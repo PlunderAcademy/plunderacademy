@@ -1,0 +1,23 @@
+<svg width="800" height="320" viewBox="0 0 800 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="320" rx="16" fill="#F5F7FA"/>
+  <text x="24" y="36" font-family="monospace" font-size="16" fill="#111827">EVM Storage Slots (32 bytes each)</text>
+  <g transform="translate(24,60)">
+    <rect width="752" height="40" rx="8" fill="#E5E7EB" stroke="#D1D5DB"/>
+    <rect x="8" y="8" width="360" height="24" rx="4" fill="#C7D2FE"/>
+    <rect x="376" y="8" width="360" height="24" rx="4" fill="#FECACA"/>
+    <text x="16" y="26" font-family="monospace" font-size="12" fill="#1F2937">packed: uint128 a | uint128 b</text>
+  </g>
+  <g transform="translate(24,116)">
+    <rect width="752" height="40" rx="8" fill="#E5E7EB" stroke="#D1D5DB"/>
+    <text x="16" y="26" font-family="monospace" font-size="12" fill="#1F2937">mapping(address =&gt; uint256) balances // keccak(key, slot)</text>
+  </g>
+  <g transform="translate(24,172)">
+    <rect width="752" height="40" rx="8" fill="#E5E7EB" stroke="#D1D5DB"/>
+    <text x="16" y="26" font-family="monospace" font-size="12" fill="#1F2937">uint256[] items // length at base slot</text>
+  </g>
+  <g transform="translate(24,228)">
+    <rect width="752" height="40" rx="8" fill="#E5E7EB" stroke="#D1D5DB"/>
+    <text x="16" y="26" font-family="monospace" font-size="12" fill="#1F2937">items[i] at keccak(base) + i</text>
+  </g>
+</svg>
+
