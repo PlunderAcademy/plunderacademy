@@ -5,6 +5,11 @@ import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { Menu } from "lucide-react";
+import { WalletButton } from "@/components/wallet-button";
 
 const nav = [
   { href: "/", label: "Home" },
@@ -21,7 +26,7 @@ export function SiteHeader() {
         <Link href="/" className="font-semibold tracking-tight">
           Plunder Academy
         </Link>
-        <nav className="flex items-center gap-6 text-sm">
+        <nav className="hidden md:flex items-center gap-6 text-sm">
           {nav.map((item) => (
             <Link
               key={item.href}
@@ -35,9 +40,50 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
-          <ConnectButton />
+        <div className="hidden md:flex items-center gap-2">
+          <WalletButton />
           <ThemeToggle />
+        </div>
+        {/* Mobile menu */}
+        <div className="md:hidden">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" aria-label="Open menu">
+                <Menu className="size-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="flex flex-col gap-4 p-0">
+              <div className="px-6 pb-4 pt-6">
+                <Link href="/" className="font-semibold tracking-tight">
+                  Plunder Academy
+                </Link>
+              </div>
+              <Separator />
+              <nav className="flex flex-col gap-1 px-2 py-2">
+                {nav.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "rounded-md px-4 py-2 text-base transition-colors hover:bg-accent hover:text-accent-foreground text-foreground/70",
+                      pathname === item.href && "text-foreground"
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+              <Separator />
+              <div className="mt-auto px-6 py-4">
+                <div className="flex flex-col gap-3">
+                  <WalletButton fullWidth />
+                  <div className="flex justify-end">
+                    <ThemeToggle />
+                  </div>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>
