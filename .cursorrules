@@ -55,3 +55,15 @@
 
 - shadcn components must be installed and updated via the CLI only.
 - Do not directly modify generated shadcn files; wrap or extend externally if needed.
+
+## Web3 integration
+
+- Wallets: Use wagmi + RainbowKit. Do not hand-roll connectors.
+- Chains: Prefer importing chains from `viem/chains`. Primary chain is `zilliqa` (add testnet if needed). Avoid hardcoding custom chain objects unless not available in viem.
+- Config: `wagmiConfig` in `src/lib/wagmi.ts` using `getDefaultConfig` with `chains: [zilliqa]`, `ssr: true`, and `transports` keyed by chain id.
+- Providers: Wrap app in `WagmiProvider`, `QueryClientProvider`, `ThemeProvider`, `RainbowKitProvider` inside `src/components/providers.tsx`.
+- UI: Use `ConnectButton` from `@rainbow-me/rainbowkit` in the header.
+- Styles: Import `@rainbow-me/rainbowkit/styles.css` in `src/app/layout.tsx`.
+- Env: Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` for WalletConnect.
+- Security: Do not expose private keys or secrets; only use public env (`NEXT_PUBLIC_*`) on the client.
+- Network scope: Keep chains limited to Zilliqa (and optionally its testnet) unless explicitly expanded.

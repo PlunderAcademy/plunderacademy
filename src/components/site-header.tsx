@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const nav = [
   { href: "/", label: "Home" },
@@ -35,11 +36,10 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <ConnectButton />
           <ThemeToggle />
         </div>
       </div>
     </header>
   );
 }
-
-

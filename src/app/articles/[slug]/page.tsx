@@ -13,14 +13,16 @@ const articles: Record<string, { title: string; content: string }> = {
   },
   "foundry-testing": {
     title: "Testing Smart Contracts with Foundry",
-    content: "Fuzzing, invariants, and helpful patterns. Replace with MDX later.
-    ",
+    content:
+      "Fuzzing, invariants, and helpful patterns. Replace with MDX later.",
   },
 };
 
 type Params = Promise<{ slug: string }>; // satisfy RSC async params in Next 15
 
-export async function generateMetadata(props: { params: Params }): Promise<Metadata> {
+export async function generateMetadata(props: {
+  params: Params;
+}): Promise<Metadata> {
   const { slug } = await props.params;
   const article = articles[slug];
   if (!article) return { title: "Article" };
@@ -38,5 +40,3 @@ export default async function ArticlePage(props: { params: Params }) {
     </article>
   );
 }
-
-
