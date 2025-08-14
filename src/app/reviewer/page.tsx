@@ -38,15 +38,24 @@ export default function ReviewerPage() {
     return content;
   }
 
-  function toPlainText(children: React.ReactNode): string {
-    const parts: string[] = [];
-    React.Children.forEach(children as any, (child: any) => {
-      if (typeof child === "string") parts.push(child);
-      else if (child && typeof child === "object" && "props" in child) {
-        parts.push(toPlainText((child as any).props?.children));
+  function toPlainText(node: React.ReactNode): string {
+    let result = "";
+    const walk = (n: React.ReactNode): void => {
+      if (n == null || typeof n === "boolean") return;
+      if (typeof n === "string" || typeof n === "number") {
+        result += String(n);
+        return;
       }
-    });
-    return parts.join("").trim();
+      if (Array.isArray(n)) {
+        n.forEach(walk);
+        return;
+      }
+      if (React.isValidElement(n)) {
+        walk((n.props as { children?: React.ReactNode }).children);
+      }
+    };
+    walk(node);
+    return result.trim();
   }
 
   function isSectionTitle(text: string): boolean {
@@ -78,9 +87,9 @@ export default function ReviewerPage() {
     ul: ({ children }) => <ul className="my-3 list-disc pl-6">{children}</ul>,
     ol: ({ children }) => <ol className="my-3 list-decimal pl-6">{children}</ol>,
     li: ({ children }) => <li className="my-1">{highlightLabels(children)}</li>,
-    code: (props) => {
-      const isInline = "inline" in props ? (props as any).inline : false;
-      const { children } = props as any;
+    code: (props: { inline?: boolean; children?: React.ReactNode }) => {
+      const isInline = Boolean(props.inline);
+      const { children } = props;
       return isInline ? (
         <code className="rounded bg-muted px-1 py-0.5 text-[0.9em]">{children}</code>
       ) : (

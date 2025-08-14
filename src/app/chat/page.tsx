@@ -4,6 +4,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useChat } from "@ai-sdk/react";
+import type { UIMessage } from "ai";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -21,7 +22,7 @@ export default function ChatPage() {
               Ask me anything about Solidity, EVM, and tooling.
             </div>
           )}
-          {messages.map((m) => (
+          {messages.map((m: UIMessage) => (
             <div
               key={m.id}
               className={
@@ -32,27 +33,23 @@ export default function ChatPage() {
             >
               {m.role === "user"
                 ? (
-                    Array.isArray((m as any).parts)
-                      ? (m as any).parts
-                          .filter((p: any) => p?.type === "text")
-                          .map((p: any, i: number) => (
+                    Array.isArray(m.parts)
+                      ? m.parts
+                          .filter((p) => p?.type === "text")
+                          .map((p, i: number) => (
                             <div key={`${m.id}-${i}`} className="whitespace-pre-wrap">
-                              {String(p.text ?? "")}
+                              {p.type === "text" ? p.text : ""}
                             </div>
                           ))
-                      : typeof (m as any).content === "string"
-                      ? <div className="whitespace-pre-wrap">{(m as any).content}</div>
-                      : String((m as any).content ?? "")
+                      : null
                   )
                 : (() => {
-                    const text = Array.isArray((m as any).parts)
-                      ? (m as any).parts
-                          .filter((p: any) => p?.type === "text")
-                          .map((p: any) => String(p.text ?? ""))
+                    const text = Array.isArray(m.parts)
+                      ? m.parts
+                          .filter((p) => p?.type === "text")
+                          .map((p) => (p.type === "text" ? p.text : ""))
                           .join("\n\n")
-                      : typeof (m as any).content === "string"
-                      ? (m as any).content
-                      : String((m as any).content ?? "");
+                      : "";
                     return (
                       <div className="prose prose-sm max-w-none">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
