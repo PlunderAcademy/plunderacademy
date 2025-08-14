@@ -11,7 +11,7 @@ export const maxDuration = 30;
 // - grok-3-mini
 // - Llama-4-Maverick-17B-128E-Instruct-FP8
 
-const DEFAULT_DEPLOYMENT = "gpt-5-nano";
+const DEFAULT_DEPLOYMENT = "gpt-oss-120b";
 
 // System prompt used for all chats
 const SYSTEM_PROMPT =

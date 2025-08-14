@@ -12,7 +12,7 @@ export const maxDuration = 60;
 // - Llama-4-Maverick-17B-128E-Instruct-FP8
 
 // Default Azure deployment for the reviewer endpoint
-const DEFAULT_DEPLOYMENT = "gpt-5-nano";
+const DEFAULT_DEPLOYMENT = "gpt-oss-120b";
 
 // Minimal system prompt used now (full spec below as a comment)
 const SYSTEM_PROMPT =
