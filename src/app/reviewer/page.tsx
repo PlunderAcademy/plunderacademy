@@ -93,11 +93,16 @@ export default function ReviewerPage() {
       return isInline ? (
         <code className="rounded bg-muted px-1 py-0.5 text-[0.9em]">{children}</code>
       ) : (
-        <pre className="overflow-x-auto rounded-lg border bg-card p-3 text-sm">
-          <code>{children}</code>
-        </pre>
+        <code>{children}</code>
       );
     },
+    pre: ({ children }) => (
+      <div className="my-3">
+        <pre className="overflow-x-auto rounded-lg border bg-card p-3 text-sm">
+          {children}
+        </pre>
+      </div>
+    ),
     blockquote: ({ children }) => (
       <blockquote className="my-3 border-l-4 border-muted pl-4 italic">{children}</blockquote>
     ),

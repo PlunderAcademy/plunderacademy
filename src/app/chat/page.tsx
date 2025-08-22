@@ -27,8 +27,8 @@ export default function ChatPage() {
               key={m.id}
               className={
                 m.role === "user"
-                  ? "ml-auto max-w-[80%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
-                  : "mr-auto max-w-[80%] rounded-lg border bg-card px-3 py-2 text-sm"
+                  ? "ml-auto max-w-[80%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground overflow-hidden"
+                  : "mr-auto max-w-[80%] rounded-lg border bg-card px-3 py-2 text-sm overflow-hidden"
               }
             >
               {m.role === "user"
@@ -37,7 +37,7 @@ export default function ChatPage() {
                       ? m.parts
                           .filter((p) => p?.type === "text")
                           .map((p, i: number) => (
-                            <div key={`${m.id}-${i}`} className="whitespace-pre-wrap">
+                            <div key={`${m.id}-${i}`} className="whitespace-pre-wrap break-words">
                               {p.type === "text" ? p.text : ""}
                             </div>
                           ))
@@ -51,8 +51,30 @@ export default function ChatPage() {
                           .join("\n\n")
                       : "";
                     return (
-                      <div className="prose prose-sm max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+                      <div className="prose prose-sm max-w-none overflow-hidden">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code: (props: { inline?: boolean; children?: React.ReactNode }) => {
+                              const isInline = Boolean(props.inline);
+                              const { children } = props;
+                              return isInline ? (
+                                <code className="rounded bg-muted px-1 py-0.5 text-[0.9em]">{children}</code>
+                              ) : (
+                                <code className="block whitespace-pre-wrap break-words">{children}</code>
+                              );
+                            },
+                            pre: ({ children }: { children?: React.ReactNode }) => (
+                              <div className="my-3">
+                                <pre className="overflow-x-auto rounded-lg border bg-card p-3 text-sm whitespace-pre-wrap break-words">
+                                  {children}
+                                </pre>
+                              </div>
+                            ),
+                          }}
+                        >
+                          {text}
+                        </ReactMarkdown>
                       </div>
                     );
                   })()}
