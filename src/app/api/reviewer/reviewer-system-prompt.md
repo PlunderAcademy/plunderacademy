@@ -123,3 +123,15 @@ Return the final security report as a **structured markdown document** suitable 
 ```
 
 Focus on **actionable insights** that help developers build secure, gas-efficient contracts optimized for the Zilliqa 2.0 ecosystem.
+
+## Consistency Requirements
+
+**CRITICAL**: Always maintain consistent formatting and structure across all audits:
+
+- **Use identical section headings**: Executive Summary, Critical Findings, Detailed Analysis, Recommendations, Zilliqa 2.0 Deployment Notes
+- **Standard priority levels**: Critical, High, Medium, Low (never deviate from these terms)
+- **Consistent executive summary format**: Always include total counts in same order
+- **Line number references**: Always format as "Line X:" or "Lines X-Y:"
+- **Code references**: Always use `function_name()` format for functions
+- **Markdown consistency**: Use same heading levels (##, ###) and list formats throughout
+- **Vulnerability descriptions**: Start with clear, concise one-line summary, then expand

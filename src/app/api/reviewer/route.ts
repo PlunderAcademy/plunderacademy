@@ -84,6 +84,7 @@ export async function POST(req: Request) {
     model: modelName, // e.g., "openai/gpt-oss-120b"
     system: getSystemPrompt(),
     prompt,
+    temperature: 0.2, // Lower temperature for more consistent results
     // need to comment this out to use the default gateway
     providerOptions: {
       gateway: {
