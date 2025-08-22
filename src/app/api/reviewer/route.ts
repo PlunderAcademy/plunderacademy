@@ -16,6 +16,7 @@ export const maxDuration = 60;
 // - meta/llama-4-maverick ($0.20/$0.60)
 // - google/gemini-2.0-flash ($0.15/$0.60)
 // - google/gemini-2.0-flash-lite ($0.07/$0.30)
+// - google/gemini-2.5-flash ($0.30/$2.50)
 // - google/gemini-2.5-flash-lite ($0.10/$0.40)
 
 // Default model for AI Gateway
@@ -75,14 +76,15 @@ export async function POST(req: Request) {
     });
   }
 
-  // AI Gateway with provider options - restrict to Groq for gpt-oss-120b
+  // AI Gateway with provider options
   const result = await streamText({
-    model: modelName, // e.g., "openai/gpt-oss-120b" via groq
+    model: modelName, // e.g., "openai/gpt-oss-120b"
     system: getSystemPrompt(),
     prompt,
+    // need to comment this out to use the default gateway
     providerOptions: {
       gateway: {
-        only: ['groq'], // Only use Groq provider for better pricing
+        only: ['cerebras'],
       },
     },
   });
