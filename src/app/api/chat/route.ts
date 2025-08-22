@@ -18,6 +18,7 @@ export const maxDuration = 30;
 // - google/gemini-2.0-flash-lite ($0.07/$0.30)
 // - google/gemini-2.5-flash ($0.30/$2.50)
 // - google/gemini-2.5-flash-lite ($0.10/$0.40)
+// - alibaba/qwen-3-235b 
 
 // Default model for AI Gateway
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
@@ -85,18 +86,32 @@ export async function POST(req: Request) {
     //   messages: convertToModelMessages(body.messages),
     // });
 
+    // Log token usage and finish reason after stream completes
+    result.usage.then((usage) => {
+      console.log('Chat Token usage:', usage);
+    }).catch((error) => {
+      console.error('Error getting chat token usage:', error);
+    });
+
+    result.finishReason.then((finishReason) => {
+      console.log('Chat Finish reason:', finishReason);
+    }).catch((error) => {
+      console.error('Error getting chat finish reason:', error);
+    });
+
     return result.toUIMessageStreamResponse();
   }
 
   if (typeof body?.prompt === "string" && body.prompt.trim()) {
-    // AI Gateway with provider options - restrict to Groq for gpt-oss-120b
+    // AI Gateway with provider options
     const result = await streamText({
-      model: modelName, // e.g., "openai/gpt-oss-120b" via groq
+      model: modelName, // e.g., "openai/gpt-oss-120b"
       system: getSystemPrompt(),
       prompt: body.prompt.trim(),
+      // need to comment this out to use the default gateway
       providerOptions: {
         gateway: {
-          only: ['groq'], // Only use Groq provider for better pricing
+          only: ['cerebras'],
         },
       },
     });
@@ -107,6 +122,19 @@ export async function POST(req: Request) {
     //   system: getSystemPrompt(),
     //   prompt: body.prompt.trim(),
     // });
+
+    // Log token usage and finish reason after stream completes
+    result.usage.then((usage) => {
+      console.log('Chat Token usage:', usage);
+    }).catch((error) => {
+      console.error('Error getting chat token usage:', error);
+    });
+
+    result.finishReason.then((finishReason) => {
+      console.log('Chat Finish reason:', finishReason);
+    }).catch((error) => {
+      console.error('Error getting chat finish reason:', error);
+    });
 
     return result.toTextStreamResponse();
   }

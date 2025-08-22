@@ -96,6 +96,19 @@ export async function POST(req: Request) {
   //   prompt,
   // });
 
+  // Log token usage and finish reason after stream completes
+  result.usage.then((usage) => {
+    console.log('Token usage:', usage);
+  }).catch((error) => {
+    console.error('Error getting token usage:', error);
+  });
+
+  result.finishReason.then((finishReason) => {
+    console.log('Finish reason:', finishReason);
+  }).catch((error) => {
+    console.error('Error getting finish reason:', error);
+  });
+
   // Return text stream response (works well with useCompletion)
   return result.toTextStreamResponse();
 }
