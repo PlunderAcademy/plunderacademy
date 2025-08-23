@@ -51,7 +51,7 @@ export default function ChatPage() {
           {messages.length === 0 && (
             <Message from="assistant">
               <MessageAvatar src="/ai-avatar.svg" name="AI" />
-              <MessageContent className="!bg-white">
+              <MessageContent className="!bg-white !text-gray-900">
                 <Response>
                   Ask me anything about Solidity, EVM, and tooling. I&apos;m here to help with smart contract development, security audits, gas optimization, and more!
                 </Response>
@@ -67,7 +67,7 @@ export default function ChatPage() {
               {message.role === "user" && (
                 <MessageAvatar src="/user-avatar.svg" name="You" />
               )}
-              <MessageContent className={message.role === "assistant" ? "!bg-white" : ""}>
+              <MessageContent className={message.role === "assistant" ? "!bg-white !text-gray-900" : ""}>
                 {message.role === "user" ? (
                   Array.isArray(message.parts)
                     ? message.parts
@@ -95,10 +95,10 @@ export default function ChatPage() {
           {isLoading && (
             <Message from="assistant">
               <MessageAvatar src="/ai-avatar.svg" name="AI" />
-              <MessageContent className="!bg-white">
+              <MessageContent className="!bg-white !text-gray-900">
                 <div className="flex items-center gap-2">
                   <Loader size={16} />
-                  <span className="text-muted-foreground">Thinking...</span>
+                  <span className="text-gray-600">Thinking...</span>
                 </div>
               </MessageContent>
             </Message>
