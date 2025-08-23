@@ -8,13 +8,13 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 // Available models through AI Gateway (examples):
-// - openai/gpt-4o-mini ($0.15/$0.60) - formatting here wasnt very nice
-// - openai/gpt-5-mini ($0.25/$2) - looks really nice but was quite slow
-// - openai/gpt-5-nano ($0.05/$0.40) - formatting here wasnt very nice
+// - openai/gpt-4o-mini ($0.15/$0.60) - its ok but think oss and 2.5 flash lite are better, a little slower
+// - openai/gpt-5-mini ($0.25/$2) - looks really nice but was really slow
+// - openai/gpt-5-nano ($0.05/$0.40) - its ok but think oss and 2.5 flash lite are better, a little slower
 // - openai/gpt-oss-120b ($0.15/$0.75) - this is really nice and fast on cerebras
-// - xai/grok-3-mini ($0.30/$0.50) - its ok but think oss and 2.5 flash lite are better
+// - xai/grok-3-mini ($0.30/$0.50) - its ok but think oss and 2.5 flash lite are better, a little slower
 // - meta/llama-4-maverick ($0.20/$0.60) - its ok but think oss and 2.5 flash lite are better
-// - google/gemini-2.0-flash ($0.15/$0.60) - formatting here wasnt very nice
+// - google/gemini-2.0-flash ($0.15/$0.60) - 2.5 flash lite is better 
 // - google/gemini-2.0-flash-lite ($0.07/$0.30) - 2.5 flash lite is better
 // - google/gemini-2.5-flash ($0.30/$2.50) - quite slow
 // - google/gemini-2.5-flash-lite ($0.10/$0.40) - REALLY like this one
@@ -100,17 +100,54 @@ export async function POST(req: Request) {
   //   prompt,
   // });
 
+  // Log the complete response for debugging formatting issues
+  const requestId = Math.random().toString(36).substring(2, 15);
+  console.log(`[${requestId}] Starting review with model: ${modelName}`);
+  console.log(`[${requestId}] Input prompt length: ${prompt.length} chars`);
+  
+  result.text.then((fullResponse) => {
+    console.log(`[${requestId}] === RAW AI RESPONSE START ===`);
+    console.log(fullResponse);
+    console.log(`[${requestId}] === RAW AI RESPONSE END ===`);
+    console.log(`[${requestId}] Response length: ${fullResponse.length} chars`);
+    
+    // Basic format validation
+    const hasExecutiveSummary = fullResponse.includes('## Executive Summary');
+    const hasCriticalFindings = fullResponse.includes('## Critical Findings');
+    const hasDetailedAnalysis = fullResponse.includes('## Detailed Analysis');
+    const hasRecommendations = fullResponse.includes('## Recommendations');
+    const hasZilliqaNotes = fullResponse.includes('## Zilliqa 2.0 Deployment Notes');
+    
+    // Check for the problematic markdown code block wrapper
+    const hasMarkdownWrapper = fullResponse.trim().startsWith('```markdown') && fullResponse.trim().endsWith('```');
+    const startsCorrectly = fullResponse.trim().startsWith('## Executive Summary');
+    
+    console.log(`[${requestId}] Format validation:`, {
+      hasExecutiveSummary,
+      hasCriticalFindings,
+      hasDetailedAnalysis,
+      hasRecommendations,
+      hasZilliqaNotes,
+      allSectionsPresent: hasExecutiveSummary && hasCriticalFindings && hasDetailedAnalysis && hasRecommendations && hasZilliqaNotes,
+      hasMarkdownWrapper: hasMarkdownWrapper,
+      startsCorrectly: startsCorrectly,
+      formatIssue: hasMarkdownWrapper ? 'WRAPPED_IN_CODE_BLOCK' : !startsCorrectly ? 'WRONG_START' : 'OK'
+    });
+  }).catch((error) => {
+    console.error(`[${requestId}] Error getting full response:`, error);
+  });
+
   // Log token usage and finish reason after stream completes
   result.usage.then((usage) => {
-    console.log('Token usage:', usage);
+    console.log(`[${requestId}] Token usage:`, usage);
   }).catch((error) => {
-    console.error('Error getting token usage:', error);
+    console.error(`[${requestId}] Error getting token usage:`, error);
   });
 
   result.finishReason.then((finishReason) => {
-    console.log('Finish reason:', finishReason);
+    console.log(`[${requestId}] Finish reason:`, finishReason);
   }).catch((error) => {
-    console.error('Error getting finish reason:', error);
+    console.error(`[${requestId}] Error getting finish reason:`, error);
   });
 
   // Return text stream response (works well with useCompletion)

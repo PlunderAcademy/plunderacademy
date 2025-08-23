@@ -32,8 +32,7 @@ contract OverflowToken {
   });
 
   async function onReview() {
-    const prompt = `Please audit the following Solidity code and provide findings, fixes and risks as markdown.\n\n${code}`;
-    await complete(prompt);
+    await complete(code);
   }
 
   return (

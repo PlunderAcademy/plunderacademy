@@ -8,13 +8,13 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 // Available models through AI Gateway (examples):
-// - openai/gpt-4o-mini ($0.15/$0.60) - formatting here wasnt very nice
-// - openai/gpt-5-mini ($0.25/$2) - looks really nice but was quite slow
-// - openai/gpt-5-nano ($0.05/$0.40) - formatting here wasnt very nice
+// - openai/gpt-4o-mini ($0.15/$0.60) - its ok but think oss and 2.5 flash lite are better, a little slower
+// - openai/gpt-5-mini ($0.25/$2) - looks really nice but was really slow
+// - openai/gpt-5-nano ($0.05/$0.40) - its ok but think oss and 2.5 flash lite are better, a little slower
 // - openai/gpt-oss-120b ($0.15/$0.75) - this is really nice and fast on cerebras
-// - xai/grok-3-mini ($0.30/$0.50) - its ok but think oss and 2.5 flash lite are better
+// - xai/grok-3-mini ($0.30/$0.50) - its ok but think oss and 2.5 flash lite are better, a little slower
 // - meta/llama-4-maverick ($0.20/$0.60) - its ok but think oss and 2.5 flash lite are better
-// - google/gemini-2.0-flash ($0.15/$0.60) - formatting here wasnt very nice
+// - google/gemini-2.0-flash ($0.15/$0.60) - 2.5 flash lite is better 
 // - google/gemini-2.0-flash-lite ($0.07/$0.30) - 2.5 flash lite is better
 // - google/gemini-2.5-flash ($0.30/$2.50) - quite slow
 // - google/gemini-2.5-flash-lite ($0.10/$0.40) - REALLY like this one
