@@ -144,6 +144,48 @@ export async function POST(req: Request) {
     console.error(`[${requestId}] Error getting token usage:`, error);
   });
 
+  // Log detailed provider metadata if available
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (result as any).providerMetadata?.then((providerMetadata: any) => {
+    // Google metadata (rich usage details)
+    if (providerMetadata?.google?.usageMetadata) {
+      const googleUsage = providerMetadata.google.usageMetadata;
+      console.log(`[${requestId}] Google usage metadata:`, {
+        promptTokenCount: googleUsage.promptTokenCount,
+        candidatesTokenCount: googleUsage.candidatesTokenCount,
+        totalTokenCount: googleUsage.totalTokenCount,
+        ...(googleUsage.cachedContentTokenCount && { cachedContentTokenCount: googleUsage.cachedContentTokenCount }),
+        ...(googleUsage.thoughtsTokenCount && { thoughtsTokenCount: googleUsage.thoughtsTokenCount }),
+      });
+      
+      if (providerMetadata.google.safetyRatings) {
+        console.log(`[${requestId}] Safety ratings:`, providerMetadata.google.safetyRatings);
+      }
+      
+      if (providerMetadata.google.groundingMetadata) {
+        console.log(`[${requestId}] Grounding metadata:`, providerMetadata.google.groundingMetadata);
+      }
+    }
+    
+    // Gateway routing information (useful for all providers)
+    if (providerMetadata?.gateway?.routing) {
+      const routing = providerMetadata.gateway.routing;
+      console.log(`[${requestId}] Gateway routing:`, {
+        originalModelId: routing.originalModelId,
+        resolvedProvider: routing.resolvedProvider,
+        resolvedProviderApiModelId: routing.resolvedProviderApiModelId,
+        finalProvider: routing.finalProvider,
+        cost: providerMetadata.gateway.cost,
+        responseTime: routing.attempts?.[0] ? 
+          `${Math.round(routing.attempts[0].endTime - routing.attempts[0].startTime)}ms` : 'unknown'
+      });
+    }
+    
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }).catch((error: any) => {
+    console.error(`[${requestId}] Error getting provider metadata:`, error);
+  });
+
   result.finishReason.then((finishReason) => {
     console.log(`[${requestId}] Finish reason:`, finishReason);
   }).catch((error) => {

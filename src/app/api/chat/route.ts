@@ -88,17 +88,63 @@ export async function POST(req: Request) {
     //   messages: convertToModelMessages(body.messages),
     // });
 
+    // Generate request ID for logging
+    const requestId = Math.random().toString(36).substring(2, 15);
+    console.log(`[${requestId}] Chat (messages) started with model: ${modelName}`);
+
     // Log token usage and finish reason after stream completes
     result.usage.then((usage) => {
-      console.log('Chat Token usage:', usage);
+      console.log(`[${requestId}] Chat Token usage:`, usage);
     }).catch((error) => {
-      console.error('Error getting chat token usage:', error);
+      console.error(`[${requestId}] Error getting chat token usage:`, error);
+    });
+
+    // Log detailed provider metadata if available
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (result as any).providerMetadata?.then((providerMetadata: any) => {
+      // Google metadata (rich usage details)
+      if (providerMetadata?.google?.usageMetadata) {
+        const googleUsage = providerMetadata.google.usageMetadata;
+        console.log(`[${requestId}] Chat Google usage metadata:`, {
+          promptTokenCount: googleUsage.promptTokenCount,
+          candidatesTokenCount: googleUsage.candidatesTokenCount,
+          totalTokenCount: googleUsage.totalTokenCount,
+          ...(googleUsage.cachedContentTokenCount && { cachedContentTokenCount: googleUsage.cachedContentTokenCount }),
+          ...(googleUsage.thoughtsTokenCount && { thoughtsTokenCount: googleUsage.thoughtsTokenCount }),
+        });
+        
+        if (providerMetadata.google.safetyRatings) {
+          console.log(`[${requestId}] Chat Safety ratings:`, providerMetadata.google.safetyRatings);
+        }
+        
+        if (providerMetadata.google.groundingMetadata) {
+          console.log(`[${requestId}] Chat Grounding metadata:`, providerMetadata.google.groundingMetadata);
+        }
+      }
+      
+      // Gateway routing information (useful for all providers)
+      if (providerMetadata?.gateway?.routing) {
+        const routing = providerMetadata.gateway.routing;
+        console.log(`[${requestId}] Chat Gateway routing:`, {
+          originalModelId: routing.originalModelId,
+          resolvedProvider: routing.resolvedProvider,
+          resolvedProviderApiModelId: routing.resolvedProviderApiModelId,
+          finalProvider: routing.finalProvider,
+          cost: providerMetadata.gateway.cost,
+          responseTime: routing.attempts?.[0] ? 
+            `${Math.round(routing.attempts[0].endTime - routing.attempts[0].startTime)}ms` : 'unknown'
+        });
+      }
+      
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }).catch((error: any) => {
+      console.error(`[${requestId}] Error getting chat provider metadata:`, error);
     });
 
     result.finishReason.then((finishReason) => {
-      console.log('Chat Finish reason:', finishReason);
+      console.log(`[${requestId}] Chat Finish reason:`, finishReason);
     }).catch((error) => {
-      console.error('Error getting chat finish reason:', error);
+      console.error(`[${requestId}] Error getting chat finish reason:`, error);
     });
 
     return result.toUIMessageStreamResponse();
@@ -125,17 +171,63 @@ export async function POST(req: Request) {
     //   prompt: body.prompt.trim(),
     // });
 
+    // Generate request ID for logging
+    const requestId = Math.random().toString(36).substring(2, 15);
+    console.log(`[${requestId}] Chat (prompt) started with model: ${modelName}`);
+
     // Log token usage and finish reason after stream completes
     result.usage.then((usage) => {
-      console.log('Chat Token usage:', usage);
+      console.log(`[${requestId}] Chat Token usage:`, usage);
     }).catch((error) => {
-      console.error('Error getting chat token usage:', error);
+      console.error(`[${requestId}] Error getting chat token usage:`, error);
+    });
+
+    // Log detailed provider metadata if available
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (result as any).providerMetadata?.then((providerMetadata: any) => {
+      // Google metadata (rich usage details)
+      if (providerMetadata?.google?.usageMetadata) {
+        const googleUsage = providerMetadata.google.usageMetadata;
+        console.log(`[${requestId}] Chat Google usage metadata:`, {
+          promptTokenCount: googleUsage.promptTokenCount,
+          candidatesTokenCount: googleUsage.candidatesTokenCount,
+          totalTokenCount: googleUsage.totalTokenCount,
+          ...(googleUsage.cachedContentTokenCount && { cachedContentTokenCount: googleUsage.cachedContentTokenCount }),
+          ...(googleUsage.thoughtsTokenCount && { thoughtsTokenCount: googleUsage.thoughtsTokenCount }),
+        });
+        
+        if (providerMetadata.google.safetyRatings) {
+          console.log(`[${requestId}] Chat Safety ratings:`, providerMetadata.google.safetyRatings);
+        }
+        
+        if (providerMetadata.google.groundingMetadata) {
+          console.log(`[${requestId}] Chat Grounding metadata:`, providerMetadata.google.groundingMetadata);
+        }
+      }
+      
+      // Gateway routing information (useful for all providers)
+      if (providerMetadata?.gateway?.routing) {
+        const routing = providerMetadata.gateway.routing;
+        console.log(`[${requestId}] Chat Gateway routing:`, {
+          originalModelId: routing.originalModelId,
+          resolvedProvider: routing.resolvedProvider,
+          resolvedProviderApiModelId: routing.resolvedProviderApiModelId,
+          finalProvider: routing.finalProvider,
+          cost: providerMetadata.gateway.cost,
+          responseTime: routing.attempts?.[0] ? 
+            `${Math.round(routing.attempts[0].endTime - routing.attempts[0].startTime)}ms` : 'unknown'
+        });
+      }
+      
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }).catch((error: any) => {
+      console.error(`[${requestId}] Error getting chat provider metadata:`, error);
     });
 
     result.finishReason.then((finishReason) => {
-      console.log('Chat Finish reason:', finishReason);
+      console.log(`[${requestId}] Chat Finish reason:`, finishReason);
     }).catch((error) => {
-      console.error('Error getting chat finish reason:', error);
+      console.error(`[${requestId}] Error getting chat finish reason:`, error);
     });
 
     return result.toTextStreamResponse();
