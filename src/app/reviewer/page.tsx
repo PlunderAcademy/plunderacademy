@@ -3,25 +3,36 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useCompletion } from "@ai-sdk/react";
+import { Response } from "@/components/ai-elements/response";
 
 export default function ReviewerPage() {
   const [code, setCode] = React.useState<string>(
-    `// Paste Solidity code here
-// Example:
-// pragma solidity ^0.8.24;
-// contract Hello {
-//   function greet() external pure returns(string memory) { return "hi"; }
-// }`
+    `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract OverflowToken {
+    mapping(address => uint256) public balanceOf;
+
+    constructor() {
+        balanceOf[msg.sender] = type(uint256).max - 10;
+    }
+
+    // BUG: unchecked addition can wrap around
+    function mint(uint256 amount) external {
+        unchecked {
+            balanceOf[msg.sender] += amount; // overflow if amount > 10
+        }
+    }
+}`
   );
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [result, setResult] = React.useState<string>("");
+  const { completion, complete, isLoading, error } = useCompletion({
+    api: "/api/reviewer",
+    streamProtocol: "text",
+  });
 
   async function onReview() {
-    setIsLoading(true);
-    // TODO: wire to AI endpoint
-    await new Promise((r) => setTimeout(r, 800));
-    setResult("Security notes, gas tips, and suggestions will appear here.");
-    setIsLoading(false);
+    await complete(code);
   }
 
   return (
@@ -54,7 +65,13 @@ export default function ReviewerPage() {
       <div className="space-y-4">
         <h2 className="font-semibold">Findings</h2>
         <div className="min-h-[380px] rounded-md border bg-card p-4 text-sm">
-          {result || (
+          {error ? (
+            <span className="text-destructive">{error.message}</span>
+                     ) : completion ? (
+             <div className="prose max-w-none">
+               <Response>{completion}</Response>
+             </div>
+          ) : (
             <span className="text-muted-foreground">No findings yet.</span>
           )}
         </div>

@@ -1,74 +1,129 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-
-type Message = { id: string; role: "user" | "assistant"; content: string };
+import { useChat } from "@ai-sdk/react";
+import type { UIMessage } from "ai";
+import { 
+  Conversation, 
+  ConversationContent, 
+  ConversationScrollButton 
+} from "@/components/ai-elements/conversation";
+import { 
+  Message, 
+  MessageContent, 
+  MessageAvatar 
+} from "@/components/ai-elements/message";
+import { 
+  PromptInput, 
+  PromptInputTextarea, 
+  PromptInputSubmit, 
+  PromptInputToolbar 
+} from "@/components/ai-elements/prompt-input";
+import { Response } from "@/components/ai-elements/response";
+import { Loader } from "@/components/ai-elements/loader";
 
 export default function ChatPage() {
-  const [messages, setMessages] = React.useState<Message[]>([
-    {
-      id: "sys-hello",
-      role: "assistant",
-      content: "Ask me anything about Solidity, EVM, and tooling.",
-    },
-  ]);
+  const { messages, sendMessage, status } = useChat();
   const [input, setInput] = React.useState("");
-  const [isSending, setIsSending] = React.useState(false);
+  const isLoading = status === "submitted" || status === "streaming";
 
-  async function onSend(e: React.FormEvent) {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: input.trim(),
-    };
-    setMessages((m) => [...m, userMessage]);
+    sendMessage({ text: input.trim() });
     setInput("");
-    setIsSending(true);
-    // TODO: connect to backend streaming endpoint
-    await new Promise((r) => setTimeout(r, 600));
-    const reply: Message = {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content:
-        "This is a placeholder response. We will stream real answers soon.",
-    };
-    setMessages((m) => [...m, reply]);
-    setIsSending(false);
-  }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+  };
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      <div className="rounded-xl border p-4">
-        <div className="max-h-[60vh] space-y-3 overflow-y-auto p-1">
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className={
-                m.role === "user"
-                  ? "ml-auto max-w-[80%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
-                  : "mr-auto max-w-[80%] rounded-lg border bg-card px-3 py-2 text-sm"
-              }
-            >
-              {m.content}
-            </div>
-          ))}
-        </div>
+    <div className="mx-auto flex h-[calc(100vh-200px)] w-full max-w-4xl flex-col">
+      <div className="mb-4">
+        <h1 className="text-3xl font-bold tracking-tight">
+          AI Chat Assistant
+        </h1>
       </div>
-      <form onSubmit={onSend} className="flex items-center gap-2">
-        <Input
-          className="flex-1"
-          placeholder="Ask a question about Solidity or the EVM..."
+      
+      <Conversation className="flex-1 border rounded-xl">
+        <ConversationContent>
+          {messages.length === 0 && (
+            <Message from="assistant">
+              <MessageAvatar src="/ai-avatar.svg" name="AI" />
+              <MessageContent className="!bg-white !text-gray-900">
+                <Response>
+                  Ask me anything about Solidity, EVM, and tooling. I&apos;m here to help with smart contract development, security audits, gas optimization, and more!
+                </Response>
+              </MessageContent>
+            </Message>
+          )}
+          
+          {messages.map((message: UIMessage) => (
+            <Message key={message.id} from={message.role}>
+              {message.role === "assistant" && (
+                <MessageAvatar src="/ai-avatar.svg" name="AI" />
+              )}
+              {message.role === "user" && (
+                <MessageAvatar src="/user-avatar.svg" name="You" />
+              )}
+              <MessageContent className={message.role === "assistant" ? "!bg-white !text-gray-900" : ""}>
+                {message.role === "user" ? (
+                  Array.isArray(message.parts)
+                    ? message.parts
+                        .filter((p) => p?.type === "text")
+                        .map((p, i: number) => (
+                          <div key={`${message.id}-${i}`} className="whitespace-pre-wrap">
+                            {p.type === "text" ? p.text : ""}
+                          </div>
+                        ))
+                    : null
+                ) : (
+                  <Response>
+                    {Array.isArray(message.parts)
+                      ? message.parts
+                          .filter((p) => p?.type === "text")
+                          .map((p) => (p.type === "text" ? p.text : ""))
+                          .join("\n\n")
+                      : ""}
+                  </Response>
+                )}
+              </MessageContent>
+            </Message>
+          ))}
+          
+          {isLoading && (
+            <Message from="assistant">
+              <MessageAvatar src="/ai-avatar.svg" name="AI" />
+              <MessageContent className="!bg-white !text-gray-900">
+                <div className="flex items-center gap-2">
+                  <Loader size={16} />
+                  <span className="text-gray-600">Thinking...</span>
+                </div>
+              </MessageContent>
+            </Message>
+          )}
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
+
+      <PromptInput 
+        onSubmit={handleSubmit}
+        className="mt-4"
+      >
+        <PromptInputTextarea
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleInputChange}
+          placeholder="Ask a question about Solidity or the EVM..."
         />
-        <Button type="submit" disabled={isSending}>
-          {isSending ? "Sending..." : "Send"}
-        </Button>
-      </form>
+        <PromptInputToolbar>
+          <div /> {/* Spacer */}
+          <PromptInputSubmit 
+            status={status}
+            disabled={!input.trim()}
+          />
+        </PromptInputToolbar>
+      </PromptInput>
     </div>
   );
 }
