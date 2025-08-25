@@ -218,14 +218,125 @@
   @apply my-1;
 }
 .prose :where(code) {
-  @apply rounded bg-muted px-1 py-0.5 text-xs;
+  @apply rounded bg-muted px-1 py-0.5 text-xs font-mono text-foreground;
 }
 .prose :where(pre) {
-  @apply rounded-lg border bg-card p-4 text-sm;
+  @apply rounded-lg border bg-muted/30 p-4 text-sm font-mono text-foreground overflow-x-auto;
+}
+.prose :where(pre code) {
+  @apply bg-transparent p-0 text-sm;
+}
+.prose :where(blockquote) {
+  @apply border-l-4 border-border pl-4 italic text-muted-foreground my-6;
+}
+.prose :where(table) {
+  @apply w-full border-collapse border border-border my-6;
+}
+.prose :where(th) {
+  @apply border border-border bg-muted/50 px-4 py-2 text-left font-semibold text-foreground;
+}
+.prose :where(td) {
+  @apply border border-border px-4 py-2 text-foreground;
 }
 .prose :where(img) {
   @apply my-6 rounded-lg border;
 }
 .prose :where(a) {
   @apply text-primary underline-offset-4 hover:underline;
+}
+.prose :where(strong) {
+  @apply font-semibold text-foreground;
+}
+.prose :where(em) {
+  @apply italic text-foreground;
+}
+.prose :where(ul, ol) {
+  @apply my-4 text-foreground;
+}
+.prose :where(hr) {
+  @apply border-border my-8;
+}
+
+/* AI Elements Response component overrides for better dark mode */
+.prose .ai-response,
+.prose [data-ai-response] {
+  @apply text-foreground;
+}
+
+/* Ensure code syntax highlighting works well in dark mode */
+.prose :where(pre[class*="language-"]) {
+  @apply bg-muted/30 border border-border;
+}
+
+/* Better styling for inline code in AI responses */
+.prose :where(p code, li code) {
+  @apply bg-muted/60 text-foreground border border-border/50;
+}
+
+/* Improve list styling in AI responses */
+.prose :where(ul) {
+  @apply list-disc list-inside;
+}
+.prose :where(ol) {
+  @apply list-decimal list-inside;
+}
+
+/* Better contrast for field labels (like **Contract:**) */
+.prose :where(li strong:first-child) {
+  @apply text-foreground font-semibold;
+}
+
+/* Specific styling for vulnerability sections */
+.prose :where(h4) {
+  @apply text-foreground border-b border-border/30 pb-1 mb-3;
+}
+
+/* Streamdown component overrides to use theme colors instead of orange defaults */
+.prose [data-streamdown] {
+  @apply text-foreground;
+}
+
+.prose [data-streamdown] h1,
+.prose [data-streamdown] h2, 
+.prose [data-streamdown] h3,
+.prose [data-streamdown] h4,
+.prose [data-streamdown] h5,
+.prose [data-streamdown] h6 {
+  @apply text-foreground;
+}
+
+.prose [data-streamdown] p {
+  @apply text-foreground;
+}
+
+.prose [data-streamdown] li {
+  @apply text-foreground;
+}
+
+.prose [data-streamdown] strong {
+  @apply text-foreground font-semibold;
+}
+
+.prose [data-streamdown] code {
+  @apply bg-muted/60 text-foreground;
+}
+
+.prose [data-streamdown] pre {
+  @apply bg-muted/30 border border-border text-foreground;
+}
+
+.prose [data-streamdown] blockquote {
+  @apply border-l-4 border-border text-muted-foreground;
+}
+
+.prose [data-streamdown] table {
+  @apply border border-border;
+}
+
+.prose [data-streamdown] th {
+  @apply bg-muted/50 text-foreground border border-border;
+}
+
+.prose [data-streamdown] td {
+  @apply text-foreground border border-border;
 }
