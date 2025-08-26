@@ -13,6 +13,7 @@ import { WalletButton } from "@/components/wallet-button";
 
 const nav = [
   { href: "/", label: "Home" },
+  { href: "/lessons", label: "Lessons" },
   { href: "/articles", label: "Articles" },
   { href: "/reviewer", label: "Code Reviewer" },
   { href: "/chat", label: "Chat" },

@@ -21,6 +21,8 @@ import {
   Network,
   Wallet,
   Rocket,
+  GraduationCap,
+  CheckCircle,
 } from "lucide-react";
 
 export default function Home() {
@@ -40,10 +42,13 @@ export default function Home() {
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button asChild>
-            <Link href="/articles">Browse Articles</Link>
+            <Link href="/lessons">Start Learning Path</Link>
           </Button>
           <Button variant="secondary" asChild>
-            <Link href="/reviewer">Try the Code Reviewer</Link>
+            <Link href="/articles">Browse Articles</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/reviewer">Try Code Reviewer</Link>
           </Button>
           <Button variant="ghost" asChild>
             <Link href="/chat">Ask the Chat</Link>
@@ -52,14 +57,24 @@ export default function Home() {
       </div>
 
       {/* Feature bullets */}
-      <div className="grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-3 text-left">
+      <div className="grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 text-left">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GraduationCap className="size-5" /> Structured Lessons
+            </CardTitle>
+            <CardDescription>
+              5 modules from blockchain basics to advanced Solidity development.
+            </CardDescription>
+          </CardHeader>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="size-5" /> Deep Articles
             </CardTitle>
             <CardDescription>
-              Digestible explanations of core EVM topics and Solidity patterns.
+              Digestible explanations of core EVM topics and patterns.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -69,7 +84,7 @@ export default function Home() {
               <Bot className="size-5" /> AI Code Reviewer
             </CardTitle>
             <CardDescription>
-              Paste Solidity to get instant security notes and gas tips.
+              Instant security notes and gas optimization tips.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -79,10 +94,72 @@ export default function Home() {
               <MessageCircle className="size-5" /> Chat Assistant
             </CardTitle>
             <CardDescription>
-              Ask questions and get context-aware answers and examples.
+              Get context-aware answers and code examples.
             </CardDescription>
           </CardHeader>
         </Card>
+      </div>
+
+      {/* New Structured Learning Path Section */}
+      <div className="w-full max-w-6xl rounded-xl border-2 bg-gradient-to-r from-primary/5 to-primary/10 p-8 text-left">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <div className="inline-flex items-center rounded-full border px-3 py-1 text-xs">
+              New: Comprehensive Curriculum
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Follow Our Structured Learning Path
+            </h2>
+            <p className="text-muted-foreground">
+              Master blockchain development with our step-by-step curriculum. Start from the fundamentals and progress through EVM, Solidity, and Zilliqa-specific development.
+            </p>
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-center gap-2">
+                <CheckCircle className="size-4 text-green-500" />
+                Module 1: Blockchain Fundamentals
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle className="size-4 text-green-500" />
+                Module 2: EVM Fundamentals
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle className="size-4 text-green-500" />
+                Module 3: Intro to Solidity
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle className="size-4 text-green-500" />
+                Module 4: Zilliqa EVM Development Setup
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle className="size-4 text-green-500" />
+                Module 5: Creating Your Own Token
+              </li>
+            </ul>
+          </div>
+          <div className="flex flex-col justify-center gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ready to Begin?</CardTitle>
+                <CardDescription>
+                  Each module includes multiple lessons, practical examples, and interactive quizzes to test your knowledge.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-3">
+                  <Button asChild>
+                    <Link href="/lessons">
+                      <GraduationCap className="mr-2 size-4" />
+                      Start Module 1
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <Link href="/lessons">View All Modules</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
 
       {/* Why Plunder Academy */}
