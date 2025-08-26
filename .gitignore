@@ -42,3 +42,6 @@ next-env.d.ts
 
 .cursorindexingignore
 .specstory/
+
+# Anthropic
+.claude/*.local.json
