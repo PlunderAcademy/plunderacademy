@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
   BookOpen, 
-  CheckCircle, 
   Clock, 
   ChevronRight,
   GraduationCap,
@@ -59,7 +58,7 @@ export default function LessonsPage() {
 
       {/* Modules List */}
       <div className="space-y-6">
-        {modules.map((module, moduleIndex) => (
+        {modules.map((module) => (
           <Card key={module.id} className="overflow-hidden">
             <CardHeader className="pb-4">
               <div className="flex items-start justify-between">
@@ -79,7 +78,7 @@ export default function LessonsPage() {
             <CardContent className="space-y-4">
               {/* Lessons Grid */}
               <div className="grid gap-3">
-                {module.lessons.map((lesson, lessonIndex) => (
+                {module.lessons.map((lesson) => (
                   <Link 
                     key={lesson.id}
                     href={`/lessons/${module.id}/${lesson.id}`}

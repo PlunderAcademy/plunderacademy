@@ -15,25 +15,26 @@ import {
 import { modules } from "@/data/lessons";
 
 interface LessonPageProps {
-  params: {
+  params: Promise<{
     moduleId: string;
     lessonId: string;
-  };
+  }>;
 }
 
-export default function LessonPage({ params }: LessonPageProps) {
-  const module = modules.find(m => m.id === params.moduleId);
-  if (!module) notFound();
+export default async function LessonPage({ params }: LessonPageProps) {
+  const resolvedParams = await params;
+  const currentModule = modules.find(m => m.id === resolvedParams.moduleId);
+  if (!currentModule) notFound();
   
-  const lessonIndex = module.lessons.findIndex(l => l.id === params.lessonId);
-  const lesson = module.lessons[lessonIndex];
+  const lessonIndex = currentModule.lessons.findIndex(l => l.id === resolvedParams.lessonId);
+  const lesson = currentModule.lessons[lessonIndex];
   if (!lesson) notFound();
   
-  const prevLesson = lessonIndex > 0 ? module.lessons[lessonIndex - 1] : null;
-  const nextLesson = lessonIndex < module.lessons.length - 1 ? module.lessons[lessonIndex + 1] : null;
+  const prevLesson = lessonIndex > 0 ? currentModule.lessons[lessonIndex - 1] : null;
+  const nextLesson = lessonIndex < currentModule.lessons.length - 1 ? currentModule.lessons[lessonIndex + 1] : null;
   
   // Find next module's first lesson if at end of current module
-  const moduleIndex = modules.findIndex(m => m.id === params.moduleId);
+  const moduleIndex = modules.findIndex(m => m.id === resolvedParams.moduleId);
   const nextModule = !nextLesson && moduleIndex < modules.length - 1 ? modules[moduleIndex + 1] : null;
   const nextModuleFirstLesson = nextModule ? nextModule.lessons[0] : null;
 
@@ -46,7 +47,7 @@ export default function LessonPage({ params }: LessonPageProps) {
         </Link>
         <ChevronRight className="size-4" />
         <Link href="/lessons" className="hover:text-foreground">
-          {module.title}
+          {currentModule.title}
         </Link>
         <ChevronRight className="size-4" />
         <span className="text-foreground">{lesson.title}</span>
@@ -61,7 +62,7 @@ export default function LessonPage({ params }: LessonPageProps) {
                 Lesson {lesson.number}
               </Badge>
               <Badge variant="secondary">
-                {module.title.replace("Module ", "").split(":")[0]}
+                {currentModule.title.replace("Module ", "").split(":")[0]}
               </Badge>
             </div>
             <h1 className="text-3xl font-bold tracking-tight">
@@ -120,7 +121,7 @@ export default function LessonPage({ params }: LessonPageProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {prevLesson ? (
           <Button asChild variant="outline">
-            <Link href={`/lessons/${module.id}/${prevLesson.id}`}>
+            <Link href={`/lessons/${currentModule.id}/${prevLesson.id}`}>
               <ChevronLeft className="mr-2 size-4" />
               Previous: {prevLesson.title}
             </Link>
@@ -136,21 +137,21 @@ export default function LessonPage({ params }: LessonPageProps) {
         
         {nextLesson ? (
           <Button asChild>
-            <Link href={`/lessons/${module.id}/${nextLesson.id}`}>
+            <Link href={`/lessons/${currentModule.id}/${nextLesson.id}`}>
               Next: {nextLesson.title}
               <ChevronRight className="ml-2 size-4" />
             </Link>
           </Button>
-        ) : nextModuleFirstLesson ? (
+        ) : nextModuleFirstLesson && nextModule ? (
           <Button asChild>
             <Link href={`/lessons/${nextModule.id}/${nextModuleFirstLesson.id}`}>
               Next Module: {nextModuleFirstLesson.title}
               <ChevronRight className="ml-2 size-4" />
             </Link>
           </Button>
-        ) : module.quiz ? (
+        ) : currentModule.quiz ? (
           <Button asChild variant="default">
-            <Link href={`/lessons/${module.id}/quiz`}>
+            <Link href={`/lessons/${currentModule.id}/quiz`}>
               Take Module Quiz
               <ChevronRight className="ml-2 size-4" />
             </Link>
