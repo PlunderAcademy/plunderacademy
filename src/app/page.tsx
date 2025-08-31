@@ -53,6 +53,9 @@ export default function Home() {
           <Button variant="ghost" asChild>
             <Link href="/chat">Ask the Chat</Link>
           </Button>
+          <Button variant="outline" asChild>
+            <Link href="/achievements-demo">Try Achievements Demo</Link>
+          </Button>
         </div>
       </div>
 
