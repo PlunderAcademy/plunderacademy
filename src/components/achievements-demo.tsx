@@ -163,8 +163,8 @@ export function AchievementsDemo() {
   const achievementMetadataRef = React.useRef<Record<string, NFTMetadata>>({});
   const loadingMetadataRef = React.useRef<Set<string>>(new Set());
   
-  // Track which achievements have already been celebrated
-  const celebratedAchievements = React.useRef<Set<string>>(new Set());
+  // Track which transaction hashes have already been celebrated
+  const celebratedTransactions = React.useRef<Set<string>>(new Set());
   const [showCelebration, setShowCelebration] = React.useState(false);
   const [celebrationData, setCelebrationData] = React.useState<{
     name?: string;
@@ -433,14 +433,14 @@ export function AchievementsDemo() {
   };
 
   React.useEffect(() => {
-    if (isConfirmed) {
-      // Show celebration for the current achievement (only once per achievement)
-      const achievement = demoAchievements.find(a => a.taskCode === selectedAchievement);
-      const achievementNumber = selectedAchievement.toString().padStart(4, "0");
-      const celebrationKey = `main-${achievementNumber}`;
-      
-      if (!celebratedAchievements.current.has(celebrationKey)) {
-        celebratedAchievements.current.add(celebrationKey);
+    if (isConfirmed && hash) {
+      // Only celebrate if we haven't celebrated this specific transaction
+      if (!celebratedTransactions.current.has(hash)) {
+        celebratedTransactions.current.add(hash);
+        
+        // Show celebration for the current achievement
+        const achievement = demoAchievements.find(a => a.taskCode === selectedAchievement);
+        const achievementNumber = selectedAchievement.toString().padStart(4, "0");
         
         setCelebrationData({
           name: achievement?.title || "Achievement Unlocked",
@@ -460,22 +460,21 @@ export function AchievementsDemo() {
       setAnswers(Array(demoQuestions.length).fill(""));
       setTransactionId("");
     }
-  }, [isConfirmed, fetchWalletAchievements, fetchUnclaimedVouchers, selectedAchievement, achievementMetadata]);
+  }, [isConfirmed, hash, fetchWalletAchievements, fetchUnclaimedVouchers, selectedAchievement, achievementMetadata]);
 
   React.useEffect(() => {
-    if (isUnclaimedConfirmed) {
-      // Find the achievement that was just claimed
-      const claimedVoucherId = Array.from(claimingVouchers)[0];
-      if (claimedVoucherId) {
-        const [taskCodeStr] = claimedVoucherId.split('-');
-        const taskCode = parseInt(taskCodeStr);
-        const achievement = demoAchievements.find(a => a.taskCode === taskCode);
-        const achievementNumber = taskCode.toString().padStart(4, "0");
-        const celebrationKey = `unclaimed-${achievementNumber}`;
+    if (isUnclaimedConfirmed && unclaimedHash) {
+      // Only celebrate if we haven't celebrated this specific transaction
+      if (!celebratedTransactions.current.has(unclaimedHash)) {
+        celebratedTransactions.current.add(unclaimedHash);
         
-        // Only show celebration if we haven't celebrated this achievement yet
-        if (!celebratedAchievements.current.has(celebrationKey)) {
-          celebratedAchievements.current.add(celebrationKey);
+        // Find the achievement that was just claimed
+        const claimedVoucherId = Array.from(claimingVouchers)[0];
+        if (claimedVoucherId) {
+          const [taskCodeStr] = claimedVoucherId.split('-');
+          const taskCode = parseInt(taskCodeStr);
+          const achievement = demoAchievements.find(a => a.taskCode === taskCode);
+          const achievementNumber = taskCode.toString().padStart(4, "0");
           
           // Set celebration data
           setCelebrationData({
@@ -496,7 +495,7 @@ export function AchievementsDemo() {
       setClaimingVouchers(new Set());
   
     }
-  }, [isUnclaimedConfirmed, fetchWalletAchievements, fetchUnclaimedVouchers, claimingVouchers, achievementMetadata]);
+  }, [isUnclaimedConfirmed, unclaimedHash, fetchWalletAchievements, fetchUnclaimedVouchers, claimingVouchers, achievementMetadata]);
 
   // Keep refs in sync with state
   React.useEffect(() => {
