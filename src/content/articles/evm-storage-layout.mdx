@@ -1,0 +1,31 @@
+---
+slug: evm-storage-layout
+title: EVM Storage Layout Explained
+excerpt: How Solidity maps state variables to storage slots, with diagrams and examples.
+level: beginner
+tags:
+  - evm
+  - storage
+  - solidity
+hero: /articles/evm-storage-layout.svg
+---
+
+## Storage Slots & Packing
+
+State variables are placed into 32-byte slots. Smaller types can pack together to save gas.
+
+![EVM storage slots](/articles/evm-storage-layout.svg)
+
+### Mappings & Arrays
+
+- **Mappings** hash the key with a seed slot.
+- **Dynamic arrays** store length at the base and elements at hashed offsets.
+
+```solidity
+struct S { uint128 a; uint128 b; } // packs into one slot
+mapping(address => uint256) balances; // keccak(slot, key)
+```
+
+### Calldata & Memory
+
+Prefer `calldata` for external function parameters to avoid memory copies where possible.

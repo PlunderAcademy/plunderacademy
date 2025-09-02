@@ -13,12 +13,12 @@ import {
   Clock, 
   ChevronRight,
   GraduationCap,
-  Target,
-  FileQuestion
+  Target
 } from "lucide-react";
-import { modules } from "@/data/lessons";
+import { getModules } from "@/lib/mdx";
 
-export default function LessonsPage() {
+export default async function LessonsPage() {
+  const modules = await getModules();
   return (
     <div className="mx-auto max-w-6xl space-y-8">
       {/* Header */}
@@ -80,8 +80,8 @@ export default function LessonsPage() {
               <div className="grid gap-3">
                 {module.lessons.map((lesson) => (
                   <Link 
-                    key={lesson.id}
-                    href={`/lessons/${module.id}/${lesson.id}`}
+                    key={lesson.slug}
+                    href={`/lessons/${module.slug}/${lesson.slug}`}
                     className="group"
                   >
                     <div className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-secondary/50 hover:shadow-sm">
@@ -104,27 +104,6 @@ export default function LessonsPage() {
                 ))}
               </div>
 
-              {/* Module Quiz */}
-              {module.quiz && (
-                <div className="rounded-lg border-2 border-dashed p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <FileQuestion className="size-5 text-primary" />
-                      <div>
-                        <p className="font-semibold">Module Quiz</p>
-                        <p className="text-sm text-muted-foreground">
-                          Test your knowledge with {module.quiz.questions.length} questions
-                        </p>
-                      </div>
-                    </div>
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/lessons/${module.id}/quiz`}>
-                        Take Quiz
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         ))}
@@ -140,7 +119,7 @@ export default function LessonsPage() {
         </CardHeader>
         <CardContent>
           <Button asChild size="lg">
-            <Link href="/lessons/module-1/1-1">
+            <Link href="/lessons/blockchain-fundamentals/blockchain-basics">
               <BookOpen className="mr-2 size-4" />
               Start Learning
             </Link>

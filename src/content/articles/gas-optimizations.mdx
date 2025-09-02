@@ -1,0 +1,30 @@
+---
+slug: gas-optimizations
+title: Practical Gas Optimizations
+excerpt: Real-world micro-optimizations that actually matter in 2025.
+level: intermediate
+tags:
+  - evm
+  - gas
+  - solidity
+hero: /articles/gas-optimizations.svg
+---
+
+## Gas: Focus on Hot Paths
+
+Optimize code that runs often or in tight loops. Prefer clarity unless a hotspot warrants change.
+
+![Gas optimization themes](/articles/gas-optimizations.svg)
+
+- Pack storage and minimize SSTORE writes.
+- Use unchecked arithmetic when safe.
+- Avoid redundant external calls; cache values.
+
+```solidity
+unchecked { ++i; } // when overflows are impossible
+bytes32 slot = keccak256(abi.encode(key, base)); // computed once
+```
+
+### Benchmarks
+
+Back changes with `gas-report` and reproducible benchmarks.

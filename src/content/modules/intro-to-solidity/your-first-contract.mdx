@@ -1,0 +1,51 @@
+---
+id: your-first-contract
+module: intro-to-solidity
+number: 3.5
+title: 'Bringing It All Together: Your First Real Contract'
+objective: >-
+  Create a complete SimpleBank contract implementing deposits, withdrawals, and
+  event logging.
+practicalTakeaway: >-
+  Hands-on projects like SimpleBank bridge the gap between theory and practice,
+  deepening understanding of real-world contract development workflows, gas
+  management, and user interactions.
+slug: your-first-contract
+---
+
+## Project Assignment
+
+Create SimpleBank contract implementing:
+
+- User deposits and withdrawals of ZIL
+- Tracking balances with a `mapping(address => uint)`
+- Withdrawal allowed only if the user has sufficient balance
+- Emitting events on deposits and withdrawals for auditability
+- Deploy the contract on Zilliqa EVM testnet using Remix IDE
+- Use MetaMask to test deposits and withdrawals interactively
+
+### Sample Implementation
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract SimpleBank {
+    mapping(address => uint) public balances;
+    
+    event Deposit(address indexed user, uint amount);
+    event Withdrawal(address indexed user, uint amount);
+    
+    function deposit() public payable {
+        balances[msg.sender] += msg.value;
+        emit Deposit(msg.sender, msg.value);
+    }
+    
+    function withdraw(uint amount) public {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+        payable(msg.sender).transfer(amount);
+        emit Withdrawal(msg.sender, amount);
+    }
+}
+```

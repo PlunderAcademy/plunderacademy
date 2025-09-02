@@ -1,0 +1,22 @@
+---
+id: contract-lifecycle
+module: evm-fundamentals
+number: 2.4
+title: Contract Lifecycle on EVM
+objective: >-
+  Learn the phases of a smart contract's life from writing to deployment and
+  interaction.
+slug: contract-lifecycle
+---
+
+## Phases of a Contract's Life
+
+1. **Write:** Code is authored in Solidity
+2. **Compile:** Translation into EVM bytecode and the ABI interface
+3. **Deploy:** Bytecode is sent as a transaction creating the contract on-chain; deployment consumes gas
+4. **Interact:** Users or other contracts send transactions or calls to invoke functions
+5. **Update:** Contracts can be upgraded via proxy patterns or redeployment
+
+### Deployment Details
+
+The deployment transaction carries initialization data, resulting in a contract address once mined. This address becomes the persistent locator allowing interaction with the deployed logic and state.
