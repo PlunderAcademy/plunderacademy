@@ -24,37 +24,91 @@ import {
   GraduationCap,
   CheckCircle,
 } from "lucide-react";
+import { InteractiveHeroBg } from "@/components/hero/interactive-bg";
+import { TiltContainer } from "@/components/hero/tilt-container";
 
 export default function Home() {
   return (
     <div className="flex flex-col items-center gap-14 text-center">
       {/* Hero */}
-      <div className="mx-auto max-w-4xl space-y-6">
-        <div className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-muted-foreground">
-          Learn EVM development faster
+      <section className="hero-wrap relative w-screen max-w-[100vw] mx-[calc(50%-50vw)] -mt-10 overflow-hidden">
+        <div className="hero-bg" />
+        <div className="hero-grid" />
+        <div className="absolute inset-0">
+          <InteractiveHeroBg className="h-full w-full" />
         </div>
-        <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-          Plunder Academy
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Hands-on articles, an AI Solidity reviewer, and a built-in chat
-          assistant trained on the best EVM resources.
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <Button asChild>
-            <Link href="/lessons">Start Learning Path</Link>
-          </Button>
-          <Button variant="secondary" asChild>
-            <Link href="/articles">Browse Articles</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/reviewer">Try Code Reviewer</Link>
-          </Button>
-          <Button variant="ghost" asChild>
-            <Link href="/chat">Ask the Chat</Link>
-          </Button>
+        <div className="relative mx-auto flex min-h-[50vh] max-w-6xl flex-col items-center justify-center space-y-10 px-4 py-14 sm:py-16">
+          <TiltContainer>
+            <div className="space-y-8">
+              <div className="inline-flex items-center rounded-full border bg-background/70 px-4 py-1.5 text-sm text-muted-foreground backdrop-blur">
+                Learn EVM development faster
+              </div>
+              <h1 className="text-balance text-6xl font-extrabold tracking-tight leading-[0.95] sm:text-8xl">
+                <span className="bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">
+                  Plunder Academy
+                </span>
+              </h1>
+              <p className="mx-auto max-w-4xl text-balance text-xl sm:text-2xl text-muted-foreground">
+                Hands-on lessons and deep articles, plus an AI Solidity reviewer
+                and chat assistant trained on the best EVM resources.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <Button
+                  size="lg"
+                  className="h-12 px-7 text-base has-[>svg]:px-5"
+                  asChild
+                >
+                  <Link href="/lessons">
+                    <GraduationCap className="mr-2 size-4" /> Start Learning
+                    Path
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="h-12 px-7 text-base has-[>svg]:px-5"
+                  asChild
+                >
+                  <Link href="/articles">
+                    <BookOpen className="mr-2 size-4" /> Browse Articles
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 px-7 text-base has-[>svg]:px-5"
+                  asChild
+                >
+                  <Link href="/reviewer">
+                    <Code2 className="mr-2 size-4" /> Try Code Reviewer
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  className="h-12 px-7 text-base has-[>svg]:px-5"
+                  asChild
+                >
+                  <Link href="/chat">
+                    <MessageCircle className="mr-2 size-4" /> Ask the Chat
+                  </Link>
+                </Button>
+              </div>
+              <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-5 pt-2 text-base text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <BookOpen className="size-5" /> Deep EVM articles
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <GraduationCap className="size-5" /> Structured curriculum
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Bot className="size-5" /> AI Solidity reviewer
+                </span>
+              </div>
+            </div>
+          </TiltContainer>
         </div>
-      </div>
+      </section>
 
       {/* Feature bullets */}
       <div className="grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 text-left">
@@ -111,7 +165,9 @@ export default function Home() {
               Follow Our Structured Learning Path
             </h2>
             <p className="text-muted-foreground">
-              Master blockchain development with our step-by-step curriculum. Start from the fundamentals and progress through EVM, Solidity, and Zilliqa-specific development.
+              Master blockchain development with our step-by-step curriculum.
+              Start from the fundamentals and progress through EVM, Solidity,
+              and Zilliqa-specific development.
             </p>
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2">
@@ -141,7 +197,8 @@ export default function Home() {
               <CardHeader>
                 <CardTitle>Ready to Begin?</CardTitle>
                 <CardDescription>
-                  Each module includes multiple lessons, practical examples, and interactive quizzes to test your knowledge.
+                  Each module includes multiple lessons, practical examples, and
+                  interactive quizzes to test your knowledge.
                 </CardDescription>
               </CardHeader>
               <CardContent>
