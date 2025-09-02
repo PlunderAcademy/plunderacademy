@@ -1,0 +1,44 @@
+---
+id: functions-visibility-access-control
+module: intro-to-solidity
+number: 3.2
+title: 'Functions, Visibility, and Access Control'
+objective: >-
+  Learn how to define functions and implement access control patterns in
+  Solidity.
+slug: functions-visibility-access-control
+---
+
+## Defining Functions
+
+Functions are the interface for users and contracts to interact with your smart contract.
+
+```solidity
+function multiply(uint a, uint b) public pure returns (uint) {
+    return a * b;
+}
+```
+
+- `public` means anyone can call this function externally
+- `private`/`internal` restrict calls to the contract itself or derived contracts
+- `view` functions read state without modifying it
+- `pure` functions neither read nor write state
+
+### Access Control Patterns
+
+To secure sensitive operations, modifiers enforce access restrictions:
+
+```solidity
+address public owner;
+
+modifier onlyOwner() {
+    require(msg.sender == owner, "Not the owner");
+    _;
+}
+
+function changeGreeting(string calldata newGreeting) public onlyOwner {
+    greeting = newGreeting;
+}
+```
+
+`msg.sender` is the caller's address, and combining this with modifiers restricts function execution to designated owners or roles.

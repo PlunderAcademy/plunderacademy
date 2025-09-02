@@ -1,0 +1,22 @@
+---
+id: deploying-your-token
+module: creating-erc20-tokens
+number: 5.3
+title: Deploying Your Token on Zilliqa EVM Testnet
+objective: Deploy your ERC-20 token to the Zilliqa EVM testnet.
+slug: deploying-your-token
+---
+
+## Prerequisites
+
+- MetaMask configured for Zilliqa EVM testnet with a funded test ZIL wallet
+- Familiarity with Remix IDE basics as covered in previous modules
+
+### Deployment Steps
+
+1. Compile MyToken.sol in Remix, targeting Solidity compiler version 0.8.0 or later
+2. Navigate to the "Deploy & Run Transactions" tab
+3. Select "Injected Provider - MetaMask" environment, confirming MetaMask is connected to Zilliqa EVM testnet
+4. Enter your desired initial token supply in the constructor input field (e.g., 1000000 for one million tokens)
+5. Click "Deploy" and confirm the transaction signature in MetaMask
+6. After deployment, save the generated contract address for future interaction

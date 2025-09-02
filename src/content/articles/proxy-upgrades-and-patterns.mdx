@@ -1,0 +1,29 @@
+---
+slug: proxy-upgrades-and-patterns
+title: Upgradeable Contracts and Proxy Patterns
+excerpt: Transparent vs UUPS proxies, storage collisions, and upgrade safety guidelines.
+level: advanced
+tags:
+  - solidity
+  - upgrades
+  - patterns
+hero: /articles/proxy-upgrades.svg
+---
+
+## Proxy Patterns
+
+Choose between Transparent and UUPS based on trust and flexibility. Guard upgradeability with access control and timelocks.
+
+![Proxy pattern diagram](/articles/proxy-upgrades.svg)
+
+- Prevent storage collisions with fixed slots (EIP-1967).
+- Comprehensive upgrade tests and simulations.
+
+```solidity
+// EIP-1967 implementation slot example
+bytes32 constant IMPLEMENTATION_SLOT = 0x360894...;
+```
+
+### Governance
+
+Define clear upgrade owners, timelocks, and emergency procedures.

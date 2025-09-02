@@ -1,0 +1,25 @@
+---
+id: evm-execution-and-bytecode
+module: evm-fundamentals
+number: 2.2
+title: Understanding EVM Execution and Bytecode
+objective: >-
+  Learn how Solidity contracts are compiled into bytecode and executed by the
+  EVM.
+slug: evm-execution-and-bytecode
+---
+
+## Compilation and Contract Interaction
+
+Solidity contracts are compiled into bytecode, a concise, low-level set of instructions executable by EVM. Along with bytecode, the Application Binary Interface (ABI) specifies how external actors call functions, handle inputs, and receive output from contracts.
+
+### EVM Resources and Data Structures
+
+- **Stack:** A temporary, last-in-first-out data structure for intermediate values during execution
+- **Memory:** A volatile byte array used during the contract's runtime, cleaned up after execution ends
+- **Storage:** A persistent key-value store unique to each contract, used to store state variables on-chain
+- **Calldata:** Read-only data passed with transactions or calls, serving as function input parameters
+
+### Execution Flow
+
+EVM processes bytecode sequentially except for control instructions like jumps or external contract calls. It executes opcodes that perform arithmetic operations, control flow, storage access, and communicate with other contracts or users. Events emitted during execution provide real-time data visibility.

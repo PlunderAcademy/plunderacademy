@@ -1,0 +1,36 @@
+---
+id: writing-your-token-contract
+module: creating-erc20-tokens
+number: 5.2
+title: Writing Your Token Contract
+objective: >-
+  Learn how to write a secure ERC-20 token contract using OpenZeppelin
+  libraries.
+slug: writing-your-token-contract
+---
+
+## Step 1: Using OpenZeppelin's Secure Token Templates
+
+OpenZeppelin provides battle-tested smart contract libraries including the ERC-20 implementation. This approach prevents security pitfalls in token development.
+
+1. Open Remix IDE and create a new Solidity file named MyToken.sol
+2. Paste the following contract code:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract MyToken is ERC20 {
+    constructor(uint256 initialSupply) ERC20("MyToken", "MTK") {
+        // Mint the initial supply to the deployer's address
+        _mint(msg.sender, initialSupply * (10 ** decimals()));
+    }
+}
+```
+
+- Modify "MyToken" and "MTK" to reflect your token's name and symbol
+- initialSupply represents the total tokens you mint initially, counted in whole units
+
+Using OpenZeppelin's ERC-20 contracts ensures your token inherits secure, compliant functionality automatically.

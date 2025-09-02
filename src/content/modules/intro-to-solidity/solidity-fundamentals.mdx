@@ -1,0 +1,40 @@
+---
+id: solidity-fundamentals
+module: intro-to-solidity
+number: 3.1
+title: 'Solidity Fundamentals: Getting Started'
+objective: >-
+  Learn the basics of Solidity syntax, data types, and foundational constructs
+  for building robust and secure decentralized applications.
+slug: solidity-fundamentals
+---
+
+## Introduction
+
+Solidity is the primary programming language for writing smart contracts on Ethereum and all EVM-compatible blockchains, including Zilliqa. It is statically typed and contract-oriented. Solidity's syntax draws inspiration from JavaScript and C++ but is specifically designed for secure and deterministic execution in decentralized environments.
+
+### Structure of a Solidity Contract
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract HelloWorld {
+    string public greeting = "Hello, Zilliqa!";
+    
+    function setGreeting(string calldata _greeting) public {
+        greeting = _greeting;
+    }
+}
+```
+
+- `contract HelloWorld { ... }` defines the contract as a class-like blueprint
+- `string public greeting` declares a state variable stored permanently on-chain
+- The `setGreeting` function allows external users to update the greeting
+
+### Key Solidity Types
+
+- **uint:** Unsigned integer for non-negative whole numbers
+- **address:** Blockchain account identifier, used for contracts or external users
+- **bool:** Boolean logic true or false
+- **string:** Text data encoded in UTF-8

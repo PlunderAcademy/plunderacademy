@@ -1,0 +1,34 @@
+---
+slug: zilliqa-wallets-and-rpc
+title: Connecting Wallets and RPC on Zilliqa
+excerpt: How to connect with RainbowKit and wagmi, pick RPCs, and query chain data.
+level: beginner
+tags:
+  - zilliqa
+  - wallets
+  - rpc
+hero: /articles/zilliqa-wallets-rpc.svg
+---
+
+## Wallets & RPC on Zilliqa
+
+Use WalletConnect via RainbowKit, and viem to talk to Zilliqa EVM. Keep your RPC keys secure and prefer provider failover in production.
+
+![Wallets and RPC flow](/articles/zilliqa-wallets-rpc.svg)
+
+### Recommended Stack
+
+- **wagmi + RainbowKit** for connections and UI.
+- **viem** for robust RPC calls.
+- **WalletConnect** project ID via NEXT_PUBLIC env.
+
+```javascript
+// viem example
+import { createPublicClient, http } from 'viem';
+import { zilliqa } from 'viem/chains';
+const client = createPublicClient({ chain: zilliqa, transport: http() });
+```
+
+### Queries
+
+Read contract state with `client.readContract`, and simulate writes with `client.simulateContract` before sending.

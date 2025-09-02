@@ -1,0 +1,28 @@
+---
+id: exploring-and-interacting
+module: creating-erc20-tokens
+number: 5.4
+title: Exploring and Interacting with Your Token
+objective: Learn how to interact with your deployed token and add it to MetaMask.
+practicalTakeaway: >-
+  Creating a fungible token is a foundational blockchain development skill.
+  Leveraging OpenZeppelin's robust ERC-20 framework accelerates development
+  while integrating security best practices.
+slug: exploring-and-interacting
+---
+
+## Verification and Tracking
+
+Use the Zilliqa EVM block explorer to input your contract address and view your token, contract code, and transaction history.
+
+### Checking Balances
+
+Within Remix's deployed contracts panel, call balanceOf with your wallet address. This should return your full token balance considering decimals (usually 18).
+
+### Token Transfers
+
+Invoke transfer in Remix, entering the recipient's address and the amount to transfer (adjusted by decimals). Verify the recipient's updated balance on Remix or their MetaMask wallet.
+
+### Adding Token to MetaMask
+
+Add the deployed token contract address and symbol as a custom token in MetaMask. This enables seeing token balances directly in your wallet and enables transfers or dApp interactions.

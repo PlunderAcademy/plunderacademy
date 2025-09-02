@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { articles as allArticles } from "@/data/articles";
+import { getArticles, type ArticleMeta } from "@/lib/mdx";
 
-export default function ArticlesPage() {
+export default async function ArticlesPage() {
+  const allArticles = await getArticles();
   const byLevel = {
     beginner: allArticles.filter((a) => a.level === "beginner"),
     intermediate: allArticles.filter((a) => a.level === "intermediate"),
     advanced: allArticles.filter((a) => a.level === "advanced"),
   } as const;
 
-  const renderList = (list: typeof allArticles) => (
+  const renderList = (list: ArticleMeta[]) => (
     <ul className="grid grid-cols-1 gap-6 md:grid-cols-2">
       {list.map((a) => (
         <li key={a.slug} className="rounded-xl border p-6">

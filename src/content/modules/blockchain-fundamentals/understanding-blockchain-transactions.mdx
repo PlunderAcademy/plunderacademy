@@ -1,0 +1,45 @@
+---
+id: understanding-blockchain-transactions
+module: blockchain-fundamentals
+number: 1.4
+title: Understanding Blockchain Transactions and Their Lifecycle
+objective: >-
+  Understand the detailed structure of blockchain transactions and the
+  step-by-step lifecycle from initiation to final confirmation on the
+  blockchain.
+practicalTakeaway: >-
+  Understanding transactions' anatomy and lifecycle is essential for developing,
+  debugging, and optimizing decentralized applications on platforms like Zilliqa
+  2.0 and Ethereum.
+slug: understanding-blockchain-transactions
+---
+
+## What Is a Blockchain Transaction?
+
+A blockchain transaction is a digitally signed message that represents the transfer of value or interaction with smart contract logic on the blockchain. It is the fundamental data unit that moves assets, triggers program execution, or updates state within the decentralized network.
+
+### Critical Transaction Components
+
+- **Sender Address:** The public key or address initiating the transaction
+- **Receiver Address:** The destination address, which could be another user or a smart contract
+- **Amount:** The value being transferred, typically expressed in the native cryptocurrency
+- **Data Payload:** Optional data included to invoke specific contract functions or actions
+- **Digital Signature:** A cryptographic signature proving authorization and preventing forgery
+- **Nonce:** A sequential number preventing replay attacks and ensuring transaction order
+- **Gas Limit and Gas Price:** Specifications of computational effort payment
+
+### The Transaction Lifecycle
+
+1. **Creation:** The sender creates a transaction digitally signed with their private key.
+2. **Broadcast:** The transaction is sent to the blockchain peer-to-peer network and relayed to nodes.
+3. **Validation:** Network nodes verify authenticity, check signature, ensure sufficient balance, and correct nonce.
+4. **Inclusion in a Block:** Valid transactions are bundled into a new block by validators or miners.
+5. **Consensus and Finality:** The network reaches consensus on the validity of the block containing the transaction.
+6. **State Update:** The blockchain's state updates with the effects of the transaction.
+
+### Gas Fees: Incentivizing and Securing the Network
+
+- Gas serves as the fuel for executing transaction operations and smart contract instructions
+- Fees go to validators or miners as compensation for maintaining network security
+- Users specify maximum gas they're willing to pay; exceeded limits revert transactions
+- In Zilliqa EVM, gas is paid in ZIL, benefiting from efficient network design

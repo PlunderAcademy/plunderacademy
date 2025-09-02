@@ -1,0 +1,49 @@
+---
+id: data-structures
+module: intro-to-solidity
+number: 3.3
+title: 'Data Structures: Structs, Arrays, Mappings'
+objective: >-
+  Learn about complex data structures in Solidity including structs, arrays, and
+  mappings.
+slug: data-structures
+---
+
+## Structs
+
+Group related data fields:
+
+```solidity
+struct Person {
+    string name;
+    uint age;
+}
+```
+
+## Arrays
+
+Lists of data:
+
+```solidity
+Person[] public people;
+```
+
+You can add, remove, or iterate over arrays to manage collections.
+
+## Mappings
+
+Key-value stores resembling hash maps:
+
+```solidity
+mapping(address => uint) public balances;
+```
+
+Mappings efficiently store associations like user balances or permissions.
+
+### Interactive Assignment
+
+Expand HelloWorld to hold personalized greetings per user:
+
+```solidity
+mapping(address => string) public greetings;
+```

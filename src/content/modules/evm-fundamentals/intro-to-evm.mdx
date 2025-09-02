@@ -1,0 +1,32 @@
+---
+id: intro-to-evm
+module: evm-fundamentals
+number: 2.1
+title: Introduction to Ethereum Virtual Machine (EVM)
+objective: >-
+  Gain a thorough understanding of Ethereum Virtual Machine, the virtualized
+  computing environment that executes smart contracts for Ethereum-compatible
+  blockchains including Zilliqa 2.0.
+practicalTakeaway: >-
+  The Ethereum Virtual Machine is the core runtime that enables the execution of
+  trustless, decentralized applications on EVM-compatible blockchains.
+slug: intro-to-evm
+---
+
+## What is Ethereum Virtual Machine?
+
+Ethereum Virtual Machine is a decentralized virtual computer that runs executable code on thousands of nodes simultaneously across the blockchain network. It acts as a deterministic, sandboxed environment that abstracts away hardware and software differences between nodes to deliver a consistent runtime for all smart contracts.
+
+### Core Characteristics of EVM
+
+- **Deterministic Execution:** Regardless of who runs smart contract code, the output remains the same, ensuring network consistency.
+- **Isolation:** Contracts operate in a protected sandbox, isolating their execution from the underlying node environment.
+- **Gas Metering:** Each computational step consumes a quantifiable amount of gas. This mechanism restricts infinite loops and allocates resources efficiently.
+- **Stack-Based Computing:** EVM uses a stack architecture, operating similar to an assembly language.
+- **Memory and Storage:**
+  - Memory is temporary and reset after contract execution
+  - Storage is permanent and stored on-chain, holding contract state variables securely
+
+### Why Does Zilliqa Use the EVM?
+
+Zilliqa 2.0's adoption of the EVM provides seamless compatibility with Ethereum's vast developer ecosystem. Solidity smart contracts designed for Ethereum can thus be deployed to Zilliqa with minimal changes. Zilliqa complements EVM with its sharding architecture, which enables higher transaction throughput, lower fees, and fast confirmation times.
