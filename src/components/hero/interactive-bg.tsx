@@ -16,7 +16,7 @@ export function InteractiveHeroBg({ className }: Props) {
     if (!el) return;
 
     let raf = 0;
-    let target = { x: 0, y: 0 };
+    const target = { x: 0, y: 0 };
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
