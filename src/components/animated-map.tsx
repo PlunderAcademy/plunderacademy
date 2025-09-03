@@ -1,29 +1,56 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Play, RotateCcw, Pause, CheckCircle2, Wallet } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Play, RotateCcw, Pause, CheckCircle2, Wallet, BookOpen, Shield, Gauge, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Coordinates for the path points (as percentages of the map dimensions)
-// Adjusted positions based on user requirements
+// Updated to match the image layout with 5 numbered locations
+// progress: exact percentage of path line to draw to reach this location
 const pathPoints = [
-  { x: 85, y: 85, label: "Start (Boat)" }, // Bottom right - boat position
-  { x: 75, y: 75, label: "Location 1" },   // Location 1 - right side
-  { x: 35, y: 55, label: "Location 2" },   // Location 2 - moved down to level with old 3
-  { x: 65, y: 45, label: "Location 3" },   // Location 3 - moved to level of old 2
-  { x: 45, y: 25, label: "Location 4" },   // Location 4 (volcano)
-  { x: 75, y: 15, label: "Location 5" },   // Location 5 (castle)
+  { x: 35, y: 85, label: "Location 1", progress: 0 },   // Right of the boat
+  { x: 35, y: 34, label: "Location 2", progress: 35 },   // In front of wood house
+  { x: 70, y: 27, label: "Location 3", progress: 60 },   // Castle door
+  { x: 55, y: 50, label: "Location 4", progress: 80 },   // Base of right side of temple
+  { x: 71, y: 76, label: "Location 5", progress: 100 },  // Center of monument
 ];
 
-// Create path string for SVG
+// Create curved path string for SVG
 const createPathString = (points: typeof pathPoints) => {
-  return points.reduce((path, point, index) => {
-    const command = index === 0 ? 'M' : 'L';
-    return `${path} ${command} ${point.x} ${point.y}`;
-  }, '').trim();
+  if (points.length === 0) return '';
+  
+  let path = `M ${points[0].x} ${points[0].y}`;
+  
+  for (let i = 1; i < points.length; i++) {
+    const current = points[i];
+    const previous = points[i - 1];
+    
+    // Calculate control points for smooth curves
+    const midX = (previous.x + current.x) / 2;
+    const midY = (previous.y + current.y) / 2;
+    
+    // Add some curve offset for more natural path
+    let offsetX = (current.y - previous.y) * 0.2;
+    let offsetY = (previous.x - current.x) * 0.2;
+    
+    // Invert curve between points 1 and 2 (array indices 0 and 1)
+    if (i === 1) {
+      offsetX = -offsetX;
+      offsetY = -offsetY;
+    }
+    
+    // Use quadratic curve with calculated control point
+    path += ` Q ${midX + offsetX} ${midY + offsetY} ${current.x} ${current.y}`;
+  }
+  
+  return path;
 };
 
 // Achievement interfaces (from achievements-demo.tsx)
@@ -43,6 +70,66 @@ interface WalletAchievementsResponse {
   achievements: WalletAchievement[];
 }
 
+interface NFTMetadata {
+  name: string;
+  description: string;
+  image: string;
+  attributes: Array<{
+    trait_type: string;
+    value: string | number;
+  }>;
+}
+
+interface Achievement {
+  taskCode: number;
+  title: string;
+  description: string;
+  category: "security" | "gas" | "fundamentals" | "advanced";
+}
+
+// Achievement definitions matching the demo
+const achievements: Achievement[] = [
+  {
+    taskCode: 1,
+    title: "Training Quiz Master",
+    description: "Complete the comprehensive training quiz with perfect scores",
+    category: "fundamentals"
+  },
+  {
+    taskCode: 2,
+    title: "On-Chain Pioneer", 
+    description: "Successfully create and submit a transaction on the blockchain",
+    category: "advanced"
+  },
+  {
+    taskCode: 3,
+    title: "Security Sentinel",
+    description: "Master smart contract security best practices",
+    category: "security"
+  },
+  {
+    taskCode: 4,
+    title: "Gas Optimization Expert",
+    description: "Optimize contract gas usage to professional standards",
+    category: "gas"
+  },
+  {
+    taskCode: 5,
+    title: "Advanced Developer",
+    description: "Complete advanced blockchain development challenges",
+    category: "advanced"
+  }
+];
+
+// Lesson information for uncompleted locations
+const lessonInfo: Record<number, string> = {
+  1: "Solidity Basics",
+  2: "Transaction On Chain", 
+  3: "PLACEHOLDER - info doesn't exist",
+  4: "PLACEHOLDER - info doesn't exist",
+  5: "PLACEHOLDER - info doesn't exist"
+};
+
 interface AnimatedMapProps {
   autoStart?: boolean;
   showControls?: boolean;
@@ -50,6 +137,7 @@ interface AnimatedMapProps {
 }
 
 export function AnimatedMap({ autoStart = false, showControls = true, mode = "demo" }: AnimatedMapProps) {
+  const router = useRouter();
   const { address } = useAccount();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -60,10 +148,65 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
   const [isLoadingAchievements, setIsLoadingAchievements] = useState(false);
   const [completedLocations, setCompletedLocations] = useState<Set<number>>(new Set());
   const [maxCompletedLocation, setMaxCompletedLocation] = useState(0);
+  
+  // Achievement metadata
+  const [achievementMetadata, setAchievementMetadata] = useState<Record<string, NFTMetadata>>({});
+  const [loadingMetadata, setLoadingMetadata] = useState<Set<string>>(new Set());
+  
+  // No modal needed - info shown on image hover
 
   // Animation timing
   const animationDuration = 8000; // 8 seconds total
-  const stepDuration = animationDuration / (pathPoints.length - 1);
+
+  // Fetch NFT metadata
+  const fetchNFTMetadata = useCallback(async (metadataUri: string, achievementNumber: string) => {
+    if (achievementMetadata[achievementNumber] || loadingMetadata.has(achievementNumber)) {
+      return;
+    }
+
+    setLoadingMetadata(prev => new Set(prev).add(achievementNumber));
+    
+    try {
+      const response = await fetch(metadataUri);
+      
+      if (!response.ok) {
+        throw new Error(`Metadata fetch error: ${response.status}`);
+      }
+
+      const metadata: NFTMetadata = await response.json();
+      setAchievementMetadata(prev => ({
+        ...prev,
+        [achievementNumber]: metadata
+      }));
+    } catch (error) {
+      console.error(`Error fetching metadata for ${achievementNumber}:`, error);
+    } finally {
+      setLoadingMetadata(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(achievementNumber);
+        return newSet;
+      });
+    }
+  }, [achievementMetadata, loadingMetadata]);
+
+  // Helper functions for category styling
+  const getCategoryIcon = (category: Achievement["category"]) => {
+    switch (category) {
+      case "security": return <Shield className="size-4" />;
+      case "gas": return <Gauge className="size-4" />;
+      case "fundamentals": return <BookOpen className="size-4" />;
+      case "advanced": return <Trophy className="size-4" />;
+    }
+  };
+
+  const getCategoryColor = (category: Achievement["category"]) => {
+    switch (category) {
+      case "security": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      case "gas": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "fundamentals": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "advanced": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+    }
+  };
 
   // Fetch wallet achievements
   const fetchWalletAchievements = useCallback(async () => {
@@ -80,15 +223,22 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
       const data: WalletAchievementsResponse = await response.json();
       setWalletAchievements(data.achievements);
       
-      // Map achievements to locations (taskCode 1-5 corresponds to locations 0-5 in our array)
+      // Fetch metadata for each achievement
+      data.achievements.forEach(achievement => {
+        if (achievement.isClaimed && achievement.metadataUri) {
+          fetchNFTMetadata(achievement.metadataUri, achievement.achievementNumber);
+        }
+      });
+      
+      // Map achievements to locations (taskCode 1-5 corresponds to locations 0-4 in our array)
       const completed = new Set<number>();
       let maxLocation = 0;
       
       data.achievements.forEach(achievement => {
         if (achievement.isClaimed && achievement.tokenId >= 1 && achievement.tokenId <= 5) {
-          // taskCode/tokenId 1-5 maps to array indices 1-5 (boat is at index 0)
-          completed.add(achievement.tokenId);
-          maxLocation = Math.max(maxLocation, achievement.tokenId);
+          // taskCode/tokenId 1-5 maps to array indices 0-4 (no start position)
+          completed.add(achievement.tokenId - 1);
+          maxLocation = Math.max(maxLocation, achievement.tokenId - 1);
         }
       });
       
@@ -96,8 +246,8 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
       setMaxCompletedLocation(maxLocation);
       
       // Automatically show progress line to current achievement level
-      if (maxLocation > 0) {
-        const targetProgress = (maxLocation / (pathPoints.length - 1)) * 100;
+      if (maxLocation >= 0 && completedLocations.size > 0) {
+        const targetProgress = pathPoints[maxLocation]?.progress || 0;
         setProgress(targetProgress);
         setCurrentStep(maxLocation);
       }
@@ -107,7 +257,7 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
     } finally {
       setIsLoadingAchievements(false);
     }
-  }, [address, mode]);
+  }, [address, mode, fetchNFTMetadata, completedLocations.size]);
 
   // Fetch achievements when component mounts or address changes
   useEffect(() => {
@@ -121,6 +271,15 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
       setMaxCompletedLocation(0);
     }
   }, [address, mode, fetchWalletAchievements]);
+
+  // Only fetch metadata for claimed achievements to avoid 404s
+  // useEffect(() => {
+  //   achievements.forEach(achievement => {
+  //     const achievementNumber = achievement.taskCode.toString().padStart(4, "0");
+  //     const metadataUri = `https://static.plunderswap.com/training/${achievementNumber}.json`;
+  //     fetchNFTMetadata(metadataUri, achievementNumber);
+  //   });
+  // }, [fetchNFTMetadata]);
 
   // Handle autoStart prop
   useEffect(() => {
@@ -142,7 +301,15 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
           return 100;
         }
         
-        const newStep = Math.floor((newProgress / 100) * (pathPoints.length - 1));
+        // Find which step we should be on based on progress values
+        let newStep = 0;
+        for (let i = 0; i < pathPoints.length; i++) {
+          if (newProgress >= pathPoints[i].progress) {
+            newStep = i;
+          } else {
+            break;
+          }
+        }
         setCurrentStep(newStep);
         
         return newProgress;
@@ -170,7 +337,7 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
   };
 
   const playToRealProgress = () => {
-    if (mode === "real" && maxCompletedLocation > 0) {
+    if (mode === "real" && maxCompletedLocation >= 0 && completedLocations.size > 0) {
       setIsPlaying(false);
       
       // Animate from start to current progress
@@ -178,7 +345,7 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
       setCurrentStep(0);
       
       setTimeout(() => {
-        const targetProgress = (maxCompletedLocation / (pathPoints.length - 1)) * 100;
+        const targetProgress = pathPoints[maxCompletedLocation]?.progress || 0;
         setProgress(targetProgress);
         setCurrentStep(maxCompletedLocation);
       }, 100);
@@ -190,13 +357,11 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
       return locationIndex <= currentStep ? "completed" : "pending";
     } else {
       // For real mode: check if this achievement is claimed
-      if (locationIndex === 0) return "completed"; // Boat/start is always completed
       return completedLocations.has(locationIndex) ? "completed" : "pending";
     }
   };
 
   const pathString = createPathString(pathPoints);
-  const currentPathLength = progress / 100;
 
   return (
     <div className="w-full space-y-6">
@@ -223,7 +388,7 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
                 )}
               </Button>
               
-              {mode === "real" && address && maxCompletedLocation > 0 && (
+              {mode === "real" && address && maxCompletedLocation >= 0 && completedLocations.size > 0 && (
                 <Button
                   onClick={playToRealProgress}
                   size="sm"
@@ -257,7 +422,7 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
               ) : (
                 <>
                   <span>
-                    Location: {currentStep + 1} of {pathPoints.length}
+                    Location: {Math.min(currentStep + 1, pathPoints.length)} of {pathPoints.length}
                   </span>
                   <span>
                     Progress: {Math.round(progress)}%
@@ -278,13 +443,13 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
       )}
 
       {/* Map Container */}
-      <Card className="relative overflow-hidden max-w-2xl mx-auto">
-        <div className="relative w-full aspect-[3/2] bg-gradient-to-b from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
+      <Card className="relative overflow-hidden mx-auto w-full">
+        <div className="relative w-full h-[90vh]">
           {/* Map Image */}
           <img
-            src="/map.png"
+            src="/map.webp"
             alt="Training Progress Map"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
           
           {/* SVG Overlay for path and markers */}
@@ -355,8 +520,10 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
             {pathPoints.map((point, index) => {
               const locationStatus = getLocationStatus(index);
               const isActive = index === currentStep && isPlaying;
+
+              const isCompleted = locationStatus === "completed";
               
-              return (
+              const markerContent = (
                 <g key={index}>
                   {/* Location dot */}
                   <circle
@@ -365,44 +532,162 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
                     r="1.8"
                     className={cn(
                       "transition-all duration-500",
-                      locationStatus === "completed"
+                      isCompleted
                         ? "fill-green-500 stroke-green-700" 
                         : "fill-gray-400 stroke-gray-600",
-                      isActive && "animate-pulse"
+                      isActive && "animate-pulse",
+                      isCompleted && "cursor-pointer"
                     )}
                     strokeWidth="0.8"
                   />
                   
-                  {/* Checkmark for completed achievements in real mode */}
-                  {mode === "real" && locationStatus === "completed" && index > 0 && (
-                    <text
-                      x={point.x}
-                      y={point.y + 1}
-                      className="fill-white text-center"
-                      textAnchor="middle"
-                      fontSize="2.5"
-                      fontWeight="bold"
-                    >
-                      ✓
-                    </text>
-                  )}
-                  
-                  {/* Boat symbol for start position */}
-                  {index === 0 && (
-                    <text
-                      x={point.x}
-                      y={point.y + 1}
-                      className="fill-white text-center"
-                      textAnchor="middle"
-                      fontSize="2.5"
-                    >
-                      ⚓
-                    </text>
-                  )}
+                  {/* Location number or checkmark */}
+                  <text
+                    x={point.x}
+                    y={point.y + 1}
+                    className={cn(
+                      "fill-white text-center",
+                      isCompleted && "cursor-pointer"
+                    )}
+                    textAnchor="middle"
+                    fontSize="2.5"
+                    fontWeight="bold"
+                  >
+                    {mode === "real" && isCompleted ? "✓" : index + 1}
+                  </text>
                 </g>
               );
+
+              return markerContent;
             })}
           </svg>
+          
+          {/* Hover cards for all locations */}
+          {pathPoints.map((point, index) => {
+            const locationStatus = getLocationStatus(index);
+            const achievementNumber = (index + 1).toString().padStart(4, "0");
+            const achievement = achievements.find(a => a.taskCode === index + 1);
+            const walletAchievement = walletAchievements.find(wa => wa.tokenId === index + 1 && wa.isClaimed);
+            const metadata = achievementMetadata[achievementNumber];
+            const isCompleted = locationStatus === "completed";
+            const lessonTitle = lessonInfo[index + 1];
+            
+            return (
+              <HoverCard key={`hover-${index}`}>
+                <HoverCardTrigger asChild>
+                  <div 
+                    className="absolute cursor-pointer"
+                    style={{
+                      left: `${point.x}%`,
+                      top: `${point.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      width: '20px',
+                      height: '20px',
+                      zIndex: 10
+                    }}
+                    onClick={() => router.push('/lessons')}
+                  />
+                </HoverCardTrigger>
+                <HoverCardContent className="w-96">
+                  {isCompleted && mode === "real" && metadata?.image ? (
+                    // Completed achievement - show NFT image with metadata
+                    <div className="space-y-3">
+                      {/* Header */}
+                      <div className="flex items-center justify-between">
+                        <Badge className={getCategoryColor(achievement!.category)}>
+                          {getCategoryIcon(achievement!.category)}
+                          <span className="ml-1 capitalize">{achievement!.category}</span>
+                        </Badge>
+                        <CheckCircle2 className="size-5 text-green-500" />
+                      </div>
+                      
+                      {/* Full-size NFT Image with Hover Metadata */}
+                      <div className="flex justify-center">
+                        <div className="relative w-80 h-80 rounded-lg overflow-hidden bg-muted group">
+                          <Image
+                            src={metadata.image}
+                            alt={metadata.name || achievement!.title}
+                            fill
+                            className="object-contain"
+                            unoptimized
+                          />
+                          
+                          {/* Hover Overlay with Metadata */}
+                          <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4 text-white">
+                            {/* Top Section */}
+                            <div className="space-y-2">
+                              <div>
+                                <h4 className="font-semibold text-lg">{metadata?.name || achievement!.title}</h4>
+                                <p className="text-sm text-gray-200 mt-1">
+                                  {metadata?.description || achievement!.description}
+                                </p>
+                              </div>
+
+                              {/* Attributes */}
+                              {metadata?.attributes && metadata.attributes.length > 0 && (
+                                <div className="space-y-1">
+                                  <div className="text-xs font-medium text-gray-300">Attributes:</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {metadata.attributes.slice(0, 4).map((attr, attrIndex) => (
+                                      <span
+                                        key={attrIndex}
+                                        className="text-xs bg-white/20 px-2 py-1 rounded"
+                                      >
+                                        {attr.trait_type}: {attr.value}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Bottom Section */}
+                            <div className="space-y-1 text-xs text-gray-300">
+                              <div>Achievement #{achievementNumber}</div>
+                              {walletAchievement && (
+                                <>
+                                  <div>Claimed: {new Date(walletAchievement.createdAt).toLocaleDateString()}</div>
+                                  <div>Token ID: #{walletAchievement.tokenId}</div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Title */}
+                      <div className="text-center">
+                        <h4 className="font-semibold text-lg">
+                          {metadata?.name || achievement!.title}
+                        </h4>
+                      </div>
+                    </div>
+                  ) : (
+                    // Uncompleted lesson - show lesson info
+                    <div className="space-y-3">
+                      {/* Header */}
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="bg-muted">
+                          <BookOpen className="size-4 mr-1" />
+                          Lesson {index + 1}
+                        </Badge>
+                        <div className="text-sm text-muted-foreground">Click to start</div>
+                      </div>
+                      
+                      {/* Lesson Info */}
+                      <div className="text-center p-8 bg-muted/30 rounded-lg">
+                        <div className="text-6xl mb-4">{index + 1}</div>
+                        <h4 className="font-semibold text-lg mb-2">{lessonTitle}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {isCompleted ? "Achievement completed!" : "Click to start this lesson"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </HoverCardContent>
+              </HoverCard>
+            );
+          })}
         </div>
         
         {/* Current location info */}
@@ -412,9 +697,9 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
               <p className="text-sm font-medium">
                 Your Progress: {completedLocations.size}/5 Achievements
               </p>
-              {maxCompletedLocation > 0 && (
+              {maxCompletedLocation >= 0 && completedLocations.size > 0 && (
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Latest: Location {maxCompletedLocation} Complete! ✓
+                  Latest: Location {maxCompletedLocation + 1} Complete! ✓
                 </p>
               )}
               {completedLocations.size === 0 && (
