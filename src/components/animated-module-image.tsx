@@ -2,21 +2,19 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Play, Pause, RotateCcw, Zap } from "lucide-react";
 
 interface AnimatedModuleImageProps {
   imageNumber: number;
   autoStart?: boolean;
   title?: string;
-  description?: string;
 }
 
 export function AnimatedModuleImage({ 
   imageNumber, 
   autoStart = true,
-  title = "Adventure Scene",
-  description = "Mystical effects bringing the scene to life"
+  title = "Adventure Scene"
 }: AnimatedModuleImageProps) {
   const [isAnimating, setIsAnimating] = useState(autoStart);
 
@@ -35,8 +33,8 @@ export function AnimatedModuleImage({
       case 1:
         return {
           theme: "volcanic",
-          effects: ["lightning", "volcanoGlow", "smoke", "embers", "ambientFire"],
-          description: "⚡ Lightning strikes, volcano glows, embers dance"
+          effects: ["lightning", "volcanoGlow", "smoke", "embers", "coins", "ambientFire"],
+          description: "⚡ Lightning strikes, volcano glows, coins sparkle around temple"
         };
       default:
         return {
@@ -138,6 +136,22 @@ export function AnimatedModuleImage({
               <div className="absolute top-[45%] right-[20%] w-[3px] h-[3px] bg-red-300 rounded-full ember animate-ember-float-5"></div>
             </div>
 
+            {/* Temple Coin Effects */}
+            <div className="absolute inset-0">
+              {/* Coins around temple area - more concentrated around pyramid/temple structure */}
+              <div className="absolute top-[45%] right-[35%] w-[4px] h-[4px] bg-yellow-300 rounded-full coin-glow animate-coin-float-1"></div>
+              <div className="absolute top-[50%] right-[30%] w-[3px] h-[3px] bg-amber-400 rounded-full coin-glow animate-coin-float-2"></div>
+              <div className="absolute top-[55%] right-[40%] w-[4px] h-[4px] bg-yellow-400 rounded-full coin-glow animate-coin-float-3"></div>
+              <div className="absolute top-[40%] right-[25%] w-[3px] h-[3px] bg-yellow-200 rounded-full coin-glow animate-coin-float-4"></div>
+              <div className="absolute top-[60%] right-[32%] w-[3px] h-[3px] bg-yellow-300 rounded-full coin-glow animate-coin-float-5"></div>
+              <div className="absolute top-[48%] right-[45%] w-[4px] h-[4px] bg-amber-300 rounded-full coin-glow animate-coin-float-6"></div>
+              <div className="absolute top-[42%] right-[38%] w-[3px] h-[3px] bg-yellow-400 rounded-full coin-glow animate-coin-float-7"></div>
+              
+              {/* Some coins on temple steps/structure */}
+              <div className="absolute top-[65%] right-[35%] w-[3px] h-[3px] bg-yellow-300 rounded-full coin-glow animate-coin-float-8"></div>
+              <div className="absolute top-[38%] right-[42%] w-[4px] h-[4px] bg-amber-400 rounded-full coin-glow animate-coin-float-9"></div>
+            </div>
+
             {/* Ambient Fire Glow */}
             <div className="absolute inset-0 bg-gradient-to-b from-red-600/5 via-orange-500/3 to-yellow-400/5 animate-ambient-fire"></div>
             
@@ -173,6 +187,11 @@ export function AnimatedModuleImage({
               filter: blur(0.3px);
             }
             
+            .coin-glow {
+              box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+              filter: blur(0.2px);
+            }
+            
             .animate-effects .lightning {
               animation-play-state: running;
             }
@@ -190,6 +209,10 @@ export function AnimatedModuleImage({
             }
             
             .animate-effects .ember {
+              animation-play-state: running;
+            }
+            
+            .animate-effects .coin-glow {
               animation-play-state: running;
             }
             
@@ -295,6 +318,57 @@ export function AnimatedModuleImage({
               50% { opacity: 0.5; }
             }
             
+            @keyframes coin-float-1 {
+              0%, 100% { transform: translateY(0px) translateX(0px) scale(1); opacity: 0.9; }
+              33% { transform: translateY(-8px) translateX(3px) scale(1.1); opacity: 0.6; }
+              66% { transform: translateY(-4px) translateX(-2px) scale(0.9); opacity: 1; }
+            }
+            
+            @keyframes coin-float-2 {
+              0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); opacity: 0.8; }
+              50% { transform: translateY(-12px) translateX(5px) rotate(180deg); opacity: 1; }
+            }
+            
+            @keyframes coin-float-3 {
+              0%, 100% { transform: translateY(0px) translateX(0px) scale(1); opacity: 0.7; }
+              25% { transform: translateY(-6px) translateX(4px) scale(1.2); opacity: 0.9; }
+              75% { transform: translateY(-10px) translateX(-3px) scale(0.8); opacity: 0.5; }
+            }
+            
+            @keyframes coin-float-4 {
+              0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg) scale(1); opacity: 0.9; }
+              40% { transform: translateY(-7px) translateX(6px) rotate(120deg) scale(1.1); opacity: 0.4; }
+              80% { transform: translateY(-15px) translateX(-4px) rotate(240deg) scale(0.9); opacity: 0.8; }
+            }
+            
+            @keyframes coin-float-5 {
+              0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.8; }
+              30% { transform: translateY(-9px) translateX(-5px); opacity: 0.3; }
+              70% { transform: translateY(-5px) translateX(7px); opacity: 1; }
+            }
+            
+            @keyframes coin-float-6 {
+              0%, 100% { transform: translateY(0px) translateX(0px) scale(1) rotate(0deg); opacity: 0.9; }
+              60% { transform: translateY(-11px) translateX(2px) scale(1.3) rotate(360deg); opacity: 0.5; }
+            }
+            
+            @keyframes coin-float-7 {
+              0%, 100% { transform: translateY(0px) translateX(0px) scale(1); opacity: 0.7; }
+              45% { transform: translateY(-6px) translateX(-6px) scale(0.8); opacity: 1; }
+              85% { transform: translateY(-13px) translateX(4px) scale(1.1); opacity: 0.6; }
+            }
+            
+            @keyframes coin-float-8 {
+              0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); opacity: 0.8; }
+              35% { transform: translateY(-8px) translateX(8px) rotate(90deg); opacity: 0.4; }
+              65% { transform: translateY(-12px) translateX(-2px) rotate(270deg); opacity: 0.9; }
+            }
+            
+            @keyframes coin-float-9 {
+              0%, 100% { transform: translateY(0px) translateX(0px) scale(1); opacity: 0.9; }
+              50% { transform: translateY(-14px) translateX(-7px) scale(1.2); opacity: 0.3; }
+            }
+            
             .animate-lightning-1 {
               animation: lightning-1 12s infinite;
             }
@@ -360,6 +434,42 @@ export function AnimatedModuleImage({
               animation: ember-float-5 11s ease-in-out infinite 1s;
             }
             
+            .animate-coin-float-1 {
+              animation: coin-float-1 6s ease-in-out infinite;
+            }
+            
+            .animate-coin-float-2 {
+              animation: coin-float-2 7s ease-in-out infinite 1s;
+            }
+            
+            .animate-coin-float-3 {
+              animation: coin-float-3 8s ease-in-out infinite 2s;
+            }
+            
+            .animate-coin-float-4 {
+              animation: coin-float-4 6.5s ease-in-out infinite 0.5s;
+            }
+            
+            .animate-coin-float-5 {
+              animation: coin-float-5 7.5s ease-in-out infinite 3s;
+            }
+            
+            .animate-coin-float-6 {
+              animation: coin-float-6 8.5s ease-in-out infinite 1.5s;
+            }
+            
+            .animate-coin-float-7 {
+              animation: coin-float-7 6.8s ease-in-out infinite 2.5s;
+            }
+            
+            .animate-coin-float-8 {
+              animation: coin-float-8 7.2s ease-in-out infinite 4s;
+            }
+            
+            .animate-coin-float-9 {
+              animation: coin-float-9 9s ease-in-out infinite 0.8s;
+            }
+            
             .animate-ambient-fire {
               animation: ambient-fire 8s ease-in-out infinite;
             }
@@ -384,7 +494,7 @@ export function AnimatedModuleImage({
       {/* Effects Legend */}
       <Card className="p-4">
         <h3 className="font-semibold mb-3">Volcanic Animation Effects</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-3 h-1 bg-white animate-pulse"></div>
             <span>Lightning</span>
@@ -402,12 +512,16 @@ export function AnimatedModuleImage({
             <span>Floating Embers</span>
           </div>
           <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+            <span>Temple Coins</span>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-gradient-to-r from-red-500 to-orange-400 rounded-full animate-pulse"></div>
             <span>Ambient Fire</span>
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          Experience the raw power of nature with lightning strikes, volcanic activity, and atmospheric effects that bring this adventure scene to life!
+          Experience the raw power of nature with lightning strikes, volcanic activity, magical floating coins around the temple, and atmospheric effects that bring this adventure scene to life!
         </p>
       </Card>
     </div>

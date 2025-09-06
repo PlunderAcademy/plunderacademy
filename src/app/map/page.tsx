@@ -107,7 +107,6 @@ export default function MapPage() {
       <AnimatedModuleImage 
         imageNumber={1}
         title="Volcanic Island Adventure"
-        description="Lightning, volcano, and atmospheric effects"
       />
     </div>
   );
