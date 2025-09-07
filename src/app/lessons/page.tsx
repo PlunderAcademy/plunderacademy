@@ -50,6 +50,15 @@ export default async function LessonsPage() {
     'creating-erc20-tokens': 'from-yellow-500/20 to-yellow-600/20 border-yellow-500/30'
   };
   
+  // Module images mapping (placeholder paths - replace with actual images)
+  const moduleImages: Record<string, string> = {
+    'blockchain-fundamentals': '/modules/blockchain-fundamentals.png',
+    'evm-fundamentals': '/modules/evm-fundamentals.png', 
+    'intro-to-solidity': '/modules/intro-to-solidity.png',
+    'zilliqa-evm-setup': '/modules/zilliqa-evm-setup.png',
+    'creating-erc20-tokens': '/modules/creating-erc20-tokens.png'
+  };
+  
   return (
     <div className="space-y-0">
       {/* Pirate Map Hero Section */}
@@ -152,120 +161,137 @@ export default async function LessonsPage() {
       {/* Main Content */}
       <div className="mx-auto max-w-6xl px-4 space-y-12 pt-16">
 
-        {/* Module Islands */}
-        <div className="space-y-8">
-          <div className="text-center space-y-4">
-            <h2 className="text-3xl font-bold tracking-tight">
-              Explore the Islands
+        {/* Module Islands - Redesigned */}
+        <div className="space-y-16">
+          <div className="text-center space-y-6">
+            <div className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-300">
+              <MapPin className="mr-2 size-4" />
+              5 Legendary Islands Await
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-transparent dark:from-white dark:via-slate-200 dark:to-white">
+              Choose Your Next Adventure
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Each island contains valuable lessons and treasures. Complete them in order to unlock your path to EVM mastery.
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Each island holds ancient secrets of blockchain mastery. Start your journey and collect treasures of knowledge along the way.
             </p>
           </div>
           
-          {modules.map((module, index) => {
-            const IconComponent = moduleIcons[module.slug] || MapPin;
-            const isFirstModule = index === 0;
-            
-            return (
-              <Card key={module.id} className={`overflow-hidden border-2 bg-gradient-to-br ${moduleColors[module.slug]} relative`}>
-                {/* Module Header */}
-                <CardHeader className="pb-6 relative">
-                  <div className="flex items-start gap-6">
-                    {/* Module Icon */}
-                    <div className={`flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br ${moduleColors[module.slug]} border-2 flex items-center justify-center shadow-lg`}>
-                      <IconComponent className="size-8 text-primary" />
-                    </div>
+          {/* Module Islands Grid - Visual Cards with Images */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+            {modules.map((module, index) => {
+              const IconComponent = moduleIcons[module.slug] || MapPin;
+              const isFirstModule = index === 0;
+              const difficultyLevel = index === 0 ? 'Beginner' : index < 3 ? 'Intermediate' : 'Advanced';
+              const estimatedHours = Math.ceil(module.lessons.length * 1.5);
+              const moduleImage = moduleImages[module.slug];
+              
+              return (
+                <Card key={module.id} className="group relative overflow-hidden border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl bg-white dark:bg-slate-900">
+                  {/* Module Illustration Header */}
+                  <div className="relative h-48 overflow-hidden">
+                    <Image
+                      src={moduleImage}
+                      alt={`${module.title} - Island Illustration`}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
                     
-                    {/* Module Info */}
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-center gap-3">
-                        <CardTitle className="text-2xl md:text-3xl">
-                          {module.title}
-                        </CardTitle>
-                        <Badge variant="secondary" className="text-xs">
-                          {module.lessons.length} lessons
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+                    
+                    {/* Island Number Badge */}
+                    <div className="absolute top-4 left-4 flex items-center gap-2">
+                      <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm border-2 border-white/50 flex items-center justify-center shadow-xl">
+                        <span className="text-lg font-bold text-slate-800">{index + 1}</span>
+                      </div>
+                      {isFirstModule && (
+                        <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg animate-pulse">
+                          <Flag className="size-3 mr-1" />
+                          Start Here
                         </Badge>
-                        {isFirstModule && (
-                          <Badge className="bg-amber-500 hover:bg-amber-600 text-amber-50">
-                            <Flag className="size-3 mr-1" />
-                            Start Here
-                          </Badge>
-                        )}
-                      </div>
-                      <CardDescription className="text-base leading-relaxed">
-                        {module.description}
-                      </CardDescription>
-                      
-                      {/* Quick Stats */}
-                      <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="size-4" />
-                          <span>{Math.ceil(module.lessons.length * 1.5)}-{Math.ceil(module.lessons.length * 2)} hours</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Target className="size-4" />
-                          <span>{index === 0 ? 'Beginner' : index < 3 ? 'Intermediate' : 'Advanced'}</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  {/* Lessons Treasure Map */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-lg flex items-center gap-2">
-                      <BookOpen className="size-5" />
-                      Treasures to Discover
-                    </h4>
                     
-                    <div className="grid gap-3">
-                      {module.lessons.map((lesson, lessonIndex) => (
-                        <Link 
-                          key={lesson.slug}
-                          href={`/lessons/${module.slug}/${lesson.slug}`}
-                          className="group"
-                        >
-                          <div className="flex items-center justify-between rounded-xl border bg-background/50 backdrop-blur-sm p-4 transition-all hover:bg-background/80 hover:shadow-md hover:border-primary/50">
-                            <div className="flex items-start gap-4">
-                              {/* Lesson Number */}
-                              <div className="flex-shrink-0 size-12 flex items-center justify-center rounded-lg bg-primary/10 border border-primary/20 text-sm font-bold text-primary">
-                                {lesson.number}
-                              </div>
-                              
-                              {/* Lesson Content */}
-                              <div className="space-y-2">
-                                <h3 className="font-semibold leading-tight group-hover:text-primary transition-colors">
-                                  {lesson.title}
-                                </h3>
-                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                  {lesson.objective}
-                                </p>
-                                {lesson.practicalTakeaway && (
-                                  <p className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 inline-block">
-                                    💎 {lesson.practicalTakeaway}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Action */}
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                ~{Math.ceil(1.5 + lessonIndex * 0.3)}h
-                              </Badge>
-                              <ChevronRight className="size-5 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-primary" />
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
+                    {/* Difficulty & Stats */}
+                    <div className="absolute top-4 right-4">
+                      <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-white/50">
+                        <div className="text-xs font-medium text-slate-600 text-center">{difficultyLevel}</div>
+                        <div className="text-sm font-bold text-slate-800 text-center">{module.lessons.length} lessons</div>
+                      </div>
+                    </div>
+                    
+                    {/* Floating Icon */}
+                    <div className="absolute bottom-4 left-4">
+                      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${moduleColors[module.slug]} border-2 border-white/50 flex items-center justify-center shadow-xl backdrop-blur-sm`}>
+                        <IconComponent className="size-6 text-white drop-shadow-sm" />
+                      </div>
+                    </div>
+                    
+                    {/* Adventure Time */}
+                    <div className="absolute bottom-4 right-4">
+                      <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1 text-white text-xs font-medium">
+                        ~{estimatedHours}h adventure
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  
+                  {/* Card Content */}
+                  <div className="p-6 space-y-4">
+                    {/* Module Title & Description */}
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-bold leading-tight group-hover:text-primary transition-colors">
+                        {module.title.replace(/^Module \d+: /, '')}
+                      </h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                        {module.description}
+                      </p>
+                    </div>
+                    
+                    {/* Progress & Quick Stats */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <Trophy className="size-4 text-amber-500" />
+                          <span>{module.lessons.length} treasures</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Ship className="size-4 text-blue-500" />
+                          <span>Ready to sail</span>
+                        </div>
+                      </div>
+                      
+                      {/* Animated Progress Bar */}
+                      <div className="space-y-2">
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                          <div className="bg-gradient-to-r from-green-400 to-green-500 h-2 rounded-full w-0 group-hover:w-1/3 transition-all duration-1000 delay-300" />
+                        </div>
+                        <div className="text-xs text-muted-foreground">Ready to begin your journey</div>
+                      </div>
+                    </div>
+                    
+                    {/* Explore Button */}
+                    <Button 
+                      asChild 
+                      className="w-full bg-gradient-to-r from-primary via-primary to-primary/80 hover:from-primary/90 hover:via-primary hover:to-primary text-white shadow-lg group-hover:shadow-xl transition-all duration-300 text-base font-semibold"
+                      size="lg"
+                    >
+                      <Link href={`/lessons/${module.slug}/${module.lessons[0]?.slug}`}>
+                        <Compass className="mr-2 size-4" />
+                        Explore Island
+                        <ChevronRight className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
+                      </Link>
+                    </Button>
+                  </div>
+                  
+                  {/* Hover Glow */}
+                  <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                    <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${moduleColors[module.slug]} opacity-10`} />
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
         </div>
 
         {/* Final Call to Action */}
