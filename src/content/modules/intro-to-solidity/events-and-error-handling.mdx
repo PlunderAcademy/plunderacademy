@@ -1,0 +1,39 @@
+---
+id: events-and-error-handling
+module: intro-to-solidity
+number: 3.4
+title: Events and Error Handling
+objective: Learn how to emit events and handle errors in Solidity smart contracts.
+slug: events-and-error-handling
+---
+
+## Events
+
+Events emit logs that off-chain applications and listeners use to track contract activity.
+
+```solidity
+event GreetingChanged(address indexed user, string newGreeting);
+
+function setGreeting(string calldata newGreeting) public {
+    greetings[msg.sender] = newGreeting;
+    emit GreetingChanged(msg.sender, newGreeting);
+}
+```
+
+`indexed` fields are searchable in logs.
+
+## Error Handling
+
+Solidity provides mechanisms to enforce constraints and revert transactions:
+
+```solidity
+function withdraw(uint amount) public {
+    require(balances[msg.sender] >= amount, "Insufficient funds");
+    balances[msg.sender] -= amount;
+    payable(msg.sender).transfer(amount);
+}
+```
+
+- `require` reverts with an error message if conditions fail
+- `assert` used for internal invariants
+- `revert` explicitly stops execution and rolls back

@@ -12,7 +12,8 @@ import {
   Lightbulb,
   Home
 } from "lucide-react";
-import { modules } from "@/data/lessons";
+import { getModules, getLessonByIds } from "@/lib/mdx";
+import MDXContent from "@/components/mdx-content";
 
 interface LessonPageProps {
   params: Promise<{
@@ -21,14 +22,41 @@ interface LessonPageProps {
   }>;
 }
 
+export async function generateStaticParams() {
+  const modules = await getModules();
+  const params = [];
+  
+  for (const mod of modules) {
+    for (const lesson of mod.lessons) {
+      params.push({
+        moduleId: mod.slug,
+        lessonId: lesson.slug,
+      });
+    }
+  }
+  
+  return params;
+}
+
 export default async function LessonPage({ params }: LessonPageProps) {
   const resolvedParams = await params;
-  const currentModule = modules.find(m => m.id === resolvedParams.moduleId);
+  const modules = await getModules();
+  
+  const currentModule = modules.find(m => m.slug === resolvedParams.moduleId);
   if (!currentModule) notFound();
   
-  const lessonIndex = currentModule.lessons.findIndex(l => l.id === resolvedParams.lessonId);
-  const lesson = currentModule.lessons[lessonIndex];
-  if (!lesson) notFound();
+  const lessonIndex = currentModule.lessons.findIndex(l => l.slug === resolvedParams.lessonId);
+  const lessonMeta = currentModule.lessons[lessonIndex];
+  if (!lessonMeta) notFound();
+  
+  // Get the full lesson content
+  let lesson;
+  try {
+    lesson = await getLessonByIds(resolvedParams.moduleId, resolvedParams.lessonId);
+  } catch (error) {
+    console.error('Error loading lesson:', error);
+    notFound();
+  }
   
   const prevLesson = lessonIndex > 0 ? currentModule.lessons[lessonIndex - 1] : null;
   const nextLesson = lessonIndex < currentModule.lessons.length - 1 ? currentModule.lessons[lessonIndex + 1] : null;
@@ -50,7 +78,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
           {currentModule.title}
         </Link>
         <ChevronRight className="size-4" />
-        <span className="text-foreground">{lesson.title}</span>
+        <span className="text-foreground">{lesson.meta.title}</span>
       </div>
 
       {/* Lesson Header */}
@@ -59,14 +87,14 @@ export default async function LessonPage({ params }: LessonPageProps) {
           <div className="space-y-2">
             <div className="flex items-center gap-3">
               <Badge variant="outline" className="font-mono">
-                Lesson {lesson.number}
+                Lesson {lesson.meta.number}
               </Badge>
               <Badge variant="secondary">
                 {currentModule.title.replace("Module ", "").split(":")[0]}
               </Badge>
             </div>
             <h1 className="text-3xl font-bold tracking-tight">
-              {lesson.title}
+              {lesson.meta.title}
             </h1>
           </div>
         </div>
@@ -81,7 +109,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
           </CardHeader>
           <CardContent>
             <p className="text-sm leading-relaxed">
-              {lesson.objective}
+              {lesson.meta.objective}
             </p>
           </CardContent>
         </Card>
@@ -90,13 +118,10 @@ export default async function LessonPage({ params }: LessonPageProps) {
       <Separator />
 
       {/* Lesson Content */}
-      <div 
-        className="prose prose-gray max-w-none dark:prose-invert"
-        dangerouslySetInnerHTML={{ __html: lesson.content }}
-      />
+      <MDXContent content={lesson.content} />
 
       {/* Practical Takeaway */}
-      {lesson.practicalTakeaway && (
+      {lesson.meta.practicalTakeaway && (
         <>
           <Separator />
           <Card className="border-2">
@@ -108,7 +133,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
             </CardHeader>
             <CardContent>
               <p className="leading-relaxed">
-                {lesson.practicalTakeaway}
+                {lesson.meta.practicalTakeaway}
               </p>
             </CardContent>
           </Card>
@@ -121,7 +146,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {prevLesson ? (
           <Button asChild variant="outline">
-            <Link href={`/lessons/${currentModule.id}/${prevLesson.id}`}>
+            <Link href={`/lessons/${currentModule.slug}/${prevLesson.slug}`}>
               <ChevronLeft className="mr-2 size-4" />
               Previous: {prevLesson.title}
             </Link>
@@ -137,22 +162,15 @@ export default async function LessonPage({ params }: LessonPageProps) {
         
         {nextLesson ? (
           <Button asChild>
-            <Link href={`/lessons/${currentModule.id}/${nextLesson.id}`}>
+            <Link href={`/lessons/${currentModule.slug}/${nextLesson.slug}`}>
               Next: {nextLesson.title}
               <ChevronRight className="ml-2 size-4" />
             </Link>
           </Button>
         ) : nextModuleFirstLesson && nextModule ? (
           <Button asChild>
-            <Link href={`/lessons/${nextModule.id}/${nextModuleFirstLesson.id}`}>
+            <Link href={`/lessons/${nextModule.slug}/${nextModuleFirstLesson.slug}`}>
               Next Module: {nextModuleFirstLesson.title}
-              <ChevronRight className="ml-2 size-4" />
-            </Link>
-          </Button>
-        ) : currentModule.quiz ? (
-          <Button asChild variant="default">
-            <Link href={`/lessons/${currentModule.id}/quiz`}>
-              Take Module Quiz
               <ChevronRight className="ml-2 size-4" />
             </Link>
           </Button>

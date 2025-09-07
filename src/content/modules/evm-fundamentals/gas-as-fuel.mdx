@@ -1,0 +1,25 @@
+---
+id: gas-as-fuel
+module: evm-fundamentals
+number: 2.3
+title: Gas as the Fuel of EVM
+objective: >-
+  Understand how gas quantifies computational effort and resource usage on the
+  EVM.
+slug: gas-as-fuel
+---
+
+## The Role of Gas
+
+Gas quantifies computational effort and resource usage on the EVM. By attaching a cost to every executed operation, it prevents wasteful or malicious consumption of network resources. Users must pay gas fees to incentivize miners or validators to include and execute their transactions.
+
+### Gas Costs and Pricing Mechanics
+
+EVM instructions have predefined gas costs proportional to their computation and storage demands. More complex operations and writes to storage require significantly more gas. Before execution, users specify:
+
+- **Gas Price:** Payment per unit of gas, influencing transaction inclusion priority
+- **Gas Limit:** Upper gas expenditure bound protecting users from unexpectedly high fees
+
+### Gas Payments on Zilliqa
+
+Zilliqa's native token ZIL is used to pay fees. Its scalable design keeps typical gas prices low, facilitating affordable and rapid dApp interactions.

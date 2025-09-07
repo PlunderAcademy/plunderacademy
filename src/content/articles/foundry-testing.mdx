@@ -1,0 +1,30 @@
+---
+slug: foundry-testing
+title: Testing Smart Contracts with Foundry
+excerpt: Patterns for unit, fuzz, and invariant tests that catch critical bugs.
+level: intermediate
+tags:
+  - foundry
+  - testing
+  - solidity
+hero: /articles/foundry-testing.svg
+---
+
+## Beyond Unit Tests
+
+Combine fuzzing and invariants to explore unexpected states and ensure key properties hold.
+
+![Foundry testing pyramid](/articles/foundry-testing.svg)
+
+- Unit: narrow behavior
+- Fuzz: random inputs
+- Invariant: global properties across time
+
+```bash
+# forge test -vvvv
+# Invariants validate properties across sequences of calls
+```
+
+### Stateful Fuzzing
+
+Model complex actors with handlers to explore multi-step attacks and integrations.

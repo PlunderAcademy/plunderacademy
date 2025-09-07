@@ -1,0 +1,35 @@
+---
+slug: zilliqa-evm-introduction
+title: Introduction to Zilliqa EVM
+excerpt: Overview of Zilliqa's EVM execution layer, accounts, gas, and tooling.
+level: beginner
+tags:
+  - zilliqa
+  - evm
+  - basics
+hero: /articles/zilliqa-evm-intro.svg
+---
+
+## What is the Zilliqa EVM?
+
+The Zilliqa EVM brings familiar Ethereum-style development to Zilliqa. You write Solidity, deploy with standard tooling, and interact using common wallets.
+
+![Zilliqa EVM overview](/articles/zilliqa-evm-intro.svg)
+
+### Key Concepts
+
+- **Accounts & Nonces**: Same account model and transaction nonces as Ethereum.
+- **Gas**: Transactions consume gas based on execution and storage.
+- **Tooling**: Works with viem, wagmi, and RainbowKit for dapps.
+
+### Hello World
+
+```solidity
+// Example minimal contract
+pragma solidity ^0.8.24;
+contract HelloZil { function hi() external pure returns (string memory) { return "Hi Zilliqa"; } }
+```
+
+### Next Steps
+
+Set up a project, connect RainbowKit, and deploy to Zilliqa testnet. Validate events and gas.
