@@ -16,47 +16,15 @@ import {
   MapPin,
   Compass,
   Ship,
-  Anchor,
-  Crown,
-  Zap,
-  Code2,
-  Wrench,
-  Coins,
   Trophy,
   Flag,
-  LucideIcon
+  TreePine,
+  Crown
 } from "lucide-react";
-import { getModules } from "@/lib/mdx";
+import { getIslands } from "@/lib/mdx";
 
 export default async function LessonsPage() {
-  const modules = await getModules();
-  
-  // Module icons mapping
-  const moduleIcons: Record<string, LucideIcon> = {
-    'blockchain-fundamentals': Anchor,
-    'evm-fundamentals': Zap, 
-    'intro-to-solidity': Code2,
-    'zilliqa-evm-setup': Wrench,
-    'creating-erc20-tokens': Coins
-  };
-  
-  // Module colors for theming
-  const moduleColors: Record<string, string> = {
-    'blockchain-fundamentals': 'from-blue-500/20 to-blue-600/20 border-blue-500/30',
-    'evm-fundamentals': 'from-purple-500/20 to-purple-600/20 border-purple-500/30', 
-    'intro-to-solidity': 'from-green-500/20 to-green-600/20 border-green-500/30',
-    'zilliqa-evm-setup': 'from-orange-500/20 to-orange-600/20 border-orange-500/30',
-    'creating-erc20-tokens': 'from-yellow-500/20 to-yellow-600/20 border-yellow-500/30'
-  };
-  
-  // Module images mapping (placeholder paths - replace with actual images)
-  const moduleImages: Record<string, string> = {
-    'blockchain-fundamentals': '/modules/blockchain-fundamentals.png',
-    'evm-fundamentals': '/modules/evm-fundamentals.png', 
-    'intro-to-solidity': '/modules/intro-to-solidity.png',
-    'zilliqa-evm-setup': '/modules/zilliqa-evm-setup.png',
-    'creating-erc20-tokens': '/modules/creating-erc20-tokens.png'
-  };
+  const islands = await getIslands();
   
   return (
     <div className="space-y-0">
@@ -96,38 +64,114 @@ export default async function LessonsPage() {
               Navigate through 5 legendary modules and discover the treasures of blockchain development.
               Each island holds valuable knowledge to make you a true EVM pirate.
             </p>
+            <p className="mx-auto max-w-3xl text-xl text-slate-300">
+              NOTE: The map is a work in progress and will be updated as we build out content in Milestone 2.  The other islands are placeholders and may be different than the ones shown here.
+            </p>
           </div>
           
-          {/* Treasure Map Image */}
+          {/* Overall Adventure Map */}
           <div className="relative mx-auto max-w-4xl mb-12">
-            <Image
-              src="/treasuremap.png"
-              alt="Treasure Map - Learning Journey"
-              width={800}
-              height={500}
-              className="w-full h-auto rounded-xl border-2 border-amber-500/30 shadow-2xl"
-              priority
-            />
-          </div>
-          
-          {/* Map Islands Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-            {modules.map((module, index) => {
-              const IconComponent = moduleIcons[module.slug] || MapPin;
-              return (
-                <div key={module.slug} className="text-center space-y-2">
-                  <div className={`mx-auto w-16 h-16 rounded-full bg-gradient-to-br ${moduleColors[module.slug]} border-2 flex items-center justify-center`}>
-                    <IconComponent className="size-8 text-white" />
+            <div className="relative group cursor-pointer">
+              <Image
+                src="/overall_map.webp"
+                alt="Adventure Islands Map"
+                width={1000}
+                height={600}
+                className="w-full h-auto rounded-xl border-2 border-amber-500/30 shadow-2xl transition-transform duration-300 group-hover:scale-[1.02]"
+                priority
+              />
+              
+              {/* Interactive Overlay */}
+              <div className="absolute inset-0 rounded-xl">
+                {/* Jungle Island - Center Island (clickable) */}
+                <Link href="/lessons/jungle" className="absolute top-[44%] left-[55%] transform -translate-x-1/2 -translate-y-1/2 group/jungle">
+                  <div className="relative">
+                    {/* Pulsing indicator */}
+                    <div className="absolute inset-0 bg-green-500/30 rounded-full animate-ping scale-150"></div>
+                    <div className="relative bg-green-600/80 hover:bg-green-500/90 backdrop-blur-sm rounded-full p-4 border-2 border-white/50 shadow-xl transition-all duration-300 group-hover/jungle:scale-110">
+                      <TreePine className="w-8 h-8 text-white" />
+                    </div>
+                    <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1 border border-white/50 shadow-lg opacity-0 group-hover/jungle:opacity-100 transition-opacity duration-300">
+                      <span className="text-sm font-semibold text-green-800 whitespace-nowrap">🌴 Jungle Island</span>
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-400 font-medium">
-                    Island {index + 1}
-                  </div>
-                  <div className="text-sm text-slate-300 leading-tight">
-                    {module.title.replace('Module ' + (index + 1) + ': ', '')}
+                </Link>
+
+                {/* Coming Soon Islands */}
+                {/* Desert Island - Top Right */}
+                <div className="absolute top-[20%] left-[75%] group/desert">
+                  <div className="relative">
+                    <div className="relative bg-orange-600/60 backdrop-blur-sm rounded-full p-3 border-2 border-white/30 shadow-lg cursor-not-allowed">
+                      <div className="w-6 h-6 rounded-full bg-orange-300"></div>
+                    </div>
+                    <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 border border-white/50 shadow-lg opacity-0 group-hover/desert:opacity-100 transition-opacity duration-300">
+                      <span className="text-xs font-medium text-orange-800">🏜️ Desert Island</span>
+                      <div className="text-xs text-orange-600">Coming Soon</div>
+                    </div>
                   </div>
                 </div>
-              );
-            })}
+
+                {/* Ice Island - Top Left */}
+                <div className="absolute top-[20%] left-[25%] group/ice">
+                  <div className="relative">
+                    <div className="relative bg-blue-600/60 backdrop-blur-sm rounded-full p-3 border-2 border-white/30 shadow-lg cursor-not-allowed">
+                      <div className="w-6 h-6 rounded-full bg-blue-300"></div>
+                    </div>
+                    <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 border border-white/50 shadow-lg opacity-0 group-hover/ice:opacity-100 transition-opacity duration-300">
+                      <span className="text-xs font-medium text-blue-800">🧊 Ice Island</span>
+                      <div className="text-xs text-blue-600">Coming Soon</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mushroom Island - Bottom Right */}
+                <div className="absolute bottom-[20%] left-[70%] group/mushroom">
+                  <div className="relative">
+                    <div className="relative bg-purple-600/60 backdrop-blur-sm rounded-full p-3 border-2 border-white/30 shadow-lg cursor-not-allowed">
+                      <div className="w-6 h-6 rounded-full bg-purple-300"></div>
+                    </div>
+                    <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 border border-white/50 shadow-lg opacity-0 group-hover/mushroom:opacity-100 transition-opacity duration-300">
+                      <span className="text-xs font-medium text-purple-800">🍄 Mushroom Island</span>
+                      <div className="text-xs text-purple-600">Coming Soon</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Volcano Island - Bottom Left */}
+                <div className="absolute bottom-[20%] left-[25%] group/volcano">
+                  <div className="relative">
+                    <div className="relative bg-red-600/60 backdrop-blur-sm rounded-full p-3 border-2 border-white/30 shadow-lg cursor-not-allowed">
+                      <div className="w-6 h-6 rounded-full bg-red-300"></div>
+                    </div>
+                    <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 border border-white/50 shadow-lg opacity-0 group-hover/volcano:opacity-100 transition-opacity duration-300">
+                      <span className="text-xs font-medium text-red-800">🌋 Volcano Island</span>
+                      <div className="text-xs text-red-600">Coming Soon</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Islands Preview */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+            {islands.map((island, index) => (
+              <div key={island.slug} className="text-center space-y-2">
+                <div className={`mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-${island.color}-500/${island.status === 'available' ? '20' : '10'} to-${island.color}-600/${island.status === 'available' ? '20' : '10'} border-2 border-${island.color}-500/${island.status === 'available' ? '30' : '20'} flex items-center justify-center ${island.status === 'coming-soon' ? 'opacity-60' : ''}`}>
+                  {island.slug === 'jungle' ? (
+                    <TreePine className="size-8 text-white" />
+                  ) : (
+                    <span className="text-2xl">{island.icon}</span>
+                  )}
+                </div>
+                <div className={`text-xs font-medium ${island.status === 'available' ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Island {index + 1}
+                </div>
+                <div className={`text-sm leading-tight ${island.status === 'available' ? 'text-slate-300' : 'text-slate-500'}`}>
+                  {island.status === 'available' ? island.title : 'Coming Soon'}
+                </div>
+              </div>
+            ))}
           </div>
           
           {/* Journey Stats */}
@@ -135,23 +179,23 @@ export default async function LessonsPage() {
             <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10">
               <div className="flex items-center justify-center gap-2 text-2xl font-bold text-white mb-1">
                 <Ship className="size-6 text-blue-400" />
-                5 Islands
+                {islands.filter(island => island.status === 'available').length} Island{islands.filter(island => island.status === 'available').length !== 1 ? 's' : ''}
               </div>
-              <div className="text-sm text-slate-400">Modules to Explore</div>
+              <div className="text-sm text-slate-400">Available Now</div>
             </div>
             <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10">
               <div className="flex items-center justify-center gap-2 text-2xl font-bold text-white mb-1">
                 <Trophy className="size-6 text-amber-400" />
-                {modules.reduce((acc, m) => acc + m.lessons.length, 0)} Treasures
+                {islands.find(island => island.status === 'available')?.modules.reduce((acc, module) => acc + module.lessons.length, 0) || 0}+ Lessons
               </div>
-              <div className="text-sm text-slate-400">Lessons to Discover</div>
+              <div className="text-sm text-slate-400">In Available Islands</div>
             </div>
             <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10">
               <div className="flex items-center justify-center gap-2 text-2xl font-bold text-white mb-1">
                 <Clock className="size-6 text-green-400" />
-                15-20 Hours
+                {islands.find(island => island.status === 'available')?.estimatedHours || 'TBA'}
               </div>
-              <div className="text-sm text-slate-400">Epic Adventure</div>
+              <div className="text-sm text-slate-400">{islands.find(island => island.status === 'available')?.name || 'Adventure'}</div>
             </div>
           </div>
         </div>
@@ -165,7 +209,7 @@ export default async function LessonsPage() {
           <div className="text-center space-y-6">
             <div className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-300">
               <MapPin className="mr-2 size-4" />
-              5 Legendary Islands Await
+              Adventure Islands Await
             </div>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-transparent dark:from-white dark:via-slate-200 dark:to-white">
               Choose Your Next Adventure
@@ -175,84 +219,99 @@ export default async function LessonsPage() {
             </p>
           </div>
           
-          {/* Module Islands Grid - Visual Cards with Images */}
+          {/* Island Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
-            {modules.map((module, index) => {
-              const IconComponent = moduleIcons[module.slug] || MapPin;
-              const isFirstModule = index === 0;
-              const difficultyLevel = index === 0 ? 'Beginner' : index < 3 ? 'Intermediate' : 'Advanced';
-              const estimatedHours = Math.ceil(module.lessons.length * 1.5);
-              const moduleImage = moduleImages[module.slug];
-              
-              return (
-                <Card key={module.id} className="group relative overflow-hidden border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl bg-white dark:bg-slate-900">
-                  {/* Module Illustration Header */}
-                  <div className="relative h-48 overflow-hidden">
+            {islands.map((island, index) => (
+              <Card key={island.slug} className={`group relative overflow-hidden border-2 transition-all duration-300 ${island.status === 'available' ? 'hover:scale-[1.02] hover:shadow-2xl' : 'opacity-60'} bg-white dark:bg-slate-900`}>
+                {/* Island Header */}
+                <div className={`relative h-48 overflow-hidden ${island.status === 'available' ? '' : 'bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900'}`}>
+                  {island.status === 'available' && island.slug === 'jungle' && (
                     <Image
-                      src={moduleImage}
-                      alt={`${module.title} - Island Illustration`}
+                      src="/islands/jungle/jungle-map.webp"
+                      alt={island.title}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-110"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
-                    
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-                    
-                    {/* Island Number Badge */}
-                    <div className="absolute top-4 left-4 flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm border-2 border-white/50 flex items-center justify-center shadow-xl">
-                        <span className="text-lg font-bold text-slate-800">{index + 1}</span>
-                      </div>
-                      {isFirstModule && (
-                        <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg animate-pulse">
-                          <Flag className="size-3 mr-1" />
-                          Start Here
-                        </Badge>
-                      )}
+                  )}
+                  
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+                  
+                  {/* Island Number Badge */}
+                  <div className="absolute top-4 left-4 flex items-center gap-2">
+                    <div className={`w-10 h-10 rounded-full ${island.status === 'available' ? 'bg-white/90' : 'bg-white/60'} backdrop-blur-sm border-2 ${island.status === 'available' ? 'border-white/50' : 'border-white/30'} flex items-center justify-center shadow-xl`}>
+                      <span className={`text-lg font-bold ${island.status === 'available' ? 'text-slate-800' : 'text-slate-600'}`}>{index + 1}</span>
                     </div>
-                    
-                    {/* Difficulty & Stats */}
+                    {island.status === 'available' ? (
+                      <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg animate-pulse">
+                        <Flag className="size-3 mr-1" />
+                        Start Here
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-white/60 text-slate-600 border-slate-400">
+                        Coming Soon
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {/* Difficulty & Stats for available islands */}
+                  {island.status === 'available' && (
                     <div className="absolute top-4 right-4">
                       <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-white/50">
-                        <div className="text-xs font-medium text-slate-600 text-center">{difficultyLevel}</div>
-                        <div className="text-sm font-bold text-slate-800 text-center">{module.lessons.length} lessons</div>
+                        <div className="text-xs font-medium text-slate-600 text-center">Beginner</div>
+                        <div className="text-sm font-bold text-slate-800 text-center">{island.modules.length} modules</div>
                       </div>
                     </div>
-                    
-                    {/* Floating Icon */}
-                    <div className="absolute bottom-4 left-4">
-                      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${moduleColors[module.slug]} border-2 border-white/50 flex items-center justify-center shadow-xl backdrop-blur-sm`}>
-                        <IconComponent className="size-6 text-white drop-shadow-sm" />
-                      </div>
-                    </div>
-                    
-                    {/* Adventure Time */}
-                    <div className="absolute bottom-4 right-4">
-                      <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1 text-white text-xs font-medium">
-                        ~{estimatedHours}h adventure
-                      </div>
+                  )}
+                  
+                  {/* Floating Icon */}
+                  <div className="absolute bottom-4 left-4">
+                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br from-${island.color}-500/20 to-${island.color}-600/20 border-${island.color}-500/30 border-2 border-white/50 flex items-center justify-center shadow-xl backdrop-blur-sm`}>
+                      {island.slug === 'jungle' ? (
+                        <TreePine className="size-6 text-white drop-shadow-sm" />
+                      ) : (
+                        <span className="text-2xl">{island.icon}</span>
+                      )}
                     </div>
                   </div>
                   
-                  {/* Card Content */}
-                  <div className="p-6 space-y-4">
-                    {/* Module Title & Description */}
-                    <div className="space-y-2">
-                      <h3 className="text-xl font-bold leading-tight group-hover:text-primary transition-colors">
-                        {module.title.replace(/^Module \d+: /, '')}
-                      </h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-                        {module.description}
-                      </p>
+                  {/* Adventure Time */}
+                  {island.status === 'available' && (
+                    <div className="absolute bottom-4 right-4">
+                      <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1 text-white text-xs font-medium">
+                        ~{island.estimatedHours} adventure
+                      </div>
                     </div>
-                    
-                    {/* Progress & Quick Stats */}
+                  )}
+                  
+                  {/* Coming Soon Icon for inactive islands */}
+                  {island.status === 'coming-soon' && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-6xl opacity-60">{island.icon}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Card Content */}
+                <div className="p-6 space-y-4">
+                  {/* Island Title & Description */}
+                  <div className="space-y-2">
+                    <h3 className={`text-xl font-bold leading-tight ${island.status === 'available' ? 'group-hover:text-primary transition-colors' : 'text-muted-foreground'}`}>
+                      {island.status === 'available' ? island.title : island.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                      {island.description}
+                    </p>
+                  </div>
+                  
+                  {/* Progress & Quick Stats for available islands */}
+                  {island.status === 'available' && (
                     <div className="space-y-3">
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1.5">
                           <Trophy className="size-4 text-amber-500" />
-                          <span>{module.lessons.length} treasures</span>
+                          <span>{island.modules.reduce((acc, module) => acc + module.lessons.length, 0)}+ lessons</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Ship className="size-4 text-blue-500" />
@@ -263,33 +322,42 @@ export default async function LessonsPage() {
                       {/* Animated Progress Bar */}
                       <div className="space-y-2">
                         <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                          <div className="bg-gradient-to-r from-green-400 to-green-500 h-2 rounded-full w-0 group-hover:w-1/3 transition-all duration-1000 delay-300" />
+                          <div className={`bg-gradient-to-r from-${island.color}-400 to-${island.color}-500 h-2 rounded-full w-0 group-hover:w-full transition-all duration-1000 delay-300`} />
                         </div>
                         <div className="text-xs text-muted-foreground">Ready to begin your journey</div>
                       </div>
                     </div>
-                    
-                    {/* Explore Button */}
+                  )}
+                  
+                  {/* Explore Button */}
+                  {island.status === 'available' ? (
                     <Button 
                       asChild 
                       className="w-full bg-gradient-to-r from-primary via-primary to-primary/80 hover:from-primary/90 hover:via-primary hover:to-primary text-white shadow-lg group-hover:shadow-xl transition-all duration-300 text-base font-semibold"
                       size="lg"
                     >
-                      <Link href={`/lessons/${module.slug}/${module.lessons[0]?.slug}`}>
+                      <Link href={`/lessons/${island.slug}`}>
                         <Compass className="mr-2 size-4" />
                         Explore Island
                         <ChevronRight className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
                       </Link>
                     </Button>
-                  </div>
-                  
-                  {/* Hover Glow */}
+                  ) : (
+                    <Button disabled className="w-full" size="lg">
+                      <Compass className="mr-2 size-4" />
+                      Coming Soon
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Hover Glow */}
+                {island.status === 'available' && (
                   <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                    <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${moduleColors[module.slug]} opacity-10`} />
+                    <div className={`absolute inset-0 rounded-xl bg-gradient-to-br from-${island.color}-500/20 to-${island.color}-600/20 opacity-10`} />
                   </div>
-                </Card>
-              );
-            })}
+                )}
+              </Card>
+            ))}
           </div>
         </div>
 
@@ -313,7 +381,7 @@ export default async function LessonsPage() {
           <CardContent className="text-center space-y-6 relative">
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Button asChild size="lg" className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white">
-                <Link href="/lessons/blockchain-fundamentals/blockchain-basics">
+                <Link href={`/lessons/${islands.find(island => island.status === 'available')?.slug || 'jungle'}`}>
                   <Ship className="mr-2 size-4" />
                   Begin the Adventure
                 </Link>
