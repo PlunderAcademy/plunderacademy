@@ -8,13 +8,11 @@ import { Play, Pause, RotateCcw, Zap } from "lucide-react";
 interface AnimatedModuleImageProps {
   imageNumber: number;
   autoStart?: boolean;
-  title?: string;
 }
 
 export function AnimatedModuleImage({ 
   imageNumber, 
-  autoStart = true,
-  title = "Adventure Scene"
+  autoStart = true
 }: AnimatedModuleImageProps) {
   const [isAnimating, setIsAnimating] = useState(autoStart);
 
@@ -83,7 +81,7 @@ export function AnimatedModuleImage({
           
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Zap className="w-4 h-4" />
-            <span>{title}</span>
+            <span>Adventure Effects</span>
           </div>
         </div>
       </Card>
@@ -94,7 +92,7 @@ export function AnimatedModuleImage({
           {/* Base image */}
           <img
             src={`/module-images/${imageNumber}.png`}
-            alt={title}
+            alt={`Adventure scene ${imageNumber}`}
             className="w-full h-full object-cover"
           />
           
@@ -479,50 +477,6 @@ export function AnimatedModuleImage({
             }
           `}</style>
         </div>
-        
-        {/* Info overlay */}
-        <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur rounded-lg p-3 border">
-          <p className="text-sm font-medium">
-            {title}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {isAnimating ? config.description : "⚡ Effects paused"}
-          </p>
-        </div>
-      </Card>
-      
-      {/* Effects Legend */}
-      <Card className="p-4">
-        <h3 className="font-semibold mb-3">Volcanic Animation Effects</h3>
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-1 bg-white animate-pulse"></div>
-            <span>Lightning</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-            <span>Volcano Glow</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-gray-400 rounded-full animate-bounce"></div>
-            <span>Rising Smoke</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-orange-400 rounded-full animate-ping"></div>
-            <span>Floating Embers</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
-            <span>Temple Coins</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-gradient-to-r from-red-500 to-orange-400 rounded-full animate-pulse"></div>
-            <span>Ambient Fire</span>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground mt-3">
-          Experience the raw power of nature with lightning strikes, volcanic activity, magical floating coins around the temple, and atmospheric effects that bring this adventure scene to life!
-        </p>
       </Card>
     </div>
   );

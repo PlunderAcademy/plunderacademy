@@ -5,6 +5,7 @@ import { Metadata } from "next";
 import { AnimatedMap } from "@/components/animated-map";
 import { AnimatedJungle } from "@/components/animated-jungle";
 import { AnimatedModuleImage } from "@/components/animated-module-image";
+import { StoryVariantSelector } from "@/components/story-variant-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -92,22 +93,23 @@ export default function MapPage() {
         <Separator />
       </div>
       
-      {/* Animated Module Image Section */}
-      <div className="mb-8 text-center">
+      {/* Adventure Scene */}
+      <div className="mb-6 text-center">
         <h2 className="text-3xl font-bold tracking-tight mb-4 flex items-center justify-center gap-3">
           <Mountain className="w-8 h-8 text-red-600" />
-          Volcanic Adventure Demo
+          Adventure Scene
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Witness the power of nature with lightning strikes illuminating the sky, 
-          a glowing volcano with flowing lava, rising smoke, and dancing embers
+          Your shipwrecked adventure begins here...
         </p>
       </div>
       
-      <AnimatedModuleImage 
-        imageNumber={1}
-        title="Volcanic Island Adventure"
-      />
+      <AnimatedModuleImage imageNumber={1} />
+      
+      {/* Mission Story */}
+      <div className="mt-8">
+        <StoryVariantSelector defaultVariant="typewriter" />
+      </div>
     </div>
   );
 }
