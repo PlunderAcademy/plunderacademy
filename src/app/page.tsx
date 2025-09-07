@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -22,14 +23,23 @@ import {
   Wallet,
   Rocket,
   GraduationCap,
-  CheckCircle,
+  Ship,
+  Clock,
+  Compass,
+  Crown,
+  Anchor,
+  Zap,
+  Wrench,
+  Coins,
+  Trophy,
+  MapPin,
 } from "lucide-react";
 import { InteractiveHeroBg } from "@/components/hero/interactive-bg";
 import { TiltContainer } from "@/components/hero/tilt-container";
 
 export default function Home() {
   return (
-    <div className="flex flex-col items-center gap-14 text-center">
+    <div className="flex flex-col items-center gap-20 md:gap-24 lg:gap-28 text-center">
       {/* Hero */}
       <section className="hero-wrap relative w-screen max-w-[100vw] mx-[calc(50%-50vw)] -mt-10 overflow-hidden">
         <div className="hero-bg" />
@@ -110,168 +120,531 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Feature bullets */}
-      <div className="grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 text-left">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GraduationCap className="size-5" /> Structured Lessons
-            </CardTitle>
-            <CardDescription>
-              5 modules from blockchain basics to advanced Solidity development.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="size-5" /> Deep Articles
-            </CardTitle>
-            <CardDescription>
-              Digestible explanations of core EVM topics and patterns.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bot className="size-5" /> AI Code Reviewer
-            </CardTitle>
-            <CardDescription>
-              Instant security notes and gas optimization tips.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageCircle className="size-5" /> Chat Assistant
-            </CardTitle>
-            <CardDescription>
-              Get context-aware answers and code examples.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-
-      {/* New Structured Learning Path Section */}
-      <div className="w-full max-w-6xl rounded-xl border-2 bg-gradient-to-r from-primary/5 to-primary/10 p-8 text-left">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="space-y-4">
-            <div className="inline-flex items-center rounded-full border px-3 py-1 text-xs">
-              New: Comprehensive Curriculum
-            </div>
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              Follow Our Structured Learning Path
-            </h2>
-            <p className="text-muted-foreground">
-              Master blockchain development with our step-by-step curriculum.
-              Start from the fundamentals and progress through EVM, Solidity,
-              and Zilliqa-specific development.
-            </p>
-            <ul className="space-y-2 text-sm">
-              <li className="flex items-center gap-2">
-                <CheckCircle className="size-4 text-green-500" />
-                Module 1: Blockchain Fundamentals
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle className="size-4 text-green-500" />
-                Module 2: EVM Fundamentals
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle className="size-4 text-green-500" />
-                Module 3: Intro to Solidity
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle className="size-4 text-green-500" />
-                Module 4: Zilliqa EVM Development Setup
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle className="size-4 text-green-500" />
-                Module 5: Creating Your Own Token
-              </li>
-            </ul>
+      {/* Your Complete EVM Arsenal */}
+      <div className="w-full max-w-6xl space-y-12">
+        <div className="text-center space-y-6">
+          <div className="inline-flex items-center rounded-full border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10 px-6 py-3 text-amber-700 dark:text-amber-300 shadow-lg">
+            <Trophy className="mr-3 size-5" />
+            <span className="font-semibold">Your Complete EVM Arsenal</span>
           </div>
-          <div className="flex flex-col justify-center gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ready to Begin?</CardTitle>
-                <CardDescription>
-                  Each module includes multiple lessons, practical examples, and
-                  interactive quizzes to test your knowledge.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-3">
-                  <Button asChild>
-                    <Link href="/lessons">
-                      <GraduationCap className="mr-2 size-4" />
-                      Start Module 1
-                    </Link>
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <Link href="/lessons">View All Modules</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-      {/* Why Plunder Academy */}
-      <div className="w-full max-w-6xl space-y-8 text-left">
-        <div className="space-y-3 text-center">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Why Plunder Academy
+          <h2 className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-transparent dark:from-white dark:via-slate-200 dark:to-white">
+            Everything You Need to
+            <br />
+            <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 bg-clip-text text-transparent">
+              Conquer the Blockchain
+            </span>
           </h2>
-          <p className="text-muted-foreground mx-auto max-w-2xl">
-            Learn modern EVM development the right way: concise explanations,
-            actionable guidance, and tools that accelerate your journey.
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            Four legendary tools forged by blockchain masters. Whether you&apos;re
+            starting your journey or sharpening your skills, these treasures
+            will guide you to EVM mastery.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="size-5" /> Security-first
+
+        {/* Hero Feature - Structured Learning Path */}
+        <Card className="group relative overflow-hidden border bg-gradient-to-br from-slate-50 to-blue-50/50 dark:from-slate-950 dark:to-blue-950/50 hover:shadow-2xl transition-all duration-500">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/3 to-indigo-500/5" />
+
+          <div className="relative p-8 md:p-12">
+            {/* Treasure Map Header */}
+            <div className="relative mb-8">
+              <Image
+                src="/treasuremap.png"
+                alt="Learning Path Treasure Map"
+                width={1000}
+                height={400}
+                className="w-full h-48 md:h-64 object-cover rounded-xl border-2 border-amber-500/30 shadow-lg"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent rounded-xl" />
+              <div className="absolute bottom-4 left-6 text-white">
+                <Badge className="bg-amber-600 text-white px-3 py-1 text-sm font-medium mb-2 shadow-lg">
+                  Most Popular
+                </Badge>
+                <h3 className="text-2xl md:text-3xl font-bold leading-tight drop-shadow-lg">
+                  Comprehensive Learning Path
+                </h3>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              {/* Description & Social Proof */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex -space-x-1">
+                    {[...Array(4)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 border-2 border-background flex items-center justify-center"
+                      >
+                        <span className="text-white text-xs">👤</span>
+                      </div>
+                    ))}
+                  </div>
+                  <span>1,200+ developers enrolled</span>
+                </div>
+
+                <p className="text-xl text-muted-foreground leading-relaxed">
+                  Master blockchain development through our structured
+                  curriculum. From fundamentals to advanced concepts, build
+                  real-world expertise that employers value.
+                </p>
+              </div>
+
+              {/* Key Benefits */}
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-foreground">
+                  Why join the crew:
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-gradient-to-br from-purple-50/80 to-indigo-50/80 dark:from-purple-950/20 dark:to-indigo-950/20 rounded-xl p-6 border border-purple-200 dark:border-purple-800 text-center">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <Trophy className="size-6 text-white" />
+                    </div>
+                    <h5 className="font-semibold text-foreground mb-2">Earn NFT Achievements</h5>
+                    <p className="text-sm text-muted-foreground">Complete modules and earn unique achievement NFTs that prove your EVM mastery to the world</p>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-emerald-50/80 to-green-50/80 dark:from-emerald-950/20 dark:to-green-950/20 rounded-xl p-6 border border-emerald-200 dark:border-emerald-800 text-center">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <Shield className="size-6 text-white" />
+                    </div>
+                    <h5 className="font-semibold text-foreground mb-2">Battle-Tested Security</h5>
+                    <p className="text-sm text-muted-foreground">Learn from real-world exploits and vulnerabilities with hands-on security practices</p>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-amber-50/80 to-orange-50/80 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl p-6 border border-amber-200 dark:border-amber-800 text-center">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <Rocket className="size-6 text-white" />
+                    </div>
+                    <h5 className="font-semibold text-foreground mb-2">Deploy Real Projects</h5>
+                    <p className="text-sm text-muted-foreground">Build and launch production-ready smart contracts on Zilliqa mainnet</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats Row */}
+              <div className="grid grid-cols-3 gap-8 py-6 border-t border-border/50">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-foreground mb-1">
+                    25+
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Interactive Lessons
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-foreground mb-1">
+                    5
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Core Modules
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-foreground mb-1">
+                    15-20h
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Total Duration
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA Section */}
+              <div className="space-y-4 pt-4">
+                <Button
+                  size="lg"
+                  asChild
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg px-8 py-6 w-full"
+                >
+                  <Link href="/lessons">
+                    <Compass className="mr-3 size-5" />
+                    Start Learning Path
+                    <ChevronRight className="ml-3 size-5" />
+                  </Link>
+                </Button>
+                <div className="text-sm text-muted-foreground text-center">
+                  Free to start • Self-paced • Achievements upon completion
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Supporting Tools Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          {/* Deep Articles */}
+          <Card className="group relative overflow-hidden border-2 bg-gradient-to-br from-emerald-500/10 to-teal-600/10 border-emerald-500/30 backdrop-blur-sm hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.15)_0%,transparent_70%)]" />
+            <CardHeader className="relative pb-6">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg mb-4 mx-auto">
+                <BookOpen className="size-7 text-white" />
+              </div>
+              <CardTitle className="text-xl font-bold mb-3 text-center group-hover:text-emerald-600 transition-colors">
+                📖 Knowledge Vault
               </CardTitle>
-              <CardDescription>
-                Built-in checks and best practices reduce common pitfalls and
-                vulnerabilities.
+              <CardDescription className="text-center leading-relaxed">
+                Deep-dive articles on EVM internals, security patterns, and
+                optimization secrets that separate novices from masters.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="relative text-center">
+              <div className="text-sm text-muted-foreground mb-4">
+                <span className="font-semibold text-emerald-600">
+                  Expert-level insights
+                </span>{" "}
+                • Production-ready techniques
+              </div>
+              <Button
+                variant="outline"
+                asChild
+                className="w-full border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-500/50"
+              >
+                <Link href="/articles">
+                  <BookOpen className="mr-2 size-4" />
+                  Discover Secrets
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* AI Code Reviewer */}
+          <Card className="group relative overflow-hidden border-2 bg-gradient-to-br from-purple-500/10 to-pink-600/10 border-purple-500/30 backdrop-blur-sm hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.15)_0%,transparent_70%)]" />
+            <CardHeader className="relative pb-6">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg mb-4 mx-auto relative">
+                <Bot className="size-7 text-white" />
+                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                  <Sparkles className="size-3 text-white" />
+                </div>
+              </div>
+              <CardTitle className="text-xl font-bold mb-3 text-center group-hover:text-purple-600 transition-colors">
+                🤖 AI Security Mate
+              </CardTitle>
+              <CardDescription className="text-center leading-relaxed">
+                Your AI-powered first mate spots vulnerabilities, suggests
+                optimizations, and reviews code like a seasoned auditor.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="relative text-center">
+              <div className="text-sm text-muted-foreground mb-4">
+                <span className="font-semibold text-purple-600">
+                  Instant analysis
+                </span>{" "}
+                • Security-focused • Gas optimization
+              </div>
+              <Button
+                variant="outline"
+                asChild
+                className="w-full border-purple-500/30 hover:bg-purple-500/10 hover:border-purple-500/50"
+              >
+                <Link href="/reviewer">
+                  <Shield className="mr-2 size-4" />
+                  Audit My Code
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Chat Assistant */}
+          <Card className="group relative overflow-hidden border-2 bg-gradient-to-br from-orange-500/10 to-red-600/10 border-orange-500/30 backdrop-blur-sm hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.15)_0%,transparent_70%)]" />
+            <CardHeader className="relative pb-6">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg mb-4 mx-auto">
+                <MessageCircle className="size-7 text-white" />
+              </div>
+              <CardTitle className="text-xl font-bold mb-3 text-center group-hover:text-orange-600 transition-colors">
+                💬 Wise Oracle
+              </CardTitle>
+              <CardDescription className="text-center leading-relaxed">
+                Ask anything about EVM development. Get instant answers, code
+                examples, and guidance from your personal blockchain sage.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="relative text-center">
+              <div className="text-sm text-muted-foreground mb-4">
+                <span className="font-semibold text-orange-600">
+                  24/7 guidance
+                </span>{" "}
+                • Context-aware • Code examples
+              </div>
+              <Button
+                variant="outline"
+                asChild
+                className="w-full border-orange-500/30 hover:bg-orange-500/10 hover:border-orange-500/50"
+              >
+                <Link href="/chat">
+                  <MessageCircle className="mr-2 size-4" />
+                  Ask the Oracle
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Epic Learning Journey Section */}
+      <div className="w-full max-w-6xl space-y-8">
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-300">
+            <Crown className="mr-2 size-4" />
+            Legendary Learning Journey
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+            From Landlubber to EVM Captain
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Chart your course through 5 legendary modules. Each island builds
+            upon the last, taking you from blockchain basics to advanced smart
+            contract mastery.
+          </p>
+        </div>
+
+        <div className="relative">
+          {/* Treasure Map Path Background */}
+          <div className="absolute inset-0 opacity-20 pointer-events-none">
+            <svg className="w-full h-full" viewBox="0 0 800 400" fill="none">
+              <path
+                d="M50 350 Q200 300 350 200 Q500 100 750 50"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeDasharray="10,10"
+                className="text-amber-600"
+              />
+            </svg>
+          </div>
+
+          <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Module Islands Preview */}
+            {[
+              {
+                name: "Blockchain Fundamentals",
+                icon: Anchor,
+                color: "blue",
+                difficulty: "Beginner",
+                lessons: 5,
+              },
+              {
+                name: "EVM Fundamentals",
+                icon: Zap,
+                color: "purple",
+                difficulty: "Beginner",
+                lessons: 5,
+              },
+              {
+                name: "Intro to Solidity",
+                icon: Code2,
+                color: "green",
+                difficulty: "Intermediate",
+                lessons: 5,
+              },
+              {
+                name: "Zilliqa EVM Setup",
+                icon: Wrench,
+                color: "orange",
+                difficulty: "Intermediate",
+                lessons: 4,
+              },
+              {
+                name: "Creating ERC20 Tokens",
+                icon: Coins,
+                color: "yellow",
+                difficulty: "Advanced",
+                lessons: 4,
+              },
+            ].map((module, index) => {
+              const IconComponent = module.icon;
+              const isFirst = index === 0;
+
+              return (
+                <Card
+                  key={module.name}
+                  className={`group relative overflow-hidden border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl bg-gradient-to-br from-${
+                    module.color
+                  }-500/10 to-${module.color}-600/10 border-${
+                    module.color
+                  }-500/30 ${index >= 3 ? "md:col-span-2 lg:col-span-1" : ""}`}
+                >
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-10 h-10 rounded-lg bg-gradient-to-br from-${module.color}-500 to-${module.color}-600 flex items-center justify-center shadow-lg relative`}
+                        >
+                          <IconComponent className="size-5 text-white" />
+                          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white text-slate-800 text-xs font-bold flex items-center justify-center shadow-md">
+                            {index + 1}
+                          </div>
+                        </div>
+                        {isFirst && (
+                          <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs">
+                            Start Here
+                          </Badge>
+                        )}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs border-${module.color}-500/50`}
+                      >
+                        {module.difficulty}
+                      </Badge>
+                    </div>
+
+                    <CardTitle className="text-lg leading-tight group-hover:text-primary transition-colors">
+                      {module.name}
+                    </CardTitle>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <Trophy className="size-4" />
+                        <span>{module.lessons} lessons</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="size-4" />
+                        <span>~{module.lessons * 1.5}h</span>
+                      </div>
+                    </div>
+
+                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                      <div
+                        className={`bg-gradient-to-r from-${
+                          module.color
+                        }-400 to-${
+                          module.color
+                        }-500 h-2 rounded-full transition-all duration-1000 delay-${
+                          index * 200
+                        } ${isFirst ? "w-full" : "w-0 group-hover:w-full"}`}
+                      />
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      {isFirst
+                        ? "Ready to explore!"
+                        : "Unlocked after previous module"}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Call to Action */}
+        <div className="text-center space-y-6">
+          <Card className="border-2 bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-red-500/10 border-amber-500/30 p-8">
+            <div className="space-y-4">
+              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-xl">
+                <Ship className="size-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold">Ready to Set Sail?</h3>
+              <p className="text-muted-foreground max-w-lg mx-auto">
+                Your epic journey awaits! Start with the fundamentals and work
+                your way up to becoming an EVM master.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+                <Button
+                  size="lg"
+                  asChild
+                  className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-lg"
+                >
+                  <Link href="/lessons">
+                    <Compass className="mr-2 size-4" />
+                    Begin the Adventure
+                  </Link>
+                </Button>
+                <Button variant="outline" size="lg" asChild>
+                  <Link href="/lessons">
+                    <MapPin className="mr-2 size-4" />
+                    View Treasure Map
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Why Choose Our Academy */}
+      <div className="w-full max-w-6xl space-y-8">
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+            <Shield className="mr-2 size-4" />
+            Battle-Tested Approach
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+            Why Sail with Plunder Academy?
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Learn modern EVM development the pirate way: battle-tested
+            strategies, treasure-filled lessons, and AI-powered tools that
+            accelerate your journey to mastery.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+          <Card className="group relative overflow-hidden border-2 bg-gradient-to-br from-red-500/10 to-red-600/10 border-red-500/30 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.1)_0%,transparent_50%)]" />
+            <CardHeader className="relative">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg mb-4">
+                <Shield className="size-6 text-white" />
+              </div>
+              <CardTitle className="text-xl font-bold mb-2 group-hover:text-red-600 transition-colors">
+                ⚔️ Security-First Approach
+              </CardTitle>
+              <CardDescription className="leading-relaxed">
+                Built-in security audits and battle-tested practices protect
+                your treasure from common vulnerabilities and exploits.
               </CardDescription>
             </CardHeader>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gauge className="size-5" /> Gas-savvy
+
+          <Card className="group relative overflow-hidden border-2 bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.1)_0%,transparent_50%)]" />
+            <CardHeader className="relative">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg mb-4">
+                <Gauge className="size-6 text-white" />
+              </div>
+              <CardTitle className="text-xl font-bold mb-2 group-hover:text-blue-600 transition-colors">
+                ⚡ Gas Optimization Mastery
               </CardTitle>
-              <CardDescription>
-                Practical optimizations that actually matter in production
-                contracts.
+              <CardDescription className="leading-relaxed">
+                Learn practical optimization techniques that actually matter in
+                production contracts and save real money on deployments.
               </CardDescription>
             </CardHeader>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="size-5" /> AI-assisted
+
+          <Card className="group relative overflow-hidden border-2 bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/30 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.1)_0%,transparent_50%)]" />
+            <CardHeader className="relative">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg mb-4">
+                <Sparkles className="size-6 text-white" />
+              </div>
+              <CardTitle className="text-xl font-bold mb-2 group-hover:text-purple-600 transition-colors">
+                🤖 AI-Powered Learning
               </CardTitle>
-              <CardDescription>
-                Leverage AI to review Solidity, spot issues, and explain
-                tradeoffs instantly.
+              <CardDescription className="leading-relaxed">
+                Your personal AI first mate reviews code, spots issues, and
+                explains complex concepts with instant feedback.
               </CardDescription>
             </CardHeader>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Layers className="size-5" /> From basics to advanced
+
+          <Card className="group relative overflow-hidden border-2 bg-gradient-to-br from-emerald-500/10 to-emerald-600/10 border-emerald-500/30 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.1)_0%,transparent_50%)]" />
+            <CardHeader className="relative">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg mb-4">
+                <Layers className="size-6 text-white" />
+              </div>
+              <CardTitle className="text-xl font-bold mb-2 group-hover:text-emerald-600 transition-colors">
+                📈 Complete Journey
               </CardTitle>
-              <CardDescription>
-                Covers fundamentals through testing, deployment, and protocol
-                patterns.
+              <CardDescription className="leading-relaxed">
+                From blockchain basics to advanced protocol patterns - covers
+                everything you need to become a legendary EVM developer.
               </CardDescription>
             </CardHeader>
           </Card>

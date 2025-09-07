@@ -13,7 +13,6 @@ import {
   BookOpen, 
   Clock, 
   ChevronRight,
-  Target,
   MapPin,
   Compass,
   Ship,
