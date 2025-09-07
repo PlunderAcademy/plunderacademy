@@ -86,6 +86,10 @@ function TypewriterStory({ autoStart }: { autoStart: boolean }) {
   const [displayedText, setDisplayedText] = useState("");
   const [isTyping, setIsTyping] = useState(autoStart);
   const [isPaused, setIsPaused] = useState(!autoStart);
+  const [speedLevel, setSpeedLevel] = useState(1); // 0: slow, 1: normal, 2: fast
+  const [speedChanged, setSpeedChanged] = useState(false);
+  const [fontIndex, setFontIndex] = useState(0);
+  const [fontChanged, setFontChanged] = useState(false);
 
   const sections = [
     { type: "title", text: `${MISSION_DATA.title} — ${MISSION_DATA.subtitle}` },
@@ -95,6 +99,55 @@ function TypewriterStory({ autoStart }: { autoStart: boolean }) {
   ];
 
   const fullText = sections.map(s => s.text).join("\n\n");
+
+  // Speed configurations: [ms per character, label, icon]
+  const speedConfigs = [
+    { delay: 60, label: "Slow", icon: "🐌" },
+    { delay: 30, label: "Normal", icon: "⚡" },
+    { delay: 10, label: "Fast", icon: "🚀" }
+  ];
+
+  // Font configurations
+  const fontConfigs = [
+    { 
+      name: "Classic Typewriter", 
+      family: "'Courier Prime', 'Courier New', 'Monaco', monospace",
+      weight: "500",
+      spacing: "0.05em",
+      icon: "⌨️"
+    },
+    { 
+      name: "Retro Terminal", 
+      family: "'Fira Code', 'Consolas', 'Monaco', monospace",
+      weight: "400", 
+      spacing: "0.02em",
+      icon: "💻"
+    },
+    { 
+      name: "Adventure Book", 
+      family: "'Georgia', 'Times New Roman', serif",
+      weight: "400",
+      spacing: "0.01em", 
+      icon: "📚"
+    },
+    { 
+      name: "Modern Script", 
+      family: "'Inter', 'Segoe UI', sans-serif",
+      weight: "450",
+      spacing: "0.03em",
+      icon: "✨"
+    },
+    { 
+      name: "Pirate Scroll", 
+      family: "'Crimson Text', 'Playfair Display', serif",
+      weight: "500",
+      spacing: "0.04em",
+      icon: "🏴‍☠️"
+    }
+  ];
+
+  const currentSpeed = speedConfigs[speedLevel];
+  const currentFont = fontConfigs[fontIndex];
 
   useEffect(() => {
     if (!isTyping || isPaused) return;
@@ -108,10 +161,10 @@ function TypewriterStory({ autoStart }: { autoStart: boolean }) {
           return prev;
         }
       });
-    }, 30); // Adjust speed here
+    }, currentSpeed.delay);
 
     return () => clearInterval(interval);
-  }, [isTyping, isPaused, fullText]);
+  }, [isTyping, isPaused, fullText, currentSpeed.delay]);
 
   const handleToggle = () => {
     setIsPaused(!isPaused);
@@ -128,12 +181,45 @@ function TypewriterStory({ autoStart }: { autoStart: boolean }) {
     setIsTyping(false);
   };
 
+  const handleSpeedClick = () => {
+    setSpeedLevel(prev => (prev + 1) % speedConfigs.length);
+    setSpeedChanged(true);
+    setTimeout(() => setSpeedChanged(false), 500); // Flash effect for 500ms
+  };
+
+  const handleFontClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent speed change when clicking font
+    setFontIndex(prev => (prev + 1) % fontConfigs.length);
+    setFontChanged(true);
+    setTimeout(() => setFontChanged(false), 500); // Flash effect for 500ms
+  };
+
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Book className="w-5 h-5" />
           <h3 className="font-semibold">Typewriter Story</h3>
+          <Badge 
+            variant={speedLevel === 0 ? "outline" : speedLevel === 1 ? "secondary" : "default"}
+            className={`flex items-center gap-1 transition-all ${
+              speedChanged ? "animate-pulse scale-110" : ""
+            }`}
+          >
+            <span>{currentSpeed.icon}</span>
+            <span>{currentSpeed.label}</span>
+          </Badge>
+          <Badge 
+            variant="outline"
+            className={`flex items-center gap-1 transition-all cursor-pointer hover:bg-primary/10 ${
+              fontChanged ? "animate-pulse scale-110 bg-primary/20" : ""
+            }`}
+            onClick={handleFontClick}
+            title="Click to change font"
+          >
+            <span>{currentFont.icon}</span>
+            <span className="text-xs">{currentFont.name}</span>
+          </Badge>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -166,10 +252,41 @@ function TypewriterStory({ autoStart }: { autoStart: boolean }) {
         </div>
       </div>
       
-      <div className="prose prose-sm max-w-none dark:prose-invert">
-        <div className="whitespace-pre-wrap font-mono text-sm leading-relaxed">
+      <div className="mb-4 space-y-2">
+        <p className="text-xs text-muted-foreground text-center">
+          💡 <strong>Click text area</strong> to change speed: 🐌 Slow → ⚡ Normal → 🚀 Fast
+        </p>
+        <p className="text-xs text-muted-foreground text-center">
+          🎨 <strong>Click font badge</strong> to change font: ⌨️ Typewriter → 💻 Terminal → 📚 Book → ✨ Modern → 🏴‍☠️ Pirate
+        </p>
+        <div className="flex items-center justify-center gap-4 text-xs">
+          <span className="font-medium">Speed: {currentSpeed.icon} {currentSpeed.label}</span>
+          <span className="text-muted-foreground">•</span>
+          <span className="font-medium">Font: {currentFont.icon} {currentFont.name}</span>
+        </div>
+      </div>
+      
+      <div 
+        className={`prose prose-sm max-w-none dark:prose-invert cursor-pointer hover:bg-muted/30 transition-all p-4 rounded-lg border-2 border-dashed ${
+          speedChanged 
+            ? "border-primary bg-primary/10 shadow-lg scale-[1.02]" 
+            : "border-muted hover:border-primary/50"
+        }`}
+        onClick={handleSpeedClick}
+        title={`Click to change speed (Current: ${currentSpeed.label})`}
+      >
+        <div 
+          className={`whitespace-pre-wrap text-base leading-relaxed text-foreground selection:bg-primary/20 transition-all duration-300 ${
+            fontChanged ? "scale-[1.01] bg-primary/5 rounded" : ""
+          }`}
+          style={{ 
+            fontFamily: currentFont.family,
+            fontWeight: currentFont.weight,
+            letterSpacing: currentFont.spacing
+          }}
+        >
           {displayedText}
-          {isTyping && !isPaused && <span className="animate-pulse">|</span>}
+          {isTyping && !isPaused && <span className="animate-pulse text-primary font-bold">▋</span>}
         </div>
       </div>
     </Card>
