@@ -17,7 +17,7 @@ const nav = [
   { href: "/articles", label: "Articles" },
   { href: "/reviewer", label: "Code Reviewer" },
   { href: "/chat", label: "Chat" },
-  { href: "/achievements-demo", label: "Achievements Demo" },
+  // { href: "/achievements-demo", label: "Achievements Demo" },
 ];
 
 export function SiteHeader() {
