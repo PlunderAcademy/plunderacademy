@@ -28,9 +28,6 @@ import {
   Compass,
   Crown,
   Anchor,
-  Zap,
-  Wrench,
-  Coins,
   Trophy,
   MapPin,
 } from "lucide-react";
@@ -146,26 +143,26 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/3 to-indigo-500/5" />
 
           <div className="relative p-8 md:p-12">
-            {/* Treasure Map Header */}
-            <div className="relative mb-8">
-              <Image
-                src="/treasuremap.png"
-                alt="Learning Path Treasure Map"
-                width={1000}
-                height={400}
-                className="w-full h-48 md:h-64 object-cover rounded-xl border-2 border-amber-500/30 shadow-lg"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent rounded-xl" />
-              <div className="absolute bottom-4 left-6 text-white">
-                <Badge className="bg-amber-600 text-white px-3 py-1 text-sm font-medium mb-2 shadow-lg">
-                  Most Popular
-                </Badge>
-                <h3 className="text-2xl md:text-3xl font-bold leading-tight drop-shadow-lg">
-                  Comprehensive Learning Path
-                </h3>
-              </div>
+          {/* Treasure Map Header */}
+          <div className="relative mb-8">
+            <Image
+              src="/overall_map.webp"
+              alt="Learning Path Treasure Map"
+              width={1000}
+              height={400}
+              className="w-full h-48 md:h-64 object-cover rounded-xl border-2 border-amber-500/30 shadow-lg"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent rounded-xl" />
+            <div className="absolute bottom-4 left-6 text-white">
+              <Badge className="bg-amber-600 text-white px-3 py-1 text-sm font-medium mb-2 shadow-lg">
+                Most Popular
+              </Badge>
+              <h3 className="text-2xl md:text-3xl font-bold leading-tight drop-shadow-lg">
+                Comprehensive Learning Path
+              </h3>
             </div>
+          </div>
 
             <div className="space-y-8">
               {/* Description & Social Proof */}
@@ -425,34 +422,35 @@ export default function Home() {
                 difficulty: "Beginner",
                 lessons: 5,
               },
-              {
-                name: "EVM Fundamentals",
-                icon: Zap,
-                color: "purple",
-                difficulty: "Beginner",
-                lessons: 5,
-              },
-              {
-                name: "Intro to Solidity",
-                icon: Code2,
-                color: "green",
-                difficulty: "Intermediate",
-                lessons: 5,
-              },
-              {
-                name: "Zilliqa EVM Setup",
-                icon: Wrench,
-                color: "orange",
-                difficulty: "Intermediate",
-                lessons: 4,
-              },
-              {
-                name: "Creating ERC20 Tokens",
-                icon: Coins,
-                color: "yellow",
-                difficulty: "Advanced",
-                lessons: 4,
-              },
+              // TODO: Add other islands here as we build out content in Milestone 2
+              // {
+              //   name: "EVM Fundamentals",
+              //   icon: Zap,
+              //   color: "purple",
+              //   difficulty: "Beginner",
+              //   lessons: 5,
+              // },
+              // {
+              //   name: "Intro to Solidity",
+              //   icon: Code2,
+              //   color: "green",
+              //   difficulty: "Intermediate",
+              //   lessons: 5,
+              // },
+              // {
+              //   name: "Zilliqa EVM Setup",
+              //   icon: Wrench,
+              //   color: "orange",
+              //   difficulty: "Intermediate",
+              //   lessons: 4,
+              // },
+              // {
+              //   name: "Creating ERC20 Tokens",
+              //   icon: Coins,
+              //   color: "yellow",
+              //   difficulty: "Advanced",
+              //   lessons: 4,
+              // },
             ].map((module, index) => {
               const IconComponent = module.icon;
               const isFirst = index === 0;

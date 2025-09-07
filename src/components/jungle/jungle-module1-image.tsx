@@ -1,104 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { Card } from "@/components/ui/card";
-import { Play, Pause, RotateCcw, Zap } from "lucide-react";
 
-interface AnimatedModuleImageProps {
-  imageNumber: number;
-  autoStart?: boolean;
-}
-
-export function AnimatedModuleImage({ 
-  imageNumber, 
-  autoStart = true
-}: AnimatedModuleImageProps) {
-  const [isAnimating, setIsAnimating] = useState(autoStart);
-
-  const handleToggleAnimation = () => {
-    setIsAnimating(!isAnimating);
-  };
-
-  const handleReset = () => {
-    setIsAnimating(false);
-    setTimeout(() => setIsAnimating(true), 100);
-  };
-
-  // Configuration for different images - you can expand this
-  const getEffectsConfig = (imageNum: number) => {
-    switch (imageNum) {
-      case 1:
-        return {
-          theme: "volcanic",
-          effects: ["lightning", "volcanoGlow", "smoke", "embers", "coins", "ambientFire"],
-          description: "⚡ Lightning strikes, volcano glows, coins sparkle around temple"
-        };
-      default:
-        return {
-          theme: "adventure",
-          effects: ["lightning", "glow", "particles"],
-          description: "✨ Magical effects active"
-        };
-    }
-  };
-
-  const config = getEffectsConfig(imageNumber);
-
+export function JungleModule1Image() {
   return (
-    <div className="w-full space-y-6">
-      {/* Controls */}
-      <Card className="p-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleToggleAnimation}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              {isAnimating ? (
-                <>
-                  <Pause className="w-4 h-4" />
-                  Pause Effects
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4" />
-                  Start Effects
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleReset}
-              size="sm"
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reset
-            </Button>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Zap className="w-4 h-4" />
-            <span>Adventure Effects</span>
-          </div>
-        </div>
-      </Card>
-
-      {/* Animated Image Container */}
-      <Card className="relative overflow-hidden">
-        <div className="relative w-full aspect-[16/9]">
-          {/* Base image */}
-          <img
-            src={`/module-images/${imageNumber}.png`}
-            alt={`Adventure scene ${imageNumber}`}
-            className="w-full h-full object-cover"
-          />
-          
-          {/* Animated overlay effects */}
-          <div className={`absolute inset-0 ${isAnimating ? 'animate-effects' : ''}`}>
-            
+    <Card className="relative overflow-hidden">
+      <div className="relative w-full aspect-[16/9]">
+        {/* Base image */}
+        <Image
+          src="/islands/jungle/jungle-module1-image.webp"
+          alt="Blockchain Fundamentals Adventure Scene"
+          fill
+          className="object-cover"
+        />
+        
+        {/* Animated overlay effects */}
+        <div className="absolute inset-0 animate-effects">
             {/* Lightning Effects */}
             <div className="absolute inset-0 lightning-container">
               <div className="absolute top-[10%] left-[20%] w-1 h-[30%] bg-white/90 lightning animate-lightning-1"></div>
@@ -112,8 +30,6 @@ export function AnimatedModuleImage({
 
             {/* Volcano Glow Effects */}
             <div className="absolute inset-0">
-              {/* Main volcano glow - POSITIONING: Adjust top-[X%] and left-[X%] to move */}
-
               <div className="absolute top-[30%] left-[55%] -translate-x-1/2 w-[100px] h-[50px] bg-red-500/40 rounded-full volcano-glow animate-volcano-pulse-delay"></div>
               <div className="absolute top-[35%] left-[55%] -translate-x-1/2 w-[60px] h-[30px] bg-yellow-300/40 rounded-full volcano-glow animate-volcano-flicker"></div>
             </div>
@@ -123,8 +39,8 @@ export function AnimatedModuleImage({
               <div className="absolute top-[10%] left-[48%] w-[20px] h-[20px] bg-gray-400/30 rounded-full smoke animate-smoke-rise-1"></div>
               <div className="absolute top-[15%] left-[52%] w-[15px] h-[15px] bg-gray-500/25 rounded-full smoke animate-smoke-rise-2"></div>
               <div className="absolute top-[12%] left-[45%] w-[25px] h-[25px] bg-gray-300/20 rounded-full smoke animate-smoke-rise-3"></div>
-            </div>
-
+          </div>
+          
             {/* Floating Embers */}
             <div className="absolute inset-0">
               <div className="absolute top-[40%] left-[30%] w-[3px] h-[3px] bg-orange-400 rounded-full ember animate-ember-float-1"></div>
@@ -132,11 +48,10 @@ export function AnimatedModuleImage({
               <div className="absolute top-[35%] left-[60%] w-[3px] h-[3px] bg-yellow-400 rounded-full ember animate-ember-float-3"></div>
               <div className="absolute top-[60%] left-[40%] w-[2px] h-[2px] bg-orange-500 rounded-full ember animate-ember-float-4"></div>
               <div className="absolute top-[45%] right-[20%] w-[3px] h-[3px] bg-red-300 rounded-full ember animate-ember-float-5"></div>
-            </div>
+        </div>
 
             {/* Temple Coin Effects */}
             <div className="absolute inset-0">
-              {/* Coins around temple area - more concentrated around pyramid/temple structure */}
               <div className="absolute top-[45%] right-[35%] w-[4px] h-[4px] bg-yellow-300 rounded-full coin-glow animate-coin-float-1"></div>
               <div className="absolute top-[50%] right-[30%] w-[3px] h-[3px] bg-amber-400 rounded-full coin-glow animate-coin-float-2"></div>
               <div className="absolute top-[55%] right-[40%] w-[4px] h-[4px] bg-yellow-400 rounded-full coin-glow animate-coin-float-3"></div>
@@ -144,8 +59,6 @@ export function AnimatedModuleImage({
               <div className="absolute top-[60%] right-[32%] w-[3px] h-[3px] bg-yellow-300 rounded-full coin-glow animate-coin-float-5"></div>
               <div className="absolute top-[48%] right-[45%] w-[4px] h-[4px] bg-amber-300 rounded-full coin-glow animate-coin-float-6"></div>
               <div className="absolute top-[42%] right-[38%] w-[3px] h-[3px] bg-yellow-400 rounded-full coin-glow animate-coin-float-7"></div>
-              
-              {/* Some coins on temple steps/structure */}
               <div className="absolute top-[65%] right-[35%] w-[3px] h-[3px] bg-yellow-300 rounded-full coin-glow animate-coin-float-8"></div>
               <div className="absolute top-[38%] right-[42%] w-[4px] h-[4px] bg-amber-400 rounded-full coin-glow animate-coin-float-9"></div>
             </div>
@@ -173,7 +86,6 @@ export function AnimatedModuleImage({
               filter: blur(8px);
               box-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
             }
-            
             
             .smoke {
               filter: blur(4px);
@@ -242,11 +154,6 @@ export function AnimatedModuleImage({
               94%, 96% { opacity: 0.2; }
             }
             
-            @keyframes volcano-pulse {
-              0%, 100% { transform: translate(-50%, 0) scale(1); opacity: 0.4; }
-              50% { transform: translate(-50%, 0) scale(1.2); opacity: 0.7; }
-            }
-            
             @keyframes volcano-pulse-delay {
               0%, 100% { transform: translate(-50%, 0) scale(1); opacity: 0.6; }
               50% { transform: translate(-50%, 0) scale(1.1); opacity: 0.9; }
@@ -258,7 +165,6 @@ export function AnimatedModuleImage({
               50% { opacity: 0.2; transform: translate(-50%, 0) scale(0.8); }
               75% { opacity: 0.9; transform: translate(-50%, 0) scale(1.1); }
             }
-            
             
             @keyframes smoke-rise-1 {
               0% { opacity: 0; transform: translateY(0) scale(0.5); }
@@ -387,10 +293,6 @@ export function AnimatedModuleImage({
               animation: flash-2 18s infinite 8s;
             }
             
-            .animate-volcano-pulse {
-              animation: volcano-pulse 5s ease-in-out infinite;
-            }
-            
             .animate-volcano-pulse-delay {
               animation: volcano-pulse-delay 5s ease-in-out infinite 1.5s;
             }
@@ -398,7 +300,6 @@ export function AnimatedModuleImage({
             .animate-volcano-flicker {
               animation: volcano-flicker 4s ease-in-out infinite 1s;
             }
-            
             
             .animate-smoke-rise-1 {
               animation: smoke-rise-1 6s ease-out infinite;
@@ -476,8 +377,7 @@ export function AnimatedModuleImage({
               animation: atmospheric 15s ease-in-out infinite;
             }
           `}</style>
-        </div>
-      </Card>
-    </div>
+      </div>
+    </Card>
   );
 }

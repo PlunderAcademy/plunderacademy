@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
-import { Button } from "@/components/ui/button";
+import { ModuleMeta } from "@/lib/mdx";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Play, RotateCcw, Pause, CheckCircle2, Wallet, BookOpen, Shield, Gauge, Trophy } from "lucide-react";
+import { CheckCircle2, BookOpen, Shield, Gauge, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Coordinates for the path points (as percentages of the map dimensions)
@@ -121,31 +121,30 @@ const achievements: Achievement[] = [
   }
 ];
 
-// Lesson information for uncompleted locations
-const lessonInfo: Record<number, string> = {
-  1: "Solidity Basics",
-  2: "Transaction On Chain", 
-  3: "PLACEHOLDER - info doesn't exist",
-  4: "PLACEHOLDER - info doesn't exist",
-  5: "PLACEHOLDER - info doesn't exist"
-};
+// Module slugs mapping to jungle modules in order
+const JUNGLE_MODULES = [
+  'blockchain-fundamentals',
+  'evm-fundamentals', 
+  'intro-to-solidity',
+  'zilliqa-evm-setup',
+  'creating-erc20-tokens'
+];
 
 interface AnimatedMapProps {
   autoStart?: boolean;
-  showControls?: boolean;
   mode?: "demo" | "real"; // New prop to switch between demo and real data
+  modules?: ModuleMeta[]; // Module data passed from server component
 }
 
-export function AnimatedMap({ autoStart = false, showControls = true, mode = "demo" }: AnimatedMapProps) {
+export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: AnimatedMapProps) {
   const router = useRouter();
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   
   // Achievement data
   const [walletAchievements, setWalletAchievements] = useState<WalletAchievement[]>([]);
-  const [isLoadingAchievements, setIsLoadingAchievements] = useState(false);
   const [completedLocations, setCompletedLocations] = useState<Set<number>>(new Set());
   const [maxCompletedLocation, setMaxCompletedLocation] = useState(0);
   
@@ -212,7 +211,6 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
   const fetchWalletAchievements = useCallback(async () => {
     if (!address || mode === "demo") return;
     
-    setIsLoadingAchievements(true);
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_PLUNDER_ACADEMY_API}/api/v1/vouchers/wallet/${address}`);
       
@@ -245,32 +243,43 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
       setCompletedLocations(completed);
       setMaxCompletedLocation(maxLocation);
       
-      // Automatically show progress line to current achievement level
+      // Show progress line to the NEXT module after the last completed one
       if (maxLocation >= 0 && completedLocations.size > 0) {
-        const targetProgress = pathPoints[maxLocation]?.progress || 0;
-        setProgress(targetProgress);
-        setCurrentStep(maxLocation);
+        // If we've completed modules, show path to the next one
+        const nextModuleIndex = maxLocation + 1;
+        if (nextModuleIndex < pathPoints.length) {
+          // Show path to next module
+          const targetProgress = pathPoints[nextModuleIndex]?.progress || 0;
+          setProgress(targetProgress);
+          setCurrentStep(nextModuleIndex);
+        } else {
+          // All modules completed, show full path
+          setProgress(100);
+          setCurrentStep(pathPoints.length - 1);
+        }
+      } else {
+        // No modules completed yet, start at the beginning
+        setProgress(0);
+        setCurrentStep(0);
       }
       
     } catch (error) {
       console.error("Error fetching wallet achievements:", error);
-    } finally {
-      setIsLoadingAchievements(false);
     }
   }, [address, mode, fetchNFTMetadata, completedLocations.size]);
 
   // Fetch achievements when component mounts or address changes
   useEffect(() => {
-    if (address && mode === "real") {
+    if (address && isConnected && mode === "real") {
       fetchWalletAchievements();
-    } else if (mode === "demo") {
-      // Reset to demo mode
+    } else {
+      // Reset progress when wallet disconnects or in demo mode
       setProgress(0);
       setCurrentStep(0);
       setCompletedLocations(new Set());
       setMaxCompletedLocation(0);
     }
-  }, [address, mode, fetchWalletAchievements]);
+  }, [address, isConnected, mode, fetchWalletAchievements]);
 
   // Only fetch metadata for claimed achievements to avoid 404s
   // useEffect(() => {
@@ -319,38 +328,6 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
     return () => clearInterval(interval);
   }, [isPlaying]);
 
-  const handlePlay = () => {
-    if (progress >= 100) {
-      handleReset();
-    }
-    setIsPlaying(true);
-  };
-
-  const handlePause = () => {
-    setIsPlaying(false);
-  };
-
-  const handleReset = () => {
-    setIsPlaying(false);
-    setProgress(0);
-    setCurrentStep(0);
-  };
-
-  const playToRealProgress = () => {
-    if (mode === "real" && maxCompletedLocation >= 0 && completedLocations.size > 0) {
-      setIsPlaying(false);
-      
-      // Animate from start to current progress
-      setProgress(0);
-      setCurrentStep(0);
-      
-      setTimeout(() => {
-        const targetProgress = pathPoints[maxCompletedLocation]?.progress || 0;
-        setProgress(targetProgress);
-        setCurrentStep(maxCompletedLocation);
-      }, 100);
-    }
-  };
 
   const getLocationStatus = (locationIndex: number) => {
     if (mode === "demo") {
@@ -361,95 +338,45 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
     }
   };
 
+  // Helper function to determine if a module is available (sequential access)
+  const isModuleAvailable = (locationIndex: number) => {
+    if (mode === "demo") return true;
+    
+    // Module 1 is always available
+    if (locationIndex === 0) return true;
+    
+    // For subsequent modules, check if previous module is completed
+    return completedLocations.has(locationIndex - 1);
+  };
+
+  // Helper function to get the next available module for CTA styling
+  const getNextAvailableModule = () => {
+    if (mode === "demo") return 0;
+    
+    for (let i = 0; i < 5; i++) {
+      if (!completedLocations.has(i) && isModuleAvailable(i)) {
+        return i;
+      }
+    }
+    return -1; // All completed
+  };
+
   const pathString = createPathString(pathPoints);
+
+  const nextAvailableModule = getNextAvailableModule();
 
   return (
     <div className="w-full space-y-6">
-      {/* Controls */}
-      {showControls && (
-        <Card className="p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={isPlaying ? handlePause : handlePlay}
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                {isPlaying ? (
-                  <>
-                    <Pause className="w-4 h-4" />
-                    Pause
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4" />
-                    {mode === "demo" ? (progress >= 100 ? 'Replay Full Journey' : 'Start Full Journey') : 'Demo Full Path'}
-                  </>
-                )}
-              </Button>
-              
-              {mode === "real" && address && maxCompletedLocation >= 0 && completedLocations.size > 0 && (
-                <Button
-                  onClick={playToRealProgress}
-                  size="sm"
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Wallet className="w-4 h-4" />
-                  Replay My Journey
-                </Button>
-              )}
-              
-              <Button
-                onClick={handleReset}
-                size="sm"
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Reset
-              </Button>
-            </div>
-            
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              {mode === "real" && address ? (
-                <>
-                  <span>
-                    Completed: {completedLocations.size} of 5
-                  </span>
-                  {isLoadingAchievements && <span>Loading...</span>}
-                </>
-              ) : (
-                <>
-                  <span>
-                    Location: {Math.min(currentStep + 1, pathPoints.length)} of {pathPoints.length}
-                  </span>
-                  <span>
-                    Progress: {Math.round(progress)}%
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-          
-          {/* Progress bar */}
-          <div className="mt-4 w-full bg-muted rounded-full h-2">
-            <div 
-              className="h-2 bg-red-500 rounded-full transition-all duration-100 ease-linear"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </Card>
-      )}
-
       {/* Map Container */}
       <Card className="relative overflow-hidden mx-auto w-full">
         <div className="relative w-full h-[90vh]">
           {/* Map Image */}
-          <img
-            src="/map.webp"
-            alt="Training Progress Map"
-            className="w-full h-full object-contain"
+          <Image
+            src="/islands/jungle/jungle-map.webp"
+            alt="Jungle Island Map"
+            fill
+            className="object-contain"
+            priority
           />
           
           {/* SVG Overlay for path and markers */}
@@ -520,11 +447,23 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
             {pathPoints.map((point, index) => {
               const locationStatus = getLocationStatus(index);
               const isActive = index === currentStep && isPlaying;
-
               const isCompleted = locationStatus === "completed";
+              const isAvailable = isModuleAvailable(index);
+              const isNextModule = nextAvailableModule === index;
               
               const markerContent = (
                 <g key={index}>
+                  {/* CTA Glow for next available module */}
+                  {isNextModule && !isCompleted && (
+                    <circle
+                      cx={point.x}
+                      cy={point.y}
+                      r="3.5"
+                      className="fill-amber-400/30 animate-pulse"
+                      strokeWidth="0"
+                    />
+                  )}
+                  
                   {/* Location dot */}
                   <circle
                     cx={point.x}
@@ -534,9 +473,13 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
                       "transition-all duration-500",
                       isCompleted
                         ? "fill-green-500 stroke-green-700" 
-                        : "fill-gray-400 stroke-gray-600",
+                        : isAvailable
+                        ? isNextModule 
+                          ? "fill-amber-500 stroke-amber-700" 
+                          : "fill-blue-500 stroke-blue-700"
+                        : "fill-gray-300 stroke-gray-500",
                       isActive && "animate-pulse",
-                      isCompleted && "cursor-pointer"
+                      isAvailable && "cursor-pointer"
                     )}
                     strokeWidth="0.8"
                   />
@@ -547,7 +490,7 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
                     y={point.y + 1}
                     className={cn(
                       "fill-white text-center",
-                      isCompleted && "cursor-pointer"
+                      isAvailable && "cursor-pointer"
                     )}
                     textAnchor="middle"
                     fontSize="2.5"
@@ -570,13 +513,18 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
             const walletAchievement = walletAchievements.find(wa => wa.tokenId === index + 1 && wa.isClaimed);
             const metadata = achievementMetadata[achievementNumber];
             const isCompleted = locationStatus === "completed";
-            const lessonTitle = lessonInfo[index + 1];
+            const isAvailable = isModuleAvailable(index);
+            const moduleSlug = JUNGLE_MODULES[index];
+            const moduleData = modules.find(m => m.slug === moduleSlug);
             
             return (
               <HoverCard key={`hover-${index}`}>
                 <HoverCardTrigger asChild>
                   <div 
-                    className="absolute cursor-pointer"
+                    className={cn(
+                      "absolute",
+                      isAvailable && isConnected ? "cursor-pointer" : "cursor-not-allowed"
+                    )}
                     style={{
                       left: `${point.x}%`,
                       top: `${point.y}%`,
@@ -585,7 +533,11 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
                       height: '20px',
                       zIndex: 10
                     }}
-                    onClick={() => router.push('/lessons')}
+                    onClick={() => {
+                      if (isAvailable && isConnected) {
+                        router.push(`/lessons/jungle/${moduleSlug}`);
+                      }
+                    }}
                   />
                 </HoverCardTrigger>
                 <HoverCardContent className="w-96">
@@ -663,24 +615,43 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
                       </div>
                     </div>
                   ) : (
-                    // Uncompleted lesson - show lesson info
+                    // Module info - show from mdx data
                     <div className="space-y-3">
                       {/* Header */}
                       <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="bg-muted">
+                        <Badge variant="outline" className={cn("bg-muted", !isAvailable && "opacity-50")}>
                           <BookOpen className="size-4 mr-1" />
-                          Lesson {index + 1}
+                          Module {index + 1}
                         </Badge>
-                        <div className="text-sm text-muted-foreground">Click to start</div>
+                        <div className="text-sm text-muted-foreground">
+                          {!isConnected 
+                            ? "Connect wallet to start" 
+                            : isAvailable 
+                            ? "Click to start" 
+                            : "Complete previous modules first"
+                          }
+                        </div>
                       </div>
                       
-                      {/* Lesson Info */}
+                      {/* Module Info */}
                       <div className="text-center p-8 bg-muted/30 rounded-lg">
                         <div className="text-6xl mb-4">{index + 1}</div>
-                        <h4 className="font-semibold text-lg mb-2">{lessonTitle}</h4>
+                        <h4 className="font-semibold text-lg mb-2">
+                          {moduleData?.title || 'Loading...'}
+                        </h4>
                         <p className="text-sm text-muted-foreground">
-                          {isCompleted ? "Achievement completed!" : "Click to start this lesson"}
+                          {moduleData?.description || 'Module description loading...'}
                         </p>
+                        {!isConnected && (
+                          <p className="text-xs text-orange-600 mt-2">
+                            🔒 Connect wallet to access modules
+                          </p>
+                        )}
+                        {isConnected && !isAvailable && (
+                          <p className="text-xs text-orange-600 mt-2">
+                            🔒 Complete Module {index} to unlock
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -695,16 +666,16 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
           {mode === "real" && address ? (
             <>
               <p className="text-sm font-medium">
-                Your Progress: {completedLocations.size}/5 Achievements
+                Your Progress: {completedLocations.size}/5 Modules
               </p>
               {maxCompletedLocation >= 0 && completedLocations.size > 0 && (
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Latest: Location {maxCompletedLocation + 1} Complete! ✓
+                  Latest: Module {maxCompletedLocation + 1} Complete! ✓
                 </p>
               )}
               {completedLocations.size === 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Complete achievements to unlock locations
+                  Start with Module 1: Blockchain Fundamentals
                 </p>
               )}
             </>
@@ -715,48 +686,11 @@ export function AnimatedMap({ autoStart = false, showControls = true, mode = "de
           ) : (
             <>
               <p className="text-sm font-medium">
-                Current Location: {pathPoints[currentStep]?.label}
+                Navigate through 5 modules to master blockchain development
               </p>
-              {currentStep < pathPoints.length - 1 && isPlaying && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Moving to: {pathPoints[currentStep + 1]?.label}
-                </p>
-              )}
-              {progress >= 100 && (
-                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Journey Complete! 🎉
-                </p>
-              )}
             </>
           )}
         </div>
-      </Card>
-      
-      {/* Legend */}
-      <Card className="p-4">
-        <h3 className="font-semibold mb-3">Map Legend</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
-              {mode === "real" && <CheckCircle2 className="w-2 h-2 text-white" />}
-            </div>
-            <span>{mode === "real" ? "Achievement Earned" : "Completed Location"}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-            <span>{mode === "real" ? "Not Yet Earned" : "Upcoming Location"}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-0.5 bg-red-500" style={{ backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 2px, #ef4444 2px, #ef4444 4px)' }}></div>
-            <span>Travel Path</span>
-          </div>
-        </div>
-        
-        {mode === "real" && (
-          <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
-            <p>Complete training achievements to unlock new locations and advance your journey!</p>
-          </div>
-        )}
       </Card>
     </div>
   );

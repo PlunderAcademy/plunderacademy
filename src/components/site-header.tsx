@@ -17,7 +17,6 @@ const nav = [
   { href: "/articles", label: "Articles" },
   { href: "/reviewer", label: "Code Reviewer" },
   { href: "/chat", label: "Chat" },
-  { href: "/map", label: "Progress Map" },
   { href: "/achievements-demo", label: "Achievements Demo" },
 ];
 
