@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +62,24 @@ interface VoucherResponse {
   chainId: number;
 }
 
+interface CelebrationData {
+  name?: string;
+  description?: string;
+  image?: string;
+  achievementNumber: string;
+  category?: "fundamentals" | "advanced" | "security" | "gas";
+  attributes?: Array<{
+    trait_type: string;
+    value: string | number;
+  }>;
+}
+
+interface ClaimedAchievement {
+  achievementNumber: string;
+  hasAchievement: boolean;
+  metadataUri?: string;
+}
+
 export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
   const { address } = useAccount();
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -80,7 +99,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
   
   // Achievement celebration
   const [showCelebration, setShowCelebration] = useState(false);
-  const [celebrationData, setCelebrationData] = useState<any>(null);
+  const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
 
   // Contract interactions
   const { 
@@ -97,193 +116,8 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
     hash,
   });
 
-
-  // Timer effect
-  useEffect(() => {
-    if (isStarted && !isCompleted && timeLeft > 0) {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            handleSubmitQuiz();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }
-  }, [isStarted, isCompleted, timeLeft]);
-
-  // Handle successful contract confirmation
-  useEffect(() => {
-    if (isConfirmed && hash && voucher && missionData) {
-      // Show achievement celebration
-      const moduleToAchievementMap = {
-        'blockchain-fundamentals': '0001',
-        'evm-fundamentals': '0002', 
-        'intro-to-solidity': '0003',
-        'zilliqa-evm-setup': '0004',
-        'creating-erc20-tokens': '0005'
-      };
-      const achievementNumber = moduleToAchievementMap[quiz.module as keyof typeof moduleToAchievementMap];
-
-      const imageUrl = `https://static.plunderswap.com/training/images/${achievementNumber || "0001"}.webp`;
-
-      // Load NFT metadata for complete attributes
-      const loadNFTMetadata = async () => {
-        try {
-          const metadataUrl = `https://static.plunderswap.com/training/${achievementNumber || "0001"}.json`;
-          const response = await fetch(metadataUrl);
-          if (response.ok) {
-            const metadata = await response.json();
-            setCelebrationData({
-              name: metadata.name || missionData.achievementReward?.name || "Achievement Unlocked",
-              description: metadata.description || missionData.achievementReward?.description || "Congratulations!",
-              achievementNumber: achievementNumber || "0001",
-              category: "fundamentals", // Could be mapped from module
-              image: metadata.image || imageUrl,
-              attributes: metadata.attributes || []
-            });
-          } else {
-            // Fallback to mission data if metadata fails
-            setCelebrationData({
-              name: missionData.achievementReward?.name || "Achievement Unlocked",
-              description: missionData.achievementReward?.description || "Congratulations!",
-              achievementNumber: achievementNumber || "0001",
-              category: "fundamentals",
-              image: imageUrl
-            });
-          }
-        } catch (error) {
-          console.error('Error loading NFT metadata for celebration:', error);
-          // Fallback to mission data
-          setCelebrationData({
-            name: missionData.achievementReward?.name || "Achievement Unlocked",
-            description: missionData.achievementReward?.description || "Congratulations!",
-            achievementNumber: achievementNumber || "0001",
-            category: "fundamentals",
-            image: imageUrl
-          });
-        } finally {
-          // Ensure celebration shows even if metadata loading fails
-          setShowCelebration(true);
-        }
-      };
-
-      loadNFTMetadata();
-      
-      // Set NFT image for display in completed section
-      setNftImageUrl(imageUrl);
-      
-      setStep("completed");
-    }
-  }, [isConfirmed, hash, voucher, missionData, quiz.module]);
-
-  // Check if achievement is already claimed on component mount
-  useEffect(() => {
-    const checkClaimedStatus = async () => {
-      if (!address) return;
-
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_PLUNDER_ACADEMY_API}/api/v1/vouchers/claimed/${address}`);
-        if (response.ok) {
-          const data = await response.json();
-          const achievementNumber = {
-            'blockchain-fundamentals': '0001',
-            'evm-fundamentals': '0002', 
-            'intro-to-solidity': '0003',
-            'zilliqa-evm-setup': '0004',
-            'creating-erc20-tokens': '0005'
-          }[quiz.module];
-
-          const claimedAchievement = data.claimedAchievements?.find(
-            (achievement: any) => achievement.achievementNumber === achievementNumber
-          );
-
-          if (claimedAchievement && claimedAchievement.hasAchievement) {
-            setAlreadyClaimed(true);
-            setStep("completed");
-            
-            // Load NFT image from metadata
-            if (claimedAchievement.metadataUri) {
-              try {
-                const metadataResponse = await fetch(claimedAchievement.metadataUri);
-                if (metadataResponse.ok) {
-                  const metadata = await metadataResponse.json();
-                  if (metadata.image) {
-                    // Convert .png to .webp if needed
-                    const imageUrl = metadata.image.replace(/\.png$/, '.webp');
-                    setNftImageUrl(imageUrl);
-                  }
-                }
-              } catch (error) {
-                console.error('Error loading NFT metadata:', error);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error checking claimed status:', error);
-      }
-    };
-
-    checkClaimedStatus();
-  }, [address, quiz.module]);
-
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const handleStartQuiz = () => {
-    setIsStarted(true);
-  };
-
-  const handleAnswerChange = (questionId: number, answer: string | string[]) => {
-    setAnswers(prev => {
-      const existingIndex = prev.findIndex(a => a.questionId === questionId);
-      const newAnswer = { questionId, answer };
-      
-      if (existingIndex >= 0) {
-        return prev.map((a, i) => i === existingIndex ? newAnswer : a);
-      } else {
-        return [...prev, newAnswer];
-      }
-    });
-  };
-
-  const getCurrentAnswer = (questionId: number): string | string[] => {
-    const answer = answers.find(a => a.questionId === questionId);
-    return answer?.answer || (quiz.questions[currentQuestion]?.type === 'multiple-select' ? [] : '');
-  };
-
-  const isQuestionAnswered = (questionId: number): boolean => {
-    const answer = getCurrentAnswer(questionId);
-    if (Array.isArray(answer)) {
-      return answer.length > 0;
-    }
-    return answer !== '';
-  };
-
-  const isCurrentQuestionAnswered = (): boolean => {
-    return isQuestionAnswered(quiz.questions[currentQuestion]?.id);
-  };
-
-  const handleNext = () => {
-    if (currentQuestion < quiz.questions.length - 1) {
-      setCurrentQuestion(prev => prev + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(prev => prev - 1);
-    }
-  };
-
-  const handleSubmitQuiz = async () => {
+  // Define handleSubmitQuiz before the timer effect that uses it
+  const handleSubmitQuiz = useCallback(async () => {
     if (!address) {
       setSubmitError('Please connect your wallet to submit the quiz');
       return;
@@ -429,6 +263,191 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
     } finally {
       setIsSubmitting(false);
     }
+  }, [address, quiz.module, quiz.timeLimit, answers]);
+
+  // Timer effect
+  useEffect(() => {
+    if (isStarted && !isCompleted && timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            handleSubmitQuiz();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [isStarted, isCompleted, timeLeft, handleSubmitQuiz]);
+
+  // Handle successful contract confirmation
+  useEffect(() => {
+    if (isConfirmed && hash && voucher && missionData) {
+      // Show achievement celebration
+      const moduleToAchievementMap = {
+        'blockchain-fundamentals': '0001',
+        'evm-fundamentals': '0002', 
+        'intro-to-solidity': '0003',
+        'zilliqa-evm-setup': '0004',
+        'creating-erc20-tokens': '0005'
+      };
+      const achievementNumber = moduleToAchievementMap[quiz.module as keyof typeof moduleToAchievementMap];
+
+      const imageUrl = `https://static.plunderswap.com/training/images/${achievementNumber || "0001"}.webp`;
+
+      // Load NFT metadata for complete attributes
+      const loadNFTMetadata = async () => {
+        try {
+          const metadataUrl = `https://static.plunderswap.com/training/${achievementNumber || "0001"}.json`;
+          const response = await fetch(metadataUrl);
+          if (response.ok) {
+            const metadata = await response.json();
+            setCelebrationData({
+              name: metadata.name || missionData.achievementReward?.name || "Achievement Unlocked",
+              description: metadata.description || missionData.achievementReward?.description || "Congratulations!",
+              achievementNumber: achievementNumber || "0001",
+              category: "fundamentals", // Could be mapped from module
+              image: metadata.image || imageUrl,
+              attributes: metadata.attributes || []
+            });
+          } else {
+            // Fallback to mission data if metadata fails
+            setCelebrationData({
+              name: missionData.achievementReward?.name || "Achievement Unlocked",
+              description: missionData.achievementReward?.description || "Congratulations!",
+              achievementNumber: achievementNumber || "0001",
+              category: "fundamentals",
+              image: imageUrl
+            });
+          }
+        } catch (error) {
+          console.error('Error loading NFT metadata for celebration:', error);
+          // Fallback to mission data
+          setCelebrationData({
+            name: missionData.achievementReward?.name || "Achievement Unlocked",
+            description: missionData.achievementReward?.description || "Congratulations!",
+            achievementNumber: achievementNumber || "0001",
+            category: "fundamentals",
+            image: imageUrl
+          });
+        } finally {
+          // Ensure celebration shows even if metadata loading fails
+          setShowCelebration(true);
+        }
+      };
+
+      loadNFTMetadata();
+      
+      // Set NFT image for display in completed section
+      setNftImageUrl(imageUrl);
+      
+      setStep("completed");
+    }
+  }, [isConfirmed, hash, voucher, missionData, quiz.module]);
+
+  // Check if achievement is already claimed on component mount
+  useEffect(() => {
+    const checkClaimedStatus = async () => {
+      if (!address) return;
+
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_PLUNDER_ACADEMY_API}/api/v1/vouchers/claimed/${address}`);
+        if (response.ok) {
+          const data = await response.json();
+          const achievementNumber = {
+            'blockchain-fundamentals': '0001',
+            'evm-fundamentals': '0002', 
+            'intro-to-solidity': '0003',
+            'zilliqa-evm-setup': '0004',
+            'creating-erc20-tokens': '0005'
+          }[quiz.module];
+
+          const claimedAchievement = data.claimedAchievements?.find(
+            (achievement: ClaimedAchievement) => achievement.achievementNumber === achievementNumber
+          );
+
+          if (claimedAchievement && claimedAchievement.hasAchievement) {
+            setAlreadyClaimed(true);
+            setStep("completed");
+            
+            // Load NFT image from metadata
+            if (claimedAchievement.metadataUri) {
+              try {
+                const metadataResponse = await fetch(claimedAchievement.metadataUri);
+                if (metadataResponse.ok) {
+                  const metadata = await metadataResponse.json();
+                  if (metadata.image) {
+                    // Convert .png to .webp if needed
+                    const imageUrl = metadata.image.replace(/\.png$/, '.webp');
+                    setNftImageUrl(imageUrl);
+                  }
+                }
+              } catch (error) {
+                console.error('Error loading NFT metadata:', error);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error checking claimed status:', error);
+      }
+    };
+
+    checkClaimedStatus();
+  }, [address, quiz.module]);
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleStartQuiz = () => {
+    setIsStarted(true);
+  };
+
+  const handleAnswerChange = (questionId: number, answer: string | string[]) => {
+    setAnswers(prev => {
+      const existingIndex = prev.findIndex(a => a.questionId === questionId);
+      const newAnswer = { questionId, answer };
+      
+      if (existingIndex >= 0) {
+        return prev.map((a, i) => i === existingIndex ? newAnswer : a);
+      } else {
+        return [...prev, newAnswer];
+      }
+    });
+  };
+
+  const getCurrentAnswer = (questionId: number): string | string[] => {
+    const answer = answers.find(a => a.questionId === questionId);
+    return answer?.answer || (quiz.questions[currentQuestion]?.type === 'multiple-select' ? [] : '');
+  };
+
+  const isQuestionAnswered = (questionId: number): boolean => {
+    const answer = getCurrentAnswer(questionId);
+    if (Array.isArray(answer)) {
+      return answer.length > 0;
+    }
+    return answer !== '';
+  };
+
+  const isCurrentQuestionAnswered = (): boolean => {
+    return isQuestionAnswered(quiz.questions[currentQuestion]?.id);
+  };
+
+  const handleNext = () => {
+    if (currentQuestion < quiz.questions.length - 1) {
+      setCurrentQuestion(prev => prev + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(prev => prev - 1);
+    }
   };
 
   const handleClaimAchievement = async () => {
@@ -507,9 +526,11 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
               <div className="text-center">
                 <p className="text-sm font-medium text-muted-foreground mb-3">Your Achievement NFT:</p>
                 <div className="inline-block border-2 border-yellow-400 rounded-lg p-2 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20">
-                  <img 
+                  <Image 
                     src={nftImageUrl} 
                     alt={missionData?.achievementReward?.name || "Achievement NFT"} 
+                    width={192}
+                    height={256}
                     className="w-48 h-64 object-contain rounded"
                     onError={(e) => {
                       // Fallback to .png if .webp fails
@@ -518,6 +539,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
                         target.src = target.src.replace('.webp', '.png');
                       }
                     }}
+                    unoptimized
                   />
                 </div>
               </div>
@@ -613,7 +635,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
             <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-800/30 p-3 rounded border">
               <p className="font-medium mb-1">📝 Important Notes:</p>
               <ul className="space-y-1 list-disc list-inside">
-                <li>If you can't claim now, don't worry - you can claim all unclaimed vouchers from your achievements screen under wallet details</li>
+                <li>If you can&apos;t claim now, don&apos;t worry - you can claim all unclaimed vouchers from your achievements screen under wallet details</li>
                 <li>You will need ZIL in your wallet to pay for gas fees</li>
                 <li>Currently on Testnet - get free ZIL from the <a href="https://faucet.testnet.zilliqa.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">Zilliqa Testnet Faucet</a></li>
               </ul>
@@ -722,9 +744,11 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
                 <div className="text-center">
                   <p className="text-sm font-medium text-muted-foreground mb-3">Your Achievement NFT:</p>
                   <div className="inline-block border-2 border-yellow-400 rounded-lg p-2 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20">
-                    <img 
+                    <Image 
                       src={nftImageUrl} 
                       alt={missionData?.achievementReward?.name || "Achievement NFT"} 
+                      width={192}
+                      height={256}
                       className="w-48 h-64 object-contain rounded"
                       onError={(e) => {
                         // Fallback to .png if .webp fails
@@ -733,6 +757,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
                           target.src = target.src.replace('.webp', '.png');
                         }
                       }}
+                      unoptimized
                     />
                   </div>
                 </div>
