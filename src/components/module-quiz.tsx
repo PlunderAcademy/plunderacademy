@@ -979,7 +979,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
       <AchievementCelebration
         isVisible={showCelebration}
         onClose={() => setShowCelebration(false)}
-        achievementData={celebrationData}
+        achievementData={celebrationData ?? undefined}
       />
     </>
   );
