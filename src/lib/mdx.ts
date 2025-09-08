@@ -31,6 +31,32 @@ export type MissionMeta = {
   content: string;
   storyIntro: string;
   monologue: string[];
+  achievementReward?: {
+    name: string;
+    description: string;
+  };
+};
+
+export type QuizQuestion = {
+  id: number;
+  type: 'multiple-choice' | 'multiple-select';
+  lesson: string;
+  question: string;
+  options: string[];
+  points: number;
+};
+
+export type QuizMeta = {
+  id: string;
+  slug: string;
+  module: string;
+  title: string;
+  description: string;
+  totalQuestions: number;
+  passingScore: number;
+  timeLimit: number;
+  questions: QuizQuestion[];
+  content: string;
 };
 
 export type ModuleMeta = {
@@ -423,9 +449,99 @@ export async function getMissionByModule(moduleSlug: string): Promise<MissionMet
       content,
       storyIntro,
       monologue,
+      achievementReward: data.achievementReward,
     };
   } catch (error) {
     console.error(`Error loading mission for module ${moduleSlug}:`, error);
     return null;
   }
+}
+
+export async function getQuizByModule(moduleSlug: string): Promise<QuizMeta | null> {
+  try {
+    const quizzesDirectory = path.join(process.cwd(), 'src/content/modules/jungle/quizzes');
+    const quizFileName = `${moduleSlug}-quiz.mdx`;
+    const fullPath = path.join(quizzesDirectory, quizFileName);
+    
+    if (!fs.existsSync(fullPath)) {
+      return null;
+    }
+    
+    const fileContents = fs.readFileSync(fullPath, 'utf8');
+    const { data, content } = matter(fileContents);
+    
+    // Parse quiz questions from content
+    const questions = parseQuizQuestions(content);
+    
+    return {
+      id: data.id,
+      slug: data.slug,
+      module: data.module,
+      title: data.title,
+      description: data.description,
+      totalQuestions: data.totalQuestions,
+      passingScore: data.passingScore,
+      timeLimit: data.timeLimit,
+      questions,
+      content,
+    };
+  } catch (error) {
+    console.error(`Error loading quiz for module ${moduleSlug}:`, error);
+    return null;
+  }
+}
+
+function parseQuizQuestions(content: string): QuizQuestion[] {
+  const questions: QuizQuestion[] = [];
+  
+  // Split content by question headers
+  const questionBlocks = content.split(/### Question \d+/).slice(1);
+  
+  questionBlocks.forEach((block, index) => {
+    const lines = block.trim().split('\n');
+    let type: 'multiple-choice' | 'multiple-select' = 'multiple-choice';
+    let points = 1;
+    let lesson = '';
+    let question = '';
+    const options: string[] = [];
+    
+    // Parse each line of the question block
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      if (line.startsWith('**Type:**')) {
+        type = line.includes('Multiple Select') ? 'multiple-select' : 'multiple-choice';
+      } else if (line.startsWith('**Points:**')) {
+        points = parseInt(line.replace('**Points:**', '').trim()) || 1;
+      } else if (line.startsWith('**Lesson:**')) {
+        lesson = line.replace('**Lesson:**', '').trim();
+      } else if (line.startsWith('**Options:**')) {
+        // Start parsing options from the next line
+        for (let j = i + 1; j < lines.length; j++) {
+          const optionLine = lines[j].trim();
+          if (optionLine.startsWith('-') && optionLine.includes(')')) {
+            options.push(optionLine);
+          } else if (optionLine === '---' || optionLine.startsWith('**')) {
+            break;
+          }
+        }
+        break;
+      } else if (line && !line.startsWith('**') && !line.startsWith('-') && !line.startsWith('#') && !question) {
+        question = line;
+      }
+    }
+    
+    if (question && options.length > 0) {
+      questions.push({
+        id: index + 1,
+        type,
+        lesson,
+        question,
+        options,
+        points,
+      });
+    }
+  });
+  
+  return questions;
 }

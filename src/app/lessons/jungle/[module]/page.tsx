@@ -7,12 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { 
   ChevronLeft, 
-  Home, 
   TreePine,
   BookOpen,
   Trophy
 } from "lucide-react";
-import { getModules, getMissionByModule, getLessonByIds } from "@/lib/mdx";
+import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from "@/lib/mdx";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
 import MDXContent from "@/components/mdx-content";
 
@@ -23,6 +22,7 @@ import { JungleModule3Image } from "@/components/jungle/jungle-module3-image";
 import { JungleModule4Image } from "@/components/jungle/jungle-module4-image";
 import { JungleModule5Image } from "@/components/jungle/jungle-module5-image";
 import { JungleStory } from "@/components/jungle/story";
+import { ModuleQuiz } from "@/components/module-quiz";
 
 interface JungleModulePageProps {
   params: Promise<{
@@ -80,6 +80,9 @@ export default async function JungleModulePage({ params }: JungleModulePageProps
 
   // Load mission data from MDX
   const missionData = await getMissionByModule(resolvedParams.module);
+  
+  // Load quiz data from MDX
+  const quizData = await getQuizByModule(resolvedParams.module);
 
   // Load lesson content for tabs
   const lessonContents = await Promise.all(
@@ -246,25 +249,29 @@ export default async function JungleModulePage({ params }: JungleModulePageProps
       </Card>
 
       {/* Quiz Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="size-5" />
-            Module Quiz
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center p-8">
-          <div className="bg-muted/30 rounded-lg p-12 border-2 border-dashed border-muted-foreground/20 space-y-4">
-            <p className="text-lg text-muted-foreground">Quiz Content TBA</p>
-            <p className="text-sm text-muted-foreground">
-              Interactive quiz for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
-            </p>
-            <Button disabled className="mt-4">
-              Submit Quiz for Achievement
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {quizData ? (
+        <ModuleQuiz quiz={quizData} missionData={missionData} />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="size-5" />
+              Module Quiz
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center p-8">
+            <div className="bg-muted/30 rounded-lg p-12 border-2 border-dashed border-muted-foreground/20 space-y-4">
+              <p className="text-lg text-muted-foreground">Quiz Content TBA</p>
+              <p className="text-sm text-muted-foreground">
+                Interactive quiz for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+              </p>
+              <Button disabled className="mt-4">
+                Submit Quiz for Achievement
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Separator />
 

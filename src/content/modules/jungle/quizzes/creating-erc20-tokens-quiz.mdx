@@ -1,0 +1,180 @@
+---
+id: creating-erc20-tokens-quiz
+slug: creating-erc20-tokens-quiz
+module: creating-erc20-tokens
+title: "Module 5: Creating Your Own Token on Zilliqa EVM Quiz"
+description: "Test your knowledge of ERC-20 token standards, OpenZeppelin contracts, token deployment, and interaction"
+totalQuestions: 9
+passingScore: 80
+timeLimit: 15
+---
+
+# Module 5: Creating Your Own Token on Zilliqa EVM Quiz
+
+## Instructions
+- **Total Questions:** 9
+- **Time Limit:** 15 minutes  
+- **Passing Score:** 80%
+- **Question Types:** Multiple choice
+
+---
+
+## Questions
+
+### Question 1
+**Type:** Multiple Choice  
+**Points:** 11  
+**Lesson:** 5.1 Introduction to ERC-20 Tokens
+
+What does ERC-20 define?
+
+**Options:**
+- A) A standard for non-fungible tokens
+- B) A standard for fungible tokens that are interchangeable
+- C) A private token standard for Zilliqa only
+
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 11
+**Lesson:** 5.1 Introduction to ERC-20 Tokens
+
+Which of the following is NOT an ERC-20 function?
+
+**Options:**
+- A) totalSupply()
+- B) balanceOf(address)
+- C) mint()
+- D) transfer(address, uint)
+
+---
+
+### Question 3
+**Type:** Multiple Choice
+**Points:** 11
+**Lesson:** 5.2 Writing Your Token Contract
+
+What is the benefit of using OpenZeppelin's token contracts?
+
+**Options:**
+- A) Pre-written, audited, and secure token functionality
+- B) Lower transaction fees by design
+- C) Unique token standards different from Ethereum
+
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 12
+**Lesson:** 5.2 Writing Your Token Contract
+
+In the constructor of the sample token contract, what does _mint(msg.sender, initialSupply * (10 ** decimals())) do?
+
+**Options:**
+- A) Burns tokens permanently
+- B) Assigns the entire initial supply to the deployer's address
+- C) Transfers tokens to all users
+
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 11
+**Lesson:** 5.3 Deploying Your Token
+
+What must be done before deploying a token contract on Zilliqa EVM testnet?
+
+**Options:**
+- A) Purchase real ZIL on an exchange
+- B) Configure MetaMask for Zilliqa EVM testnet and obtain test ZIL from a faucet
+- C) Set up a local node only
+
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 11
+**Lesson:** 5.3 Deploying Your Token
+
+In Remix, what environment should you select to deploy on Zilliqa EVM?
+
+**Options:**
+- A) JavaScript VM
+- B) Injected Provider - MetaMask
+- C) Remix VM
+
+---
+
+### Question 7
+**Type:** Multiple Choice
+**Points:** 11
+**Lesson:** 5.4 Interacting with Your Token
+
+How can you check your token balance after deployment?
+
+**Options:**
+- A) Call the balanceOf function with your wallet address in Remix
+- B) Use a standard bank app
+- C) Only with a special token viewer app
+
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 11
+**Lesson:** 5.4 Interacting with Your Token
+
+What is required to add your newly created token to MetaMask?
+
+**Options:**
+- A) Contract address and token symbol
+- B) Only the contract address
+- C) Only the token symbol
+
+---
+
+### Question 9
+**Type:** Multiple Choice
+**Points:** 11
+**Lesson:** 5.4 Interacting with Your Token
+
+Why is transferring tokens correctly important?
+
+**Options:**
+- A) To avoid transaction failure and ensure recipient receives tokens
+- B) To increase transaction gas fees
+- C) To lock tokens permanently
+
+---
+
+## Answer Key Summary
+
+| Question | Lesson | Points |
+|----------|--------|---------|
+| 1 | 5.1 | 11 |
+| 2 | 5.1 | 11 |
+| 3 | 5.2 | 11 |
+| 4 | 5.2 | 12 |
+| 5 | 5.3 | 11 |
+| 6 | 5.3 | 11 |
+| 7 | 5.4 | 11 |
+| 8 | 5.4 | 11 |
+| 9 | 5.4 | 11 |
+
+**Total Points:** 100  
+**Passing Score:** 80 points
+
+---
+
+## Implementation Notes for Developers
+
+```typescript
+interface TokenQuizConfig {
+  totalQuestions: 9;
+  passingScore: 80;
+  timeLimit: 15; // minutes
+  moduleId: 'creating-erc20-tokens';
+  topics: ['ERC-20 Standards', 'OpenZeppelin', 'Token Deployment', 'Token Interaction'];
+}
+```

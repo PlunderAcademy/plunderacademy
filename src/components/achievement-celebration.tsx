@@ -1,9 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Award, Sparkles, Star, Trophy } from "lucide-react";
 
 interface AchievementCelebrationProps {
@@ -15,6 +13,10 @@ interface AchievementCelebrationProps {
     image?: string;
     achievementNumber: string;
     category?: "fundamentals" | "advanced" | "security" | "gas";
+    attributes?: Array<{
+      trait_type: string;
+      value: string | number;
+    }>;
   };
 }
 
@@ -25,59 +27,113 @@ export function AchievementCelebration({
 }: AchievementCelebrationProps) {
   const [showCard, setShowCard] = React.useState(false);
   const [showFireworks, setShowFireworks] = React.useState(false);
+  const [isClosing, setIsClosing] = React.useState(false);
+  
+  // Use ref to store timer so it doesn't get cleared by re-renders
+  const closeTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const cardTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  
+  // Track if we've already started the celebration to prevent multiple timers
+  const celebrationStartedRef = React.useRef(false);
+  
+  // Store onClose in a ref to avoid stale closures and dependency issues
+  const onCloseRef = React.useRef(onClose);
+  
+  // Keep the ref updated
+  React.useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const handleClose = React.useCallback(() => {
+    setIsClosing(true);
+    setShowCard(false);
+    setShowFireworks(false);
+    
+    // Clear any active timers
+    if (cardTimerRef.current) {
+      clearTimeout(cardTimerRef.current);
+      cardTimerRef.current = null;
+    }
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    
+    setTimeout(() => {
+      setIsClosing(false);
+      celebrationStartedRef.current = false; // Reset flag
+      onCloseRef.current();
+    }, 800); // Longer timeout for the scale-out animation
+  }, []);
 
   React.useEffect(() => {
-    if (isVisible) {
+    if (isVisible && !celebrationStartedRef.current) {
+      console.log('🎉 Achievement celebration started - will auto-close in 8 seconds');
+      celebrationStartedRef.current = true;
+      
+      // Clear any existing timers
+      if (cardTimerRef.current) {
+        clearTimeout(cardTimerRef.current);
+      }
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+      }
+      
       // Start fireworks immediately
       setShowFireworks(true);
       
       // Show card after slight delay
-      const cardTimer = setTimeout(() => {
+      cardTimerRef.current = setTimeout(() => {
         setShowCard(true);
       }, 300);
 
-      // Auto close after 4 seconds
-      const closeTimer = setTimeout(() => {
-        handleClose();
-      }, 4000);
-
-      return () => {
-        clearTimeout(cardTimer);
-        clearTimeout(closeTimer);
-      };
-    } else {
+      // Auto close after 8 seconds (double the time)
+      closeTimerRef.current = setTimeout(() => {
+        console.log('🕐 8 seconds elapsed - auto-closing celebration');
+        setIsClosing(true);
+        setShowCard(false);
+        setShowFireworks(false);
+        setTimeout(() => {
+          setIsClosing(false);
+          celebrationStartedRef.current = false; // Reset flag
+          onCloseRef.current();
+        }, 800);
+      }, 8000);
+    } else if (!isVisible) {
+      // Reset everything when becoming invisible
+      celebrationStartedRef.current = false;
       setShowCard(false);
       setShowFireworks(false);
+      setIsClosing(false);
+      
+      // Clear timers when becoming invisible
+      if (cardTimerRef.current) {
+        clearTimeout(cardTimerRef.current);
+        cardTimerRef.current = null;
+      }
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
     }
   }, [isVisible]);
 
-  const handleClose = () => {
-    setShowCard(false);
-    setShowFireworks(false);
-    setTimeout(() => {
-      onClose();
-    }, 300);
-  };
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      console.log('🧹 Cleaning up celebration timers');
+      if (cardTimerRef.current) {
+        clearTimeout(cardTimerRef.current);
+        cardTimerRef.current = null;
+      }
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+      celebrationStartedRef.current = false;
+    };
+  }, []);
 
-  const getCategoryColor = (category?: string) => {
-    switch (category) {
-      case "security": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-      case "gas": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      case "fundamentals": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "advanced": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-      default: return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-    }
-  };
-
-  const getCategoryIcon = (category?: string) => {
-    switch (category) {
-      case "security": return "🛡️";
-      case "gas": return "⚡";
-      case "fundamentals": return "📚";
-      case "advanced": return "🏆";
-      default: return "🎯";
-    }
-  };
 
   if (!isVisible) return null;
 
@@ -149,31 +205,37 @@ export function AchievementCelebration({
       )}
 
       {/* Achievement Card */}
-      <div className={`relative transition-all duration-500 ${
-        showCard 
-          ? 'scale-100 opacity-100 translate-y-0' 
-          : 'scale-50 opacity-0 translate-y-10'
+      <div className={`relative transition-all duration-700 ${
+        isClosing
+          ? 'scale-[0.2] opacity-0 translate-x-[50vw] -translate-y-[50vh]' // Scale out to top-right (wallet area)
+          : showCard 
+            ? 'scale-100 opacity-100 translate-y-0' 
+            : 'scale-50 opacity-0 translate-y-10'
       }`}>
-        <Card className="w-80 overflow-hidden shadow-2xl border-2 border-yellow-400 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20">
+        <Card className="w-64 overflow-hidden shadow-2xl border-2 border-yellow-400 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20">
           {/* Header with celebration message */}
-          <div className="bg-gradient-to-r from-yellow-400 to-orange-400 p-4 text-center">
-            <div className="flex items-center justify-center gap-2 text-white font-bold text-lg">
-              <Trophy className="size-6" />
+          <div className="bg-gradient-to-r from-yellow-400 to-orange-400 p-3 text-center">
+            <div className="flex items-center justify-center gap-2 text-white font-bold text-base">
+              <Trophy className="size-5" />
               <span>Achievement Unlocked!</span>
-              <Trophy className="size-6" />
+              <Trophy className="size-5" />
             </div>
           </div>
 
           {/* Achievement Image */}
-          <div className="aspect-[320/425] bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
+          <div className="aspect-[4/5] bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
             {achievementData?.image ? (
-              <Image 
+              <img 
                 src={achievementData.image} 
                 alt={achievementData.name || "Achievement Badge"}
-                width={320}
-                height={425}
                 className="w-full h-full object-contain"
-                unoptimized
+                onError={(e) => {
+                  // Fallback to .png if .webp fails
+                  const target = e.target as HTMLImageElement;
+                  if (target.src.includes('.webp')) {
+                    target.src = target.src.replace('.webp', '.png');
+                  }
+                }}
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-muted-foreground">
@@ -191,32 +253,56 @@ export function AchievementCelebration({
           </div>
 
           {/* Achievement Details */}
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              {achievementData?.category && (
-                <Badge className={getCategoryColor(achievementData.category)}>
-                  <span className="mr-1">{getCategoryIcon(achievementData.category)}</span>
-                  <span className="capitalize">{achievementData.category}</span>
-                </Badge>
-              )}
-              <div className="text-sm text-muted-foreground">
-                #{achievementData?.achievementNumber}
-              </div>
-            </div>
-            
+          <div className="p-4 space-y-3">
             <div className="text-center space-y-2">
               <h3 className="text-xl font-bold text-foreground">
                 {achievementData?.name || "New Achievement"}
               </h3>
-              <p className="text-muted-foreground">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 {achievementData?.description || "Congratulations on your achievement!"}
               </p>
             </div>
 
+            {/* Key Achievement Info */}
+            <div className="bg-gradient-to-r from-yellow-100/50 to-orange-100/50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg p-2 space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Achievement</span>
+                <span className="font-medium">#{achievementData?.achievementNumber}</span>
+              </div>
+              
+              {/* Display key attributes from JSON */}
+              {achievementData?.attributes?.map((attr) => {
+                // Only show specific key attributes for cleaner display
+                if (['Module', 'Location', 'Type', 'Rarity'].includes(attr.trait_type)) {
+                  return (
+                    <div key={attr.trait_type} className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{attr.trait_type}</span>
+                      <span className="font-medium">{attr.value}</span>
+                    </div>
+                  );
+                }
+                return null;
+              })}
+              
+              {/* Fallback if no attributes */}
+              {(!achievementData?.attributes || achievementData.attributes.length === 0) && (
+                <>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Type</span>
+                    <span className="font-medium capitalize">{achievementData?.category || 'Fundamentals'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Rarity</span>
+                    <span className="font-medium">Common</span>
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="text-center">
-              <div className="inline-flex items-center gap-2 text-green-600 dark:text-green-400 font-semibold">
-                <CheckCircle className="size-5" />
-                <span>Successfully claimed on blockchain!</span>
+              <div className="inline-flex items-center gap-1 text-green-600 dark:text-green-400 font-medium text-xs">
+                <CheckCircle className="size-4" />
+                <span>Successfully claimed!</span>
               </div>
             </div>
           </div>
