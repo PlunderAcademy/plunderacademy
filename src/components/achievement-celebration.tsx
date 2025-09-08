@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { CheckCircle, Award, Sparkles, Star, Trophy } from "lucide-react";
 
@@ -225,10 +226,11 @@ export function AchievementCelebration({
           {/* Achievement Image */}
           <div className="aspect-[4/5] bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
             {achievementData?.image ? (
-              <img 
+              <Image 
                 src={achievementData.image} 
                 alt={achievementData.name || "Achievement Badge"}
-                className="w-full h-full object-contain"
+                fill
+                className="object-contain"
                 onError={(e) => {
                   // Fallback to .png if .webp fails
                   const target = e.target as HTMLImageElement;
@@ -236,6 +238,7 @@ export function AchievementCelebration({
                     target.src = target.src.replace('.webp', '.png');
                   }
                 }}
+                unoptimized
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-muted-foreground">
