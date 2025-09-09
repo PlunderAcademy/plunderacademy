@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAchievements, type UnclaimedVoucher, type WalletAchievement, type NFTMetadata } from "@/hooks/use-achievements";
+import { useAchievements } from "@/hooks/use-achievements";
 import { AchievementCelebration } from "@/components/achievement-celebration";
+import { AnimatedAchievementCard } from "@/components/animated-achievement-card";
 import { ALL_ACHIEVEMENTS, type Achievement } from "@/lib/achievements-config";
 import { 
   Award, 
@@ -25,9 +26,10 @@ import {
 interface AchievementsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  useAnimatedCards?: boolean; // New prop to toggle animated cards
 }
 
-export function AchievementsModal({ isOpen, onClose }: AchievementsModalProps) {
+export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }: AchievementsModalProps) {
   const {
     unclaimedVouchers,
     walletAchievements,
@@ -44,7 +46,6 @@ export function AchievementsModal({ isOpen, onClose }: AchievementsModalProps) {
     unclaimedHash,
     fetchUnclaimedVouchers,
     fetchWalletAchievements,
-    fetchNFTMetadata,
     claimUnclaimedVoucher
   } = useAchievements();
 
@@ -188,82 +189,142 @@ export function AchievementsModal({ isOpen, onClose }: AchievementsModalProps) {
                           const metadata = achievementMetadata[walletAchievement.achievementNumber];
                           const isLoadingMeta = loadingMetadata.has(walletAchievement.achievementNumber);
                           
-                          return (
-                            <div 
-                              key={walletAchievement.achievementNumber} 
-                              className="relative group border rounded-lg overflow-hidden cursor-pointer transition-transform hover:scale-105 aspect-[320/425]"
-                            >
-                              {/* NFT Image */}
-                              <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
-                                {isLoadingMeta ? (
-                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                                ) : metadata?.image ? (
-                                  <Image 
-                                    src={metadata.image} 
-                                    alt={metadata.name || "Achievement Badge"}
-                                    fill
-                                    className="object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                      const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                                      if (nextElement) nextElement.style.display = 'flex';
-                                    }}
-                                    unoptimized
-                                  />
-                                ) : null}
-                                {/* Fallback icon */}
-                                <div className="flex-col items-center justify-center text-muted-foreground" style={{ display: metadata?.image ? 'none' : 'flex' }}>
-                                  <Award className="size-12 mb-2" />
-                                  <span className="text-sm">Achievement Badge</span>
-                                </div>
-                              </div>
-                              
-                              {/* Hover Overlay */}
-                              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4 text-white">
-                                {/* Top Section */}
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <Badge className="bg-white/20 text-white border-white/20 hover:bg-white/20">
-                                      {getCategoryIcon(demoAchievement.category)}
-                                      <span className="ml-1 capitalize">{demoAchievement.category}</span>
-                                    </Badge>
-                                    <CheckCircle className="size-5 text-green-400" />
-                                  </div>
-                                  
-                                  <div>
-                                    <h4 className="font-semibold text-lg">{metadata?.name || demoAchievement.title}</h4>
-                                    <p className="text-sm text-gray-200 mt-1">
-                                      {metadata?.description || demoAchievement.description}
-                                    </p>
-                                  </div>
-
-                                  {/* Attributes */}
-                                  {metadata?.attributes && metadata.attributes.length > 0 && (
-                                    <div className="space-y-1">
-                                      <div className="text-xs font-medium text-gray-300">Attributes:</div>
-                                      <div className="flex flex-wrap gap-1">
-                                        {metadata.attributes.slice(0, 3).map((attr, index) => (
-                                          <span
-                                            key={index}
-                                            className="text-xs bg-white/20 px-2 py-1 rounded"
-                                          >
-                                            {attr.trait_type}: {attr.value}
-                                          </span>
-                                        ))}
-                                      </div>
+                          if (useAnimatedCards) {
+                            // Use AnimatedAchievementCard with auto-assigned animation per achievement
+                            return (
+                              <AnimatedAchievementCard
+                                key={walletAchievement.achievementNumber}
+                                achievementNumber={walletAchievement.achievementNumber}
+                                // No animation prop - will auto-assign based on achievement number
+                                size="sm"
+                                className="w-full aspect-[320/425] border rounded-lg overflow-hidden"
+                                alt={metadata?.name || demoAchievement.title}
+                              >
+                                {/* Hover Overlay with same styling as before */}
+                                <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4 text-white">
+                                  {/* Top Section */}
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <Badge className="bg-white/20 text-white border-white/20 hover:bg-white/20">
+                                        {getCategoryIcon(demoAchievement.category)}
+                                        <span className="ml-1 capitalize">{demoAchievement.category}</span>
+                                      </Badge>
+                                      <CheckCircle className="size-5 text-green-400" />
                                     </div>
-                                  )}
-                                </div>
+                                    
+                                    <div>
+                                      <h4 className="font-semibold text-lg">{metadata?.name || demoAchievement.title}</h4>
+                                      <p className="text-sm text-gray-200 mt-1">
+                                        {metadata?.description || demoAchievement.description}
+                                      </p>
+                                    </div>
 
-                                {/* Bottom Section */}
-                                <div className="space-y-1 text-xs text-gray-300">
-                                  <div>Achievement #{walletAchievement.achievementNumber}</div>
-                                  <div>Claimed: {new Date(walletAchievement.createdAt).toLocaleDateString()}</div>
-                                  <div>Token ID: #{walletAchievement.tokenId}</div>
+                                    {/* Attributes */}
+                                    {metadata?.attributes && metadata.attributes.length > 0 && (
+                                      <div className="space-y-1">
+                                        <div className="text-xs font-medium text-gray-300">Attributes:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {metadata.attributes.slice(0, 3).map((attr, index) => (
+                                            <span
+                                              key={index}
+                                              className="text-xs bg-white/20 px-2 py-1 rounded"
+                                            >
+                                              {attr.trait_type}: {attr.value}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Bottom Section */}
+                                  <div className="space-y-1 text-xs text-gray-300">
+                                    <div>Achievement #{walletAchievement.achievementNumber}</div>
+                                    <div>Claimed: {new Date(walletAchievement.createdAt).toLocaleDateString()}</div>
+                                    <div>Token ID: #{walletAchievement.tokenId}</div>
+                                  </div>
+                                </div>
+                              </AnimatedAchievementCard>
+                            );
+                          } else {
+                            // Use original static card rendering
+                            return (
+                              <div 
+                                key={walletAchievement.achievementNumber} 
+                                className="relative group border rounded-lg overflow-hidden cursor-pointer transition-transform hover:scale-105 aspect-[320/425]"
+                              >
+                                {/* NFT Image */}
+                                <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
+                                  {isLoadingMeta ? (
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                  ) : metadata?.image ? (
+                                    <Image 
+                                      src={metadata.image} 
+                                      alt={metadata.name || "Achievement Badge"}
+                                      fill
+                                      className="object-contain"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                                        if (nextElement) nextElement.style.display = 'flex';
+                                      }}
+                                      unoptimized
+                                    />
+                                  ) : null}
+                                  {/* Fallback icon */}
+                                  <div className="flex-col items-center justify-center text-muted-foreground" style={{ display: metadata?.image ? 'none' : 'flex' }}>
+                                    <Award className="size-12 mb-2" />
+                                    <span className="text-sm">Achievement Badge</span>
+                                  </div>
+                                </div>
+                                
+                                {/* Hover Overlay */}
+                                <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4 text-white">
+                                  {/* Top Section */}
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <Badge className="bg-white/20 text-white border-white/20 hover:bg-white/20">
+                                        {getCategoryIcon(demoAchievement.category)}
+                                        <span className="ml-1 capitalize">{demoAchievement.category}</span>
+                                      </Badge>
+                                      <CheckCircle className="size-5 text-green-400" />
+                                    </div>
+                                    
+                                    <div>
+                                      <h4 className="font-semibold text-lg">{metadata?.name || demoAchievement.title}</h4>
+                                      <p className="text-sm text-gray-200 mt-1">
+                                        {metadata?.description || demoAchievement.description}
+                                      </p>
+                                    </div>
+
+                                    {/* Attributes */}
+                                    {metadata?.attributes && metadata.attributes.length > 0 && (
+                                      <div className="space-y-1">
+                                        <div className="text-xs font-medium text-gray-300">Attributes:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {metadata.attributes.slice(0, 3).map((attr, index) => (
+                                            <span
+                                              key={index}
+                                              className="text-xs bg-white/20 px-2 py-1 rounded"
+                                            >
+                                              {attr.trait_type}: {attr.value}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Bottom Section */}
+                                  <div className="space-y-1 text-xs text-gray-300">
+                                    <div>Achievement #{walletAchievement.achievementNumber}</div>
+                                    <div>Claimed: {new Date(walletAchievement.createdAt).toLocaleDateString()}</div>
+                                    <div>Token ID: #{walletAchievement.tokenId}</div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
+                            );
+                          }
                         } else {
                           // Show placeholder for unearned achievement
                           const achievementNumber = demoAchievement.taskCode.toString().padStart(4, "0");

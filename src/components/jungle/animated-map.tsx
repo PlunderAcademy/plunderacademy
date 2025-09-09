@@ -230,6 +230,11 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
     return -1; // All completed
   };
 
+  // Helper function to get module background image
+  const getModuleImage = (moduleIndex: number) => {
+    return `/islands/jungle/jungle-module${moduleIndex + 1}-image.webp`;
+  };
+
   const pathString = createPathString(pathPoints);
 
   const nextAvailableModule = getNextAvailableModule();
@@ -502,25 +507,81 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
                         </div>
                       </div>
                       
-                      {/* Module Info */}
-                      <div className="text-center p-8 bg-muted/30 rounded-lg">
-                        <div className="text-6xl mb-4">{index + 1}</div>
-                        <h4 className="font-semibold text-lg mb-2">
-                          {moduleData?.title || 'Loading...'}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {moduleData?.description || 'Module description loading...'}
-                        </p>
-                        {!isConnected && (
-                          <p className="text-xs text-orange-600 mt-2">
-                            🔒 Connect wallet to access modules
-                          </p>
-                        )}
-                        {isConnected && !isAvailable && (
-                          <p className="text-xs text-orange-600 mt-2">
-                            🔒 Complete Module {index} to unlock
-                          </p>
-                        )}
+                      {/* Module Info with Background Image */}
+                      <div className="relative rounded-lg overflow-hidden">
+                        {/* Background Image */}
+                        <div className="relative w-full h-64">
+                          <Image
+                            src={getModuleImage(index)}
+                            alt={`Module ${index + 1} Preview`}
+                            fill
+                            className="object-cover"
+                            onError={(e) => {
+                              // Fallback to .png if .webp fails
+                              const target = e.target as HTMLImageElement;
+                              if (target.src.includes('.webp')) {
+                                target.src = target.src.replace('.webp', '.png');
+                              }
+                            }}
+                          />
+                          
+                          {/* Overlay for better text readability */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+                          
+                          {/* Content Overlay */}
+                          <div className="absolute inset-0 flex flex-col justify-between p-6 text-white">
+                            {/* Top Section - Module Number */}
+                            <div className="flex justify-between items-start">
+                              <div className="bg-white/20 backdrop-blur-sm rounded-full w-12 h-12 flex items-center justify-center">
+                                <span className="text-xl font-bold">{index + 1}</span>
+                              </div>
+                              <div className={cn(
+                                "px-2 py-1 rounded text-xs font-medium",
+                                isAvailable ? "bg-green-500/80" : "bg-orange-500/80"
+                              )}>
+                                {!isConnected 
+                                  ? "Connect Wallet" 
+                                  : isAvailable 
+                                  ? "Available" 
+                                  : "Locked"
+                                }
+                              </div>
+                            </div>
+                            
+                            {/* Bottom Section - Module Details */}
+                            <div className="text-center space-y-2">
+                              <h4 className="font-semibold text-lg">
+                                {moduleData?.title || 'Loading...'}
+                              </h4>
+                              <p className="text-sm text-gray-200 opacity-90">
+                                {moduleData?.description || 'Module description loading...'}
+                              </p>
+                              
+                              {/* Status Messages */}
+                              {!isConnected && (
+                                <div className="bg-orange-500/20 backdrop-blur-sm border border-orange-400/30 rounded px-3 py-2 mt-3">
+                                  <p className="text-xs text-orange-200">
+                                    🔒 Connect wallet to access modules
+                                  </p>
+                                </div>
+                              )}
+                              {isConnected && !isAvailable && (
+                                <div className="bg-orange-500/20 backdrop-blur-sm border border-orange-400/30 rounded px-3 py-2 mt-3">
+                                  <p className="text-xs text-orange-200">
+                                    🔒 Complete Module {index} to unlock
+                                  </p>
+                                </div>
+                              )}
+                              {isConnected && isAvailable && (
+                                <div className="bg-green-500/20 backdrop-blur-sm border border-green-400/30 rounded px-3 py-2 mt-3">
+                                  <p className="text-xs text-green-200">
+                                    ✨ Click to start this module
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}

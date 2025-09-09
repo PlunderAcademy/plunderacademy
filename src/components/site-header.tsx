@@ -20,7 +20,6 @@ const nav = [
   { href: "/articles", label: "Articles" },
   { href: "/reviewer", label: "Code Reviewer" },
   { href: "/chat", label: "Chat" },
-  { href: "/achievement-preview", label: "Achievement Preview" },
 ];
 
 export function SiteHeader() {
@@ -101,6 +100,7 @@ export function SiteHeader() {
       <AchievementsModal 
         isOpen={isAchievementsModalOpen} 
         onClose={() => setIsAchievementsModalOpen(false)} 
+        useAnimatedCards={true} // Enable animated cards in modal
       />
     </header>
   );
