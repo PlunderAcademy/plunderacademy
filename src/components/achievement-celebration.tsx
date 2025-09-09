@@ -69,7 +69,6 @@ export function AchievementCelebration({
 
   React.useEffect(() => {
     if (isVisible && !celebrationStartedRef.current) {
-      console.log('🎉 Achievement celebration started - will auto-close in 8 seconds');
       celebrationStartedRef.current = true;
       
       // Clear any existing timers
@@ -90,7 +89,6 @@ export function AchievementCelebration({
 
       // Auto close after 8 seconds (double the time)
       closeTimerRef.current = setTimeout(() => {
-        console.log('🕐 8 seconds elapsed - auto-closing celebration');
         setIsClosing(true);
         setShowCard(false);
         setShowFireworks(false);
@@ -122,7 +120,6 @@ export function AchievementCelebration({
   // Cleanup on unmount
   React.useEffect(() => {
     return () => {
-      console.log('🧹 Cleaning up celebration timers');
       if (cardTimerRef.current) {
         clearTimeout(cardTimerRef.current);
         cardTimerRef.current = null;

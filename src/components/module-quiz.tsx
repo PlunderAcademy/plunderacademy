@@ -12,6 +12,7 @@ import { Clock, Trophy, CheckCircle, XCircle, AlertCircle, ExternalLink } from "
 import { QuizMeta, MissionMeta } from "@/lib/mdx";
 import { trainingRegistryABI } from "@/lib/training-registry-abi";
 import { AchievementCelebration } from "@/components/achievement-celebration";
+import { useAchievements } from "@/hooks/use-achievements";
 
 /**
  * ModuleQuiz Component - Interactive Quiz with Achievement Flow
@@ -82,6 +83,7 @@ interface ClaimedAchievement {
 
 export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
   const { address } = useAccount();
+  const { fetchWalletAchievements, fetchUnclaimedVouchers } = useAchievements();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
   const [timeLeft, setTimeLeft] = useState(quiz.timeLimit * 60); // Convert minutes to seconds
@@ -343,9 +345,12 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
       // Set NFT image for display in completed section
       setNftImageUrl(imageUrl);
       
+      // Note: Header refresh is handled when achievement celebration closes (after 8 seconds)
+      // This gives enough time for the backend to process the blockchain transaction
+      
       setStep("completed");
     }
-  }, [isConfirmed, hash, voucher, missionData, quiz.module]);
+  }, [isConfirmed, hash, voucher, missionData, quiz.module, fetchWalletAchievements, fetchUnclaimedVouchers]);
 
   // Check if achievement is already claimed on component mount
   useEffect(() => {
@@ -978,7 +983,28 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
       {/* Achievement Celebration */}
       <AchievementCelebration
         isVisible={showCelebration}
-        onClose={() => setShowCelebration(false)}
+        onClose={() => {
+          setShowCelebration(false);
+          // Refresh when celebration closes (after 8 seconds - perfect timing for backend processing)
+          fetchWalletAchievements();
+          fetchUnclaimedVouchers();
+          
+          // Trigger a custom event for the header to listen to
+          window.dispatchEvent(new CustomEvent('achievementClaimed', { 
+            detail: { timestamp: Date.now() } 
+          }));
+          
+          // Additional refresh 3 seconds later to ensure header updates
+          setTimeout(() => {
+            fetchWalletAchievements();
+            fetchUnclaimedVouchers();
+            
+            // Trigger another event after delayed refresh
+            window.dispatchEvent(new CustomEvent('achievementClaimed', { 
+              detail: { timestamp: Date.now() } 
+            }));
+          }, 3000);
+        }}
         achievementData={celebrationData ?? undefined}
       />
     </>
