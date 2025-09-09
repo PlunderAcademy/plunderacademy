@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { CheckCircle2, BookOpen, Shield, Gauge, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAchievements } from "@/hooks/use-achievements";
+import { ALL_ACHIEVEMENTS, type Achievement } from "@/lib/achievements-config";
 
 // Coordinates for the path points (as percentages of the map dimensions)
 // Updated to match the image layout with 5 numbered locations
@@ -53,73 +55,7 @@ const createPathString = (points: typeof pathPoints) => {
   return path;
 };
 
-// Achievement interfaces (from achievements-demo.tsx)
-interface WalletAchievement {
-  achievementNumber: string;
-  tokenId: number;
-  hasVoucher: boolean;
-  isClaimed: boolean;
-  voucherSignature?: string;
-  metadataUri: string;
-  createdAt: string;
-}
-
-interface WalletAchievementsResponse {
-  walletAddress: string;
-  contractAddress: string;
-  achievements: WalletAchievement[];
-}
-
-interface NFTMetadata {
-  name: string;
-  description: string;
-  image: string;
-  attributes: Array<{
-    trait_type: string;
-    value: string | number;
-  }>;
-}
-
-interface Achievement {
-  taskCode: number;
-  title: string;
-  description: string;
-  category: "security" | "gas" | "fundamentals" | "advanced";
-}
-
-// Achievement definitions matching the demo
-const achievements: Achievement[] = [
-  {
-    taskCode: 1,
-    title: "Training Quiz Master",
-    description: "Complete the comprehensive training quiz with perfect scores",
-    category: "fundamentals"
-  },
-  {
-    taskCode: 2,
-    title: "On-Chain Pioneer", 
-    description: "Successfully create and submit a transaction on the blockchain",
-    category: "advanced"
-  },
-  {
-    taskCode: 3,
-    title: "Security Sentinel",
-    description: "Master smart contract security best practices",
-    category: "security"
-  },
-  {
-    taskCode: 4,
-    title: "Gas Optimization Expert",
-    description: "Optimize contract gas usage to professional standards",
-    category: "gas"
-  },
-  {
-    taskCode: 5,
-    title: "Advanced Developer",
-    description: "Complete advanced blockchain development challenges",
-    category: "advanced"
-  }
-];
+// These interfaces are now imported from the shared config
 
 // Module slugs mapping to jungle modules in order
 const JUNGLE_MODULES = [
@@ -143,50 +79,18 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   
-  // Achievement data
-  const [walletAchievements, setWalletAchievements] = useState<WalletAchievement[]>([]);
+  // Use shared achievement hook
+  const { walletAchievements, achievementMetadata } = useAchievements();
+  
+  // Local state for map-specific logic
   const [completedLocations, setCompletedLocations] = useState<Set<number>>(new Set());
   const [maxCompletedLocation, setMaxCompletedLocation] = useState(0);
-  
-  // Achievement metadata
-  const [achievementMetadata, setAchievementMetadata] = useState<Record<string, NFTMetadata>>({});
-  const [loadingMetadata, setLoadingMetadata] = useState<Set<string>>(new Set());
   
   // No modal needed - info shown on image hover
 
   // Animation timing
   const animationDuration = 8000; // 8 seconds total
 
-  // Fetch NFT metadata
-  const fetchNFTMetadata = useCallback(async (metadataUri: string, achievementNumber: string) => {
-    if (achievementMetadata[achievementNumber] || loadingMetadata.has(achievementNumber)) {
-      return;
-    }
-
-    setLoadingMetadata(prev => new Set(prev).add(achievementNumber));
-    
-    try {
-      const response = await fetch(metadataUri);
-      
-      if (!response.ok) {
-        throw new Error(`Metadata fetch error: ${response.status}`);
-      }
-
-      const metadata: NFTMetadata = await response.json();
-      setAchievementMetadata(prev => ({
-        ...prev,
-        [achievementNumber]: metadata
-      }));
-    } catch (error) {
-      console.error(`Error fetching metadata for ${achievementNumber}:`, error);
-    } finally {
-      setLoadingMetadata(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(achievementNumber);
-        return newSet;
-      });
-    }
-  }, [achievementMetadata, loadingMetadata]);
 
   // Helper functions for category styling
   const getCategoryIcon = (category: Achievement["category"]) => {
@@ -207,32 +111,15 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
     }
   };
 
-  // Fetch wallet achievements
-  const fetchWalletAchievements = useCallback(async () => {
-    if (!address || mode === "demo") return;
-    
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_PLUNDER_ACADEMY_API}/api/v1/vouchers/wallet/${address}`);
-      
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
-      }
 
-      const data: WalletAchievementsResponse = await response.json();
-      setWalletAchievements(data.achievements);
-      
-      // Fetch metadata for each achievement
-      data.achievements.forEach(achievement => {
-        if (achievement.isClaimed && achievement.metadataUri) {
-          fetchNFTMetadata(achievement.metadataUri, achievement.achievementNumber);
-        }
-      });
-      
+  // Update map progress based on shared achievement data
+  useEffect(() => {
+    if (address && isConnected && mode === "real" && walletAchievements.length >= 0) {
       // Map achievements to locations (taskCode 1-5 corresponds to locations 0-4 in our array)
       const completed = new Set<number>();
       let maxLocation = 0;
       
-      data.achievements.forEach(achievement => {
+      walletAchievements.forEach(achievement => {
         if (achievement.isClaimed && achievement.tokenId >= 1 && achievement.tokenId <= 5) {
           // taskCode/tokenId 1-5 maps to array indices 0-4 (no start position)
           completed.add(achievement.tokenId - 1);
@@ -244,7 +131,7 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
       setMaxCompletedLocation(maxLocation);
       
       // Show progress line to the NEXT module after the last completed one
-      if (maxLocation >= 0 && completedLocations.size > 0) {
+      if (maxLocation >= 0 && completed.size > 0) {
         // If we've completed modules, show path to the next one
         const nextModuleIndex = maxLocation + 1;
         if (nextModuleIndex < pathPoints.length) {
@@ -262,16 +149,6 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
         setProgress(0);
         setCurrentStep(0);
       }
-      
-    } catch (error) {
-      console.error("Error fetching wallet achievements:", error);
-    }
-  }, [address, mode, fetchNFTMetadata, completedLocations.size]);
-
-  // Fetch achievements when component mounts or address changes
-  useEffect(() => {
-    if (address && isConnected && mode === "real") {
-      fetchWalletAchievements();
     } else {
       // Reset progress when wallet disconnects or in demo mode
       setProgress(0);
@@ -279,16 +156,8 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
       setCompletedLocations(new Set());
       setMaxCompletedLocation(0);
     }
-  }, [address, isConnected, mode, fetchWalletAchievements]);
+  }, [address, isConnected, mode, walletAchievements]);
 
-  // Only fetch metadata for claimed achievements to avoid 404s
-  // useEffect(() => {
-  //   achievements.forEach(achievement => {
-  //     const achievementNumber = achievement.taskCode.toString().padStart(4, "0");
-  //     const metadataUri = `https://static.plunderswap.com/training/${achievementNumber}.json`;
-  //     fetchNFTMetadata(metadataUri, achievementNumber);
-  //   });
-  // }, [fetchNFTMetadata]);
 
   // Handle autoStart prop
   useEffect(() => {
@@ -359,6 +228,11 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
       }
     }
     return -1; // All completed
+  };
+
+  // Helper function to get module background image
+  const getModuleImage = (moduleIndex: number) => {
+    return `/islands/jungle/jungle-module${moduleIndex + 1}-image.webp`;
   };
 
   const pathString = createPathString(pathPoints);
@@ -509,7 +383,7 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
           {pathPoints.map((point, index) => {
             const locationStatus = getLocationStatus(index);
             const achievementNumber = (index + 1).toString().padStart(4, "0");
-            const achievement = achievements.find(a => a.taskCode === index + 1);
+            const achievement = ALL_ACHIEVEMENTS.find(a => a.taskCode === index + 1);
             const walletAchievement = walletAchievements.find(wa => wa.tokenId === index + 1 && wa.isClaimed);
             const metadata = achievementMetadata[achievementNumber];
             const isCompleted = locationStatus === "completed";
@@ -633,25 +507,81 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
                         </div>
                       </div>
                       
-                      {/* Module Info */}
-                      <div className="text-center p-8 bg-muted/30 rounded-lg">
-                        <div className="text-6xl mb-4">{index + 1}</div>
-                        <h4 className="font-semibold text-lg mb-2">
-                          {moduleData?.title || 'Loading...'}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {moduleData?.description || 'Module description loading...'}
-                        </p>
-                        {!isConnected && (
-                          <p className="text-xs text-orange-600 mt-2">
-                            🔒 Connect wallet to access modules
-                          </p>
-                        )}
-                        {isConnected && !isAvailable && (
-                          <p className="text-xs text-orange-600 mt-2">
-                            🔒 Complete Module {index} to unlock
-                          </p>
-                        )}
+                      {/* Module Info with Background Image */}
+                      <div className="relative rounded-lg overflow-hidden">
+                        {/* Background Image */}
+                        <div className="relative w-full h-64">
+                          <Image
+                            src={getModuleImage(index)}
+                            alt={`Module ${index + 1} Preview`}
+                            fill
+                            className="object-cover"
+                            onError={(e) => {
+                              // Fallback to .png if .webp fails
+                              const target = e.target as HTMLImageElement;
+                              if (target.src.includes('.webp')) {
+                                target.src = target.src.replace('.webp', '.png');
+                              }
+                            }}
+                          />
+                          
+                          {/* Overlay for better text readability */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+                          
+                          {/* Content Overlay */}
+                          <div className="absolute inset-0 flex flex-col justify-between p-6 text-white">
+                            {/* Top Section - Module Number */}
+                            <div className="flex justify-between items-start">
+                              <div className="bg-white/20 backdrop-blur-sm rounded-full w-12 h-12 flex items-center justify-center">
+                                <span className="text-xl font-bold">{index + 1}</span>
+                              </div>
+                              <div className={cn(
+                                "px-2 py-1 rounded text-xs font-medium",
+                                isAvailable ? "bg-green-500/80" : "bg-orange-500/80"
+                              )}>
+                                {!isConnected 
+                                  ? "Connect Wallet" 
+                                  : isAvailable 
+                                  ? "Available" 
+                                  : "Locked"
+                                }
+                              </div>
+                            </div>
+                            
+                            {/* Bottom Section - Module Details */}
+                            <div className="text-center space-y-2">
+                              <h4 className="font-semibold text-lg">
+                                {moduleData?.title || 'Loading...'}
+                              </h4>
+                              <p className="text-sm text-gray-200 opacity-90">
+                                {moduleData?.description || 'Module description loading...'}
+                              </p>
+                              
+                              {/* Status Messages */}
+                              {!isConnected && (
+                                <div className="bg-orange-500/20 backdrop-blur-sm border border-orange-400/30 rounded px-3 py-2 mt-3">
+                                  <p className="text-xs text-orange-200">
+                                    🔒 Connect wallet to access modules
+                                  </p>
+                                </div>
+                              )}
+                              {isConnected && !isAvailable && (
+                                <div className="bg-orange-500/20 backdrop-blur-sm border border-orange-400/30 rounded px-3 py-2 mt-3">
+                                  <p className="text-xs text-orange-200">
+                                    🔒 Complete Module {index} to unlock
+                                  </p>
+                                </div>
+                              )}
+                              {isConnected && isAvailable && (
+                                <div className="bg-green-500/20 backdrop-blur-sm border border-green-400/30 rounded px-3 py-2 mt-3">
+                                  <p className="text-xs text-green-200">
+                                    ✨ Click to start this module
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}

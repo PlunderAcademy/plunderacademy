@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -10,6 +11,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Menu } from "lucide-react";
 import { WalletButton } from "@/components/wallet-button";
+import { HeaderAchievements } from "@/components/header-achievements";
+import { AchievementsModal } from "@/components/achievements-modal";
 
 const nav = [
   { href: "/", label: "Home" },
@@ -17,11 +20,12 @@ const nav = [
   { href: "/articles", label: "Articles" },
   { href: "/reviewer", label: "Code Reviewer" },
   { href: "/chat", label: "Chat" },
-  // { href: "/achievements-demo", label: "Achievements Demo" },
 ];
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const [isAchievementsModalOpen, setIsAchievementsModalOpen] = React.useState(false);
+  
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -43,6 +47,7 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="hidden md:flex items-center gap-2">
+          <HeaderAchievements onOpenModal={() => setIsAchievementsModalOpen(true)} />
           <WalletButton />
           <ThemeToggle />
         </div>
@@ -78,16 +83,25 @@ export function SiteHeader() {
               <Separator />
               <div className="mt-auto px-6 py-4">
                 <div className="flex flex-col gap-3">
-                  <WalletButton fullWidth />
-                  <div className="flex justify-end">
+                  <div className="flex gap-2">
+                    <HeaderAchievements onOpenModal={() => setIsAchievementsModalOpen(true)} />
+                    <div className="flex-1" />
                     <ThemeToggle />
                   </div>
+                  <WalletButton fullWidth />
                 </div>
               </div>
             </SheetContent>
           </Sheet>
         </div>
       </div>
+      
+      {/* Achievements Modal */}
+      <AchievementsModal 
+        isOpen={isAchievementsModalOpen} 
+        onClose={() => setIsAchievementsModalOpen(false)} 
+        useAnimatedCards={true} // Enable animated cards in modal
+      />
     </header>
   );
 }

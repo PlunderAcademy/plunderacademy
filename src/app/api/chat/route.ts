@@ -74,11 +74,11 @@ export async function POST(req: Request) {
       system: getSystemPrompt(),
       messages: convertToModelMessages(body.messages),
       // need to comment this out to use the default gateway
-      // providerOptions: {
-      //   gateway: {
-      //     only: ['cerebras'],
-      //   },
-      // },
+      providerOptions: {
+        gateway: {
+          only: ['cerebras'],
+        },
+      },
     });
 
     // Legacy Azure call (commented out):

@@ -28,7 +28,7 @@ src/
 ├── components/         
 │   ├── ai-elements/    # AI-specific UI components
 │   └── ui/            # Reusable shadcn components
-└── data/              # Article content and prompts
+└── content/              # Article content and prompts
 ```
 
 ## Development Commands
