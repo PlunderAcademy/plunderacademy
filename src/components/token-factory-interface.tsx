@@ -56,7 +56,7 @@ export function TokenFactoryInterface() {
   // Transaction state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ txHash: string; tokenDetails: { name: string; symbol: string; initialSupply: number; creator: string; chainId: number } } | null>(null);
+  const [success, setSuccess] = useState<{ txHash: string; tokenDetails: { name: string; symbol: string; initialSupply: number; creator: `0x${string}`; chainId: number } } | null>(null);
   
   // Contract interaction
   const { writeContract, data: hash, isPending } = useWriteContract();
@@ -111,7 +111,7 @@ export function TokenFactoryInterface() {
   };
 
   // Handle successful transaction
-  if (isConfirmed && hash && !success) {
+  if (isConfirmed && hash && !success && address) {
     const tokenDetails = {
       name: tokenName.trim(),
       symbol: tokenSymbol.trim().toUpperCase(),
