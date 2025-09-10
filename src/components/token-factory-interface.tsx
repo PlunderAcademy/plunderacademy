@@ -56,7 +56,7 @@ export function TokenFactoryInterface() {
   // Transaction state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ txHash: string; tokenDetails: any } | null>(null);
+  const [success, setSuccess] = useState<{ txHash: string; tokenDetails: { name: string; symbol: string; initialSupply: number; creator: string; chainId: number } } | null>(null);
   
   // Contract interaction
   const { writeContract, data: hash, isPending } = useWriteContract();
@@ -103,9 +103,9 @@ export function TokenFactoryInterface() {
         ],
       });
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Token creation error:', err);
-      setError(err.message || 'Failed to create token');
+      setError(err instanceof Error ? err.message : 'Failed to create token');
       setIsSubmitting(false);
     }
   };
@@ -372,7 +372,7 @@ export function TokenFactoryInterface() {
           <ul className="space-y-1 list-disc list-inside">
             <li>Your wallet will prompt you to approve the transaction</li>
             <li>Our factory will create a new ERC-20 token for you</li>
-            <li>You'll receive all the initial tokens in your wallet</li>
+            <li>You&apos;ll receive all the initial tokens in your wallet</li>
             <li>Copy the transaction hash to submit for your achievement</li>
           </ul>
         </div>
