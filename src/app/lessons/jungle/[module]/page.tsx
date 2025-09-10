@@ -23,6 +23,7 @@ import { JungleModule4Image } from "@/components/jungle/jungle-module4-image";
 import { JungleModule5Image } from "@/components/jungle/jungle-module5-image";
 import { JungleStory } from "@/components/jungle/story";
 import { ModuleQuiz } from "@/components/module-quiz";
+import { TokenFactoryInterface } from "@/components/token-factory-interface";
 
 interface JungleModulePageProps {
   params: Promise<{
@@ -248,9 +249,14 @@ export default async function JungleModulePage({ params }: JungleModulePageProps
         </CardContent>
       </Card>
 
+      {/* Token Factory Interface - Only for creating-erc20-tokens module */}
+      {resolvedParams.module === 'creating-erc20-tokens' && (
+        <TokenFactoryInterface />
+      )}
+
       {/* Quiz Section */}
-      {quizData ? (
-        <ModuleQuiz quiz={quizData} missionData={missionData} />
+      {(quizData || resolvedParams.module === 'creating-erc20-tokens') ? (
+        <ModuleQuiz quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
       ) : (
         <Card>
           <CardHeader>

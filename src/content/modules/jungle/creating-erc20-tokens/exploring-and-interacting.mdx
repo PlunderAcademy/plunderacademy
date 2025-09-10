@@ -3,26 +3,371 @@ id: exploring-and-interacting
 module: creating-erc20-tokens
 number: 5.4
 title: Exploring and Interacting with Your Token
-objective: Learn how to interact with your deployed token and add it to MetaMask.
+objective: >-
+  Learn how to deploy, verify, and interact with your token using Hardhat, 
+  MetaMask, and Zilliqa's block explorer.
 practicalTakeaway: >-
-  Creating a fungible token is a foundational blockchain development skill.
-  Leveraging OpenZeppelin's robust ERC-20 framework accelerates development
-  while integrating security best practices.
+  Hands-on experience with token deployment, verification, and real-world 
+  interaction builds confidence and understanding of the complete token lifecycle.
 slug: exploring-and-interacting
 ---
 
-## Verification and Tracking
+## Deploying Your Simple Token
 
-Use the Zilliqa EVM block explorer to input your contract address and view your token, contract code, and transaction history.
+### Quick Deployment with Hardhat Ignition
 
-### Checking Balances
+Let's deploy your simple token to Zilliqa testnet and start interacting with it!
 
-Within Remix's deployed contracts panel, call balanceOf with your wallet address. This should return your full token balance considering decimals (usually 18).
+**Create deployment module `ignition/modules/MyFirstToken.ts`:**
 
-### Token Transfers
+```bash
+rm ignition/modules/Counter.ts
+```
 
-Invoke transfer in Remix, entering the recipient's address and the amount to transfer (adjusted by decimals). Verify the recipient's updated balance on Remix or their MetaMask wallet.
+```typescript
+import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-### Adding Token to MetaMask
+const MyFirstTokenModule = buildModule("MyFirstTokenModule", (m) => {
+  // Get the claimant address parameter
+  const claimant = m.getParameter("claimant");
+  
+  // Deploy the token contract with claimant address
+  const token = m.contract("MyFirstToken", [claimant]);
+  
+  return { token };
+});
 
-Add the deployed token contract address and symbol as a custom token in MetaMask. This enables seeing token balances directly in your wallet and enables transfers or dApp interactions.
+export default MyFirstTokenModule;
+```
+
+**Important:** The deployment module now requires a `claimant` parameter - this should be your connected MetaMask wallet address!
+
+### Deploy to Zilliqa Testnet
+
+**Make sure your environment is ready:**
+
+1. **Check your `.env` file has your private key:**
+   ```
+   PRIVATE_KEY=your_metamask_private_key_here
+   ```
+
+2. **Ensure you have testnet ZIL** in your MetaMask wallet
+
+3. **Deploy your token (replace YOUR_WALLET_ADDRESS with your MetaMask address):**
+   ```bash
+   npx hardhat ignition deploy ignition/modules/MyFirstToken.ts --network zilliqaTestnet --parameters '{"MyFirstTokenModule": {"claimant": "YOUR_WALLET_ADDRESS"}}'
+   ```
+
+**Example with actual address:**
+   ```bash
+   npx hardhat ignition deploy ignition/modules/MyFirstToken.ts --network zilliqaTestnet --parameters '{"MyFirstTokenModule": {"claimant": "0x742d35Cc6565C42d26A7b4b4c6d3A5c5c5d4e4F4"}}'
+   ```
+
+**Expected output:**
+```
+Hardhat Ignition 🚀
+
+Deploying [ MyFirstTokenModule ]
+
+✅ MyFirstTokenModule#MyFirstToken - 0x742d35Cc65C42d26A7b4b4c6d3A5c5c5d4e4F4
+
+[ MyFirstTokenModule ] successfully deployed 🚀
+```
+
+**Important:** The claimant address you pass here should match your connected wallet on Plunder Academy!
+
+**🎉 Congratulations! Your token is now live on Zilliqa testnet!**
+
+## Adding Your Token to MetaMask
+
+### Step-by-Step Token Addition
+
+**Manual addition process:**
+
+1. **Open MetaMask** and ensure you're on Zilliqa EVM Testnet
+
+2. **Go to Assets tab** and click "Import tokens"
+
+3. **Select "Custom Token"**
+
+4. **Enter token details:**
+   - **Token Contract Address:** Your deployed contract address
+   - **Token Symbol:** MFT (should auto-populate)
+   - **Token Decimals:** 18 (should auto-populate)
+
+5. **Click "Add Custom Token"** then "Import Tokens"
+
+**Your token should now appear in MetaMask!** You should see your balance of 1,000,000 MFT tokens.
+
+## Interacting with Your Token
+
+### Using Hardhat Console
+
+**Connect to your deployed token:**
+
+```bash
+npx hardhat console --network zilliqaTestnet
+```
+
+**In the console:**
+
+```javascript
+// Connect to your token
+const token = await ethers.getContractAt("MyFirstToken", "YOUR_CONTRACT_ADDRESS");
+
+// Check basic info
+await token.name()        // "My First Token"
+await token.symbol()      // "MFT"
+await token.decimals()    // 18n
+
+// Check total supply
+const totalSupply = await token.totalSupply();
+console.log(`Total Supply: ${ethers.formatEther(totalSupply)} MFT`);
+
+// Check your balance
+const [deployer] = await ethers.getSigners();
+const balance = await token.balanceOf(deployer.address);
+console.log(`Your Balance: ${ethers.formatEther(balance)} MFT`);
+```
+
+### Transfer Tokens
+
+**Send tokens to another address:**
+
+```javascript
+// In Hardhat console
+const recipientAddress = "0x742d35Cc65C42d26A7b4b4c6d3A5c5c5d4e4F4"; // Replace with actual address
+const transferAmount = ethers.parseEther("1000"); // 1000 MFT
+
+console.log("Transferring 1000 MFT...");
+const tx = await token.transfer(recipientAddress, transferAmount);
+console.log(`Transaction hash: ${tx.hash}`);
+
+// Wait for confirmation
+await tx.wait();
+console.log("Transfer completed!");
+
+// Check new balances
+const yourBalance = await token.balanceOf(deployer.address);
+const recipientBalance = await token.balanceOf(recipientAddress);
+
+console.log(`Your new balance: ${ethers.formatEther(yourBalance)} MFT`);
+console.log(`Recipient balance: ${ethers.formatEther(recipientBalance)} MFT`);
+```
+
+## Verifying Your Token on Block Explorer
+
+### Step-by-Step Verification
+
+1. **Visit Zilliqa Blockscout:** https://zilliqa.blockscout.com
+
+2. **Search for your contract:**
+   - Paste your contract address in the search bar
+   - Click on your contract address in the results
+
+3. **Navigate to verification:**
+   - Click on the "Contract" tab
+   - Click "Verify & Publish"
+
+4. **Fill in the details:**
+   - **Contract Address:** (Auto-filled)
+   - **Contract Name:** `MyFirstToken`
+   - **Compiler Version:** `0.8.28`
+   - **Optimization:** `Yes`
+   - **Optimization Runs:** `200`
+   - **EVM Version:** `shanghai`
+
+5. **Upload contract source:**
+   - Copy the contents of your `contracts/MyFirstToken.sol`
+   - Paste it in the "Contract Source Code" field
+
+6. **Submit verification:**
+   - Click "Verify and Publish"
+   - Wait for verification (usually takes 1-2 minutes)
+
+**Success!** Your contract should now show a green checkmark and "Contract Source Code Verified".
+
+## Creating Transfer Scripts
+
+### Basic Transfer Script
+
+**Create `scripts/transfer-tokens.ts`:**
+
+```typescript
+import { ethers } from "hardhat";
+
+async function main() {
+  const contractAddress = "YOUR_CONTRACT_ADDRESS"; // Replace with your address
+  const token = await ethers.getContractAt("MyFirstToken", contractAddress);
+  
+  // Configuration
+  const recipientAddress = "RECIPIENT_ADDRESS"; // Replace with recipient
+  const amount = ethers.parseEther("100"); // 100 MFT
+  
+  const [sender] = await ethers.getSigners();
+  
+  console.log("=== Token Transfer ===");
+  console.log(`From: ${sender.address}`);
+  console.log(`To: ${recipientAddress}`);
+  console.log(`Amount: ${ethers.formatEther(amount)} MFT`);
+  
+  // Check sender balance
+  const senderBalance = await token.balanceOf(sender.address);
+  console.log(`Sender balance: ${ethers.formatEther(senderBalance)} MFT`);
+  
+  if (senderBalance < amount) {
+    console.error("❌ Insufficient balance!");
+    return;
+  }
+  
+  // Execute transfer
+  console.log("\n⏳ Sending transaction...");
+  const tx = await token.transfer(recipientAddress, amount);
+  console.log(`Transaction hash: ${tx.hash}`);
+  
+  // Wait for confirmation
+  console.log("⏳ Waiting for confirmation...");
+  const receipt = await tx.wait();
+  console.log(`✅ Transfer confirmed in block ${receipt?.blockNumber}`);
+  console.log(`Gas used: ${receipt?.gasUsed}`);
+  
+  // Show updated balances
+  const newSenderBalance = await token.balanceOf(sender.address);
+  const recipientBalance = await token.balanceOf(recipientAddress);
+  
+  console.log("\n📊 Updated Balances:");
+  console.log(`Sender: ${ethers.formatEther(newSenderBalance)} MFT`);
+  console.log(`Recipient: ${ethers.formatEther(recipientBalance)} MFT`);
+  
+  console.log(`\n🔍 View on Explorer:`);
+  console.log(`https://zilliqa.blockscout.com/tx/${tx.hash}`);
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+```
+
+**Run the transfer:**
+
+```bash
+npx hardhat run scripts/transfer-tokens.ts --network zilliqaTestnet
+```
+
+## Token Analytics
+
+### Basic Token Stats
+
+**Create `scripts/token-stats.ts`:**
+
+```typescript
+import { ethers } from "hardhat";
+
+async function main() {
+  const contractAddress = "YOUR_CONTRACT_ADDRESS";
+  const token = await ethers.getContractAt("MyFirstToken", contractAddress);
+  
+  console.log("📊 My First Token Analytics");
+  console.log("============================");
+  
+  // Basic token info
+  console.log("\n🪙 Token Information:");
+  console.log(`Name: ${await token.name()}`);
+  console.log(`Symbol: ${await token.symbol()}`);
+  console.log(`Decimals: ${await token.decimals()}`);
+  
+  const totalSupply = await token.totalSupply();
+  console.log(`Total Supply: ${ethers.formatEther(totalSupply)} MFT`);
+  
+  // Contract info
+  console.log("\n📋 Contract Information:");
+  console.log(`Address: ${await token.getAddress()}`);
+  console.log(`Explorer: https://zilliqa.blockscout.com/address/${await token.getAddress()}`);
+  
+  // Deployer info
+  const [deployer] = await ethers.getSigners();
+  const deployerBalance = await token.balanceOf(deployer.address);
+  
+  console.log("\n👤 Deployer Information:");
+  console.log(`Address: ${deployer.address}`);
+  console.log(`Balance: ${ethers.formatEther(deployerBalance)} MFT`);
+  console.log(`Percentage: ${((Number(deployerBalance) / Number(totalSupply)) * 100).toFixed(2)}%`);
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+```
+
+## Exploring the Block Explorer
+
+### Understanding Your Token's Page
+
+**Visit your token on Blockscout:**
+`https://zilliqa.blockscout.com/address/YOUR_CONTRACT_ADDRESS`
+
+**Key sections to explore:**
+
+1. **Overview Tab:**
+   - Contract balance and transaction count
+   - Contract creation details
+
+2. **Transactions Tab:**
+   - All interactions with your token
+   - Transfer events and gas usage
+
+3. **Contract Tab:**
+   - Verified source code
+   - Read/Write contract functions
+
+4. **Events Tab:**
+   - Transfer events showing token movements
+   - Event details and transaction hashes
+
+### Reading Contract Functions
+
+**Try these read functions on the explorer:**
+
+1. **name()** → "My First Token"
+2. **symbol()** → "MFT"
+3. **decimals()** → 18
+4. **totalSupply()** → 1000000000000000000000000
+5. **balanceOf(address)** → Check any address balance
+
+## What You've Accomplished! 🎉
+
+Congratulations! You've successfully:
+
+✅ **Deployed your first token** to Zilliqa testnet
+✅ **Added your token to MetaMask** for easy management
+✅ **Transferred tokens** between addresses
+✅ **Verified your contract** on the block explorer
+✅ **Created interaction scripts** for token management
+✅ **Explored the block explorer** to understand your token's activity
+
+### Your Token is Now Live and Functional!
+
+Your simple 10-line token contract is:
+- 🌐 **Deployed on Zilliqa testnet**
+- 🔍 **Verified and transparent**
+- 🦊 **Compatible with MetaMask**
+- 💱 **Ready for trading and integration**
+- 📊 **Trackable on the block explorer**
+
+### Next Steps for Learning
+
+Now that you have a working token, consider:
+
+1. **🔧 Add advanced features** from the previous module
+2. **🏦 Integrate with DeFi protocols**
+3. **💱 Create liquidity pools** for trading
+4. **🎮 Build a dApp frontend** for your token
+5. **👥 Start a community** around your project
+
+You've mastered the fundamentals of ERC-20 token development on Zilliqa!

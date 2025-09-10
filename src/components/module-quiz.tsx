@@ -37,8 +37,9 @@ import { useAchievements } from "@/hooks/use-achievements";
  */
 
 interface ModuleQuizProps {
-  quiz: QuizMeta;
+  quiz?: QuizMeta | null;
   missionData?: MissionMeta | null;
+  moduleSlug: string; // Add module slug to determine submission type
 }
 
 interface QuizAnswer {
@@ -81,17 +82,23 @@ interface ClaimedAchievement {
   metadataUri?: string;
 }
 
-export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
+export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
   const { address } = useAccount();
   const { fetchWalletAchievements, fetchUnclaimedVouchers } = useAchievements();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
-  const [timeLeft, setTimeLeft] = useState(quiz.timeLimit * 60); // Convert minutes to seconds
+  const [timeLeft, setTimeLeft] = useState((quiz?.timeLimit || 15) * 60); // Convert minutes to seconds
   const [isStarted, setIsStarted] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [result, setResult] = useState<QuizResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  
+  // Transaction submission state for Module 5
+  const [transactionId, setTransactionId] = useState('');
+  const [transactionError, setTransactionError] = useState<string | null>(null);
+  const [selectedChain, setSelectedChain] = useState<'testnet' | 'mainnet'>('testnet');
+  const [submissionMethod, setSubmissionMethod] = useState<'factory' | 'deployment'>('factory');
   
   // Voucher and contract claiming states
   const [voucher, setVoucher] = useState<VoucherResponse | null>(null);
@@ -118,17 +125,30 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
     hash,
   });
 
-  // Define handleSubmitQuiz before the timer effect that uses it
-  const handleSubmitQuiz = useCallback(async () => {
+  // Define submission handler for both quiz and transaction submissions
+  const handleSubmit = useCallback(async () => {
     if (!address) {
-      setSubmitError('Please connect your wallet to submit the quiz');
+      setSubmitError('Please connect your wallet to submit');
       return;
+    }
+    
+    // For Module 5 transaction submission, validate transaction ID
+    if (moduleSlug === 'creating-erc20-tokens') {
+      if (!transactionId.trim()) {
+        setTransactionError('Please enter a transaction ID');
+        return;
+      }
+      if (!/^0x[a-fA-F0-9]{64}$/.test(transactionId.trim())) {
+        setTransactionError('Please enter a valid transaction ID (0x followed by 64 hex characters)');
+        return;
+      }
     }
     
     setIsSubmitting(true);
     setSubmitError(null);
+    setTransactionError(null);
     
-    const timeSpent = (quiz.timeLimit * 60) - timeLeft;
+    const timeSpent = ((quiz?.timeLimit || 15) * 60) - timeLeft;
     
     // Map module slug to achievement number
     const moduleToAchievementMap: Record<string, string> = {
@@ -139,7 +159,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
       'creating-erc20-tokens': '0005'
     };
     
-    const achievementNumber = moduleToAchievementMap[quiz.module];
+    const achievementNumber = moduleToAchievementMap[moduleSlug];
     
     if (!achievementNumber) {
       setSubmitError('Unknown module configuration');
@@ -147,16 +167,34 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
       return;
     }
     
-    // Convert answers to the expected format: {"q1": "B", "q2": "A", ...}
-    const formattedAnswers: Record<string, string> = {};
-    answers.forEach((answer, index) => {
-      formattedAnswers[`q${index + 1}`] = Array.isArray(answer.answer) 
-        ? answer.answer.join(',') 
-        : answer.answer;
-    });
+    // Determine submission type and data based on module
+    const isTransactionSubmission = moduleSlug === 'creating-erc20-tokens';
+    
+    let submissionData;
+    if (isTransactionSubmission) {
+      submissionData = {
+        transactionId: transactionId.trim(),
+        chainId: selectedChain === 'testnet' ? 33101 : 32769,
+        claimantAddress: address, // The connected wallet that should be the claimant
+        method: submissionMethod // 'factory' or 'deployment'
+      };
+    } else {
+      // Convert answers to the expected format: {"q1": "B", "q2": "A", ...}
+      const formattedAnswers: Record<string, string> = {};
+      answers.forEach((answer, index) => {
+        formattedAnswers[`q${index + 1}`] = Array.isArray(answer.answer) 
+          ? answer.answer.join(',') 
+          : answer.answer;
+      });
+      submissionData = {
+        answers: formattedAnswers
+      };
+    }
     
     /**
      * API Request Format (matches /api/v1/vouchers/submit specification):
+     * 
+     * Quiz Submission (Modules 1-4):
      * {
      *   "walletAddress": "0x...",
      *   "achievementNumber": "0001",
@@ -165,22 +203,23 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
      *   "metadata": { "timestamp": "2024-01-15T10:30:00Z", "timeSpent": 120 }
      * }
      * 
-     * Future Module 5 (creating-erc20-tokens) format:
+     * Transaction Submission (Module 5):
      * {
+     *   "walletAddress": "0x...",
+     *   "achievementNumber": "0005",
      *   "submissionType": "transaction",
-     *   "submissionData": { "transactionId": "0x..." }
+     *   "submissionData": { "transactionId": "0x..." },
+     *   "metadata": { "timestamp": "2024-01-15T10:30:00Z" }
      * }
      */
     const requestPayload = {
       walletAddress: address,
       achievementNumber,
-      submissionType: 'quiz', // TODO: Make this dynamic for module 5 transaction verification
-      submissionData: {
-        answers: formattedAnswers
-      },
+      submissionType: isTransactionSubmission ? 'transaction' : 'quiz',
+      submissionData,
       metadata: {
         timestamp: new Date().toISOString(),
-        timeSpent
+        ...(isTransactionSubmission ? {} : { timeSpent })
       }
     };
     
@@ -265,15 +304,16 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [address, quiz.module, quiz.timeLimit, answers]);
+  }, [address, moduleSlug, quiz?.timeLimit, answers, transactionId, timeLeft, selectedChain, submissionMethod]);
 
-  // Timer effect
+  // Timer effect (only for quiz modules)
   useEffect(() => {
-    if (isStarted && !isCompleted && timeLeft > 0) {
+    const isQuizModule = moduleSlug !== 'creating-erc20-tokens';
+    if (isStarted && !isCompleted && timeLeft > 0 && isQuizModule) {
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            handleSubmitQuiz();
+            handleSubmit();
             return 0;
           }
           return prev - 1;
@@ -282,7 +322,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
 
       return () => clearInterval(timer);
     }
-  }, [isStarted, isCompleted, timeLeft, handleSubmitQuiz]);
+  }, [isStarted, isCompleted, timeLeft, handleSubmit, moduleSlug]);
 
   // Handle successful contract confirmation
   useEffect(() => {
@@ -295,7 +335,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
         'zilliqa-evm-setup': '0004',
         'creating-erc20-tokens': '0005'
       };
-      const achievementNumber = moduleToAchievementMap[quiz.module as keyof typeof moduleToAchievementMap];
+      const achievementNumber = moduleToAchievementMap[moduleSlug as keyof typeof moduleToAchievementMap];
 
       const imageUrl = `https://static.plunderswap.com/training/images/${achievementNumber || "0001"}.webp`;
 
@@ -350,7 +390,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
       
       setStep("completed");
     }
-  }, [isConfirmed, hash, voucher, missionData, quiz.module, fetchWalletAchievements, fetchUnclaimedVouchers]);
+  }, [isConfirmed, hash, voucher, missionData, moduleSlug, fetchWalletAchievements, fetchUnclaimedVouchers]);
 
   // Check if achievement is already claimed on component mount
   useEffect(() => {
@@ -367,7 +407,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
             'intro-to-solidity': '0003',
             'zilliqa-evm-setup': '0004',
             'creating-erc20-tokens': '0005'
-          }[quiz.module];
+          }[moduleSlug];
 
           const claimedAchievement = data.claimedAchievements?.find(
             (achievement: ClaimedAchievement) => achievement.achievementNumber === achievementNumber
@@ -401,7 +441,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
     };
 
     checkClaimedStatus();
-  }, [address, quiz.module]);
+  }, [address, moduleSlug]);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -428,7 +468,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
 
   const getCurrentAnswer = (questionId: number): string | string[] => {
     const answer = answers.find(a => a.questionId === questionId);
-    return answer?.answer || (quiz.questions[currentQuestion]?.type === 'multiple-select' ? [] : '');
+    return answer?.answer || (quiz?.questions[currentQuestion]?.type === 'multiple-select' ? [] : '');
   };
 
   const isQuestionAnswered = (questionId: number): boolean => {
@@ -440,11 +480,11 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
   };
 
   const isCurrentQuestionAnswered = (): boolean => {
-    return isQuestionAnswered(quiz.questions[currentQuestion]?.id);
+    return quiz?.questions[currentQuestion]?.id ? isQuestionAnswered(quiz.questions[currentQuestion].id) : false;
   };
 
   const handleNext = () => {
-    if (currentQuestion < quiz.questions.length - 1) {
+    if (quiz && currentQuestion < quiz.questions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
     }
   };
@@ -483,19 +523,23 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
   const handleRetakeQuiz = () => {
     setCurrentQuestion(0);
     setAnswers([]);
-    setTimeLeft(quiz.timeLimit * 60);
+    setTimeLeft((quiz?.timeLimit || 15) * 60);
     setIsStarted(false);
     setIsCompleted(false);
     setResult(null);
     setIsSubmitting(false);
     setSubmitError(null);
+    setTransactionError(null);
+    setTransactionId('');
+    setSelectedChain('testnet');
+    setSubmissionMethod('factory');
     setVoucher(null);
     setStep("quiz");
     setShowCelebration(false);
     setCelebrationData(null);
   };
 
-  const progress = ((currentQuestion + 1) / quiz.questions.length) * 100;
+  const progress = quiz ? ((currentQuestion + 1) / quiz.questions.length) * 100 : 0;
   const answeredQuestions = answers.length;
 
   // Main component render with achievement celebration overlay
@@ -563,45 +607,294 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
       );
     }
 
+    // Module 5: Transaction Submission Interface
+    if (moduleSlug === 'creating-erc20-tokens') {
+      if (!isStarted) {
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="size-5" />
+                Submit Your Token Deployment
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <p className="text-muted-foreground">
+                Deploy your token using the Hardhat environment you set up, then submit your deployment transaction ID to earn your achievement.
+              </p>
+
+              {/* Connected Wallet Display */}
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                <h4 className="font-semibold text-green-800 dark:text-green-200 mb-2">🔗 Connected Wallet (Claimant Address):</h4>
+                <p className="text-sm text-green-700 dark:text-green-300 font-mono break-all">
+                  {address}
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  Use this address as the claimant parameter when deploying your contract.
+                </p>
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">📝 Two Ways to Create Your Token:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                  <div className="bg-white dark:bg-blue-950/30 p-3 rounded border">
+                    <h5 className="font-medium text-blue-800 dark:text-blue-200 mb-1">🚀 Factory Method (Recommended)</h5>
+                    <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
+                      <li>Use our pre-deployed token factory</li>
+                      <li>No development setup required</li>
+                      <li>Works with any wallet</li>
+                      <li>Gas efficient</li>
+                    </ul>
+                  </div>
+                  <div className="bg-white dark:bg-blue-950/30 p-3 rounded border">
+                    <h5 className="font-medium text-blue-800 dark:text-blue-200 mb-1">🛠️ Full Deployment</h5>
+                    <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
+                      <li>Deploy your own contract</li>
+                      <li>Requires Hardhat setup</li>
+                      <li>Professional development workflow</li>
+                      <li>Complete control</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
+                <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">💡 Deployment Command:</h4>
+                <div className="bg-amber-100 dark:bg-amber-800/30 p-3 rounded border font-mono text-sm">
+                  <p className="text-amber-700 dark:text-amber-300">
+                    npx hardhat ignition deploy ignition/modules/MyFirstToken.ts --network zilliqaTestnet --parameters &apos;{"{"}
+                    &quot;MyFirstTokenModule&quot;: {"{"}
+                    &quot;claimant&quot;: &quot;{address}&quot;
+                    {"}"} {"}"}&apos;
+                  </p>
+                </div>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                  Remember to update your deployment module to accept the claimant parameter!
+                </p>
+              </div>
+
+              <Button onClick={handleStartQuiz} className="w-full">
+                Submit Transaction ID
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      // Transaction submission form
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="size-5" />
+              Submit Your Token Deployment Transaction
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              {/* Connected Wallet Display */}
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 rounded-lg">
+                <p className="text-sm font-medium text-green-800 dark:text-green-200">🔗 Claimant Wallet:</p>
+                <p className="text-xs text-green-700 dark:text-green-300 font-mono break-all mt-1">
+                  {address}
+                </p>
+              </div>
+
+              {/* Method Selection */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Creation Method</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="method"
+                      value="factory"
+                      checked={submissionMethod === 'factory'}
+                      onChange={(e) => setSubmissionMethod(e.target.value as 'factory')}
+                      className="w-4 h-4 text-primary"
+                    />
+                    <span className="text-sm">🚀 Token Factory (Recommended)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="method"
+                      value="deployment"
+                      checked={submissionMethod === 'deployment'}
+                      onChange={(e) => setSubmissionMethod(e.target.value as 'deployment')}
+                      className="w-4 h-4 text-primary"
+                    />
+                    <span className="text-sm">🛠️ Full Deployment</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Chain Selection */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Network</label>
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="chain"
+                      value="testnet"
+                      checked={selectedChain === 'testnet'}
+                      onChange={(e) => setSelectedChain(e.target.value as 'testnet')}
+                      className="w-4 h-4 text-primary"
+                    />
+                    <span className="text-sm">Testnet (Recommended)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="chain"
+                      value="mainnet"
+                      checked={selectedChain === 'mainnet'}
+                      onChange={(e) => setSelectedChain(e.target.value as 'mainnet')}
+                      className="w-4 h-4 text-primary"
+                    />
+                    <span className="text-sm">Mainnet</span>
+                  </label>
+                </div>
+                
+                {selectedChain === 'mainnet' && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 rounded-lg">
+                    <p className="text-sm font-medium text-red-800 dark:text-red-200 mb-1">⚠️ Mainnet Deployment Warning</p>
+                    <ul className="text-xs text-red-700 dark:text-red-300 space-y-1 list-disc list-inside">
+                      <li>Real ZIL will be spent on gas fees</li>
+                      <li>Your token will be permanently deployed to mainnet</li>
+                      <li>Consider testing on testnet first</li>
+                      <li>Only proceed if you intend to create a real token</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="transactionId" className="text-sm font-medium">
+                  Transaction ID
+                </label>
+                <input
+                  id="transactionId"
+                  type="text"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  placeholder="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground font-mono text-sm"
+                />
+                {transactionError && (
+                  <p className="text-sm text-red-600 dark:text-red-400">{transactionError}</p>
+                )}
+              </div>
+
+              {/* Method-specific instructions */}
+              {submissionMethod === 'factory' && (
+                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 p-3 rounded-lg">
+                  <p className="text-sm font-medium text-purple-800 dark:text-purple-200 mb-1">🏭 Token Factory Instructions:</p>
+                  <ul className="text-xs text-purple-700 dark:text-purple-300 space-y-1 list-disc list-inside">
+                    <li>Use the token creation form in the module content above</li>
+                    <li>Connect your wallet and fill in token details</li>
+                    <li>Click &quot;Create Token&quot; and approve the transaction</li>
+                    <li>Copy the transaction hash from your wallet or block explorer</li>
+                  </ul>
+                </div>
+              )}
+
+              {submissionMethod === 'deployment' && (
+                <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-3 rounded-lg">
+                  <p className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-1">🛠️ Full Deployment Instructions:</p>
+                  <ul className="text-xs text-orange-700 dark:text-orange-300 space-y-1 list-disc list-inside">
+                    <li>Complete the Hardhat setup from previous modules</li>
+                    <li>Deploy using: npx hardhat ignition deploy ignition/modules/MyFirstToken.ts</li>
+                    <li>Include --parameters with your wallet address as claimant</li>
+                    <li>Copy the deployment transaction hash from the output</li>
+                  </ul>
+                </div>
+              )}
+
+              <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
+                <p className="font-medium mb-1">📋 Verification Process:</p>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>We&apos;ll verify this transaction {submissionMethod === 'factory' ? 'called our token factory' : 'deployed a valid ERC-20 contract'}</li>
+                  <li>The {submissionMethod === 'factory' ? 'creator' : 'contract claimant'} must be your connected wallet</li>
+                  <li>Transaction must be successful (not reverted)</li>
+                  <li>Transaction must be on the selected network</li>
+                </ul>
+              </div>
+            </div>
+
+            {submitError && (
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                  <AlertCircle className="size-4" />
+                  <span className="font-medium">Submission Error</span>
+                </div>
+                <p className="text-sm text-red-600 dark:text-red-400 mt-1">{submitError}</p>
+              </div>
+            )}
+
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => setIsStarted(false)}
+              >
+                Back
+              </Button>
+              <Button 
+                onClick={handleSubmit} 
+                disabled={isSubmitting || !transactionId.trim()}
+                className={!transactionId.trim() ? "opacity-50" : ""}
+              >
+                {isSubmitting ? "Verifying..." : "Submit Transaction"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Quiz interface for other modules
     if (!isStarted) {
       return (
         <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="size-5" />
-            {quiz.title}
+            {quiz?.title || 'Module Quiz'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <p className="text-muted-foreground">{quiz.description}</p>
+          <p className="text-muted-foreground">{quiz?.description}</p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <div className="font-semibold">{quiz.totalQuestions}</div>
+              <div className="font-semibold">{quiz?.totalQuestions || 0}</div>
               <div className="text-sm text-muted-foreground">Questions</div>
             </div>
             <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <div className="font-semibold">{quiz.timeLimit} min</div>
+              <div className="font-semibold">{quiz?.timeLimit || 15} min</div>
               <div className="text-sm text-muted-foreground">Time Limit</div>
             </div>
             <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <div className="font-semibold">{quiz.passingScore}%</div>
+              <div className="font-semibold">{quiz?.passingScore || 80}%</div>
               <div className="text-sm text-muted-foreground">Passing Score</div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <h4 className="font-semibold">Instructions:</h4>
-            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li>Answer all questions to complete the quiz</li>
-              <li>You can navigate between questions</li>
-              <li>Quiz will auto-submit when time runs out</li>
-              <li>You need {quiz.passingScore}% to pass</li>
-            </ul>
-          </div>
+          {quiz && (
+            <div className="space-y-2">
+              <h4 className="font-semibold">Instructions:</h4>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Answer all questions to complete the quiz</li>
+                <li>You can navigate between questions</li>
+                <li>Quiz will auto-submit when time runs out</li>
+                <li>You need {quiz.passingScore}% to pass</li>
+              </ul>
+            </div>
+          )}
 
-          <Button onClick={handleStartQuiz} className="w-full">
-            Start Quiz
+          <Button onClick={handleStartQuiz} className="w-full" disabled={!quiz}>
+            {quiz ? 'Start Quiz' : 'Quiz Not Available'}
           </Button>
         </CardContent>
       </Card>
@@ -720,7 +1013,7 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
               <div className="text-sm text-muted-foreground">Time Spent</div>
             </div>
             <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <div className="font-semibold">{quiz.passingScore}%</div>
+              <div className="font-semibold">{quiz?.passingScore || 80}%</div>
               <div className="text-sm text-muted-foreground">Required</div>
             </div>
           </div>
@@ -798,6 +1091,8 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
       );
     }
 
+    if (!quiz) return null;
+    
     const question = quiz.questions[currentQuestion];
     const currentAnswer = getCurrentAnswer(question.id);
 
@@ -818,10 +1113,10 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
         </div>
         <div className="space-y-2">
           <Progress value={progress} className="h-2" />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{answeredQuestions} answered</span>
-            <span>{quiz.questions.length - answeredQuestions} remaining</span>
-          </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{answeredQuestions} answered</span>
+              <span>{(quiz?.questions.length || 0) - answeredQuestions} remaining</span>
+            </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -945,9 +1240,9 @@ export function ModuleQuiz({ quiz, missionData }: ModuleQuizProps) {
           </Button>
           
           <div className="flex gap-2">
-            {currentQuestion === quiz.questions.length - 1 ? (
+            {currentQuestion === (quiz?.questions.length || 1) - 1 ? (
               <Button 
-                onClick={handleSubmitQuiz} 
+                onClick={handleSubmit} 
                 disabled={isSubmitting || !isCurrentQuestionAnswered()}
                 className={!isCurrentQuestionAnswered() ? "opacity-50" : ""}
                 title={!isCurrentQuestionAnswered() ? "Please answer this question to submit the quiz" : ""}

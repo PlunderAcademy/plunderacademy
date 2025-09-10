@@ -1,0 +1,470 @@
+---
+id: reading-the-blockchain-block-explorers
+module: blockchain-fundamentals
+number: 1.7
+title: Reading the Blockchain with Block Explorers
+objective: >-
+  Master the use of block explorers to investigate transactions, analyze smart
+  contract interactions, and troubleshoot blockchain activities using Zilliqa's
+  Blockscout explorer.
+practicalTakeaway: >-
+  Block explorers are essential tools for understanding blockchain activity.
+  Learning to read transaction data, analyze gas usage, and investigate contract
+  interactions will make you a more effective blockchain user and developer.
+slug: reading-the-blockchain-block-explorers
+---
+
+## Understanding Block Explorers
+
+### What Is a Block Explorer?
+
+**Real-world analogy:** Think of a block explorer like a combination of Google Maps and a public records office for the blockchain. Just as you can look up any address, see who lives there, and track the history of a property, block explorers let you look up any blockchain address, see what transactions happened, and track the complete history of any account or smart contract.
+
+**Technical definition:** A block explorer is a web-based tool that allows you to search, view, and analyze all data stored on a blockchain network in a user-friendly format.
+
+### Why Block Explorers Are Essential
+
+**Transparency in action:** Blockchain promises transparency, but raw blockchain data is unreadable to humans. Block explorers translate this data into understandable information.
+
+**Key use cases:**
+- **Transaction verification:** Confirm your payments went through
+- **Address investigation:** Research wallets or contracts before interacting
+- **Gas analysis:** Understand why transactions cost what they do
+- **Smart contract exploration:** See how contracts work and what they do
+- **Network monitoring:** Track network health and activity
+- **Debugging:** Figure out why transactions failed
+
+## Introducing Zilliqa's Blockscout Explorer
+
+### Accessing Zilliqa Blockscout
+
+**Primary URL:** [https://zilliqa.blockscout.com/](https://zilliqa.blockscout.com/)
+
+**What is Blockscout?**
+Blockscout is an open-source block explorer specifically designed for EVM-compatible blockchains. Zilliqa uses Blockscout as its official block explorer, providing comprehensive insight into all network activity.
+
+**Key features:**
+- **Real-time data:** Live updates of network activity
+- **Smart contract verification:** View and interact with verified contract source code
+- **Token tracking:** Monitor all ERC-20 and ERC-721 tokens
+- **API access:** Developer tools for building applications
+- **Search functionality:** Find any address, transaction, or block quickly
+
+## Navigating the Blockscout Interface
+
+### Homepage Overview
+
+**Dashboard elements:**
+- **Latest blocks:** Real-time feed of new blocks being created
+- **Recent transactions:** Live stream of network transactions
+- **Network statistics:** Total transactions, addresses, and blocks
+- **Market information:** Current ZIL price and market data
+- **Search bar:** Universal search for addresses, transactions, blocks, and tokens
+
+### Search Functionality
+
+**What you can search for:**
+- **Transaction hash:** `0x1234567890abcdef...` (66 characters)
+- **Wallet address:** `0x742d35Cc6565C42d26A7b4b4c6d3A5c5c5d4e4F4`
+- **Block number:** `#1234567` or just `1234567`
+- **Token name:** `ZIL`, `USDC`, etc.
+- **Contract address:** Same format as wallet address
+
+**Search tips:**
+- **Copy-paste carefully:** Addresses are long and error-prone to type
+- **Use full hashes:** Partial transaction hashes won't work
+- **Try different formats:** Some searches work with or without `0x` prefix
+
+## Understanding Transactions
+
+### Transaction Overview Page
+
+When you search for a transaction hash, you'll see comprehensive details:
+
+#### Basic Transaction Information
+
+**Transaction Hash**
+- **What it is:** Unique identifier for this specific transaction
+- **Example:** `0xabcd1234567890ef...`
+- **Purpose:** Like a tracking number for your blockchain transaction
+
+**Status**
+- **Success:** Transaction completed successfully ✅
+- **Failed:** Transaction was processed but execution failed ❌
+- **Pending:** Transaction waiting to be included in a block ⏳
+
+**Block Information**
+- **Block number:** Which block includes this transaction
+- **Position in block:** Order within that specific block
+- **Confirmations:** Number of blocks created after this transaction
+
+#### Financial Details
+
+**Value**
+- **Amount transferred:** How much ZIL was sent
+- **USD equivalent:** Value in US dollars at time of transaction
+- **Note:** This only shows direct ZIL transfers, not token transfers
+
+**Gas Information**
+- **Gas limit:** Maximum gas authorized for this transaction
+- **Gas used:** Actual gas consumed
+- **Gas price:** Price per unit of gas (in gwei)
+- **Total fee:** Total cost paid (Gas Used × Gas Price)
+
+#### Addresses and Participants
+
+**From Address**
+- **Sender:** Who initiated and paid for this transaction
+- **Click to explore:** View complete history of this address
+
+**To Address**
+- **Recipient:** Destination address (wallet or smart contract)
+- **Contract indicator:** Shows if destination is a smart contract
+
+**Example transaction breakdown:**
+```
+Transaction: 0xabcd1234...
+Status: Success ✅
+From: 0x742d35Cc... (Your wallet)
+To: 0x1234abcd... (Token contract)
+Value: 0 ZIL (no direct ZIL transfer)
+Gas Used: 65,432 / 100,000 (65.4% of limit)
+Gas Price: 4,762 gwei
+Total Fee: 0.000311 ZIL (~$0.008)
+```
+
+### Advanced Transaction Details
+
+#### Input Data
+
+**What is input data?**
+The encoded instructions sent to smart contracts telling them what function to execute and with what parameters.
+
+**Reading input data:**
+- **Function called:** Decoded function name (e.g., "transfer")
+- **Parameters:** Function arguments (recipient address, amount, etc.)
+- **Raw data:** Hexadecimal representation of the function call
+
+**Example token transfer input:**
+```
+Function: transfer(address to, uint256 amount)
+Parameters:
+  to: 0x742d35Cc6565C42d26A7b4b4c6d3A5c5c5d4e4F4
+  amount: 1000000000000000000 (1 token with 18 decimals)
+```
+
+#### Event Logs
+
+**What are event logs?**
+Events emitted by smart contracts during transaction execution, providing structured data about what happened.
+
+**Common events:**
+- **Transfer:** Token transfers between addresses
+- **Approval:** Permission granted for token spending
+- **Swap:** Token exchanges on decentralized exchanges
+- **Mint:** Creation of new tokens
+
+**Reading event logs:**
+```
+Event: Transfer(from, to, value)
+  from: 0x0000000000000000000000000000000000000000 (mint from zero)
+  to: 0x742d35Cc6565C42d26A7b4b4c6d3A5c5c5d4e4F4
+  value: 1000000000000000000 (1 token)
+```
+
+## Analyzing Addresses
+
+### Wallet Address Investigation
+
+**When you search for a wallet address, you'll see:**
+
+#### Balance Information
+- **ZIL balance:** Current native token holdings
+- **Token balances:** All ERC-20 tokens owned
+- **NFT collection:** ERC-721 tokens (if any)
+- **Historical values:** Balance changes over time
+
+#### Transaction History
+- **Complete history:** All incoming and outgoing transactions
+- **Filtering options:** Filter by transaction type, time period, or token
+- **Pagination:** Navigate through large transaction histories
+
+#### Activity Analysis
+- **First transaction:** When this address was first used
+- **Total transactions:** Lifetime transaction count
+- **Activity patterns:** Frequency and timing of usage
+
+### Smart Contract Address Investigation
+
+**Smart contracts provide additional information:**
+
+#### Contract Details
+- **Contract name:** Human-readable identifier
+- **Creation transaction:** When and how the contract was deployed
+- **Source code:** If verified, view the actual Solidity code
+- **ABI (Application Binary Interface):** Function definitions for interaction
+
+#### Contract Statistics
+- **Total transactions:** How many times the contract has been called
+- **Unique users:** Number of different addresses that have interacted
+- **Token information:** If it's a token contract, see supply and holders
+
+#### Verification Status
+- **Verified contracts:** ✅ Source code has been verified and is viewable
+- **Unverified contracts:** ⚠️ Only bytecode is available, higher risk
+- **Proxy contracts:** 🔗 Contracts that delegate to other implementation contracts
+
+## Reading Block Information
+
+### Block Overview
+
+**When you search for a block number, you'll see:**
+
+#### Block Header
+- **Block number:** Sequential identifier
+- **Timestamp:** When the block was mined
+- **Miner/Validator:** Who created this block
+- **Block reward:** Reward earned for creating the block
+
+#### Block Contents
+- **Transaction count:** Number of transactions included
+- **Gas usage:** Total gas consumed by all transactions
+- **Gas limit:** Maximum gas allowed for this block
+- **Block size:** Data size of the block
+
+#### Hash Information
+- **Block hash:** Unique fingerprint of this block
+- **Parent hash:** Hash of the previous block (showing the chain)
+- **Merkle root:** Mathematical summary of all transactions
+
+### Understanding Block Times
+
+**Zilliqa's 1-second blocks:**
+- **Consistency:** Blocks are created approximately every 1 second
+- **Finality:** Transactions are confirmed very quickly
+- **Monitoring:** You can watch blocks being created in real-time
+
+## Token Analysis
+
+### ERC-20 Token Investigation
+
+**For any token, you can analyze:**
+
+#### Token Information
+- **Name and symbol:** Human-readable identifiers
+- **Total supply:** How many tokens exist
+- **Decimals:** Precision level (usually 18)
+- **Contract address:** Where the token logic is stored
+
+#### Distribution Analysis
+- **Top holders:** Addresses with the largest balances
+- **Holder count:** Total number of token owners
+- **Distribution percentage:** How concentrated ownership is
+
+#### Trading Activity
+- **Transfer volume:** How much trading activity
+- **Active addresses:** How many unique users
+- **Transaction frequency:** How often transfers occur
+
+### NFT Collection Analysis
+
+**For NFT contracts (ERC-721/ERC-1155):**
+
+#### Collection Overview
+- **Total supply:** How many NFTs in the collection
+- **Owner count:** How many unique holders
+- **Floor price:** Lowest listed price (if marketplace data available)
+
+#### Individual NFT Details
+- **Token ID:** Unique identifier within the collection
+- **Owner:** Current holder of this specific NFT
+- **Transfer history:** Complete ownership timeline
+- **Metadata:** Associated images, descriptions, and attributes
+
+## Troubleshooting Failed Transactions
+
+### Common Failure Reasons
+
+#### Out of Gas
+**What happened:** Transaction ran out of gas before completion
+**Blockscout shows:** Status "Failed", gas used equals gas limit
+**Solution:** Increase gas limit for future transactions
+
+**Example:**
+```
+Status: Failed ❌
+Gas Used: 100,000 / 100,000 (100% - this is the problem!)
+Error: "Out of gas"
+```
+
+#### Insufficient Balance
+**What happened:** Not enough tokens or ZIL to complete transaction
+**Blockscout shows:** Status "Failed", error message about insufficient funds
+**Solution:** Ensure adequate balance before retrying
+
+#### Smart Contract Revert
+**What happened:** Contract code rejected the transaction (e.g., conditions not met)
+**Blockscout shows:** Status "Failed", specific revert reason in error message
+**Solution:** Address the specific condition that caused the revert
+
+**Example revert reasons:**
+- "Transfer amount exceeds balance"
+- "ERC20: transfer amount exceeds allowance"
+- "Ownable: caller is not the owner"
+
+### Gas Analysis for Optimization
+
+#### Gas Usage Patterns
+**Analyzing successful transactions:**
+- **Gas estimate accuracy:** How well you estimated gas needs
+- **Optimization opportunities:** Compare similar transactions for efficiency
+- **Cost trends:** Track gas prices over time for better timing
+
+#### Fee Optimization
+**Finding the right balance:**
+- **Speed vs. cost:** Higher gas prices for faster confirmation
+- **Network conditions:** Adjust gas price based on network congestion
+- **Transaction complexity:** More complex operations need more gas
+
+## Developer Tools and API Access
+
+### Contract Verification
+
+**Why verify contracts:**
+- **Transparency:** Users can read your contract's source code
+- **Trust:** Builds confidence in your smart contract
+- **Debugging:** Easier to understand transaction failures
+- **Integration:** Other developers can understand and use your contract
+
+**Verification process:**
+1. **Deploy contract:** Normal deployment process
+2. **Gather information:** Source code, compiler version, optimization settings
+3. **Submit verification:** Use Blockscout's verification tool
+4. **Wait for processing:** Blockscout compiles and verifies code matches
+5. **Verification complete:** Source code now visible on explorer
+
+### API Access
+
+**Blockscout provides APIs for:**
+- **Transaction data:** Programmatic access to transaction information
+- **Address information:** Automated balance and history queries
+- **Block data:** Real-time block information
+- **Token data:** Token balances and transfer information
+
+**Example API usage:**
+```javascript
+// Get address balance
+const response = await fetch(
+  'https://zilliqa.blockscout.com/api?module=account&action=balance&address=0x742d35Cc...'
+);
+const data = await response.json();
+console.log('Balance:', data.result);
+```
+
+## Practical Usage Scenarios
+
+### Scenario 1: Verifying a Payment
+
+**You sent ZIL to someone and want to confirm it arrived:**
+
+1. **Find transaction hash:** Copy from your wallet transaction history
+2. **Search in Blockscout:** Paste hash in search bar
+3. **Check status:** Ensure status shows "Success" ✅
+4. **Verify details:** Confirm recipient address and amount are correct
+5. **Share proof:** Send the Blockscout link as payment confirmation
+
+### Scenario 2: Investigating High Gas Fees
+
+**Your transaction cost more than expected:**
+
+1. **Open transaction:** Find your transaction in Blockscout
+2. **Check gas details:** Compare gas used vs. gas limit
+3. **Analyze gas price:** See if you overpaid compared to network average
+4. **Review complexity:** Complex smart contract interactions cost more
+5. **Optimize future:** Adjust gas settings for similar transactions
+
+### Scenario 3: Smart Contract Research
+
+**Before interacting with a new DeFi protocol:**
+
+1. **Find contract address:** Get address from official protocol website
+2. **Check verification:** Ensure contract is verified (✅)
+3. **Review source code:** Read the smart contract logic
+4. **Analyze activity:** Check transaction volume and user count
+5. **Assess risk:** Look for any red flags in code or activity patterns
+
+### Scenario 4: Token Analysis
+
+**Researching a new token before buying:**
+
+1. **Search token name:** Find the official contract address
+2. **Verify legitimacy:** Check against official project documentation
+3. **Analyze distribution:** Review top holders for concentration risk
+4. **Check activity:** Ensure active trading and transfers
+5. **Review contract:** If verified, examine token contract code
+
+## Advanced Block Explorer Techniques
+
+### Cross-Reference Investigation
+
+**Following the money trail:**
+- **Trace funds:** Follow tokens through multiple transactions
+- **Identify patterns:** Look for repeated interactions between addresses
+- **Cluster analysis:** Group related addresses by transaction patterns
+
+### Historical Analysis
+
+**Time-based investigation:**
+- **Price correlation:** Compare transaction timing with price movements
+- **Usage patterns:** Identify peak usage times and user behavior
+- **Growth tracking:** Monitor protocol adoption over time
+
+### Comparative Analysis
+
+**Benchmarking:**
+- **Gas efficiency:** Compare similar contracts for optimization opportunities
+- **Activity levels:** Benchmark your project against competitors
+- **User behavior:** Understand how users interact with different protocols
+
+## Privacy Considerations
+
+### What's Public vs. Private
+
+**Public information:**
+- **All transaction amounts and addresses:** Completely transparent
+- **Transaction timing:** Exact timestamps visible
+- **Smart contract interactions:** All function calls and parameters visible
+- **Token holdings:** Current balances for all addresses
+
+**Private information:**
+- **Real-world identity:** Addresses aren't directly linked to names
+- **Geographic location:** IP addresses not stored on blockchain
+- **Private keys:** Never visible or stored on blockchain
+- **Off-chain communications:** Messages and negotiations not visible
+
+### Protecting Your Privacy
+
+**Best practices:**
+- **Use multiple addresses:** Don't reuse addresses for different purposes
+- **Timing considerations:** Be aware that transaction timing can reveal patterns
+- **Amount obfuscation:** Consider varying transaction amounts
+- **Mixing services:** Understand privacy-enhancing tools (use carefully and legally)
+
+## Staying Updated with Block Explorer Features
+
+### New Features
+
+**Blockscout regularly adds:**
+- **Enhanced analytics:** Better charts and statistics
+- **New token standards:** Support for emerging token types
+- **API improvements:** More developer tools and endpoints
+- **User interface updates:** Improved navigation and design
+
+### Alternative Explorers
+
+**Other Zilliqa block explorers:**
+- **ViewBlock:** Alternative interface with different features
+- **Zilliqa Explorer:** Official Zilliqa explorer for native chain data
+- **Third-party tools:** Specialized analytics and monitoring tools
+
+Remember: Block explorers are powerful investigative tools. Use them to verify transactions, research projects, and understand blockchain activity. The transparency they provide is one of blockchain's greatest strengths - embrace it to become a more informed and confident blockchain user.

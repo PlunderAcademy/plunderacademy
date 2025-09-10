@@ -1,0 +1,658 @@
+---
+id: development-environment-setup
+module: zilliqa-evm-setup
+number: 4.3
+title: Complete Development Environment Setup
+objective: >-
+  Set up a professional Zilliqa development environment with VS Code, Node.js, 
+  and Hardhat 3 from scratch on Windows.
+slug: development-environment-setup
+---
+
+## Creating Your Professional Development Environment
+
+### Overview: What We're Building
+
+**Real-world analogy:** Setting up a development environment is like organizing a professional workshop. You need the right tools (VS Code), the power source (Node.js), and the specialized equipment (Hardhat) all working together seamlessly.
+
+By the end of this guide, you'll have a complete development setup that enables you to:
+- **Write smart contracts** with syntax highlighting and error detection
+- **Compile and test** contracts locally before deployment
+- **Deploy to Zilliqa** networks with confidence
+- **Debug issues** efficiently with professional tools
+- **Manage projects** with version control and package management
+
+**What we'll install:**
+1. **WSL2 (Windows only)** - Linux environment for optimal development
+2. **VS Code** - Your primary development interface
+3. **Node.js 22.10+** - The runtime environment for development tools
+4. **Hardhat 3** - The professional framework for smart contract development
+5. **Hardhat VS Code Extension** - Advanced Solidity support
+6. **Hardhat Ignition** - Declarative deployment system
+
+## Windows Users: WSL2 Setup (Recommended)
+
+### Why WSL2 for Blockchain Development?
+
+**Important Note:** According to the [official Hardhat documentation](https://hardhat.org/docs/getting-started#installation), using WSL2 on Windows is highly recommended for the best development experience.
+
+**Benefits of WSL2:**
+- **Better compatibility** with Node.js and npm packages
+- **Faster file system operations** for compilation and testing
+- **Linux-native tooling** that most blockchain tools are designed for
+- **Better performance** for complex development workflows
+- **Consistent environment** matching production deployments
+
+**macOS and Linux users can skip this section** as they already have native Unix environments.
+
+### Installing WSL2
+
+#### Step 1: Enable WSL2
+
+1. **Open PowerShell as Administrator** (Right-click Start button → Windows PowerShell (Admin))
+2. **Enable WSL feature:**
+   ```powershell
+   dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+   ```
+3. **Enable Virtual Machine Platform:**
+   ```powershell
+   dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+   ```
+4. **Restart your computer**
+
+#### Step 2: Set WSL2 as Default
+
+1. **Download WSL2 Linux kernel update:** Visit https://aka.ms/wsl2kernel
+2. **Install the update package**
+3. **Open PowerShell as Administrator again**
+4. **Set WSL2 as default:**
+   ```powershell
+   wsl --set-default-version 2
+   ```
+
+#### Step 3: Install Ubuntu
+
+1. **Open Microsoft Store**
+2. **Search for "Ubuntu"**
+3. **Install "Ubuntu" (latest LTS version)**
+4. **Launch Ubuntu** from Start menu
+5. **Create user account** when prompted (this will be your Linux user)
+6. **Update the system:**
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   ```
+
+### Configure VS Code for WSL2
+
+1. **Install "WSL" extension** in VS Code by Microsoft
+2. **Connect to WSL:** Click the remote connection button (bottom-left corner) → "New WSL Window"
+3. **Verify connection:** Terminal should show Linux prompt, not Windows
+
+**All subsequent steps in this guide should be performed in WSL2 Ubuntu terminal** if you're on Windows.
+
+## Step 1: Installing Visual Studio Code
+
+### Why VS Code for Blockchain Development?
+
+**VS Code advantages for smart contract development:**
+- **Excellent Solidity support** with syntax highlighting and error detection
+- **Integrated terminal** for running blockchain commands
+- **Git integration** for version control
+- **Extensions ecosystem** specifically for blockchain development
+- **IntelliSense** for code completion and documentation
+- **Debugging support** for complex development workflows
+
+### Installation Process
+
+#### Download VS Code
+
+1. **Visit the official download page:** https://code.visualstudio.com/Download
+2. **Select Windows** - the page should automatically detect your system
+3. **Choose "User Installer"** (recommended for single-user Windows installations)
+4. **Click the download button** for the appropriate architecture:
+   - **x64** for most modern Windows computers
+   - **Arm64** only if you have an ARM-based Windows device
+
+#### Install VS Code
+
+1. **Run the downloaded installer** (`VSCodeUserSetup-{version}.exe`)
+2. **Accept the license agreement**
+3. **Choose installation location** (default is usually fine)
+4. **Select additional tasks** - recommended selections:
+   - ✅ **Add "Open with Code" action to Windows Explorer file context menu**
+   - ✅ **Add "Open with Code" action to Windows Explorer directory context menu**
+   - ✅ **Register Code as an editor for supported file types**
+   - ✅ **Add to PATH** (this enables `code` command in terminal)
+5. **Click Install** and wait for completion
+6. **Launch VS Code** when installation finishes
+
+#### Verify Installation
+
+1. **Open VS Code**
+2. **Check version:** Help → About (should be version 1.85 or newer)
+3. **Test terminal:** View → Terminal (should open integrated terminal)
+4. **Test command palette:** Ctrl+Shift+P (should open command search)
+
+## Step 2: Installing Node.js 22.10+
+
+### Why Node.js for Blockchain Development?
+
+**Node.js provides:**
+- **npm package manager** for installing development tools
+- **JavaScript runtime** for Hardhat and other development frameworks
+- **Build tools** for compiling and deploying smart contracts
+- **Testing frameworks** for comprehensive contract testing
+- **Development servers** for local blockchain simulation
+
+### Installation Process
+
+#### For WSL2 Users (Windows with WSL2)
+
+**Install Node.js via Node Version Manager (NVM) - Recommended:**
+
+1. **Open your WSL2 Ubuntu terminal**
+2. **Install curl if not already installed:**
+   ```bash
+   sudo apt install curl -y
+   ```
+3. **Install NVM:**
+   ```bash
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+   ```
+4. **Restart your terminal or reload bash profile:**
+   ```bash
+   source ~/.bashrc
+   ```
+5. **Install Node.js 22.10+:**
+   ```bash
+   nvm install 22
+   nvm use 22
+   nvm alias default 22
+   ```
+
+#### For macOS and Linux Users
+
+**Install Node.js via Node Version Manager (NVM) - Recommended:**
+
+Follow the same NVM installation steps as WSL2 users above.
+
+#### For Windows Users (Without WSL2)
+
+1. **Visit the official Node.js website:** https://nodejs.org/en/download
+2. **Choose "Windows Installer"** from the download options
+3. **Select the LTS version** (should be 22.10 or higher)
+4. **Download the 64-bit .msi installer** (most common for Windows)
+
+**Installation steps:**
+1. **Run the downloaded installer** (`node-v{version}-x64.msi`)
+2. **Click "Next" through the welcome screen**
+3. **Accept the license agreement**
+4. **Choose installation folder** (default `C:\Program Files\nodejs\` is recommended)
+5. **Select features to install** - keep all defaults:
+   - ✅ **Node.js runtime**
+   - ✅ **npm package manager**
+   - ✅ **Add to PATH**
+   - ✅ **Online documentation shortcuts**
+6. **Enable tools for native modules** (recommended for some blockchain packages)
+7. **Click Install** and wait for completion
+8. **Restart your computer** to ensure PATH changes take effect
+
+#### Verify Installation
+
+**For all users (WSL2, macOS, Linux, Windows):**
+
+1. **Open your terminal** (WSL2 Ubuntu, macOS Terminal, Linux Terminal, or Windows Command Prompt)
+2. **Check Node.js version:**
+   ```bash
+   node --version
+   ```
+   Should show v22.10.0 or higher
+
+3. **Check npm version:**
+   ```bash
+   npm --version
+   ```
+   Should show 10.0.0 or higher
+
+4. **Test npm functionality:**
+   ```bash
+   npm --help
+   ```
+   Should display npm help information
+
+#### Configure npm (Optional but Recommended)
+
+**Set up npm for global packages:**
+```bash
+# Check current global folder
+npm config get prefix
+
+# Create a global packages folder in your user directory (avoids permission issues)
+mkdir "%USERPROFILE%\npm-global"
+npm config set prefix "%USERPROFILE%\npm-global"
+
+# Add to your PATH environment variable
+# Go to System Properties → Environment Variables → User variables
+# Edit PATH and add: %USERPROFILE%\npm-global
+```
+
+## Step 3: Setting Up Your First Hardhat Project
+
+### Understanding Hardhat 3
+
+**What makes Hardhat 3 special:**
+- **Production-ready** with enhanced stability and performance
+- **Built-in Solidity testing** alongside TypeScript testing
+- **Viem integration** for modern Web3 interactions
+- **Hardhat Ignition** for declarative deployments
+- **Enhanced debugging** and error reporting
+- **Better TypeScript support** throughout the development flow
+
+### Create Your Development Folder
+
+1. **Open VS Code**
+2. **Open terminal:** View → Terminal (or Ctrl+`)
+3. **Navigate to your preferred development location:**
+   ```bash
+   cd C:\Users\%USERNAME%\Documents
+   mkdir ZilliqaDevelopment
+   cd ZilliqaDevelopment
+   ```
+
+### Initialize Your First Project
+
+1. **Create a new project folder:**
+   ```bash
+   mkdir my-first-zilliqa-project
+   cd my-first-zilliqa-project
+   ```
+
+2. **Initialize Hardhat 3:**
+   ```bash
+   npm init -y
+   npx hardhat@latest init
+   ```
+
+3. **Choose project type when prompted:**
+   - ✅ **"Create a TypeScript project"** (recommended)
+   - ✅ **Use default project root** (current directory)
+   - ✅ **Add .gitignore** (for version control)
+   - ✅ **Install dependencies** (will install required packages automatically)
+
+4. **Wait for initialization to complete** (may take 2-3 minutes)
+
+### Understanding Your Project Structure
+
+**Your new project contains:**
+```
+my-first-zilliqa-project/
+├── contracts/           # Your Solidity smart contracts
+│   ├── Counter.sol     # Sample contract
+│   └── Counter.t.sol   # Solidity tests
+├── test/               # TypeScript integration tests
+│   └── Counter.ts
+├── ignition/           # Deployment modules
+│   └── modules/
+│       └── Counter.ts
+├── scripts/            # Custom automation scripts
+├── hardhat.config.ts   # Main configuration file
+├── package.json        # Node.js dependencies
+└── README.md           # Project documentation
+```
+
+### Configure Hardhat for Zilliqa
+
+1. **Open the project in VS Code:**
+   ```bash
+   code .
+   ```
+
+2. **Edit `hardhat.config.ts`** to add Zilliqa networks:
+
+```typescript
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
+
+const config: HardhatUserConfig = {
+  solidity: {
+    version: "0.8.28",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+      evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+    },
+  },
+  networks: {
+    // Local development network
+    hardhat: {
+      chainId: 31337,
+    },
+    // Zilliqa Testnet
+    zilliqaTestnet: {
+      url: "https://api.testnet.zilliqa.com",
+      chainId: 33101,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
+    // Zilliqa Mainnet
+    zilliqaMainnet: {
+      url: "https://api.zilliqa.com",
+      chainId: 32769,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
+  },
+};
+
+export default config;
+```
+
+3. **Create environment variables file** (`.env`):
+```bash
+# Create .env file (never commit this to version control)
+echo "# Environment variables for development" > .env
+echo "PRIVATE_KEY=your_metamask_private_key_here" >> .env
+echo "" >> .env
+echo "# Note: Never commit this file to version control" >> .env
+echo "# Add .env to your .gitignore file" >> .env
+```
+
+4. **Install additional dependencies:**
+```bash
+npm install --save-dev dotenv
+```
+
+5. **Update `hardhat.config.ts`** to load environment variables:
+```typescript
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
+import "dotenv/config"; // Add this line
+
+// ... rest of config stays the same
+```
+
+## Step 4: Installing Hardhat VS Code Extension
+
+### Why the Hardhat Extension?
+
+**The official Hardhat extension provides:**
+- **Solidity syntax highlighting** with error detection
+- **Code completion** for Solidity keywords and functions
+- **Inline error reporting** while you type
+- **Go-to-definition** for imported contracts
+- **Integration with Hardhat tasks** from VS Code
+- **Debugging support** for smart contracts
+
+### Installation Steps
+
+1. **Open VS Code extensions:** Ctrl+Shift+X
+2. **Search for "Hardhat"**
+3. **Install "Hardhat for Visual Studio Code"** by Nomicfoundation
+4. **Reload VS Code** if prompted
+
+### Configure the Extension
+
+1. **Open VS Code settings:** Ctrl+,
+2. **Search for "hardhat"**
+3. **Configure key settings:**
+   - ✅ **Enable formatter** for automatic code formatting
+   - ✅ **Enable linter** for error detection
+   - ✅ **Auto-compile on save** for instant feedback
+
+### Test the Extension
+
+1. **Open `contracts/Counter.sol`** in your project
+2. **Verify syntax highlighting** - Solidity keywords should be colored
+3. **Test error detection** - try introducing a syntax error and see red underlines
+4. **Test code completion** - type `pragma` and see auto-completion suggestions
+
+## Step 5: Installing Hardhat Ignition
+
+### What is Hardhat Ignition?
+
+**Hardhat Ignition provides:**
+- **Declarative deployments** - describe what you want deployed
+- **Dependency management** - automatically handle deployment order
+- **Resumable deployments** - recover from failed deployments
+- **Network compatibility** - works seamlessly across different networks
+- **Verification integration** - automatically verify contracts
+
+### Installation
+
+Hardhat Ignition is included in the Hardhat toolbox, but let's ensure it's properly configured:
+
+1. **Verify installation:**
+   ```bash
+   npx hardhat ignition --help
+   ```
+
+2. **If not installed, add it:**
+   ```bash
+   npm install --save-dev @nomicfoundation/hardhat-ignition
+   ```
+
+### Understanding Ignition Modules
+
+**Example deployment module** (`ignition/modules/Counter.ts`):
+
+```typescript
+import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
+
+export default buildModule("CounterModule", (m) => {
+  // Deploy the Counter contract
+  const counter = m.contract("Counter");
+
+  // Call the incBy function with parameter 5
+  m.call(counter, "incBy", [5n]);
+
+  // Return the contract for use in other modules
+  return { counter };
+});
+```
+
+## Step 6: Testing Your Development Environment
+
+### Compile Your First Contract
+
+1. **Compile all contracts:**
+   ```bash
+   npx hardhat compile
+   ```
+
+2. **Expected output:**
+   ```
+   Compiled 1 Solidity file successfully (or similar)
+   ```
+
+### Run Tests
+
+1. **Run all tests:**
+   ```bash
+   npx hardhat test
+   ```
+
+2. **Expected output:**
+   ```
+   ✓ Should have correct initial value
+   ✓ Should increment correctly
+   ✓ Should handle fuzz testing
+   ```
+
+### Deploy to Local Network
+
+1. **Start local Hardhat network:**
+   ```bash
+   npx hardhat node
+   ```
+   Keep this terminal open - it's your local blockchain
+
+2. **Open a new terminal** and deploy:
+   ```bash
+   npx hardhat ignition deploy ignition/modules/Counter.ts --network localhost
+   ```
+
+3. **Expected output:**
+   ```
+   Hardhat Ignition 🚀
+   
+   Deploying [ CounterModule ]
+   
+   ✅ CounterModule#Counter
+   ✅ CounterModule#Counter.incBy
+   
+   [ CounterModule ] successfully deployed 🚀
+   ```
+
+### Connect MetaMask to Local Network
+
+1. **Add localhost network to MetaMask:**
+   - Network Name: `Hardhat Local`
+   - RPC URL: `http://127.0.0.1:8545`
+   - Chain ID: `31337`
+   - Currency Symbol: `ETH`
+
+2. **Import a test account:**
+   - Copy a private key from the Hardhat node output
+   - Import it into MetaMask
+   - You should see 10,000 ETH in the test account
+
+## Step 7: Your First Zilliqa Deployment
+
+### Prepare for Testnet Deployment
+
+1. **Ensure MetaMask is set up** with Zilliqa Testnet
+2. **Have testnet ZIL** in your wallet (from previous module)
+3. **Get your private key** from MetaMask:
+   - Account menu → Account details → Export private key
+   - ⚠️ **Never share this key or commit it to version control**
+
+4. **Add your private key to `.env`:**
+   ```
+   PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+   ```
+
+### Deploy to Zilliqa Testnet
+
+1. **Deploy your contract:**
+   ```bash
+   npx hardhat ignition deploy ignition/modules/Counter.ts --network zilliqaTestnet
+   ```
+
+2. **Expected output:**
+   ```
+   Hardhat Ignition 🚀
+   
+   Deploying [ CounterModule ]
+   
+   ✅ CounterModule#Counter - 0x1234567890123456789012345678901234567890
+   ✅ CounterModule#Counter.incBy
+   
+   [ CounterModule ] successfully deployed 🚀
+   
+   Deployed Addresses
+   
+   CounterModule#Counter - 0x1234567890123456789012345678901234567890
+   ```
+
+3. **Verify on block explorer:**
+   - Copy the contract address
+   - Visit https://zilliqa.blockscout.com
+   - Search for your contract address
+   - Verify the deployment transaction succeeded
+
+## Step 8: Workflow Best Practices
+
+### Development Workflow
+
+**Recommended development cycle:**
+```
+1. Write/modify contracts in VS Code
+2. Compile: npx hardhat compile
+3. Test locally: npx hardhat test
+4. Deploy locally: npx hardhat ignition deploy ... --network localhost
+5. Test on local network with MetaMask
+6. Deploy to testnet: npx hardhat ignition deploy ... --network zilliqaTestnet
+7. Test on testnet
+8. Deploy to mainnet (production only)
+```
+
+### Project Organization
+
+**As your project grows:**
+```
+my-zilliqa-project/
+├── contracts/
+│   ├── tokens/          # Token contracts
+│   ├── governance/      # DAO contracts
+│   └── utils/           # Utility contracts
+├── test/
+│   ├── unit/            # Individual contract tests
+│   └── integration/     # Multi-contract tests
+├── ignition/modules/
+│   ├── development/     # Dev deployments
+│   ├── testnet/         # Testnet deployments
+│   └── mainnet/         # Production deployments
+└── scripts/
+    ├── deploy/          # Deployment scripts
+    └── interact/        # Contract interaction scripts
+```
+
+### Security Best Practices
+
+**Environment security:**
+- ✅ **Never commit private keys** to version control
+- ✅ **Use different accounts** for development and production
+- ✅ **Keep testnet and mainnet keys separate**
+- ✅ **Regular backups** of your development environment
+- ✅ **Use hardware wallets** for mainnet deployments with significant funds
+
+### Useful VS Code Extensions
+
+**Recommended extensions for blockchain development:**
+1. **Solidity** by Juan Blanco (additional Solidity support)
+2. **GitLens** by GitKraken (enhanced Git integration)
+3. **Prettier** by Prettier (code formatting)
+4. **Auto Rename Tag** by Jun Han (helpful for frontend work)
+5. **Bracket Pair Colorizer** by CoenraadS (better code readability)
+
+## Troubleshooting Common Issues
+
+### Node.js Issues
+
+**"node is not recognized":**
+- Restart your computer after Node.js installation
+- Check PATH environment variable includes Node.js directory
+- Reinstall Node.js with "Add to PATH" option checked
+
+### Hardhat Issues
+
+**"hardhat command not found":**
+- Use `npx hardhat` instead of just `hardhat`
+- Install Hardhat globally: `npm install -g hardhat` (not recommended)
+- Ensure you're in the project directory
+
+### Network Connection Issues
+
+**"Network connection failed":**
+- Check your internet connection
+- Verify RPC URLs are correct
+- Try switching networks in MetaMask
+- Check if the network is experiencing downtime
+
+### Compilation Errors
+
+**"Solidity compiler error":**
+- Check Solidity version compatibility
+- Ensure `evmVersion: "shanghai"` is set for Zilliqa
+- Update Hardhat and dependencies: `npm update`
+
+## Congratulations! 
+
+You now have a complete professional development environment for building on Zilliqa. You can:
+- ✅ **Write smart contracts** with professional tooling
+- ✅ **Test thoroughly** before deployment
+- ✅ **Deploy to any network** with confidence
+- ✅ **Debug effectively** when issues arise
+- ✅ **Manage complex projects** as they grow
+
+Your development environment is the foundation for everything you'll build on Zilliqa. Take time to familiarize yourself with the tools - they'll accelerate your development significantly!

@@ -15,7 +15,7 @@ export default function TermsPage() {
 
       <h2>Overview</h2>
       <p>
-        These Terms govern your access to and use of Plunder Academy (the "Service"), including but not limited to:
+        These Terms govern your access to and use of Plunder Academy (the &quot;Service&quot;), including but not limited to:
       </p>
       <ul>
         <li>The AI Solidity reviewer</li>
@@ -63,7 +63,7 @@ export default function TermsPage() {
       </p>
       <ul>
         <li>
-          <strong>No warranties</strong>: Such outputs are provided "as is" and "as available", without any warranties of accuracy, completeness, or fitness for purpose.
+          <strong>No warranties</strong>: Such outputs are provided &quot;as is&quot; and &quot;as available&quot;, without any warranties of accuracy, completeness, or fitness for purpose.
         </li>
         <li>
           <strong>Not professional advice</strong>: AI outputs are not a substitute for professional advice, code review, or security audits.
@@ -85,7 +85,7 @@ export default function TermsPage() {
 
       <h2>Disclaimers</h2>
       <p>
-        The Service is provided “as is” and “as available” without warranties of any kind, whether express or implied,
+        The Service is provided &quot;as is&quot; and &quot;as available&quot; without warranties of any kind, whether express or implied,
         including merchantability, fitness for a particular purpose, and non‑infringement.
       </p>
 

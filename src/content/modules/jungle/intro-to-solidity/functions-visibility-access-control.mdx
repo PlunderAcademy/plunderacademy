@@ -9,36 +9,546 @@ objective: >-
 slug: functions-visibility-access-control
 ---
 
-## Defining Functions
+## Understanding Functions in Token Contracts
 
-Functions are the interface for users and contracts to interact with your smart contract.
+### Function Anatomy for Tokens
+
+Functions are the primary way users and other contracts interact with your token. Every ERC-20 token has standard functions that wallets and exchanges expect to find.
+
+**Real-world analogy:** Think of functions like different windows at a bank. Each window serves a specific purpose - one for deposits, one for withdrawals, one for checking balances. The teller (function) at each window follows specific procedures and checks your identity before helping you.
+
+#### Standard ERC-20 Function Structure
 
 ```solidity
-function multiply(uint a, uint b) public pure returns (uint) {
-    return a * b;
+function transfer(address to, uint256 amount) public returns (bool) {
+    require(to != address(0), "Cannot transfer to zero address");
+    require(_balances[msg.sender] >= amount, "Insufficient balance");
+    
+    _balances[msg.sender] -= amount;
+    _balances[to] += amount;
+    
+    emit Transfer(msg.sender, to, amount);
+    return true;
 }
 ```
 
-- `public` means anyone can call this function externally
-- `private`/`internal` restrict calls to the contract itself or derived contracts
-- `view` functions read state without modifying it
-- `pure` functions neither read nor write state
+**Function components breakdown:**
+1. **Name**: `transfer` - clearly describes what it does
+2. **Parameters**: `address to, uint256 amount` - who and how much
+3. **Visibility**: `public` - anyone can call this
+4. **Returns**: `bool` - confirms success (ERC-20 standard)
+5. **Logic**: Validation, state changes, event emission
 
-### Access Control Patterns
+### Function Visibility: Who Can Do What
 
-To secure sensitive operations, modifiers enforce access restrictions:
+Understanding visibility is crucial for token security. It determines who can call your functions and from where.
+
+#### Public Functions: Open to Everyone
 
 ```solidity
-address public owner;
+function balanceOf(address account) public view returns (uint256) {
+    return _balances[account];
+}
 
-modifier onlyOwner() {
-    require(msg.sender == owner, "Not the owner");
+function transfer(address to, uint256 amount) public returns (bool) {
+    _transfer(msg.sender, to, amount);
+    return true;
+}
+```
+
+**When to use public:**
+- Standard token functions (transfer, approve, balanceOf)
+- Functions that users need to call directly
+- Functions that other contracts need to access
+
+**Security considerations:**
+- Must include proper validation
+- Can be called by anyone, including malicious actors
+- Gas costs paid by the caller
+
+#### External Functions: Only From Outside
+
+```solidity
+function transferFrom(address from, address to, uint256 amount) 
+    external 
+    returns (bool) 
+{
+    uint256 currentAllowance = _allowances[from][msg.sender];
+    require(currentAllowance >= amount, "Transfer amount exceeds allowance");
+    
+    _transfer(from, to, amount);
+    _approve(from, msg.sender, currentAllowance - amount);
+    
+    return true;
+}
+```
+
+**External vs Public:**
+- **External**: Can only be called from outside the contract (uses less gas)
+- **Public**: Can be called both externally and internally
+- **Best practice**: Use external for functions only called from outside
+
+#### Internal Functions: Helper Functions
+
+```solidity
+function _transfer(address from, address to, uint256 amount) internal {
+    require(from != address(0), "Transfer from zero address");
+    require(to != address(0), "Transfer to zero address");
+    
+    uint256 fromBalance = _balances[from];
+    require(fromBalance >= amount, "Transfer amount exceeds balance");
+    
+    unchecked {
+        _balances[from] = fromBalance - amount;
+        _balances[to] += amount;
+    }
+    
+    emit Transfer(from, to, amount);
+}
+```
+
+**When to use internal:**
+- Helper functions that multiple public functions use
+- Core logic that should be reusable but not directly callable
+- Functions that child contracts might want to override
+
+#### Private Functions: Contract-Only
+
+```solidity
+function _calculateFee(uint256 amount) private pure returns (uint256) {
+    return amount * 3 / 1000; // 0.3% fee
+}
+```
+
+**When to use private:**
+- Utility functions specific to this contract
+- Calculations that shouldn't be accessible to child contracts
+- Internal logic that should remain completely hidden
+
+### State Mutability: Reading vs Writing
+
+#### View Functions: Reading Data
+
+```solidity
+function balanceOf(address account) public view returns (uint256) {
+    return _balances[account];
+}
+
+function allowance(address owner, address spender) 
+    public 
+    view 
+    returns (uint256) 
+{
+    return _allowances[owner][spender];
+}
+
+function totalSupply() public view returns (uint256) {
+    return _totalSupply;
+}
+```
+
+**View function characteristics:**
+- Read blockchain state but don't modify it
+- Free to call (no gas cost when called externally)
+- Return data to the caller
+- Can call other view/pure functions
+
+#### Pure Functions: No State Access
+
+```solidity
+function calculateReward(uint256 stakeAmount, uint256 duration) 
+    public 
+    pure 
+    returns (uint256) 
+{
+    return stakeAmount * duration * 5 / 10000; // 0.05% per duration unit
+}
+
+function getTokenDecimals() public pure returns (uint8) {
+    return 18;
+}
+```
+
+**Pure function characteristics:**
+- Don't read or write blockchain state
+- Only work with input parameters
+- Deterministic - same inputs always give same outputs
+- Can be used for calculations and utilities
+
+#### State-Changing Functions: The Default
+
+```solidity
+function mint(address to, uint256 amount) public onlyOwner {
+    require(to != address(0), "Mint to zero address");
+    
+    _totalSupply += amount;
+    _balances[to] += amount;
+    
+    emit Transfer(address(0), to, amount);
+}
+```
+
+**State-changing function characteristics:**
+- Modify blockchain storage
+- Cost gas to execute
+- Can emit events
+- Create transactions on the blockchain
+
+### Access Control: The Security Foundation
+
+#### Basic Owner Pattern
+
+```solidity
+contract MyToken {
+    address public owner;
+    
+    constructor() {
+        owner = msg.sender; // Deployer becomes owner
+    }
+    
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Caller is not the owner");
+        _;
+    }
+    
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
+    
+    function transferOwnership(address newOwner) public onlyOwner {
+        require(newOwner != address(0), "New owner cannot be zero address");
+        owner = newOwner;
+    }
+}
+```
+
+#### OpenZeppelin's Ownable Pattern
+
+```solidity
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MyToken is ERC20, Ownable {
+    constructor() ERC20("MyToken", "MTK") {}
+    
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
+    
+    // transferOwnership and renounceOwnership are inherited from Ownable
+}
+```
+
+**Benefits of OpenZeppelin's Ownable:**
+- Battle-tested code
+- Two-step ownership transfer for safety
+- Ability to renounce ownership
+- Events for ownership changes
+
+#### Role-Based Access Control
+
+```solidity
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract AdvancedToken is ERC20, AccessControl {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    
+    constructor() ERC20("AdvancedToken", "ADV") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(MINTER_ROLE, msg.sender);
+    }
+    
+    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+        _mint(to, amount);
+    }
+    
+    function burn(uint256 amount) public onlyRole(BURNER_ROLE) {
+        _burn(msg.sender, amount);
+    }
+    
+    function pause() public onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+}
+```
+
+### Understanding Modifiers
+
+#### What Modifiers Do
+
+**Real-world analogy:** Modifiers are like security checkpoints. Before you can enter a restricted area (function), you must pass through the checkpoint (modifier) that verifies your credentials.
+
+```solidity
+modifier onlyMinter() {
+    require(hasRole(MINTER_ROLE, msg.sender), "Must have minter role");
+    _; // This is where the function code runs
+}
+
+modifier notPaused() {
+    require(!paused(), "Contract is paused");
     _;
 }
 
-function changeGreeting(string calldata newGreeting) public onlyOwner {
-    greeting = newGreeting;
+modifier validAmount(uint256 amount) {
+    require(amount > 0, "Amount must be greater than zero");
+    require(amount <= maxTransferAmount, "Amount exceeds maximum");
+    _;
 }
 ```
 
-`msg.sender` is the caller's address, and combining this with modifiers restricts function execution to designated owners or roles.
+#### Combining Multiple Modifiers
+
+```solidity
+function mintTokens(address to, uint256 amount) 
+    public 
+    onlyMinter 
+    notPaused 
+    validAmount(amount) 
+{
+    _mint(to, amount);
+}
+```
+
+**Execution order:** Modifiers execute in the order they're listed before the function body runs.
+
+#### Custom Modifiers for Token Logic
+
+```solidity
+modifier validRecipient(address to) {
+    require(to != address(0), "Cannot transfer to zero address");
+    require(to != address(this), "Cannot transfer to contract itself");
+    _;
+}
+
+modifier sufficientBalance(address from, uint256 amount) {
+    require(_balances[from] >= amount, "Insufficient balance");
+    _;
+}
+
+modifier withinTransferLimit(uint256 amount) {
+    require(amount <= dailyTransferLimit[msg.sender], "Exceeds daily limit");
+    _;
+}
+
+function transfer(address to, uint256 amount) 
+    public 
+    validRecipient(to)
+    sufficientBalance(msg.sender, amount)
+    withinTransferLimit(amount)
+    returns (bool) 
+{
+    _transfer(msg.sender, to, amount);
+    return true;
+}
+```
+
+### Common Token Function Patterns
+
+#### The Approve/TransferFrom Pattern
+
+```solidity
+// Step 1: Owner approves spender to use their tokens
+function approve(address spender, uint256 amount) public returns (bool) {
+    _approve(msg.sender, spender, amount);
+    return true;
+}
+
+// Step 2: Spender transfers tokens on behalf of owner
+function transferFrom(address from, address to, uint256 amount) 
+    public 
+    returns (bool) 
+{
+    uint256 currentAllowance = _allowances[from][msg.sender];
+    require(currentAllowance >= amount, "Transfer amount exceeds allowance");
+    
+    _transfer(from, to, amount);
+    _approve(from, msg.sender, currentAllowance - amount);
+    
+    return true;
+}
+
+// Helper function to check current allowance
+function allowance(address owner, address spender) 
+    public 
+    view 
+    returns (uint256) 
+{
+    return _allowances[owner][spender];
+}
+```
+
+**Why this pattern exists:**
+- Enables smart contracts to spend tokens on your behalf
+- Required for DEXes, lending protocols, and other DeFi applications
+- Provides granular control over token permissions
+
+#### The Mint/Burn Pattern
+
+```solidity
+function mint(address to, uint256 amount) public onlyOwner {
+    require(to != address(0), "Cannot mint to zero address");
+    require(_totalSupply + amount <= maxSupply, "Would exceed max supply");
+    
+    _totalSupply += amount;
+    _balances[to] += amount;
+    
+    emit Transfer(address(0), to, amount);
+}
+
+function burn(uint256 amount) public {
+    require(_balances[msg.sender] >= amount, "Burn amount exceeds balance");
+    
+    _balances[msg.sender] -= amount;
+    _totalSupply -= amount;
+    
+    emit Transfer(msg.sender, address(0), amount);
+}
+
+function burnFrom(address from, uint256 amount) public {
+    uint256 currentAllowance = _allowances[from][msg.sender];
+    require(currentAllowance >= amount, "Burn amount exceeds allowance");
+    
+    _approve(from, msg.sender, currentAllowance - amount);
+    _burn(from, amount);
+}
+```
+
+### Security Best Practices for Functions
+
+#### Input Validation
+
+```solidity
+function transfer(address to, uint256 amount) public returns (bool) {
+    // Validate recipient
+    require(to != address(0), "Cannot transfer to zero address");
+    require(to != address(this), "Cannot transfer to contract");
+    
+    // Validate amount
+    require(amount > 0, "Amount must be greater than zero");
+    require(amount <= _balances[msg.sender], "Insufficient balance");
+    
+    // Validate sender isn't blocked
+    require(!blockedAddresses[msg.sender], "Sender is blocked");
+    
+    _transfer(msg.sender, to, amount);
+    return true;
+}
+```
+
+#### Reentrancy Protection
+
+```solidity
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract SecureToken is ERC20, ReentrancyGuard {
+    function complexTransfer(address to, uint256 amount) 
+        public 
+        nonReentrant 
+        returns (bool) 
+    {
+        // Complex logic that might call external contracts
+        _transfer(msg.sender, to, amount);
+        
+        // External call to notify recipient
+        if (to.code.length > 0) {
+            ITokenReceiver(to).onTokenReceived(msg.sender, amount);
+        }
+        
+        return true;
+    }
+}
+```
+
+#### Gas Optimization for Functions
+
+```solidity
+// Inefficient: Multiple storage reads
+function badTransfer(address to, uint256 amount) public returns (bool) {
+    require(_balances[msg.sender] >= amount, "Insufficient balance");
+    _balances[msg.sender] -= amount;
+    _balances[to] += amount;
+    return true;
+}
+
+// Efficient: Single storage read, local variable
+function goodTransfer(address to, uint256 amount) public returns (bool) {
+    uint256 senderBalance = _balances[msg.sender];
+    require(senderBalance >= amount, "Insufficient balance");
+    
+    unchecked {
+        _balances[msg.sender] = senderBalance - amount;
+        _balances[to] += amount;
+    }
+    
+    return true;
+}
+```
+
+### Function Overriding with OpenZeppelin
+
+```solidity
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract CustomToken is ERC20 {
+    mapping(address => bool) public blacklisted;
+    
+    // Override the internal _beforeTokenTransfer function
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        require(!blacklisted[from], "Sender is blacklisted");
+        require(!blacklisted[to], "Recipient is blacklisted");
+        
+        super._beforeTokenTransfer(from, to, amount);
+    }
+    
+    // Override transfer to add custom logic
+    function transfer(address to, uint256 amount) 
+        public 
+        override 
+        returns (bool) 
+    {
+        // Custom logic before transfer
+        _recordTransferMetrics(msg.sender, to, amount);
+        
+        // Call parent implementation
+        return super.transfer(to, amount);
+    }
+}
+```
+
+### Understanding msg Global Variable
+
+#### msg.sender: Who Called the Function
+
+```solidity
+function mint(address to, uint256 amount) public {
+    // msg.sender is the address that called this function
+    require(msg.sender == owner, "Only owner can mint");
+    
+    // Record who minted tokens
+    mintedBy[to] = msg.sender;
+    
+    _mint(to, amount);
+}
+```
+
+#### msg.value: How Much ETH/ZIL Was Sent
+
+```solidity
+function buyTokens() public payable {
+    // msg.value is the amount of ETH/ZIL sent with this transaction
+    require(msg.value > 0, "Must send ETH to buy tokens");
+    
+    uint256 tokenAmount = msg.value * exchangeRate;
+    _mint(msg.sender, tokenAmount);
+    
+    // Forward ETH to treasury
+    payable(treasury).transfer(msg.value);
+}
+```
+
+This comprehensive understanding of functions and access control prepares you to read, understand, and work with token contracts. You'll use these patterns when building your own token in the upcoming modules!

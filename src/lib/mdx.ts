@@ -272,7 +272,7 @@ export async function getModules(): Promise<ModuleMeta[]> {
     },
     'zilliqa-evm-setup': {
       title: 'Setting Up the Zilliqa EVM Development Environment',
-      description: 'Set up your development environment with MetaMask, Remix IDE, and other essential tools for Zilliqa EVM development.',
+      description: 'Set up your development environment with MetaMask, Hardhat, and other essential tools for Zilliqa EVM development.',
       order: 4,
       island: 'jungle'
     },
