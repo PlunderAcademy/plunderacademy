@@ -129,6 +129,14 @@ export default function ChatPage() {
             />
           </PromptInputToolbar>
         </PromptInput>
+
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            <strong>⚠️ Important:</strong> AI-generated code is provided &ldquo;as is&rdquo; without guarantees. 
+            Always review, test, and validate outputs before production use. You are solely responsible 
+            for ensuring code meets your security and functional requirements.
+          </p>
+        </div>
       </div>
     </WalletAuthGuard>
   );

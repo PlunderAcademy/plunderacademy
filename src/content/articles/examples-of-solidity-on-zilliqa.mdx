@@ -1,0 +1,112 @@
+---
+slug: examples-of-solidity-on-zilliqa
+title: Top Zilliqa Projects Built with Solidity — Case Studies
+excerpt: Real-world dApps showcasing Solidity development on Zilliqa, from DEXs to identity solutions and innovative tokenomics.
+level: intermediate
+tags:
+  - zilliqa
+  - solidity
+  - dapps
+  - case-studies
+---
+
+Zilliqa's native EVM compatibility opens the door for Solidity-first development. The projects below illustrate how builders are leveraging familiar tools to deliver trading, identity, and novel token economics — all while deepening liquidity, usability, and growth on Zilliqa.
+
+
+## PlunderSwap — Zilliqa's EVM DEX & Onboarding Hub
+
+**What it is:** PlunderSwap is the first decentralized exchange on Zilliqa's EVM, offering token swaps and a broader DeFi experience. The team positions it as "TRADE. EARN. TRIUMPH." and provides wallet connection guides for MetaMask and other EVM wallets.
+
+**What it does:** Beyond basic swapping, PlunderSwap focuses on migration and accessibility for the new EVM chain — including a guided flow to transfer assets from the legacy Scilla side to Zilliqa EVM. This helps users bridge historical ZRC-2 holdings and activity into the EVM environment.
+
+**Ecosystem benefits:**
+
+- **Liquidity & price discovery:** A native EVM DEX enables on-chain markets for EVM tokens on Zilliqa, attracting flows and builders accustomed to Ethereum tooling.
+- **Frictionless onboarding:** Wallet guides and one-click style flows lower switching costs for new and returning users migrating from legacy Scilla.
+- **Validator & staking tie-ins:** PlunderSwap's ecosystem messaging highlights EVM staking and migration — reinforcing a cohesive "come build on ZIL EVM" narrative.
+
+**Technical highlights:**
+- Built entirely with Solidity smart contracts
+- Utilizes standard Uniswap V2-style AMM mechanics
+- Integrated with MetaMask and other EVM wallets
+- Custom migration tooling for legacy ZRC-2 tokens
+
+**At a glance:** "First EVM DEX on Zilliqa," public docs, wallet connection instructions, and migration tooling.
+
+---
+
+## Kalijo — SEED & kUSD: Yield-Backed Tokenomics on Zilliqa
+
+**What it is:** Kalijo introduces _SEED_, described as a yield-backed, deflationary digital asset on Zilliqa with mechanisms that include buybacks funded by yield and distributions to stakers. The project also launched _kUSD_, a Zilliqa-native stablecoin designed to be backed 1:1 by USDT/USDC and integrated with yield strategies.
+
+**What it does:** Kalijo builds a tokenized, sustainability-oriented model for on-chain income and stability. SEED's economy aims to reward long-term participation, while kUSD provides a stable base asset for DeFi on Zilliqa (liquidity, payments, and hedging).
+
+**Ecosystem benefits:**
+
+- **DeFi primitives:** A native stablecoin (kUSD) is foundational for lending, DEX pairs, and on-chain commerce, helping deepen liquidity on Zilliqa.
+- **Capital efficiency:** Yield-backed token design (SEED) encourages staking and retention, potentially growing TVL and user engagement within Zilliqa's EVM DeFi stack.
+- **Composability:** By operating in the EVM context, SEED and kUSD can integrate with DEXs, pools, and future protocols more easily.
+
+**Technical highlights:**
+- Complex tokenomics implemented in Solidity
+- Automated yield distribution mechanisms
+- Stablecoin backed by real reserves
+- Integration with existing DeFi protocols
+
+**At a glance:** SEED (yield-backed, deflationary) + kUSD (Zilliqa-native stablecoin) extend Zilliqa's DeFi toolkit and attract yield-seeking users.
+
+---
+
+## ZilNames — Human-Readable Identity for Zilliqa
+
+**What it is:** ZilNames lets users register human-readable `.zil` names mapped to wallet addresses — an on-chain identity layer designed to simplify sending/receiving and to connect people across the ecosystem. The site emphasizes ease, safety (reducing copy-paste mistakes), and broad app support.
+
+**What it does:** By turning long hexadecimal addresses into memorable names, ZilNames improves UX, lowers onboarding friction, and encourages identity-driven interactions in dApps, wallets, and community platforms.
+
+**Ecosystem benefits:**
+
+- **UX & safety:** Fewer address errors and smoother transfers; users can "use your Zilname throughout the ecosystem."
+- **Network effects:** Identity primitives increase stickiness for users and dApps (profiles, messaging, reputation) and enable richer integrations over time.
+- **Official recognition:** Listed in Zilliqa's ecosystem/tools pages, reinforcing adoption and visibility for developers.
+
+**Technical highlights:**
+- ENS-style domain name system built in Solidity
+- Reverse resolution for address-to-name lookups
+- Subdomain support for organizations
+- Integration APIs for dApp developers
+
+**At a glance:** ZilNames provides a Web3-native identity layer for Zilliqa — "your name, your identity" — improving usability across wallets and dApps.
+
+---
+
+## Why Solidity Is the Common Thread
+
+All three projects lean on Zilliqa's native EVM compatibility, which lets teams build with Solidity and familiar Ethereum tooling (wallets, frameworks, infra). This shortens development cycles, simplifies user onboarding (e.g., MetaMask), and increases composability across DeFi and identity layers.
+
+In practice, that looks like: an EVM DEX (PlunderSwap) to route liquidity; yield-backed and stable assets (Kalijo) to anchor DeFi; and human-readable identities (ZilNames) to make transactions safer and social. Each reinforces the others — a positive-sum loop for Zilliqa's EVM future.
+
+### Development Lessons
+
+**Key takeaways for builders:**
+
+1. **Standard patterns work:** Uniswap V2, ERC-20, and ENS patterns can be deployed directly
+2. **Migration matters:** Consider how users will transition from legacy systems
+3. **Composability first:** Build with other protocols in mind from day one
+4. **User experience:** Focus on reducing friction for non-technical users
+
+### Getting Started
+
+Want to build the next great Zilliqa dApp? These projects show that familiar Solidity patterns and tools work seamlessly on Zilliqa EVM:
+
+- Use **Hardhat** or **Foundry** for development
+- Deploy with **MetaMask** and standard workflows
+- Integrate with existing protocols for immediate composability
+- Focus on user onboarding and migration paths
+
+## Further Reading & Official Links
+
+- **PlunderSwap:** [plunderswap.com](https://plunderswap.com), [docs.plunderswap.com](https://docs.plunderswap.com/)
+- **Kalijo:** [kalijo.io](https://kalijo.io), [kalijo.io/kusd](https://kalijo.io/kusd)
+- **ZilNames:** [zilnames.com](https://zilnames.com)
+- **Zilliqa Ecosystem:** [zilliqa.com/ecosystem](https://zilliqa.com/ecosystem?categories=dapp)
+- **Zilliqa EVM Docs:** [dev.zilliqa.com](https://dev.zilliqa.com/)

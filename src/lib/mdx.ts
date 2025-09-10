@@ -104,7 +104,42 @@ export async function getArticles(): Promise<ArticleMeta[]> {
       };
     });
   
-  return articles;
+  // Define logical learning order: Beginner → Intermediate → Advanced
+  const learningOrder = [
+    // Beginner fundamentals (left column, top to bottom)
+    'zilliqa-evm-introduction',
+    'role-of-solidity-in-zilliqa-growth', 
+    'zilliqa-evm-important-information',
+    'zilliqa-wallets-and-rpc',
+    'evm-storage-layout',
+    
+    // Intermediate development (right column, top to bottom)
+    'examples-of-solidity-on-zilliqa',
+    'foundry-testing',
+    'gas-optimizations',
+    
+    // Advanced optimization (right column, bottom)
+    'security-checklist',
+    'zilliqa-performance-and-fees'
+  ];
+  
+  // Sort articles by learning order
+  return articles.sort((a, b) => {
+    const aIndex = learningOrder.indexOf(a.slug);
+    const bIndex = learningOrder.indexOf(b.slug);
+    
+    // If both articles are in the learning order, sort by their position
+    if (aIndex !== -1 && bIndex !== -1) {
+      return aIndex - bIndex;
+    }
+    
+    // If only one article is in the learning order, prioritize it
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+    
+    // If neither article is in the learning order, maintain original order
+    return 0;
+  });
 }
 
 export async function getArticleBySlug(slug: string) {

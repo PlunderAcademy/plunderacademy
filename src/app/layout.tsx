@@ -5,6 +5,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { CookieConsentBanner } from "@/components/cookie-consent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,6 +43,7 @@ export default function RootLayout({
             </main>
             <SiteFooter />
           </div>
+          <CookieConsentBanner />
         </Providers>
       </body>
     </html>

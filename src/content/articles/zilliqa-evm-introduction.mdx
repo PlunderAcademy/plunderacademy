@@ -1,35 +1,370 @@
 ---
 slug: zilliqa-evm-introduction
 title: Introduction to Zilliqa EVM
-excerpt: Overview of Zilliqa's EVM execution layer, accounts, gas, and tooling.
+excerpt: Comprehensive guide to Zilliqa's EVM execution layer, comparing it to Ethereum, and getting started with development.
 level: beginner
 tags:
   - zilliqa
   - evm
   - basics
-hero: /articles/zilliqa-evm-intro.svg
+  - getting-started
 ---
 
 ## What is the Zilliqa EVM?
 
-The Zilliqa EVM brings familiar Ethereum-style development to Zilliqa. You write Solidity, deploy with standard tooling, and interact using common wallets.
+The Zilliqa EVM brings familiar Ethereum-style development to Zilliqa's high-performance blockchain. You write Solidity, deploy with standard tooling like Hardhat and Foundry, and interact using common wallets like MetaMask — all while benefiting from Zilliqa's superior scalability and lower costs.
 
-![Zilliqa EVM overview](/articles/zilliqa-evm-intro.svg)
 
-### Key Concepts
+This isn't just another EVM-compatible chain. Zilliqa EVM represents a strategic evolution that combines the developer experience you already know with the performance advantages of Zilliqa's pioneering sharding technology.
 
-- **Accounts & Nonces**: Same account model and transaction nonces as Ethereum.
-- **Gas**: Transactions consume gas based on execution and storage.
-- **Tooling**: Works with viem, wagmi, and RainbowKit for dapps.
+## Zilliqa EVM vs Ethereum: Key Differences
 
-### Hello World
+| Feature | Ethereum Mainnet | Zilliqa EVM |
+|---------|------------------|-------------|
+| **Transaction Finality** | ~12-15 minutes | ~1-2 minutes |
+| **Average Gas Cost** | 20-100+ gwei | 0.1-1 gwei |
+| **Throughput** | ~15 TPS | 1000+ TPS |
+| **Block Time** | ~12 seconds | ~1-2 seconds |
+| **Tooling Compatibility** | Native | 100% Compatible |
+| **Language Support** | Solidity | Solidity (Scilla deprecated) |
 
-```solidity
-// Example minimal contract
-pragma solidity ^0.8.24;
-contract HelloZil { function hi() external pure returns (string memory) { return "Hi Zilliqa"; } }
+### Performance Advantages
+
+**Faster Finality:** Your transactions confirm in minutes, not hours. This makes Zilliqa EVM ideal for applications requiring quick settlement.
+
+**Lower Costs:** Gas fees are typically 10-100x lower than Ethereum mainnet, making micro-transactions and complex operations economically viable.
+
+**Higher Throughput:** The underlying sharding architecture means your dApp can handle real user load without congestion.
+
+## Key Concepts
+
+### Accounts & Nonces
+Zilliqa EVM uses the exact same account model as Ethereum:
+- **Externally Owned Accounts (EOAs):** Controlled by private keys
+- **Contract Accounts:** Controlled by smart contract code
+- **Nonce system:** Prevents replay attacks, same as Ethereum
+
+```javascript
+// Same address format and derivation as Ethereum
+const address = "0x742d35Cc6634C0532925a3b8D2D1E3a8B4D3c7E8";
 ```
 
-### Next Steps
+### Gas System
+Transactions consume gas for execution and storage, following Ethereum's model:
+- **Gas Price:** Set in gwei (typically much lower than Ethereum)
+- **Gas Limit:** Maximum gas units for transaction execution
+- **Gas Used:** Actual gas consumed (refunds for unused gas)
 
-Set up a project, connect RainbowKit, and deploy to Zilliqa testnet. Validate events and gas.
+```solidity
+// Gas optimization techniques work the same way
+function efficientTransfer(address[] calldata recipients, uint256 amount) external {
+    uint256 length = recipients.length; // Cache array length
+    for (uint256 i = 0; i < length;) {
+        _transfer(msg.sender, recipients[i], amount);
+        unchecked { ++i; } // Save gas on overflow checks
+    }
+}
+```
+
+### Tooling Compatibility
+Standard Ethereum development tools work out of the box:
+- **Hardhat & Foundry:** Deploy and test contracts
+- **MetaMask & WalletConnect:** User wallet integration
+- **viem & wagmi:** Frontend blockchain interactions
+- **OpenZeppelin:** Security-audited contract libraries
+
+## Getting Started: Your First Zilliqa Contract
+
+### 1. Environment Setup
+
+First, create a new Hardhat project:
+
+```bash
+mkdir my-zilliqa-project
+cd my-zilliqa-project
+npm init -y
+npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
+npx hardhat
+```
+
+### 2. Configure Hardhat for Zilliqa
+
+Update your `hardhat.config.js`:
+
+```javascript
+require("@nomicfoundation/hardhat-toolbox");
+
+module.exports = {
+  solidity: "0.8.24",
+  networks: {
+    zilliqaTestnet: {
+      url: "https://api.testnet.zilliqa.com",
+      chainId: 33101,
+      accounts: [process.env.PRIVATE_KEY] // Add your private key to .env
+    },
+    zilliqaMainnet: {
+      url: "https://api.zilliqa.com", 
+      chainId: 32769,
+      accounts: [process.env.PRIVATE_KEY]
+    }
+  },
+  etherscan: {
+    apiKey: {
+      zilliqaTestnet: "your-api-key", // For contract verification
+      zilliqaMainnet: "your-api-key"
+    }
+  }
+};
+```
+
+### 3. Write Your Contract
+
+Create `contracts/TreasureChest.sol`:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract TreasureChest {
+    address public captain;
+    uint256 public gold;
+    mapping(address => uint256) public contributions;
+    
+    event GoldDeposited(address indexed contributor, uint256 amount);
+    event GoldWithdrawn(address indexed recipient, uint256 amount);
+    
+    constructor(uint256 _initialGold) {
+        captain = msg.sender;
+        gold = _initialGold;
+    }
+    
+    modifier onlyCaptain() {
+        require(msg.sender == captain, "Only the captain can perform this action");
+        _;
+    }
+    
+    function depositGold() external payable {
+        require(msg.value > 0, "Must deposit some gold");
+        gold += msg.value;
+        contributions[msg.sender] += msg.value;
+        emit GoldDeposited(msg.sender, msg.value);
+    }
+    
+    function withdrawGold(uint256 amount) external onlyCaptain {
+        require(gold >= amount, "Not enough gold in the chest");
+        gold -= amount;
+        payable(captain).transfer(amount);
+        emit GoldWithdrawn(captain, amount);
+    }
+    
+    function getBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+}
+```
+
+### 4. Deploy to Zilliqa Testnet
+
+Create a deployment script `scripts/deploy.js`:
+
+```javascript
+const hre = require("hardhat");
+
+async function main() {
+  // Get test ZIL from https://faucet.testnet.zilliqa.com first!
+  const initialGold = hre.ethers.parseEther("1.0"); // 1 ZIL
+  
+  const TreasureChest = await hre.ethers.getContractFactory("TreasureChest");
+  const treasureChest = await TreasureChest.deploy(initialGold);
+  
+  await treasureChest.waitForDeployment();
+  
+  console.log("TreasureChest deployed to:", await treasureChest.getAddress());
+  console.log("Captain address:", await treasureChest.captain());
+  console.log("Initial gold:", hre.ethers.formatEther(await treasureChest.gold()));
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+```
+
+Deploy with:
+```bash
+npx hardhat run scripts/deploy.js --network zilliqaTestnet
+```
+
+## MetaMask Setup for Zilliqa
+
+### Adding Zilliqa Networks
+
+**Testnet Configuration:**
+- **Network Name:** Zilliqa Testnet
+- **RPC URL:** `https://api.testnet.zilliqa.com`
+- **Chain ID:** `33101`
+- **Currency Symbol:** `ZIL`
+- **Block Explorer:** `https://otterscan.testnet.zilliqa.com`
+
+**Mainnet Configuration:**
+- **Network Name:** Zilliqa Mainnet  
+- **RPC URL:** `https://api.zilliqa.com`
+- **Chain ID:** `32769`
+- **Currency Symbol:** `ZIL`
+- **Block Explorer:** `https://otterscan.zilliqa.com`
+
+### Getting Test ZIL
+
+1. Visit [faucet.testnet.zilliqa.com](https://faucet.testnet.zilliqa.com)
+2. Enter your wallet address
+3. Receive 100 ZIL for testing (usually within 1-2 minutes)
+
+## Common Issues & Troubleshooting
+
+### Issue: "Insufficient funds for gas"
+**Solution:** Ensure you have ZIL in your wallet for gas fees. Get test ZIL from the faucet.
+
+### Issue: "Network connection failed"
+**Solutions:**
+- Verify RPC URL is correct
+- Try alternative RPC endpoints
+- Check if your VPN is blocking connections
+
+### Issue: "Transaction reverted"
+**Debugging steps:**
+1. Check contract requirements and modifiers
+2. Verify function parameters
+3. Use Hardhat's console.log for debugging
+4. Check gas limits aren't too low
+
+### Issue: "Contract not verified"
+**Solution:** Verify your contract on the block explorer:
+```bash
+npx hardhat verify --network zilliqaTestnet DEPLOYED_CONTRACT_ADDRESS "constructor_arg_1"
+```
+
+## Integration with Frontend
+
+### Using viem (Recommended)
+
+```typescript
+import { createPublicClient, createWalletClient, http, custom } from 'viem';
+
+// Define Zilliqa testnet
+const zilliqaTestnet = {
+  id: 33101,
+  name: 'Zilliqa Testnet',
+  network: 'zilliqa-testnet',
+  nativeCurrency: { name: 'Zilliqa', symbol: 'ZIL', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://api.testnet.zilliqa.com'] }
+  },
+  blockExplorers: {
+    default: { name: 'Otterscan', url: 'https://otterscan.testnet.zilliqa.com' }
+  }
+};
+
+// Create clients
+const publicClient = createPublicClient({
+  chain: zilliqaTestnet,
+  transport: http()
+});
+
+const walletClient = createWalletClient({
+  chain: zilliqaTestnet,
+  transport: custom(window.ethereum)
+});
+
+// Read contract data
+const gold = await publicClient.readContract({
+  address: '0x...', // Your contract address
+  abi: treasureChestABI,
+  functionName: 'gold'
+});
+
+// Write to contract
+const hash = await walletClient.writeContract({
+  address: '0x...', // Your contract address
+  abi: treasureChestABI,
+  functionName: 'depositGold',
+  value: parseEther('0.1') // 0.1 ZIL
+});
+```
+
+### Using wagmi + RainbowKit
+
+```typescript
+import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { zilliqa } from 'viem/chains';
+
+const config = getDefaultConfig({
+  appName: 'My Zilliqa dApp',
+  projectId: 'YOUR_WALLETCONNECT_PROJECT_ID',
+  chains: [zilliqa], // viem includes Zilliqa mainnet by default
+  ssr: true,
+});
+```
+
+## Migration from Other EVM Chains
+
+### From Ethereum
+- **Gas optimization:** Take advantage of lower fees to enable new use cases
+- **Finality:** Reduce confirmation requirements (1-2 confirmations vs 12-15)
+- **Tooling:** No changes needed - same development stack
+
+### From Polygon/BSC
+- **Similar performance:** Comparable throughput with better decentralization
+- **Lower fees:** Often cheaper than even L2 solutions
+- **Better UX:** Faster finality improves user experience
+
+### From Legacy Zilliqa (Scilla)
+- **Language change:** Rewrite contracts in Solidity
+- **Tool migration:** Switch to Ethereum-compatible tools
+- **Asset bridging:** Use official bridges to move tokens
+
+## Best Practices for Zilliqa Development
+
+### 1. Optimize for Low Gas Costs
+Take advantage of cheap transactions to enable new patterns:
+```solidity
+// Micro-payments become viable
+function tipContent(uint256 contentId) external payable {
+    require(msg.value >= 0.001 ether, "Minimum tip is 0.001 ZIL");
+    // Process micro-payment...
+}
+```
+
+### 2. Leverage Fast Finality
+Design UX around quick confirmations:
+```javascript
+// Wait for just 1-2 confirmations instead of 12+
+const receipt = await publicClient.waitForTransactionReceipt({
+  hash: txHash,
+  confirmations: 2 // Much faster than Ethereum
+});
+```
+
+### 3. Plan for Scale
+Design contracts that can handle higher throughput:
+```solidity
+// Batch operations are more affordable
+function batchTransfer(
+    address[] calldata recipients, 
+    uint256[] calldata amounts
+) external {
+    require(recipients.length == amounts.length, "Array length mismatch");
+    // Process batch efficiently...
+}
+```
+
+## Next Steps
+
+Now that you understand Zilliqa EVM fundamentals:
+
+1. **Set up your development environment** with Hardhat or Foundry
+2. **Deploy a test contract** to Zilliqa testnet
+3. **Explore the ecosystem** by integrating with existing protocols
+4. **Read our infrastructure guide** for production deployment tips
+5. **Check out real project examples** to see Solidity patterns in action
+
+The combination of Ethereum compatibility with Zilliqa's performance makes it an ideal platform for the next generation of decentralized applications. Welcome aboard, captain! 🏴‍☠️

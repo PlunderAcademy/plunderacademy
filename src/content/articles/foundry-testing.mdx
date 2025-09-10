@@ -1,30 +1,326 @@
 ---
 slug: foundry-testing
 title: Testing Smart Contracts with Foundry
-excerpt: Patterns for unit, fuzz, and invariant tests that catch critical bugs.
+excerpt: Comprehensive guide to unit, fuzz, and invariant testing patterns that catch critical bugs and ensure contract reliability.
 level: intermediate
 tags:
   - foundry
   - testing
   - solidity
-hero: /articles/foundry-testing.svg
+  - security
 ---
 
-## Beyond Unit Tests
+Testing is your first and most important line of defense against bugs, exploits, and unexpected behavior. Foundry's powerful testing framework goes far beyond simple unit tests, offering fuzzing and invariant testing that can discover edge cases human testers might miss.
 
-Combine fuzzing and invariants to explore unexpected states and ensure key properties hold.
 
-![Foundry testing pyramid](/articles/foundry-testing.svg)
+This guide covers the complete testing spectrum: from basic unit tests to advanced stateful fuzzing that simulates complex attack scenarios.
 
-- Unit: narrow behavior
-- Fuzz: random inputs
-- Invariant: global properties across time
+## Testing Foundation Setup
 
-```bash
-# forge test -vvvv
-# Invariants validate properties across sequences of calls
+### Project Structure
+```
+src/
+├── TreasureChest.sol
+test/
+├── unit/
+│   ├── TreasureChest.t.sol
+│   └── TreasureChestFuzz.t.sol
+├── integration/
+│   └── TreasureChestIntegration.t.sol
+├── invariant/
+│   └── TreasureChestInvariant.t.sol
+└── mocks/
+    └── MockERC20.sol
 ```
 
-### Stateful Fuzzing
+### Base Test Setup
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
 
-Model complex actors with handlers to explore multi-step attacks and integrations.
+import "forge-std/Test.sol";
+import "../src/TreasureChest.sol";
+
+contract TreasureChestTest is Test {
+    TreasureChest public chest;
+    address public captain = makeAddr("captain");
+    address public crew1 = makeAddr("crew1");
+    address public crew2 = makeAddr("crew2");
+    address public pirate = makeAddr("pirate");
+    
+    event GoldDeposited(address indexed contributor, uint256 amount);
+    event GoldWithdrawn(address indexed recipient, uint256 amount);
+    
+    function setUp() public {
+        vm.prank(captain);
+        chest = new TreasureChest(1 ether); // 1 ETH initial gold
+        
+        // Fund test accounts
+        vm.deal(captain, 10 ether);
+        vm.deal(crew1, 5 ether);
+        vm.deal(crew2, 5 ether);
+        vm.deal(pirate, 5 ether);
+    }
+}
+```
+
+## Unit Testing Patterns
+
+### Basic Functionality Tests
+```solidity
+contract TreasureChestUnitTest is TreasureChestTest {
+    function testInitialState() public {
+        assertEq(chest.captain(), captain);
+        assertEq(chest.gold(), 1 ether);
+        assertEq(chest.getBalance(), 0);
+    }
+    
+    function testDepositGold() public {
+        uint256 depositAmount = 2 ether;
+        
+        vm.prank(crew1);
+        vm.expectEmit(true, false, false, true);
+        emit GoldDeposited(crew1, depositAmount);
+        
+        chest.depositGold{value: depositAmount}();
+        
+        assertEq(chest.gold(), 3 ether); // 1 + 2
+        assertEq(chest.contributions(crew1), depositAmount);
+        assertEq(chest.getBalance(), depositAmount);
+    }
+    
+    function testWithdrawGold() public {
+        // First deposit some gold
+        vm.prank(crew1);
+        chest.depositGold{value: 2 ether}();
+        
+        uint256 withdrawAmount = 1.5 ether;
+        uint256 captainBalanceBefore = captain.balance;
+        
+        vm.prank(captain);
+        vm.expectEmit(true, false, false, true);
+        emit GoldWithdrawn(captain, withdrawAmount);
+        
+        chest.withdrawGold(withdrawAmount);
+        
+        assertEq(chest.gold(), 1.5 ether); // 3 - 1.5
+        assertEq(captain.balance, captainBalanceBefore + withdrawAmount);
+    }
+}
+```
+
+### Access Control Tests
+```solidity
+contract TreasureChestAccessTest is TreasureChestTest {
+    function testOnlyCaptainCanWithdraw() public {
+        vm.prank(crew1);
+        chest.depositGold{value: 2 ether}();
+        
+        // Non-captain should not be able to withdraw
+        vm.prank(pirate);
+        vm.expectRevert("Only the captain can perform this action");
+        chest.withdrawGold(1 ether);
+        
+        // Captain should be able to withdraw
+        vm.prank(captain);
+        chest.withdrawGold(1 ether); // Should succeed
+    }
+    
+    function testAnyoneCanDeposit() public {
+        uint256 depositAmount = 1 ether;
+        
+        // Test that any address can deposit
+        address[] memory depositors = new address[](3);
+        depositors[0] = crew1;
+        depositors[1] = crew2;
+        depositors[2] = pirate;
+        
+        for (uint256 i = 0; i < depositors.length; i++) {
+            vm.prank(depositors[i]);
+            chest.depositGold{value: depositAmount}();
+            assertEq(chest.contributions(depositors[i]), depositAmount);
+        }
+    }
+}
+```
+
+## Fuzz Testing (Property-Based Testing)
+
+Fuzz testing generates random inputs to test properties that should always hold true.
+
+### Basic Fuzz Tests
+```solidity
+contract TreasureChestFuzzTest is TreasureChestTest {
+    function testFuzzDepositAlwaysIncreasesGold(uint256 amount) public {
+        // Bound the amount to reasonable values
+        amount = bound(amount, 1, 100 ether);
+        
+        uint256 goldBefore = chest.gold();
+        uint256 balanceBefore = chest.getBalance();
+        
+        vm.deal(crew1, amount);
+        vm.prank(crew1);
+        chest.depositGold{value: amount}();
+        
+        assertEq(chest.gold(), goldBefore + amount);
+        assertEq(chest.getBalance(), balanceBefore + amount);
+        assertEq(chest.contributions(crew1), amount);
+    }
+    
+    function testFuzzWithdrawAlwaysDecreasesGold(uint256 depositAmount, uint256 withdrawAmount) public {
+        // Bound inputs to valid ranges
+        depositAmount = bound(depositAmount, 1 ether, 100 ether);
+        withdrawAmount = bound(withdrawAmount, 1, depositAmount);
+        
+        // Setup: deposit first
+        vm.deal(crew1, depositAmount);
+        vm.prank(crew1);
+        chest.depositGold{value: depositAmount}();
+        
+        uint256 goldBefore = chest.gold();
+        
+        // Test: withdraw
+        vm.prank(captain);
+        chest.withdrawGold(withdrawAmount);
+        
+        assertEq(chest.gold(), goldBefore - withdrawAmount);
+    }
+}
+```
+
+## Running Tests Effectively
+
+### Basic Commands
+```bash
+# Run all tests
+forge test
+
+# Run with verbosity for detailed output
+forge test -vvvv
+
+# Run specific test contract
+forge test --match-contract TreasureChestTest
+
+# Run specific test function
+forge test --match-test testDepositGold
+
+# Run with gas reporting
+forge test --gas-report
+
+# Run only invariant tests
+forge test --match-path "*/invariant/*"
+```
+
+### Advanced Testing Commands
+```bash
+# Fuzz testing with custom runs
+forge test --fuzz-runs 10000
+
+# Invariant testing with custom configuration
+forge test --invariant-runs 1000 --invariant-depth 50
+
+# Generate coverage report
+forge coverage
+
+# Run tests on specific fork
+forge test --fork-url $MAINNET_RPC_URL
+
+# Profile gas usage
+forge test --gas-report --optimize
+```
+
+## Zilliqa-Specific Testing Considerations
+
+### Network Configuration for Forking
+```solidity
+contract ZilliqaForkTest is Test {
+    function setUp() public {
+        // Fork Zilliqa testnet for integration testing
+        vm.createFork("https://api.testnet.zilliqa.com");
+    }
+    
+    function testOnZilliqaFork() public {
+        // Test against real Zilliqa network state
+        // Lower gas costs enable different testing scenarios
+        uint256 gasPrice = tx.gasprice;
+        assertLt(gasPrice, 1 gwei, "Zilliqa gas should be very low");
+    }
+}
+```
+
+### Performance Testing
+```solidity
+function testZilliqaPerformance() public {
+    // Test scenarios enabled by Zilliqa's low costs
+    uint256 numOperations = 1000; // Feasible on Zilliqa
+    
+    for (uint256 i = 0; i < numOperations; i++) {
+        address user = makeAddr(string(abi.encodePacked("user", i)));
+        vm.deal(user, 0.001 ether); // Micro-amounts viable
+        vm.prank(user);
+        chest.depositGold{value: 0.001 ether}();
+    }
+    
+    assertEq(chest.gold(), 1 ether + (numOperations * 0.001 ether));
+}
+```
+
+## Testing Best Practices
+
+### 1. Test Organization
+- **Separate concerns:** Unit, integration, and invariant tests in different files
+- **Descriptive names:** Test function names should describe the scenario
+- **Setup consistency:** Use consistent setUp patterns across test contracts
+
+### 2. Coverage Goals
+- **Line coverage:** Aim for >95% line coverage
+- **Branch coverage:** Test all conditional paths
+- **Function coverage:** Every public function should have tests
+- **Edge cases:** Test boundary conditions and error cases
+
+### 3. Fuzz Testing Strategy
+- **Bound inputs:** Use `bound()` to constrain random inputs to valid ranges
+- **Assume statements:** Use `vm.assume()` to filter out invalid test cases
+- **Property focus:** Test mathematical properties and invariants
+
+## Debugging Failed Tests
+
+### Using Console Logs
+```solidity
+import "forge-std/console.sol";
+
+function testDebugExample() public {
+    console.log("Gold before:", chest.gold());
+    
+    vm.prank(crew1);
+    chest.depositGold{value: 1 ether}();
+    
+    console.log("Gold after:", chest.gold());
+    console.log("Balance:", chest.getBalance());
+}
+```
+
+### Trace Analysis
+```bash
+# Run with maximum verbosity to see call traces
+forge test --match-test testFailingTest -vvvv
+
+# Use debugger for step-by-step analysis
+forge test --match-test testFailingTest --debug
+```
+
+## Conclusion
+
+Comprehensive testing with Foundry provides multiple layers of protection:
+
+1. **Unit tests** catch basic functionality bugs
+2. **Fuzz tests** discover edge cases with random inputs  
+3. **Invariant tests** ensure properties hold across complex state changes
+4. **Integration tests** verify external contract interactions
+5. **Gas tests** optimize for performance
+
+The combination of these testing strategies, especially on Zilliqa's low-cost environment, enables thorough validation that would be prohibitively expensive on other networks.
+
+Remember: **Good tests are your best insurance policy** against costly bugs in production. Invest in comprehensive testing early, and your contracts will be more secure, reliable, and trustworthy.
+
+Set sail with confidence, knowing your code is battle-tested! ⚓️🧪

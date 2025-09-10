@@ -1,0 +1,106 @@
+---
+slug: zilliqa-evm-important-information
+title: Zilliqa 2 — Public Endpoints, Block Explorers & Faucet
+excerpt: Essential developer infrastructure guide covering RPC endpoints, block explorers, faucets, and best practices for building on Zilliqa.
+level: beginner
+tags:
+  - zilliqa
+  - infrastructure
+  - rpc
+  - development
+---
+
+This guide summarizes the essentials for building on Zilliqa 2: which networks are available, where to point your EVM tooling, how to browse on-chain data, and where to grab test funds. Keep this page handy when wiring up your RPC client, wallet, or indexer.
+
+
+## Networks & RPC Endpoints
+
+Zilliqa operates multiple public networks so you can separate production deployments from testing and development. Below are the headline details developers reach for most often (chain ID and a representative RPC endpoint).
+
+### Mainnet
+
+- **Chain ID:** 32769
+- **API (RPC):** [api.zilliqa.com](https://api.zilliqa.com) (EVM-compatible)
+
+### Testnet
+
+- **Chain ID:** 33101
+- **API (RPC):** [api.testnet.zilliqa.com](https://api.testnet.zilliqa.com/)
+
+**Tip:** Many wallets and frameworks can auto-configure from [Chainlist](https://chainlist.org). Zilliqa 2 network entries are published there for quick setup.
+
+## Block Explorers
+
+Use an explorer to inspect blocks, transactions, logs, contract code, and token metadata. Choose the one that best fits your workflow or UI preferences:
+
+### Blockscout
+
+- [Mainnet](http://zilliqa.blockscout.com)
+- [Testnet](http://testnet.zilliqa.blockscout.com)
+
+### EVMX
+
+- [Mainnet](https://evmx.zilliqa.com)
+- [Testnet](https://evmx.testnet.zilliqa.com)
+
+### Otterscan
+
+- [Mainnet](https://otterscan.zilliqa.com)
+- [Testnet](https://otterscan.testnet.zilliqa.com)
+
+### ViewBlock
+
+- [Mainnet](https://viewblock.io/zilliqa?network=mainnet)
+- [Testnet](https://viewblock.io/zilliqa?network=testnet)
+
+## Faucets (Test Funds)
+
+For integration testing, you can request small amounts of ZIL on non-production chains:
+
+- **Testnet faucet:** [faucet.testnet.zilliqa.com](https://faucet.testnet.zilliqa.com)
+
+The faucet typically sends 100 ZIL to the EVM address you provide — enough for contract deploys, swaps on test DEXes, and scripted test runs.
+
+## Developer Notes & Best Practices
+
+- **Prefer EVM tooling:** With Zilliqa 2's EVM compatibility, standard stacks (Hardhat, Foundry, web3/viem, MetaMask) work with the endpoints above. This keeps your pipeline consistent across chains.
+- **Pin versions & RPCs:** In CI, pin the network (chain ID) and explicit RPC URLs so deploy scripts are deterministic.
+- **Use multiple explorers:** If you're debugging traces/logs, try a second explorer for a different presentation of the same on-chain data.
+- **Mind rate limits:** Public RPCs are shared. For production services, consider running your own node or a managed endpoint to ensure throughput and reliability.
+
+### Quick Setup Example
+
+```javascript
+// viem configuration for Zilliqa testnet
+import { createPublicClient, http } from 'viem';
+
+const zilliqaTestnet = {
+  id: 33101,
+  name: 'Zilliqa Testnet',
+  network: 'zilliqa-testnet',
+  nativeCurrency: { name: 'Zilliqa', symbol: 'ZIL', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://api.testnet.zilliqa.com'] },
+    public: { http: [' https://api.testnet.zilliqa.com'] },
+  },
+  blockExplorers: {
+    default: { name: 'Otterscan', url: 'https://otterscan.testnet.zilliqa.com' },
+  },
+};
+
+const client = createPublicClient({
+  chain: zilliqaTestnet,
+  transport: http(),
+});
+```
+
+## Next Steps
+
+Once you have your development environment configured with the correct endpoints:
+
+1. **Connect your wallet** to Zilliqa testnet using MetaMask
+2. **Get test ZIL** from the faucet for gas fees
+3. **Deploy a simple contract** to verify your setup
+4. **Explore transactions** in your preferred block explorer
+
+Always verify endpoints and chain IDs against the [official Zilliqa Dev Portal](https://dev.zilliqa.com/zilliqa2/endpoints/), as infrastructure can evolve with new releases.

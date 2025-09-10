@@ -82,6 +82,23 @@ contract OverflowToken {
           </div>
         </div>
       </div>
+
+      <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/30">
+        <div className="flex gap-3">
+          <div className="flex-shrink-0">
+            <span className="text-red-600 dark:text-red-400">⚠️</span>
+          </div>
+          <div className="text-sm text-red-800 dark:text-red-200">
+            <p className="font-semibold mb-2">Important: This tool is NOT a replacement for a professional security audit.</p>
+            <p>
+              This analysis is automated and heuristic - it may miss critical issues or flag false concerns. 
+              Results are provided &ldquo;as is&rdquo; for informational guidance only. You are solely responsible 
+              for verifying, testing, and validating your smart contracts independently before deployment. 
+              Always engage qualified security professionals for production contracts.
+            </p>
+          </div>
+        </div>
+      </div>
     </WalletAuthGuard>
   );
 }
