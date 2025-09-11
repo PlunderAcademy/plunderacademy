@@ -1,15 +1,15 @@
 ---
-id: zilliqa-evm-setup-quiz
-slug: zilliqa-evm-setup-quiz
-module: zilliqa-evm-setup
-title: "Module 4: Zilliqa EVM Development Environment Setup Quiz"
-description: "Test your understanding of Zilliqa EVM environment setup including wallet configuration, testnet tokens, and deployment tools"
+id: creating-erc20-tokens-quiz
+slug: creating-erc20-tokens-quiz
+module: creating-erc20-tokens
+title: "Module 4: Creating ERC-20 Tokens Quiz"
+description: "Test your knowledge of ERC-20 token development, OpenZeppelin libraries, testing, and deployment on Zilliqa"
 totalQuestions: 14
 passingScore: 80
 timeLimit: 18
 ---
 
-# Module 4: Zilliqa EVM Development Environment Setup Quiz
+# Module 4: Creating ERC-20 Tokens Quiz
 
 ## Instructions
 - **Total Questions:** 14
@@ -24,196 +24,210 @@ timeLimit: 18
 ### Question 1
 **Type:** Multiple Choice  
 **Points:** 7  
-**Lesson:** 4.1 MetaMask Setup
+**Lesson:** 5.1 Introduction to ERC-20 Tokens
 
-What is the first step in configuring MetaMask for Zilliqa EVM?
+What is the ERC-20 standard?
 
 **Options:**
-- A) Import existing wallet only
-- B) Add the Zilliqa EVM network with RPC, Chain ID, and other details
-- C) Install mining software
+- A) A mining algorithm for blockchain networks
+- B) A token standard that defines a common interface for fungible tokens on EVM blockchains
+- C) A wallet application for storing cryptocurrency
+- D) A consensus mechanism for validating transactions
 
 ---
 
 ### Question 2
 **Type:** Multiple Choice
 **Points:** 7
-**Lesson:** 4.1 MetaMask Setup
+**Lesson:** 5.1 Introduction to ERC-20 Tokens
 
-Which network Chain ID corresponds to Zilliqa EVM mainnet?
+Why do most ERC-20 tokens use 18 decimal places?
 
 **Options:**
-- A) 1
-- B) 32769
-- C) 56
+- A) It's required by law
+- B) It matches Ethereum's wei denomination and provides precision for fractional amounts
+- C) It reduces gas costs
+- D) It prevents token theft
 
 ---
 
 ### Question 3
 **Type:** Multiple Choice
 **Points:** 7
-**Lesson:** 4.1 MetaMask Setup
+**Lesson:** 5.2 Writing Your Token Contract
 
-What should you NEVER do with your MetaMask seed phrase?
+What is the main advantage of using OpenZeppelin contracts for token development?
 
 **Options:**
-- A) Store it offline safely
-- B) Share it or enter it into websites
-- C) Use it to recover your wallet
+- A) They cost less gas to deploy
+- B) They provide battle-tested, secure implementations that reduce development risks
+- C) They automatically generate profits
+- D) They work only on Ethereum mainnet
 
 ---
 
 ### Question 4
 **Type:** Multiple Choice
 **Points:** 7
-**Lesson:** 4.2 Testnet ZIL and Block Explorer
+**Lesson:** 5.2 Writing Your Token Contract
 
-What is a faucet used for in blockchain testnet environments?
+In the simple token contract example, what does the constructor do?
 
 **Options:**
-- A) Generating private keys
-- B) Obtaining free test tokens to interact on a testnet
-- C) Deploying contracts
+- A) Creates the user interface
+- B) Runs once during deployment to set initial token supply and parameters
+- C) Validates all future transactions
+- D) Connects to external APIs
 
 ---
 
 ### Question 5
 **Type:** Multiple Choice
 **Points:** 7
-**Lesson:** 4.2 Testnet ZIL and Block Explorer
+**Lesson:** 5.2 Writing Your Token Contract
 
-Where can you verify transactions and contract deployments for Zilliqa EVM?
+What is the purpose of the claimant address in the token contract?
 
 **Options:**
-- A) MetaMask wallet only
-- B) Zilliqa EVM block explorer
-- C) Local computer files
+- A) To separate deployment security from achievement claiming on learning platforms
+- B) To store the total token supply
+- C) To validate all transactions
+- D) To connect to external exchanges
 
 ---
 
 ### Question 6
 **Type:** Multiple Choice
 **Points:** 7
-**Lesson:** 4.3 Remix IDE Contract Deployment
+**Lesson:** 5.2 Writing Your Token Contract
 
-What environment should you select in Remix to deploy contracts via MetaMask on Zilliqa EVM?
+Which OpenZeppelin contract provides basic ERC-20 functionality?
 
 **Options:**
-- A) JavaScript VM
-- B) Injected Provider - MetaMask
-- C) Web3 Provider
+- A) Ownable.sol for access control
+- B) ERC20.sol for standard token functions
+- C) Pausable.sol for emergency stops
+- D) AccessControl.sol for role management
 
 ---
 
 ### Question 7
 **Type:** Multiple Choice
 **Points:** 7
-**Lesson:** 4.3 Remix IDE Contract Deployment
+**Lesson:** 5.2 Writing Your Token Contract
 
-What is the correct Solidity version to use when deploying in Zilliqa EVM?
+What does the _mint function do in an ERC-20 token?
 
 **Options:**
-- A) 0.6.0 or lower
-- B) 0.8.0 or higher
-- C) Any version
+- A) Destroys existing tokens permanently
+- B) Creates new tokens and assigns them to an address
+- C) Transfers tokens between addresses
+- D) Pauses all token operations
 
 ---
 
 ### Question 8
 **Type:** Multiple Choice
 **Points:** 7
-**Lesson:** 4.3 Remix IDE Contract Deployment
+**Lesson:** 5.3 Testing and Deployment
 
-After deploying a contract in Remix, how do you interact with it?
+What is the main purpose of writing unit tests for your token contract?
 
 **Options:**
-- A) Edit the source code directly
-- B) Use Remix's deployed contracts tab and MetaMask to call functions
-- C) Restart Remix
+- A) To make the contract run faster
+- B) To catch bugs and ensure functions work correctly before deployment
+- C) To reduce deployment costs
+- D) To automatically deploy to mainnet
 
 ---
 
 ### Question 9
 **Type:** Multiple Choice
 **Points:** 8
-**Lesson:** 4.4 Hardhat Advanced Local Development
+**Lesson:** 5.3 Testing and Deployment
 
-How do you specify the Zilliqa network in Hardhat's configuration?
+What is Hardhat Ignition used for?
 
 **Options:**
-- A) By setting chain ID, RPC URL, and private key account array
-- B) No special configuration needed
-- C) By installing MetaMask plugin
+- A) Creating token user interfaces
+- B) Mining cryptocurrency
+- C) Professional deployment with parameter management and repeatability
+- D) Monitoring gas prices
 
 ---
 
 ### Question 10
 **Type:** Multiple Choice
 **Points:** 8
-**Lesson:** 4.4 Hardhat Advanced Local Development
+**Lesson:** 5.3 Testing and Deployment
 
-What is an advantage of using Hardhat over Remix?
+What should you always do before deploying to mainnet?
 
 **Options:**
-- A) No wallet needed for deployment
-- B) Supports scripting, automated testing, and advanced deployments
-- C) Only supports Solidity test environments
+- A) Skip testing to save time
+- B) Test thoroughly on testnet and run comprehensive test suites
+- C) Deploy immediately for faster results
+- D) Only test one function
 
 ---
 
 ### Question 11
 **Type:** Multiple Choice
 **Points:** 8
-**Lesson:** 4.4 Hardhat Advanced Local Development
+**Lesson:** 5.4 Production Integration
 
-What command runs a deployment script on Zilliqa network with Hardhat?
+After deploying your token, what is the first step for users to interact with it?
 
 **Options:**
-- A) npx hardhat deploy
-- B) npx hardhat run scripts/deploy.js --network zilliqa
-- C) npm start
+- A) Contact customer support
+- B) Add the token to their wallet using the contract address
+- C) Wait for automatic detection
+- D) Download special software
 
 ---
 
 ### Question 12
 **Type:** Multiple Choice
 **Points:** 8
-**Lesson:** 4.5 Full Deployment Journey
+**Lesson:** 5.4 Production Integration
 
-What is an important first step for any Zilliqa EVM developer?
+Why is contract verification on the block explorer important?
 
 **Options:**
-- A) Purchase ZIL tokens
-- B) Set up MetaMask wallet and configure Zilliqa EVM network
-- C) Compile contracts without wallet
+- A) It costs less gas
+- B) It provides transparency by showing source code and builds user trust
+- C) It automatically deploys to other networks
+- D) It prevents all security vulnerabilities
 
 ---
 
 ### Question 13
 **Type:** Multiple Choice
 **Points:** 8
-**Lesson:** 4.5 Full Deployment Journey
+**Lesson:** 5.4 Production Integration
 
-Why is verifying contract deployment on the block explorer necessary?
+What is a common use case for ERC-20 tokens?
 
 **Options:**
-- A) To confirm the contract address and transaction status
-- B) To open the contract source
-- C) To delete the contract
+- A) Storing private keys securely
+- B) Creating governance tokens, utility tokens, or stablecoins for DeFi ecosystems
+- C) Mining new cryptocurrencies
+- D) Replacing traditional databases
 
 ---
 
 ### Question 14
 **Type:** Multiple Choice
 **Points:** 8
-**Lesson:** 4.5 Full Deployment Journey
+**Lesson:** 5.4 Production Integration
 
-What is a recommended way to deepen your development skills after initial deployment?
+What makes Zilliqa an attractive platform for token deployment compared to Ethereum?
 
 **Options:**
-- A) Only reading docs
-- B) Trying deployments with Hardhat or Truffle and writing project reflections
-- C) Waiting for community support
+- A) It uses a different programming language
+- B) Lower fees, faster transactions, while maintaining EVM compatibility
+- C) It doesn't support smart contracts
+- D) It requires special hardware
 
 ---
 

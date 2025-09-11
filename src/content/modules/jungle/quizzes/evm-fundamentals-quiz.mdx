@@ -32,6 +32,7 @@ What does EVM provide?
 - A) A centralized server to run smart contracts
 - B) A decentralized sandboxed environment where smart contracts execute identically on all nodes
 - C) A database for storing Ethereum transactions
+- D) A programming language for creating websites
 
 ---
 
@@ -46,6 +47,7 @@ Why is deterministic execution critical in EVM operations?
 - A) So contracts produce different results on different nodes
 - B) So all nodes compute the same contract output ensuring consensus
 - C) To speed up contract compilation
+- D) To reduce storage requirements on the blockchain
 
 ---
 
@@ -54,12 +56,13 @@ Why is deterministic execution critical in EVM operations?
 **Points:** 7
 **Lesson:** 2.1 & 2.2 Ethereum Virtual Machine and Execution
 
-EVM processes instructions using which data structure?
+EVM processes instructions using which primary data structure?
 
 **Options:**
-- A) Stack
-- B) Queue
-- C) Router
+- A) Linked list for sequential processing
+- B) Queue with first-in-first-out access
+- C) Stack with last-in-first-out access pattern
+- D) Hash table for random access
 
 ---
 
@@ -71,9 +74,10 @@ EVM processes instructions using which data structure?
 What holds the contract state persistently between transactions in EVM?
 
 **Options:**
-- A) Memory
-- B) Storage
-- C) Calldata
+- A) Memory that gets cleared after execution
+- B) Storage that persists permanently on the blockchain
+- C) Calldata that contains function parameters
+- D) Stack that holds temporary computation values
 
 ---
 
@@ -82,12 +86,13 @@ What holds the contract state persistently between transactions in EVM?
 **Points:** 7
 **Lesson:** 2.1 & 2.2 Ethereum Virtual Machine and Execution
 
-What role does ABI serve in contract interaction?
+What role does ABI (Application Binary Interface) serve in contract interaction?
 
 **Options:**
-- A) Defines how external callers interact with contract functions
-- B) Encrypts smart contract code
-- C) Acts as a gas meter
+- A) Defines how external applications interact with contract functions and their parameters
+- B) Encrypts smart contract code for security
+- C) Acts as a gas meter for transaction costs
+- D) Stores the contract's source code on the blockchain
 
 ---
 
@@ -99,9 +104,10 @@ What role does ABI serve in contract interaction?
 Why do transactions on EVM require gas?
 
 **Options:**
-- A) To discourage infinite loops and compensate validators
-- B) To slow down the network
+- A) To slow down the network intentionally
+- B) To prevent infinite loops and compensate validators for computational work
 - C) To add encryption to transactions
+- D) To store transaction data permanently
 
 ---
 
@@ -114,8 +120,9 @@ What happens if a transaction exceeds its gas limit?
 
 **Options:**
 - A) The transaction proceeds without limits
-- B) The transaction is reverted and no state changes occur
-- C) The transaction is paused
+- B) The transaction is reverted and no state changes occur, but gas is still consumed
+- C) The transaction is paused and resumed later
+- D) The transaction completes but costs extra fees
 
 ---
 
@@ -127,9 +134,10 @@ What happens if a transaction exceeds its gas limit?
 Which token is used to pay gas fees on Zilliqa?
 
 **Options:**
-- A) ETH
-- B) ZIL
-- C) BTC
+- A) ETH (Ethereum's native token)
+- B) ZIL (Zilliqa's native token)
+- C) BTC (Bitcoin)
+- D) USDC (USD Coin stablecoin)
 
 ---
 
@@ -141,9 +149,10 @@ Which token is used to pay gas fees on Zilliqa?
 What is the first step in a contract's lifecycle?
 
 **Options:**
-- A) Deploy
-- B) Write the contract code
-- C) Interact with the contract
+- A) Deploy the contract to the blockchain
+- B) Compile the contract to bytecode
+- C) Write the contract code in Solidity
+- D) Test the contract on mainnet
 
 ---
 
@@ -155,9 +164,10 @@ What is the first step in a contract's lifecycle?
 Deployment involves:
 
 **Options:**
-- A) Sending a special transaction with bytecode to blockchain
+- A) Sending a special transaction with bytecode to the blockchain
 - B) Sending a simple payment transaction
-- C) Importing code to local database
+- C) Importing code to a local database
+- D) Uploading files to a centralized server
 
 ---
 
@@ -170,8 +180,9 @@ Can deployed contracts be changed?
 
 **Options:**
 - A) Yes, by directly editing blockchain data
-- B) Yes, via upgrade proxies or redeployment
-- C) No, smart contracts are immutable
+- B) Generally no, they are immutable by default, but upgrade patterns exist
+- C) Yes, anyone can modify them freely
+- D) Only the original developer can edit them
 
 ---
 
@@ -183,9 +194,10 @@ Can deployed contracts be changed?
 Which tool lets you develop Solidity contracts in-browser without setup?
 
 **Options:**
-- A) Hardhat
+- A) Hardhat framework
 - B) Remix IDE
-- C) Foundry
+- C) Foundry toolkit
+- D) Visual Studio Code
 
 ---
 
@@ -197,9 +209,10 @@ Which tool lets you develop Solidity contracts in-browser without setup?
 What is Hardhat primarily used for?
 
 **Options:**
-- A) Managing wallets
+- A) Managing cryptocurrency wallets
 - B) Local development, testing, and scripting deployments
-- C) Monitoring gas fees
+- C) Monitoring gas fees across networks
+- D) Creating user interfaces for dApps
 
 ---
 
@@ -211,9 +224,10 @@ What is Hardhat primarily used for?
 How do OpenZeppelin contracts help developers?
 
 **Options:**
-- A) Reduce gas fees
-- B) Provide secure, audited reusable contract templates
-- C) Speed up compilation time
+- A) Reduce gas fees for all transactions
+- B) Provide secure, audited reusable contract templates and standards
+- C) Speed up compilation time significantly
+- D) Automatically deploy contracts to mainnet
 
 ---
 
