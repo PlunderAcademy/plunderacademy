@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface AnimatedAchievementCardProps {
   achievementNumber: string; // "0001", "0002", etc.
-  animation?: "none" | "wobble" | "pulse" | "float" | "spin" | "glow";
+  animation?: "none" | "wobble" | "pulse" | "float" | "spin" | "glow" | "shake" | "swing" | "heartbeat" | "elastic" | "tada" | "flip" | "breathe";
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   children?: React.ReactNode; // For hover overlays
@@ -23,15 +23,16 @@ export function AnimatedAchievementCard({
   onClick,
   alt = "Achievement Card"
 }: AnimatedAchievementCardProps) {
+  // Available animation options: none, wobble, pulse, float, spin, glow, shake, swing, heartbeat, elastic, tada, flip, breathe
   // Achievement-specific animation mapping
   const getDefaultAnimation = (number: string): AnimatedAchievementCardProps["animation"] => {
     switch (number) {
-      case "0001": return "wobble";    // Rum bottle - perfect for wobbling
-      case "0002": return "pulse";     // Different energy - pulsing effect
-      case "0003": return "float";     // Lighter feeling - bouncing
-      case "0004": return "spin";      // Technical/mechanical - spinning
-      case "0005": return "glow";      // Final achievement - glowing effect
-      default: return "wobble";       // Default for any other numbers
+      case "0001": return "wobble"; 
+      case "0002": return "pulse";  
+      case "0003": return "elastic";
+      case "0004": return "flip";
+      case "0005": return "tada";
+      default: return "wobble";
     }
   };
 
@@ -48,25 +49,35 @@ export function AnimatedAchievementCard({
 
   const config = sizeConfig[size];
 
-  // Animation class mappings
+  // Animation class mappings - all animations applied only to trinket layer
   const getAnimationClass = (layer: "trinket" | "polygon") => {
-    if (effectiveAnimation === "none") return "";
+    if (effectiveAnimation === "none" || layer !== "trinket") return "";
     
     switch (effectiveAnimation) {
       case "wobble":
-        return layer === "trinket" 
-          ? "animate-drunk-wobble group-hover:animate-drunk-wobble-intense" 
-          : ""; // Polygon layer should be static for wobble effect
+        return "animate-drunk-wobble group-hover:animate-drunk-wobble-intense";
       case "pulse":
         return "animate-pulse group-hover:animate-pulse-fast";
       case "float":
         return "animate-bounce group-hover:animate-bounce-fast";
       case "spin":
-        return layer === "trinket" 
-          ? "animate-spin-slow group-hover:animate-spin" 
-          : "animate-pulse-slow";
+        return "animate-spin-slow group-hover:animate-spin";
       case "glow":
         return "animate-pulse group-hover:animate-ping";
+      case "shake":
+        return "animate-shake group-hover:animate-shake-intense";
+      case "swing":
+        return "animate-swing group-hover:animate-swing-fast";
+      case "heartbeat":
+        return "animate-heartbeat group-hover:animate-heartbeat-fast";
+      case "elastic":
+        return "animate-elastic group-hover:animate-elastic-intense";
+      case "tada":
+        return "animate-tada group-hover:animate-tada-repeat";
+      case "flip":
+        return "animate-flip group-hover:animate-flip-fast";
+      case "breathe":
+        return "animate-breathe group-hover:animate-breathe-deep";
       default:
         return "";
     }
@@ -174,7 +185,14 @@ export const ANIMATION_OPTIONS = [
   { value: "pulse", label: "Pulse" },
   { value: "float", label: "Float" },
   { value: "spin", label: "Spin" },
-  { value: "glow", label: "Glow" }
+  { value: "glow", label: "Glow" },
+  { value: "shake", label: "Shake" },
+  { value: "swing", label: "Swing" },
+  { value: "heartbeat", label: "Heartbeat" },
+  { value: "elastic", label: "Elastic" },
+  { value: "tada", label: "Celebration" },
+  { value: "flip", label: "Flip" },
+  { value: "breathe", label: "Breathe" }
 ] as const;
 
 export type AnimationType = typeof ANIMATION_OPTIONS[number]["value"];
