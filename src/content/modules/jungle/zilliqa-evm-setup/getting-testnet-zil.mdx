@@ -34,9 +34,7 @@ Testnet ZIL tokens are essential for blockchain development because they allow y
 ### Official Zilliqa Faucets
 
 **Primary sources for testnet ZIL:**
-- **Zilliqa Developer Documentation:** Check the official docs for current faucet links
-- **Zilliqa Discord/Telegram:** Community channels often share working faucet links
-- **GitHub repositories:** Official Zilliqa repos may contain faucet information
+- Faucet: https://faucet.testnet.zilliqa.com
 
 **⚠️ Security Note:** Only use faucets linked from official Zilliqa sources. Fake faucets may attempt to steal your wallet information.
 
@@ -51,41 +49,37 @@ Testnet ZIL tokens are essential for blockchain development because they allow y
 
 #### Step 2: Access the Faucet
 
-1. **Navigate to the official faucet URL**
-2. **Check the network:** Ensure it's for Zilliqa testnet (Chain ID 33101)
-3. **Read any requirements:** Some faucets have daily limits or verification requirements
+1. **Navigate to the official faucet URL - https://faucet.testnet.zilliqa.com**
+2. **Read any requirements:** Some faucets have daily limits or verification requirements
 
 #### Step 3: Request Testnet ZIL
 
 1. **Paste your MetaMask address** into the faucet form
-2. **Complete any verification:** Some faucets require CAPTCHA or social media verification
-3. **Submit the request**
-4. **Note the transaction ID** if provided
+2. **Submit the request**
+3. **Note the transaction ID** if provided
 
 #### Step 4: Wait for Distribution
 
 **Typical wait times:**
-- **Instant to 2 minutes:** Most faucets process quickly
-- **Up to 5 minutes:** During high usage periods
-- **Check status:** Some faucets provide transaction tracking
+- **Instant to 10 seconds:** Most faucets process quickly
 
 ### Verification and Troubleshooting
 
 #### Verifying Receipt in MetaMask
 
-1. **Check MetaMask balance:**
+**Check MetaMask balance:**
    - Open MetaMask
    - Ensure you're on Zilliqa Testnet
-   - Balance should show testnet ZIL (usually 5-20 ZIL)
+   - Balance should show testnet ZIL (usually 100 ZIL)
 
-2. **If balance doesn't appear:**
+**If balance doesn't appear:**
    - Refresh MetaMask (click account circle → refresh)
    - Check you're on the correct network
    - Wait a few more minutes for network confirmation
 
 #### Using the Block Explorer for Verification
 
-1. **Open Zilliqa Blockscout:** https://zilliqa.blockscout.com
+1. **Open Zilliqa Testnet Blockscout:** https://testnet.zilliqa.blockscout.com/
 2. **Paste your wallet address** in the search bar
 3. **Verify transaction details:**
    - ✅ Transaction status shows "Success"
@@ -101,19 +95,18 @@ Transaction Hash: 0xabcd1234567890ef...
 Status: Success ✅
 From: 0x1234... (Faucet Address)
 To: 0x742d... (Your Address)
-Value: 10 ZIL
+Value: 100 ZIL
 Gas Used: 21,000
 Gas Price: 4,762 gwei
 ```
 
 ### Common Issues and Solutions
 
-#### Issue: "Address already used today"
-**Cause:** Most faucets limit one request per address per day
+#### Issue: "Request made too recently"
+**Cause:** Zilliqa is limited to 1 request per min
 **Solution:** 
-- Wait 24 hours before requesting again
+- Wait 1 min before requesting again
 - Use a different MetaMask account if you need more testnet ZIL
-- Check if there are multiple faucets available
 
 #### Issue: "Invalid address format"
 **Cause:** Wrong address format or network
@@ -126,26 +119,23 @@ Gas Price: 4,762 gwei
 **Cause:** Faucet has run out of funds or is under maintenance
 **Solutions:**
 - Try again in a few hours
-- Look for alternative faucets in Zilliqa community channels
-- Ask in Zilliqa Discord for current working faucets
 
 #### Issue: Transaction pending for a long time
 **Cause:** Network congestion or faucet issues
 **Solutions:**
 - Wait up to 10 minutes for confirmation
 - Check the transaction hash on the block explorer
-- Try a different faucet if available
 
 ### Managing Your Testnet ZIL
 
 #### How Much Do You Need?
 
 **For basic development:**
-- **Contract deployment:** 0.5-2 ZIL per contract
-- **Function calls:** 0.001-0.01 ZIL per transaction
+- **Contract deployment:** 0.5-5 ZIL per contract
+- **Function calls:** 0.1-5 ZIL per transaction
 - **Testing interactions:** 1-5 ZIL for comprehensive testing
 
-**Most faucets provide:** 5-20 ZIL, enough for significant development work
+**Faucet provides:** 100 ZIL, enough for significant development work
 
 #### Conserving Testnet ZIL
 
@@ -157,10 +147,8 @@ Gas Price: 4,762 gwei
 #### Getting More Testnet ZIL
 
 **When you need additional tokens:**
-1. **Wait for daily reset** (24 hours) to use the same faucet
+1. **Wait for reset** (1 min) to use the same faucet
 2. **Use additional MetaMask accounts** for more faucet requests
-3. **Join community channels** for alternative faucet recommendations
-4. **Ask fellow developers** for small testnet transfers if needed
 
 ### Best Practices for Development
 
@@ -241,11 +229,6 @@ Testnet Usage:
 - Deploy contract: 1,200,000 gas
 - User transaction: 50,000 gas
 - Admin function: 80,000 gas
-
-Mainnet Estimate (with current gas prices):
-- Deploy: ~$0.15 
-- User transaction: ~$0.006
-- Admin function: ~$0.01
 ```
 
 Your testnet ZIL is the fuel for your entire development process. Take time to understand the faucet system and block explorer - they're essential tools for successful Zilliqa development!
