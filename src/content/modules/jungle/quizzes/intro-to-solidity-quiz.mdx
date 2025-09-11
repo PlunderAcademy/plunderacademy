@@ -4,7 +4,7 @@ slug: intro-to-solidity-quiz
 module: intro-to-solidity
 title: "Module 3: Intro to Solidity - Interactive Quiz"
 description: "Test your knowledge of Solidity fundamentals, functions, data structures, events, and smart contract development"
-totalQuestions: 15
+totalQuestions: 14
 passingScore: 80
 timeLimit: 20
 ---
@@ -12,7 +12,7 @@ timeLimit: 20
 # Module 3: Intro to Solidity - Interactive Quiz
 
 ## Instructions
-- **Total Questions:** 15
+- **Total Questions:** 14
 - **Time Limit:** 20 minutes  
 - **Passing Score:** 80%
 - **Question Types:** Multiple choice
@@ -29,9 +29,10 @@ timeLimit: 20
 What is the purpose of the pragma statement in Solidity?
 
 **Options:**
-- A) To define license
-- B) To specify compiler version
+- A) To define the software license
+- B) To specify the compiler version and settings
 - C) To declare the contract name
+- D) To import external libraries
 
 ---
 
@@ -43,9 +44,10 @@ What is the purpose of the pragma statement in Solidity?
 Which variable type is used for storing blockchain wallet addresses?
 
 **Options:**
-- A) string
-- B) uint
-- C) address
+- A) string for text representation
+- B) uint256 for numerical values
+- C) address for Ethereum-style addresses
+- D) bytes32 for hash storage
 
 ---
 
@@ -57,9 +59,10 @@ Which variable type is used for storing blockchain wallet addresses?
 Which visibility keyword means a function can be called only internally by the contract or derived contracts?
 
 **Options:**
-- A) public
-- B) private
-- C) internal
+- A) public for external access
+- B) private for contract-only access
+- C) internal for contract and derived contracts
+- D) external for outside calls only
 
 ---
 
@@ -74,6 +77,7 @@ What does msg.sender represent in a smart contract?
 - A) The address of the current contract
 - B) The address of the transaction sender or function caller
 - C) The network node's address
+- D) The contract deployment address
 
 ---
 
@@ -88,6 +92,7 @@ What is the purpose of a modifier like onlyOwner in Solidity?
 - A) To restrict function calls to a specific entity
 - B) To emit events after function execution
 - C) To allow anyone to call a function
+- D) To automatically transfer tokens
 
 ---
 
@@ -102,6 +107,7 @@ What is a struct used for in Solidity?
 - A) Grouping related data fields together
 - B) Defining a contract's function
 - C) Declaring a variable on-chain
+- D) Creating inheritance relationships
 
 ---
 
@@ -116,6 +122,7 @@ How do you declare a dynamic array of structs named people?
 - A) Person[] public people;
 - B) mapping(address => Person) people;
 - C) Person people[];
+- D) array<Person> people;
 
 ---
 
@@ -130,6 +137,7 @@ How do you access a value stored in a mapping called balances for an address use
 - A) balances(user)
 - B) balances[user]
 - C) user[balances]
+- D) balances.get(user)
 
 ---
 
@@ -144,6 +152,7 @@ What keyword is used to emit an event in Solidity?
 - A) event
 - B) log
 - C) emit
+- D) trigger
 
 ---
 
@@ -158,6 +167,7 @@ What is the purpose of the require statement?
 - A) To revert the transaction if a condition is false and provide an error message
 - B) To approve a transfer of tokens
 - C) To emit transaction logs
+- D) To import external contracts
 
 ---
 
@@ -169,9 +179,10 @@ What is the purpose of the require statement?
 What happens when a require statement's condition fails during a transaction?
 
 **Options:**
-- A) The transaction continues
+- A) The transaction continues with a warning
 - B) The transaction is reverted and all state changes are rolled back
 - C) The state changes proceed partially
+- D) Only the current function exits
 
 ---
 
@@ -186,6 +197,7 @@ In the SimpleBank example, how are user balances most effectively tracked?
 - A) Using an array of addresses
 - B) Using mapping(address => uint) to associate balances
 - C) Storing balances in an external database
+- D) Using a single global variable
 
 ---
 
@@ -200,6 +212,7 @@ What advantage does emitting events for deposits and withdrawals give?
 - A) It increases contract gas cost without benefits
 - B) It enables off-chain applications to monitor and respond to state changes
 - C) It slows down contract execution
+- D) It automatically validates transactions
 
 ---
 
@@ -214,20 +227,9 @@ What is required to deploy and test the SimpleBank contract on the Zilliqa EVM t
 - A) Remix IDE and MetaMask configured for Zilliqa EVM
 - B) Only a local private blockchain
 - C) A centralized server environment
+- D) Physical hardware wallet connection
 
 ---
-
-### Question 15
-**Type:** Multiple Choice
-**Points:** 8
-**Lesson:** 3.5 Putting It All Together — Your First Contract
-
-What makes the SimpleBank contract secure and user-friendly?
-
-**Options:**
-- A) Complex code structure
-- B) Input validation with require statements and event emission for transparency
-- C) Unlimited access to all functions
 
 ---
 
@@ -249,7 +251,6 @@ What makes the SimpleBank contract secure and user-friendly?
 | 12 | 3.5 | 7 |
 | 13 | 3.5 | 8 |
 | 14 | 3.5 | 8 |
-| 15 | 3.5 | 8 |
 
-**Total Points:** 108  
-**Passing Score:** 86 points
+**Total Points:** 100  
+**Passing Score:** 80 points
