@@ -19,22 +19,49 @@ This isn't just another EVM-compatible chain. Zilliqa EVM represents a strategic
 
 ## Zilliqa EVM vs Ethereum: Key Differences
 
-| Feature | Ethereum Mainnet | Zilliqa EVM |
-|---------|------------------|-------------|
-| **Transaction Finality** | ~12-15 minutes | ~1-2 minutes |
-| **Average Gas Cost** | 20-100+ gwei | 0.1-1 gwei |
-| **Throughput** | ~15 TPS | 1000+ TPS |
-| **Block Time** | ~12 seconds | ~1-2 seconds |
-| **Tooling Compatibility** | Native | 100% Compatible |
-| **Language Support** | Solidity | Solidity (Scilla deprecated) |
+### Performance & Economics
 
-### Performance Advantages
+| Aspect | Ethereum Mainnet | Zilliqa EVM | Impact |
+|--------|------------------|-------------|---------|
+| **Transaction Finality** | 12-15 minutes (12+ confirmations) | 1-2 minutes (2-3 confirmations) | ⚡ **75% faster** settlement |
+| **Gas Costs** | $5-50+ per transaction | $0.01-0.10 per transaction | 💰 **99%+ cheaper** operations |
+| **Network Throughput** | 15-20 TPS | 100+ TPS (with sharding) | 📈 **5x higher** capacity |
+| **Block Time** | 12 seconds | 1-2 seconds | ⏱️ **Instant** feedback |
 
-**Faster Finality:** Your transactions confirm in minutes, not hours. This makes Zilliqa EVM ideal for applications requiring quick settlement.
+### Developer Experience
 
-**Lower Costs:** Gas fees are typically 10-100x lower than Ethereum mainnet, making micro-transactions and complex operations economically viable.
+| Feature | Ethereum | Zilliqa EVM | Developer Benefit |
+|---------|----------|-------------|-------------------|
+| **Smart Contract Language** | Solidity | Solidity | 🔄 **Zero migration** effort |
+| **Development Tools** | Hardhat, Foundry, Remix | Same tools work | 🛠️ **Familiar workflow** |
+| **Wallet Integration** | MetaMask, WalletConnect | Same wallets work | 👛 **Seamless UX** |
+| **Libraries & Frameworks** | OpenZeppelin, wagmi | Full compatibility | 📚 **Reuse existing code** |
 
-**Higher Throughput:** The underlying sharding architecture means your dApp can handle real user load without congestion.
+### Network Architecture
+
+| Component | Ethereum | Zilliqa EVM | Technical Advantage |
+|-----------|----------|-------------|-------------------|
+| **Consensus** | Proof of Stake | Proof of Stake | ♻️ **Energy efficient** |
+| **Scalability** | Layer 2 solutions | Native sharding | 🏗️ **Built-in scaling** |
+| **State Management** | Single chain | Sharded state | 🔀 **Parallel processing** |
+| **Finality** | Probabilistic | Fast finality | ✅ **Guaranteed settlement** |
+
+### Why These Differences Matter
+
+**For Users:**
+- **Micro-transactions become viable** - Send $0.01 without paying $5 in fees
+- **Instant feedback** - See transaction results in seconds, not minutes
+- **Lower barriers** - Experiment and learn without expensive mistakes
+
+**For Developers:**
+- **Rapid iteration** - Deploy and test quickly with cheap transactions
+- **Enhanced UX** - Build responsive dApps with fast confirmations
+- **Economic innovation** - Enable new business models with micro-payments
+
+**For dApps:**
+- **Real-world scalability** - Handle actual user traffic without congestion
+- **Cost-effective operations** - Run complex logic without prohibitive gas costs
+- **Better retention** - Users aren't frustrated by slow, expensive transactions
 
 ## Key Concepts
 
@@ -83,8 +110,21 @@ First, create a new Hardhat project:
 mkdir my-zilliqa-project
 cd my-zilliqa-project
 npm init -y
-npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
+npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox dotenv
 npx hardhat
+```
+
+Create a `.env` file in your project root:
+
+```bash
+# .env
+PRIVATE_KEY=your_private_key_here_without_0x_prefix
+```
+
+**⚠️ Security Note:** Never commit your `.env` file to version control. Add it to your `.gitignore`:
+
+```bash
+echo ".env" >> .gitignore
 ```
 
 ### 2. Configure Hardhat for Zilliqa
@@ -94,26 +134,62 @@ Update your `hardhat.config.js`:
 ```javascript
 require("@nomicfoundation/hardhat-toolbox");
 
+// Safely load environment variables
+try {
+  require("dotenv").config();
+} catch (error) {
+  console.warn("dotenv not found. Make sure to install it: npm install --save-dev dotenv");
+}
+
+// Validate private key format
+function getAccounts() {
+  const privateKey = process.env.PRIVATE_KEY;
+  if (!privateKey) {
+    console.warn("PRIVATE_KEY not found in .env file. Some network operations may fail.");
+    return [];
+  }
+  
+  // Ensure private key starts with 0x
+  const formattedKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+  
+  // Basic validation (64 hex characters after 0x)
+  if (!/^0x[a-fA-F0-9]{64}$/.test(formattedKey)) {
+    throw new Error("Invalid PRIVATE_KEY format. Should be 64 hex characters.");
+  }
+  
+  return [formattedKey];
+}
+
 module.exports = {
-  solidity: "0.8.24",
+  solidity: {
+    version: "0.8.24",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  },
   networks: {
     zilliqaTestnet: {
       url: "https://api.testnet.zilliqa.com",
       chainId: 33101,
-      accounts: [process.env.PRIVATE_KEY] // Add your private key to .env
+      accounts: getAccounts(),
+      gasPrice: 4761904800000, // Minimum gas price for Zilliqa (4761.9048 gwei)
+      gas: 8000000, // 8M gas limit (reasonable default)
+      timeout: 60000 // 60 second timeout
     },
     zilliqaMainnet: {
       url: "https://api.zilliqa.com", 
       chainId: 32769,
-      accounts: [process.env.PRIVATE_KEY]
+      accounts: getAccounts(),
+      gasPrice: 4761904800000, // Minimum gas price for Zilliqa
+      gas: 8000000,
+      timeout: 60000
     }
   },
-  etherscan: {
-    apiKey: {
-      zilliqaTestnet: "your-api-key", // For contract verification
-      zilliqaMainnet: "your-api-key"
-    }
-  }
+  // Note: Zilliqa uses different block explorers, not Etherscan
+  // Verify contracts at: https://otterscan.zilliqa.com or https://otterscan.testnet.zilliqa.com
 };
 ```
 
@@ -127,38 +203,69 @@ pragma solidity ^0.8.24;
 
 contract TreasureChest {
     address public captain;
-    uint256 public gold;
+    uint256 public totalDeposits;
     mapping(address => uint256) public contributions;
     
     event GoldDeposited(address indexed contributor, uint256 amount);
     event GoldWithdrawn(address indexed recipient, uint256 amount);
+    event CaptainshipTransferred(address indexed previousCaptain, address indexed newCaptain);
     
-    constructor(uint256 _initialGold) {
+    error InsufficientGold(uint256 requested, uint256 available);
+    error TransferFailed();
+    error OnlyCaptain();
+    error ZeroAmount();
+    error ZeroAddress();
+    
+    constructor() payable {
         captain = msg.sender;
-        gold = _initialGold;
+        if (msg.value > 0) {
+            totalDeposits = msg.value;
+            contributions[msg.sender] = msg.value;
+            emit GoldDeposited(msg.sender, msg.value);
+        }
     }
     
     modifier onlyCaptain() {
-        require(msg.sender == captain, "Only the captain can perform this action");
+        if (msg.sender != captain) revert OnlyCaptain();
         _;
     }
     
     function depositGold() external payable {
-        require(msg.value > 0, "Must deposit some gold");
-        gold += msg.value;
+        if (msg.value == 0) revert ZeroAmount();
+        
+        totalDeposits += msg.value;
         contributions[msg.sender] += msg.value;
         emit GoldDeposited(msg.sender, msg.value);
     }
     
     function withdrawGold(uint256 amount) external onlyCaptain {
-        require(gold >= amount, "Not enough gold in the chest");
-        gold -= amount;
-        payable(captain).transfer(amount);
+        if (amount == 0) revert ZeroAmount();
+        
+        uint256 balance = address(this).balance;
+        if (balance < amount) revert InsufficientGold(amount, balance);
+        
+        totalDeposits -= amount;
+        
+        (bool success, ) = payable(captain).call{value: amount}("");
+        if (!success) revert TransferFailed();
+        
         emit GoldWithdrawn(captain, amount);
+    }
+    
+    function transferCaptainship(address newCaptain) external onlyCaptain {
+        if (newCaptain == address(0)) revert ZeroAddress();
+        
+        address previousCaptain = captain;
+        captain = newCaptain;
+        emit CaptainshipTransferred(previousCaptain, newCaptain);
     }
     
     function getBalance() external view returns (uint256) {
         return address(this).balance;
+    }
+    
+    function getTotalDeposits() external view returns (uint256) {
+        return totalDeposits;
     }
 }
 ```
@@ -172,20 +279,42 @@ const hre = require("hardhat");
 
 async function main() {
   // Get test ZIL from https://faucet.testnet.zilliqa.com first!
-  const initialGold = hre.ethers.parseEther("1.0"); // 1 ZIL
+  const [deployer] = await hre.ethers.getSigners();
+  
+  console.log("Deploying TreasureChest with account:", deployer.address);
+  console.log("Account balance:", hre.ethers.formatEther(await deployer.provider.getBalance(deployer.address)));
   
   const TreasureChest = await hre.ethers.getContractFactory("TreasureChest");
-  const treasureChest = await TreasureChest.deploy(initialGold);
+  
+  // Deploy with initial gold deposit (1 ZIL)
+  const initialGold = hre.ethers.parseEther("1.0");
+  const treasureChest = await TreasureChest.deploy({ value: initialGold });
   
   await treasureChest.waitForDeployment();
   
-  console.log("TreasureChest deployed to:", await treasureChest.getAddress());
-  console.log("Captain address:", await treasureChest.captain());
-  console.log("Initial gold:", hre.ethers.formatEther(await treasureChest.gold()));
+  const contractAddress = await treasureChest.getAddress();
+  console.log("\\n✅ TreasureChest deployed to:", contractAddress);
+  console.log("👑 Captain address:", await treasureChest.captain());
+  console.log("💰 Contract balance:", hre.ethers.formatEther(await treasureChest.getBalance()), "ZIL");
+  console.log("📊 Total deposits:", hre.ethers.formatEther(await treasureChest.getTotalDeposits()), "ZIL");
+  
+  console.log("\\n📋 Deployment Summary:");
+  console.log("- Network:", hre.network.name);
+  console.log("- Contract Address:", contractAddress);
+  console.log("- Transaction Hash:", treasureChest.deploymentTransaction()?.hash);
+  
+  // Verify contract if on testnet/mainnet
+  if (hre.network.name !== "hardhat" && hre.network.name !== "localhost") {
+    console.log("\\n⏳ Waiting for block confirmations...");
+    await treasureChest.deploymentTransaction()?.wait(5);
+    
+    console.log("\\nTo verify the contract, run:");
+    console.log(`npx hardhat verify --network ${hre.network.name} ${contractAddress}`);
+  }
 }
 
 main().catch((error) => {
-  console.error(error);
+  console.error("❌ Deployment failed:", error);
   process.exitCode = 1;
 });
 ```
@@ -238,33 +367,28 @@ npx hardhat run scripts/deploy.js --network zilliqaTestnet
 4. Check gas limits aren't too low
 
 ### Issue: "Contract not verified"
-**Solution:** Verify your contract on the block explorer:
-```bash
-npx hardhat verify --network zilliqaTestnet DEPLOYED_CONTRACT_ADDRESS "constructor_arg_1"
-```
+**Solution:** Verify your contract on the block explorer. Note that Zilliqa uses Otterscan, not Etherscan:
+
+**For Testnet:**
+- Visit [otterscan.testnet.zilliqa.com](https://otterscan.testnet.zilliqa.com)
+- Navigate to your contract address
+- Use the "Verify Contract" feature with your source code
+
+**For Mainnet:**
+- Visit [otterscan.zilliqa.com](https://otterscan.zilliqa.com)
+- Follow the same process
+
+Unfortunately, Hardhat's built-in verify command doesn't work with Zilliqa's explorers yet, so manual verification is required.
 
 ## Integration with Frontend
 
 ### Using viem (Recommended)
 
 ```typescript
-import { createPublicClient, createWalletClient, http, custom } from 'viem';
+import { createPublicClient, createWalletClient, http, custom, parseEther } from 'viem';
+import { zilliqaTestnet } from 'viem/chains';
 
-// Define Zilliqa testnet
-const zilliqaTestnet = {
-  id: 33101,
-  name: 'Zilliqa Testnet',
-  network: 'zilliqa-testnet',
-  nativeCurrency: { name: 'Zilliqa', symbol: 'ZIL', decimals: 18 },
-  rpcUrls: {
-    default: { http: ['https://api.testnet.zilliqa.com'] }
-  },
-  blockExplorers: {
-    default: { name: 'Otterscan', url: 'https://otterscan.testnet.zilliqa.com' }
-  }
-};
-
-// Create clients
+// Create clients using viem's built-in chain definition
 const publicClient = createPublicClient({
   chain: zilliqaTestnet,
   transport: http()
@@ -272,37 +396,122 @@ const publicClient = createPublicClient({
 
 const walletClient = createWalletClient({
   chain: zilliqaTestnet,
-  transport: custom(window.ethereum)
+  transport: custom(window.ethereum!)
 });
+
+// Contract ABI (only the functions we need)
+const treasureChestABI = [
+  {
+    "inputs": [],
+    "name": "getTotalDeposits",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "depositGold",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "uint256", "name": "amount", "type": "uint256"}],
+    "name": "withdrawGold",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+] as const;
+
+const CONTRACT_ADDRESS = '0x1234567890123456789012345678901234567890'; // Replace with your deployed address
 
 // Read contract data
-const gold = await publicClient.readContract({
-  address: '0x...', // Your contract address
+const totalDeposits = await publicClient.readContract({
+  address: CONTRACT_ADDRESS,
   abi: treasureChestABI,
-  functionName: 'gold'
+  functionName: 'getTotalDeposits'
 });
 
-// Write to contract
+console.log('Total deposits:', parseEther(totalDeposits.toString()));
+
+// Write to contract (deposit gold)
 const hash = await walletClient.writeContract({
-  address: '0x...', // Your contract address
+  address: CONTRACT_ADDRESS,
   abi: treasureChestABI,
   functionName: 'depositGold',
   value: parseEther('0.1') // 0.1 ZIL
 });
+
+// Wait for transaction confirmation
+const receipt = await publicClient.waitForTransactionReceipt({ hash });
+console.log('Transaction confirmed:', receipt.transactionHash);
 ```
 
 ### Using wagmi + RainbowKit
 
 ```typescript
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { zilliqa } from 'viem/chains';
+import { zilliqa, zilliqaTestnet } from 'viem/chains';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { WagmiProvider } from 'wagmi';
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 
 const config = getDefaultConfig({
   appName: 'My Zilliqa dApp',
-  projectId: 'YOUR_WALLETCONNECT_PROJECT_ID',
-  chains: [zilliqa], // viem includes Zilliqa mainnet by default
+  projectId: 'YOUR_WALLETCONNECT_PROJECT_ID', // Get from https://cloud.walletconnect.com
+  chains: [zilliqaTestnet, zilliqa], // Include both testnet and mainnet
   ssr: true,
 });
+
+const queryClient = new QueryClient();
+
+// Wrap your app with providers
+function App() {
+  return (
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>
+          {/* Your app components */}
+          <YourDappComponents />
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
+}
+
+// Example hook usage
+import { useReadContract, useWriteContract, useAccount } from 'wagmi';
+
+function TreasureChestComponent() {
+  const { address } = useAccount();
+  const { writeContract } = useWriteContract();
+  
+  // Read total deposits
+  const { data: totalDeposits } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: treasureChestABI,
+    functionName: 'getTotalDeposits'
+  });
+  
+  const depositGold = () => {
+    writeContract({
+      address: CONTRACT_ADDRESS,
+      abi: treasureChestABI,
+      functionName: 'depositGold',
+      value: parseEther('0.1')
+    });
+  };
+  
+  return (
+    <div>
+      <p>Total Deposits: {totalDeposits ? formatEther(totalDeposits) : '0'} ZIL</p>
+      <button onClick={depositGold} disabled={!address}>
+        Deposit 0.1 ZIL
+      </button>
+    </div>
+  );
+}
 ```
 
 ## Migration from Other EVM Chains

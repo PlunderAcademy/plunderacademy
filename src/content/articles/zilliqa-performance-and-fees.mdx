@@ -1,23 +1,392 @@
 ---
 slug: zilliqa-performance-and-fees
 title: Performance Tuning and Fees on Zilliqa
-excerpt: Throughput, finality, and cost considerations when scaling on Zilliqa.
+excerpt: Comprehensive guide to optimizing throughput, managing finality, and understanding cost structures when scaling on Zilliqa.
 level: advanced
 tags:
   - zilliqa
   - performance
   - fees
+  - optimization
+  - scaling
 ---
 
-## Performance & Fees
+Zilliqa's unique architecture provides significant performance advantages over traditional blockchains, but understanding how to leverage these benefits requires careful consideration of throughput, finality, and cost optimization strategies.
 
-Design with throughput and finality in mind. Batch operations and tune storage patterns to reduce costs.
+## Zilliqa's Performance Architecture
 
+### Sharding Fundamentals
 
-- Amortize expensive writes.
-- Use events for indexing off-chain.
-- Prefer pull over push where possible.
+Zilliqa pioneered practical sharding, which enables:
 
-### Observability
+- **Parallel Transaction Processing**: Multiple shards process transactions simultaneously
+- **Linear Scalability**: More nodes = higher throughput (up to a point)
+- **Maintained Security**: Each shard maintains full security guarantees
 
-Budget gas and storage, track usage over time, and alert on regressions.
+```solidity
+// On Zilliqa, you can design for higher throughput scenarios
+contract HighThroughputAuction {
+    mapping(uint256 => Bid[]) public auctionBids;
+    
+    function placeBid(uint256 auctionId, uint256 amount) external payable {
+        // This pattern is affordable on Zilliqa due to low gas costs
+        auctionBids[auctionId].push(Bid({
+            bidder: msg.sender,
+            amount: amount,
+            timestamp: block.timestamp
+        }));
+        
+        emit BidPlaced(auctionId, msg.sender, amount);
+    }
+}
+```
+
+### Transaction Finality
+
+**Zilliqa Finality**: 1-2 minutes (2-3 block confirmations)
+**Ethereum Finality**: 12-15 minutes (12+ block confirmations)
+
+This faster finality enables different UX patterns:
+
+```solidity
+contract InstantSettlement {
+    event PaymentProcessed(address indexed payer, uint256 amount, uint256 confirmationTime);
+    
+    function processPayment() external payable {
+        // On Zilliqa, users can see "confirmed" status much faster
+        emit PaymentProcessed(msg.sender, msg.value, block.timestamp);
+        
+        // Business logic can proceed with higher confidence
+        _executePaymentLogic();
+    }
+}
+```
+
+## Gas Fee Structure and Optimization
+
+### Understanding Zilliqa's Gas Model
+
+Zilliqa uses a **gas price minimum** of approximately **4,761.9048 gwei**, but this translates to much lower actual costs due to the gas-to-ZIL conversion factor.
+
+```solidity
+// Gas optimization strategies for Zilliqa
+contract ZilliqaOptimized {
+    // Pack struct efficiently
+    struct UserData {
+        uint128 balance;     // 16 bytes
+        uint128 rewards;     // 16 bytes - packed in same slot
+        address referrer;    // 20 bytes - new slot
+        uint32 joinTime;     // 4 bytes - packed with referrer
+        bool isActive;       // 1 byte - packed with referrer
+        // 7 bytes remaining in second slot
+    }
+    
+    mapping(address => UserData) public users;
+    
+    // Batch operations are more viable due to lower costs
+    function batchUpdateUsers(
+        address[] calldata userList,
+        uint128[] calldata newBalances
+    ) external {
+        require(userList.length == newBalances.length, "Length mismatch");
+        
+        for (uint256 i = 0; i < userList.length; i++) {
+            users[userList[i]].balance = newBalances[i];
+        }
+    }
+}
+```
+
+### Cost-Effective Patterns
+
+#### 1. Event-Heavy Architecture
+
+Events are extremely cheap on Zilliqa, enabling rich logging:
+
+```solidity
+contract EventOptimized {
+    // Instead of storing everything in expensive storage
+    event UserAction(
+        address indexed user,
+        uint256 indexed actionType,
+        bytes32 indexed category,
+        uint256 value,
+        bytes metadata
+    );
+    
+    function recordAction(
+        uint256 actionType,
+        bytes32 category,
+        uint256 value,
+        bytes calldata metadata
+    ) external {
+        // Emit detailed events instead of storage writes
+        emit UserAction(msg.sender, actionType, category, value, metadata);
+        
+        // Only store essential state
+        if (actionType == CRITICAL_ACTION) {
+            criticalState[msg.sender] = value;
+        }
+    }
+}
+```
+
+#### 2. Micro-Transaction Enablement
+
+Low fees make micro-transactions economically viable:
+
+```solidity
+contract MicroPayments {
+    mapping(address => uint256) public balances;
+    
+    // Micro-tips become feasible
+    function tipContent(address creator, uint256 contentId) external payable {
+        require(msg.value >= 0.001 ether, "Minimum tip: 0.001 ZIL");
+        
+        balances[creator] += msg.value;
+        
+        emit ContentTipped(creator, contentId, msg.sender, msg.value);
+    }
+    
+    // Frequent small operations are affordable
+    function incrementCounter() external {
+        counters[msg.sender]++; // Would be expensive on Ethereum
+        emit CounterIncremented(msg.sender, counters[msg.sender]);
+    }
+}
+```
+
+## Performance Optimization Strategies
+
+### 1. Batch Operations
+
+Take advantage of low gas costs to batch multiple operations:
+
+```solidity
+contract BatchOptimized {
+    struct TokenTransfer {
+        address recipient;
+        uint256 amount;
+    }
+    
+    function batchTransfer(TokenTransfer[] calldata transfers) external {
+        uint256 totalAmount = 0;
+        
+        // Calculate total first
+        for (uint256 i = 0; i < transfers.length; i++) {
+            totalAmount += transfers[i].amount;
+        }
+        
+        require(balances[msg.sender] >= totalAmount, "Insufficient balance");
+        
+        // Execute all transfers
+        balances[msg.sender] -= totalAmount;
+        
+        for (uint256 i = 0; i < transfers.length; i++) {
+            balances[transfers[i].recipient] += transfers[i].amount;
+            emit Transfer(msg.sender, transfers[i].recipient, transfers[i].amount);
+        }
+    }
+}
+```
+
+### 2. Storage Pattern Optimization
+
+#### Pull vs Push Patterns
+
+**Push Pattern** (more viable on Zilliqa):
+```solidity
+contract PushPayments {
+    function distributeRewards(address[] calldata recipients, uint256[] calldata amounts) external {
+        // Push pattern is more affordable on Zilliqa
+        for (uint256 i = 0; i < recipients.length; i++) {
+            (bool success, ) = payable(recipients[i]).call{value: amounts[i]}("");
+            if (!success) {
+                // Log failure, continue with others
+                emit PaymentFailed(recipients[i], amounts[i]);
+            }
+        }
+    }
+}
+```
+
+**Pull Pattern** (traditional approach):
+```solidity
+contract PullPayments {
+    mapping(address => uint256) public pendingRewards;
+    
+    function claimRewards() external {
+        uint256 amount = pendingRewards[msg.sender];
+        require(amount > 0, "No rewards");
+        
+        pendingRewards[msg.sender] = 0;
+        payable(msg.sender).transfer(amount);
+    }
+}
+```
+
+### 3. State Management Strategies
+
+#### Amortize Expensive Operations
+
+```solidity
+contract AmortizedOperations {
+    uint256 private constant BATCH_SIZE = 100;
+    uint256 public processingIndex;
+    address[] public pendingUsers;
+    
+    function addUserToBatch(address user) external {
+        pendingUsers.push(user);
+        
+        // Process batch when it reaches optimal size
+        if (pendingUsers.length >= BATCH_SIZE) {
+            _processBatch();
+        }
+    }
+    
+    function _processBatch() internal {
+        uint256 endIndex = processingIndex + BATCH_SIZE;
+        if (endIndex > pendingUsers.length) {
+            endIndex = pendingUsers.length;
+        }
+        
+        for (uint256 i = processingIndex; i < endIndex; i++) {
+            _processUser(pendingUsers[i]);
+        }
+        
+        processingIndex = endIndex;
+        
+        // Clean up if batch complete
+        if (processingIndex >= pendingUsers.length) {
+            delete pendingUsers;
+            processingIndex = 0;
+        }
+    }
+}
+```
+
+## Monitoring and Observability
+
+### 1. Gas Usage Tracking
+
+```solidity
+contract GasTracker {
+    event GasUsageRecorded(
+        string indexed operation,
+        uint256 gasUsed,
+        uint256 gasPrice,
+        uint256 cost
+    );
+    
+    modifier trackGas(string memory operation) {
+        uint256 gasStart = gasleft();
+        _;
+        uint256 gasUsed = gasStart - gasleft();
+        
+        emit GasUsageRecorded(
+            operation,
+            gasUsed,
+            tx.gasprice,
+            gasUsed * tx.gasprice
+        );
+    }
+    
+    function expensiveOperation() external trackGas("expensiveOperation") {
+        // Your operation here
+    }
+}
+```
+
+### 2. Performance Metrics
+
+```solidity
+contract PerformanceMonitoring {
+    struct OperationMetrics {
+        uint256 totalCalls;
+        uint256 totalGasUsed;
+        uint256 averageGas;
+        uint256 lastUpdated;
+    }
+    
+    mapping(bytes32 => OperationMetrics) public metrics;
+    
+    function recordMetrics(string calldata operation, uint256 gasUsed) internal {
+        bytes32 opHash = keccak256(bytes(operation));
+        OperationMetrics storage metric = metrics[opHash];
+        
+        metric.totalCalls++;
+        metric.totalGasUsed += gasUsed;
+        metric.averageGas = metric.totalGasUsed / metric.totalCalls;
+        metric.lastUpdated = block.timestamp;
+        
+        // Alert if gas usage increases significantly
+        if (gasUsed > metric.averageGas * 150 / 100) { // 50% increase
+            emit PerformanceAlert(operation, gasUsed, metric.averageGas);
+        }
+    }
+}
+```
+
+## Best Practices for Zilliqa Performance
+
+### 1. Design for Throughput
+- Batch operations when possible
+- Use events liberally for off-chain indexing
+- Consider push patterns over pull patterns
+- Design for parallel processing where applicable
+
+### 2. Optimize for Fast Finality
+- Build UX around 1-2 minute confirmation times
+- Use progressive confirmation states
+- Enable rapid user feedback
+
+### 3. Leverage Low-Cost Operations
+- Enable micro-transactions and frequent interactions
+- Use rich event logging for analytics
+- Implement more sophisticated validation logic
+
+### 4. Monitor and Alert
+- Track gas usage patterns over time
+- Set up alerts for performance regressions
+- Budget gas costs for predictable operations
+- Use automated performance testing
+
+## Cost Comparison Examples
+
+### Ethereum vs Zilliqa Gas Costs
+
+| Operation | Ethereum (20 gwei) | Zilliqa | Savings |
+|-----------|-------------------|---------|---------|
+| Simple Transfer | $0.50 | $0.01 | 98% |
+| Token Transfer | $2.00 | $0.02 | 99% |
+| Contract Deploy | $50.00 | $0.50 | 99% |
+| Complex DeFi Op | $25.00 | $0.25 | 99% |
+
+### Real-World Scenarios
+
+**DEX Trading:**
+- Ethereum: $10-50 per swap
+- Zilliqa: $0.10-0.50 per swap
+- **Impact**: Enables high-frequency trading strategies
+
+**NFT Minting:**
+- Ethereum: $20-100 per mint
+- Zilliqa: $0.20-1.00 per mint
+- **Impact**: Affordable for creators and collectors
+
+**Gaming Transactions:**
+- Ethereum: Prohibitively expensive for frequent actions
+- Zilliqa: Enables micro-transactions and frequent gameplay actions
+
+## Conclusion
+
+Zilliqa's performance characteristics enable fundamentally different application architectures:
+
+1. **Higher Interaction Frequency**: Users can afford to interact more often
+2. **Richer On-Chain Logic**: Complex validation and processing becomes economical
+3. **Event-Driven Architecture**: Comprehensive logging and analytics are affordable
+4. **Micro-Transaction Economy**: New business models become viable
+
+When building on Zilliqa, think beyond traditional blockchain constraints. Design for the performance and cost advantages the platform provides, and your applications will deliver superior user experiences while maintaining economic sustainability.
+
+The key is to measure, monitor, and optimize continuously while taking advantage of Zilliqa's unique strengths in throughput, finality, and cost efficiency.
