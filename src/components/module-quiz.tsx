@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Trophy, CheckCircle, XCircle, AlertCircle, ExternalLink } from "lucide-react";
+import { Clock, Trophy, CheckCircle, XCircle, AlertCircle, ExternalLink, Share2 } from "lucide-react";
 import { QuizMeta, MissionMeta } from "@/lib/mdx";
 import { trainingRegistryABI } from "@/lib/training-registry-abi";
 import { AchievementCelebration } from "@/components/achievement-celebration";
@@ -595,6 +595,28 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
     setCelebrationData(null);
   };
 
+  // Generate Twitter share URL using dedicated share pages
+  const generateTwitterShare = () => {
+    const moduleToAchievementId = {
+      'blockchain-fundamentals': '0001',
+      'evm-fundamentals': '0002', 
+      'intro-to-solidity': '0003',
+      'zilliqa-evm-setup': '0004',
+      'creating-erc20-tokens': '0005'
+    };
+
+    const achievementId = moduleToAchievementId[moduleSlug as keyof typeof moduleToAchievementId] || '0001';
+    const sharePageUrl = `https://plunderacademy.vercel.app/share/achievement/${achievementId}`;
+    
+    // Simple share text that will be enhanced by the share page's Open Graph meta tags
+    const shareText = `🏴‍☠️ Just unlocked a new achievement at @PlunderAcademy! Check it out:`;
+    
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(sharePageUrl)}`;
+    
+    return twitterUrl;
+  };
+
+
   const progress = quiz ? ((currentQuestion + 1) / quiz.questions.length) * 100 : 0;
   const answeredQuestions = answers.length;
 
@@ -656,6 +678,20 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
               </p>
               <p className="text-sm text-green-600 dark:text-green-400 mt-1">
                 Your NFT achievement is safely stored in your wallet.
+              </p>
+            </div>
+
+            {/* Share to Twitter Button */}
+            <div className="text-center pt-4">
+              <Button
+                onClick={() => window.open(generateTwitterShare(), '_blank')}
+                className="bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 mx-auto"
+              >
+                <Share2 className="size-4" />
+                Share Achievement on X
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                🏴‍☠️ Spread the word about your epic achievement!
               </p>
             </div>
           </CardContent>
@@ -1116,15 +1152,48 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
                   </div>
                 </div>
               )}
+
+              {/* Share to Twitter Button */}
+              <div className="text-center pt-4">
+                <Button
+                  onClick={() => window.open(generateTwitterShare(), '_blank')}
+                  className="bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 mx-auto"
+                >
+                  <Share2 className="size-4" />
+                  Share Achievement on X
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  🏴‍☠️ Show the world your epic achievement!
+                </p>
+              </div>
             </div>
           ) : result?.passed ? (
-            <div className="text-center p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
-              <p className="text-green-700 dark:text-green-300 font-semibold">
-                🎉 Congratulations! You passed the quiz!
-              </p>
-              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                Your achievement has been recorded.
-              </p>
+            <div className="space-y-4">
+              <div className="text-center p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                <p className="text-green-700 dark:text-green-300 font-semibold">
+                  🎉 Congratulations! You passed the quiz!
+                </p>
+                <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                  Your achievement has been recorded.
+                </p>
+              </div>
+
+              {/* Share to Twitter Button */}
+              <div className="text-center">
+                <Button
+                  onClick={() => window.open(generateTwitterShare(), '_blank')}
+                  className="bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 mx-auto"
+                >
+                  <Share2 className="size-4" />
+                  Share Achievement on X
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  🏴‍☠️ Spread the word about your epic achievement!
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  ✨ Your achievement preview will automatically appear in the tweet!
+                </p>
+              </div>
             </div>
           ) : (
             <div className="text-center p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
