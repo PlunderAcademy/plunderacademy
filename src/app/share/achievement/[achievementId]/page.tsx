@@ -137,12 +137,6 @@ export default async function ShareAchievementPage({ params }: ShareAchievementP
                 width={200}
                 height={266}
                 className="w-48 h-64 object-contain rounded"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  if (target.src.includes('.webp')) {
-                    target.src = target.src.replace('.webp', '.png');
-                  }
-                }}
                 unoptimized
                 priority
               />
