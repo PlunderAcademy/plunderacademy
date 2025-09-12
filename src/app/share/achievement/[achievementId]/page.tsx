@@ -58,6 +58,7 @@ export async function generateMetadata(
 
   const moduleTitle = getModuleFromAttributes(achievementData.attributes);
   const shareUrl = `https://plunderacademy.vercel.app/share/achievement/${resolvedParams.achievementId}`;
+  const framedImageUrl = `https://plunderacademy.vercel.app/api/achievement-frame/${resolvedParams.achievementId}`;
   
   const shareText = `🏴‍☠️ Just earned "${achievementData.name}" by conquering ${moduleTitle} at Plunder Academy!`;
 
@@ -71,9 +72,9 @@ export async function generateMetadata(
       siteName: 'Plunder Academy',
       images: [
         {
-          url: achievementData.image,
-          width: 400,
-          height: 533,
+          url: framedImageUrl,
+          width: 1200,
+          height: 628,
           alt: `${achievementData.name} Achievement NFT`,
         },
       ],
@@ -84,7 +85,7 @@ export async function generateMetadata(
       card: 'summary_large_image',
       title: `🏴‍☠️ Achievement Unlocked: ${achievementData.name}`,
       description: `${shareText}\n\n⚔️ Set sail to plunderacademy.com and claim your treasure!`,
-      images: [achievementData.image],
+      images: [framedImageUrl],
       creator: '@PlunderAcademy',
       site: '@PlunderAcademy',
     },
