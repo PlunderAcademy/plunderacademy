@@ -47,8 +47,6 @@ By the end of this guide, you'll have a complete development setup that enables 
 
 ### Installing WSL2
 
-#### Step 1: Enable WSL2
-
 1. **Open PowerShell as Administrator** (Right-click Start button → Windows PowerShell (Admin))
 2. **Enable WSL feature:**
    ```powershell
@@ -58,39 +56,22 @@ By the end of this guide, you'll have a complete development setup that enables 
    ```powershell
    dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
    ```
-4. **Restart your computer**
-
-#### Step 2: Set WSL2 as Default
-
-1. **Download WSL2 Linux kernel update:** Visit https://aka.ms/wsl2kernel
-2. **Install the update package**
-3. **Open PowerShell as Administrator again**
-4. **Set WSL2 as default:**
+4. **Install WSL2**
    ```powershell
-   wsl --set-default-version 2
+   wsl.exe --install
    ```
-
-#### Step 3: Install Ubuntu
-
-1. **Open Microsoft Store**
-2. **Search for "Ubuntu"**
-3. **Install "Ubuntu" (latest LTS version)**
-4. **Launch Ubuntu** from Start menu
-5. **Create user account** when prompted (this will be your Linux user)
-6. **Update the system:**
+5. Restart your PC at this stage
+6. **Open PowerShell as Administrator again** (Right-click Start button → Windows PowerShell (Admin))
+7. **Install Ubuntu**
+   ```powershell
+   wsl.exe --install Ubuntu
+   ```
+8. **Create user account** when prompted (this will be your Linux user)
+9. **Update the system:**
    ```bash
    sudo apt update && sudo apt upgrade -y
    ```
-
-### Configure VS Code for WSL2
-
-1. **Install "WSL" extension** in VS Code by Microsoft
-2. **Connect to WSL:** Click the remote connection button (bottom-left corner) → "New WSL Window"
-3. **Verify connection:** Terminal should show Linux prompt, not Windows
-
-**All subsequent steps in this guide should be performed in WSL2 Ubuntu terminal** if you're on Windows.
-
-## Step 1: Installing Visual Studio Code
+## Installing Visual Studio Code
 
 ### Why VS Code for Blockchain Development?
 
@@ -101,6 +82,30 @@ By the end of this guide, you'll have a complete development setup that enables 
 - **Extensions ecosystem** specifically for blockchain development
 - **IntelliSense** for code completion and documentation
 - **Debugging support** for complex development workflows
+
+### AI-Powered Development Enhancement
+
+**For developers who want AI assistance while coding:**
+
+If you'd like VS Code with built-in AI capabilities to accelerate your smart contract development, consider these options:
+
+**GitHub Copilot for VS Code:**
+- **AI code completion** directly in VS Code
+- **Smart contract suggestions** based on context
+- **Solidity pattern recognition** for common blockchain patterns
+- **Installation:** Search for "GitHub Copilot" in VS Code extensions
+- **Subscription required** but offers free trial
+- **Can be enabled once you open VS.Code**
+
+**Cursor.com Alternative:**
+- **AI-first code editor** built on VS Code foundation
+- **Chat with your codebase** for contextual assistance
+- **Advanced AI refactoring** and code generation
+- **Blockchain-aware suggestions** for smart contract development
+- **Free tier available** with premium features for advanced usage
+- **Instead of installing Vs.Code, download cursor from cursor.com instead**
+
+Both options can significantly speed up development by providing intelligent code suggestions, explaining complex blockchain concepts, and helping debug smart contract logic.
 
 ### Installation Process
 
@@ -133,7 +138,15 @@ By the end of this guide, you'll have a complete development setup that enables 
 3. **Test terminal:** View → Terminal (should open integrated terminal)
 4. **Test command palette:** Ctrl+Shift+P (should open command search)
 
-## Step 2: Installing Node.js 22.10+
+#### Configure VS Code for WSL2
+
+1. **Install "WSL" extension** in VS Code by Microsoft
+2. **Connect to WSL:** Click the remote connection button (bottom-left corner) → "New WSL Window"
+3. **Verify connection:** Terminal should show Linux prompt, not Windows
+
+**All subsequent steps in this guide should be performed in WSL2 Ubuntu terminal** if you're on Windows.
+
+## Installing Node.js 22.10+
 
 ### Why Node.js for Blockchain Development?
 
@@ -201,42 +214,26 @@ Follow the same NVM installation steps as WSL2 users above.
 
 **For all users (WSL2, macOS, Linux, Windows):**
 
-1. **Open your terminal** (WSL2 Ubuntu, macOS Terminal, Linux Terminal, or Windows Command Prompt)
-2. **Check Node.js version:**
+**Open your terminal** (WSL2 Ubuntu, macOS Terminal, Linux Terminal, or Windows Command Prompt)
+**Check Node.js version:**
    ```bash
    node --version
    ```
    Should show v22.10.0 or higher
 
-3. **Check npm version:**
+**Check npm version:**
    ```bash
    npm --version
    ```
    Should show 10.0.0 or higher
 
-4. **Test npm functionality:**
+**Test npm functionality:**
    ```bash
    npm --help
    ```
    Should display npm help information
 
-#### Configure npm (Optional but Recommended)
-
-**Set up npm for global packages:**
-```bash
-# Check current global folder
-npm config get prefix
-
-# Create a global packages folder in your user directory (avoids permission issues)
-mkdir "%USERPROFILE%\npm-global"
-npm config set prefix "%USERPROFILE%\npm-global"
-
-# Add to your PATH environment variable
-# Go to System Properties → Environment Variables → User variables
-# Edit PATH and add: %USERPROFILE%\npm-global
-```
-
-## Step 3: Setting Up Your First Hardhat Project
+## Setting Up Your First Hardhat Project
 
 ### Understanding Hardhat 3
 
@@ -261,25 +258,26 @@ npm config set prefix "%USERPROFILE%\npm-global"
 
 ### Initialize Your First Project
 
-1. **Create a new project folder:**
+**Create a new project folder:**
    ```bash
    mkdir my-first-zilliqa-project
    cd my-first-zilliqa-project
    ```
 
-2. **Initialize Hardhat 3:**
+**Initialize Hardhat 3:**
    ```bash
    npm init -y
-   npx hardhat@latest init
+   npx hardhat@latest --init
    ```
 
-3. **Choose project type when prompted:**
-   - ✅ **"Create a TypeScript project"** (recommended)
-   - ✅ **Use default project root** (current directory)
-   - ✅ **Add .gitignore** (for version control)
+**Choose the following when prompted:**
+   - ✅ **Hardhat 3** (recommended - all of the modules will use this)
+   - ✅ **Use default path** (current directory - default)
+   - ✅ **A TypeScript Hardhat project using Node Test Runner and Viem** (recommended)
+   - ✅ **Hardhat only supports ESM - true or Y to switch** (required)
    - ✅ **Install dependencies** (will install required packages automatically)
 
-4. **Wait for initialization to complete** (may take 2-3 minutes)
+**Wait for initialization to complete** (may take 2-3 minutes)
 
 ### Understanding Your Project Structure
 
@@ -302,44 +300,61 @@ my-first-zilliqa-project/
 
 ### Configure Hardhat for Zilliqa
 
-1. **Open the project in VS Code:**
+**Open the project in VS Code:**
    ```bash
    code .
    ```
 
-2. **Edit `hardhat.config.ts`** to add Zilliqa networks:
+**Edit `hardhat.config.ts`** to add Zilliqa networks:
 
 ```typescript
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
+import type { HardhatUserConfig } from "hardhat/config";
+
+import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import { configVariable } from "hardhat/config";
+import "dotenv/config";
 
 const config: HardhatUserConfig = {
+  plugins: [hardhatToolboxViemPlugin],
   solidity: {
-    version: "0.8.28",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
+    profiles: {
+      default: {
+        version: "0.8.28",
       },
-      evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+      production: {
+        version: "0.8.28",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+        },
+      },
     },
   },
   networks: {
-    // Local development network
-    hardhat: {
-      chainId: 31337,
+    hardhatMainnet: {
+      type: "edr-simulated",
+      chainType: "l1",
     },
-    // Zilliqa Testnet
-    zilliqaTestnet: {
-      url: "https://api.testnet.zilliqa.com",
-      chainId: 33101,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    hardhatOp: {
+      type: "edr-simulated",
+      chainType: "op",
     },
-    // Zilliqa Mainnet
     zilliqaMainnet: {
-      url: "https://api.zilliqa.com",
+      type: "http",
+      chainType: "l1",
       chainId: 32769,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      url: "https://api.zilliqa.com",
+      accounts: [configVariable("ZILLIQA_MAINNET_PRIVATE_KEY")]
+    },
+    zilliqaTestnet: {
+      type: "http",
+      chainType: "l1",
+      chainId: 33101,
+      url: "https://api.testnet.zilliqa.com",
+      accounts: [configVariable("ZILLIQA_TESTNET_PRIVATE_KEY")]
     },
   },
 };
@@ -347,22 +362,22 @@ const config: HardhatUserConfig = {
 export default config;
 ```
 
-3. **Create environment variables file** (`.env`):
+**Create environment variables file** (`.env`):
 ```bash
 # Create .env file (never commit this to version control)
 echo "# Environment variables for development" > .env
-echo "PRIVATE_KEY=your_metamask_private_key_here" >> .env
+echo "ZILLIQA_TESTNET_PRIVATE_KEY=your_testnet_private_key_here" >> .env
 echo "" >> .env
 echo "# Note: Never commit this file to version control" >> .env
 echo "# Add .env to your .gitignore file" >> .env
 ```
 
-4. **Install additional dependencies:**
+**Install additional dependencies:**
 ```bash
 npm install --save-dev dotenv
 ```
 
-5. **Update `hardhat.config.ts`** to load environment variables:
+**Update `hardhat.config.ts`** to load environment variables:
 ```typescript
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
@@ -371,7 +386,7 @@ import "dotenv/config"; // Add this line
 // ... rest of config stays the same
 ```
 
-## Step 4: Installing Hardhat VS Code Extension
+## Installing Hardhat VS Code Extension
 
 ### Why the Hardhat Extension?
 
@@ -386,92 +401,32 @@ import "dotenv/config"; // Add this line
 ### Installation Steps
 
 1. **Open VS Code extensions:** Ctrl+Shift+X
-2. **Search for "Hardhat"**
-3. **Install "Hardhat for Visual Studio Code"** by Nomicfoundation
+2. **Search for "Solidity"**
+3. **Install "Solidity"** by Nomicfoundation
 4. **Reload VS Code** if prompted
 
-### Configure the Extension
-
-1. **Open VS Code settings:** Ctrl+,
-2. **Search for "hardhat"**
-3. **Configure key settings:**
-   - ✅ **Enable formatter** for automatic code formatting
-   - ✅ **Enable linter** for error detection
-   - ✅ **Auto-compile on save** for instant feedback
-
-### Test the Extension
-
-1. **Open `contracts/Counter.sol`** in your project
-2. **Verify syntax highlighting** - Solidity keywords should be colored
-3. **Test error detection** - try introducing a syntax error and see red underlines
-4. **Test code completion** - type `pragma` and see auto-completion suggestions
-
-## Step 5: Installing Hardhat Ignition
-
-### What is Hardhat Ignition?
-
-**Hardhat Ignition provides:**
-- **Declarative deployments** - describe what you want deployed
-- **Dependency management** - automatically handle deployment order
-- **Resumable deployments** - recover from failed deployments
-- **Network compatibility** - works seamlessly across different networks
-- **Verification integration** - automatically verify contracts
-
-### Installation
-
-Hardhat Ignition is included in the Hardhat toolbox, but let's ensure it's properly configured:
-
-1. **Verify installation:**
-   ```bash
-   npx hardhat ignition --help
-   ```
-
-2. **If not installed, add it:**
-   ```bash
-   npm install --save-dev @nomicfoundation/hardhat-ignition
-   ```
-
-### Understanding Ignition Modules
-
-**Example deployment module** (`ignition/modules/Counter.ts`):
-
-```typescript
-import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
-
-export default buildModule("CounterModule", (m) => {
-  // Deploy the Counter contract
-  const counter = m.contract("Counter");
-
-  // Call the incBy function with parameter 5
-  m.call(counter, "incBy", [5n]);
-
-  // Return the contract for use in other modules
-  return { counter };
-});
-```
-
-## Step 6: Testing Your Development Environment
+## Testing Your Development Environment
 
 ### Compile Your First Contract
 
-1. **Compile all contracts:**
+**Compile all contracts:**
    ```bash
    npx hardhat compile
    ```
 
-2. **Expected output:**
+**Expected output:**
    ```
    Compiled 1 Solidity file successfully (or similar)
    ```
 
 ### Run Tests
 
-1. **Run all tests:**
+**Run all tests:**
    ```bash
    npx hardhat test
    ```
 
-2. **Expected output:**
+**Expected output:**
    ```
    ✓ Should have correct initial value
    ✓ Should increment correctly
@@ -480,38 +435,111 @@ export default buildModule("CounterModule", (m) => {
 
 ### Deploy to Local Network
 
-1. **Start local Hardhat network:**
-   ```bash
-   npx hardhat node
-   ```
-   Keep this terminal open - it's your local blockchain
+**Create a deployment script** for better control and debugging:
 
-2. **Open a new terminal** and deploy:
-   ```bash
-   npx hardhat ignition deploy ignition/modules/Counter.ts --network localhost
-   ```
+**Create `scripts/deploy.ts`:**
+```bash
+mkdir -p scripts
+```
 
-3. **Expected output:**
-   ```
-   Hardhat Ignition 🚀
-   
-   Deploying [ CounterModule ]
-   
-   ✅ CounterModule#Counter
-   ✅ CounterModule#Counter.incBy
-   
-   [ CounterModule ] successfully deployed 🚀
-   ```
+**Create the deployment script** (`scripts/deploy.ts`):
+```typescript
+import { network } from "hardhat";
+
+async function main() {
+  // Get the current network name from Hardhat runtime
+  const networkName = process.env.HARDHAT_NETWORK || "localhost";
+  console.log(`Deploying Counter contract to ${networkName}...`);
+  
+  try {
+    const { viem } = await network.connect({
+      network: networkName,
+    });
+
+    const publicClient = await viem.getPublicClient();
+    const [walletClient] = await viem.getWalletClients();
+    
+    console.log("Deploying from account:", walletClient.account.address);
+    
+    // Show network info
+    const chainId = await publicClient.getChainId();
+    console.log("Network:", networkName);
+    console.log("Chain ID:", chainId);
+    
+    // Get the Counter contract artifacts
+    const counter = await viem.deployContract("Counter");
+    
+    console.log("✅ Counter deployed to:", counter.address);
+    
+    // Call incBy with 5 (like in the Ignition module)
+    console.log("Calling incBy(5)...");
+    const incByTx = await counter.write.incBy([5n]);
+    
+    console.log("Transaction hash:", incByTx);
+    
+    // Wait for transaction and get receipt
+    const receipt = await publicClient.waitForTransactionReceipt({ 
+      hash: incByTx 
+    });
+    
+    console.log("✅ incBy(5) transaction confirmed in block:", receipt.blockNumber);
+    
+    // Read the current value
+    const currentValue = await counter.read.x();
+    console.log("Current counter value:", currentValue.toString());
+    
+    console.log("\n🎉 Deployment completed successfully!");
+    console.log("Contract address:", counter.address);
+    console.log("Network:", networkName);
+    console.log("Chain ID:", chainId);
+    
+  } catch (error) {
+    console.error("❌ Deployment failed:", error);
+    process.exit(1);
+  }
+}
+
+main().catch(console.error);
+```
+
+**Start local Hardhat network:**
+```bash
+npx hardhat node
+```
+Keep this terminal open - it's your local blockchain
+
+**Open a new terminal** and deploy using your script:
+```bash
+npx hardhat run scripts/deploy.ts --network localhost
+```
+
+**Expected output:**
+```
+Deploying Counter contract to localhost...
+Deploying from account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Network: localhost
+Chain ID: 31337
+✅ Counter deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+Calling incBy(5)...
+Transaction hash: 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+✅ incBy(5) transaction confirmed in block: 1n
+Current counter value: 5
+
+🎉 Deployment completed successfully!
+Contract address: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+Network: localhost
+Chain ID: 31337
+```
 
 ### Connect MetaMask to Local Network
 
-1. **Add localhost network to MetaMask:**
+**Add localhost network to MetaMask:**
    - Network Name: `Hardhat Local`
    - RPC URL: `http://127.0.0.1:8545`
    - Chain ID: `31337`
    - Currency Symbol: `ETH`
 
-2. **Import a test account:**
+**Import a test account:**
    - Copy a private key from the Hardhat node output
    - Import it into MetaMask
    - You should see 10,000 ETH in the test account
@@ -520,43 +548,66 @@ export default buildModule("CounterModule", (m) => {
 
 ### Prepare for Testnet Deployment
 
-1. **Ensure MetaMask is set up** with Zilliqa Testnet
-2. **Have testnet ZIL** in your wallet (from previous module)
-3. **Get your private key** from MetaMask:
-   - Account menu → Account details → Export private key
-   - ⚠️ **Never share this key or commit it to version control**
+**Create a dedicated development wallet for security:**
 
-4. **Add your private key to `.env`:**
+**Generate a new private key** for development (never use your main wallet):
+   ```bash
+   openssl rand -hex 32 | sed 's/^/ZILLIQA_TESTNET_PRIVATE_KEY=0x/' > .env
+   echo "" >> .env
+   echo "# Note: Never commit this file to version control" >> .env
+   echo "# Add .env to your .gitignore file" >> .env
    ```
-   PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+
+**Display your new private key** to import into MetaMask:
+   ```bash
+   cat .env
    ```
+   Copy the private key (the part after `0x`)
+
+**Import the new wallet into MetaMask:**
+   - Open MetaMask → Account menu → Import Account
+   - Select "Private Key" as import type
+   - Paste your generated private key
+   - Click "Import"
+   - ⚠️ **This is a development-only wallet - never use for real funds**
+
+**Switch MetaMask to Zilliqa Testnet** (if not already configured)
+
+**Fund your development wallet** with testnet ZIL:
+   - Copy your new wallet address from MetaMask
+   - Visit [Zilliqa Testnet Faucet](https://faucet.testnet.zilliqa.com)
+   - Paste your wallet address
+   - Request testnet ZIL (you'll receive 100 ZIL for testing)
 
 ### Deploy to Zilliqa Testnet
 
-1. **Deploy your contract:**
+**Deploy your contract:**
    ```bash
-   npx hardhat ignition deploy ignition/modules/Counter.ts --network zilliqaTestnet
+   npx hardhat run scripts/deploy.ts --network localhost
    ```
 
-2. **Expected output:**
+**Expected output:**
    ```
-   Hardhat Ignition 🚀
-   
-   Deploying [ CounterModule ]
-   
-   ✅ CounterModule#Counter - 0x1234567890123456789012345678901234567890
-   ✅ CounterModule#Counter.incBy
-   
-   [ CounterModule ] successfully deployed 🚀
-   
-   Deployed Addresses
-   
-   CounterModule#Counter - 0x1234567890123456789012345678901234567890
+   Compiling your Solidity contracts...
+
+   Nothing to compile
+
+   Deploying Counter contract to Zilliqa testnet...
+   Deploying from account: 0xf0622b3a95935e07a4fa22a83d997e2d74f15e12
+   ✅ Counter deployed to: 0x38e480a5c189ec7318a5bff7899688dd296738a7
+   Calling incBy(5)...
+   Transaction hash: 0xe3039183ac1eb65e1186636dc8fb660ad62b94fd107eef68306915501b980cbe
+   ✅ incBy(5) transaction confirmed in block: 14441949n
+   Current counter value: 5
+
+   🎉 Deployment completed successfully!
+   Contract address: 0x38e480a5c189ec7318a5bff7899688dd296738a7
+   Network: Zilliqa Testnet
    ```
 
-3. **Verify on block explorer:**
+**Verify on block explorer:**
    - Copy the contract address
-   - Visit https://zilliqa.blockscout.com
+   - Visit http://testnet.zilliqa.blockscout.com
    - Search for your contract address
    - Verify the deployment transaction succeeded
 
@@ -606,15 +657,6 @@ my-zilliqa-project/
 - ✅ **Regular backups** of your development environment
 - ✅ **Use hardware wallets** for mainnet deployments with significant funds
 
-### Useful VS Code Extensions
-
-**Recommended extensions for blockchain development:**
-1. **Solidity** by Juan Blanco (additional Solidity support)
-2. **GitLens** by GitKraken (enhanced Git integration)
-3. **Prettier** by Prettier (code formatting)
-4. **Auto Rename Tag** by Jun Han (helpful for frontend work)
-5. **Bracket Pair Colorizer** by CoenraadS (better code readability)
-
 ## Troubleshooting Common Issues
 
 ### Node.js Issues
@@ -630,6 +672,7 @@ my-zilliqa-project/
 - Use `npx hardhat` instead of just `hardhat`
 - Install Hardhat globally: `npm install -g hardhat` (not recommended)
 - Ensure you're in the project directory
+- I had issues with ignition so used manual deploy scripts
 
 ### Network Connection Issues
 
