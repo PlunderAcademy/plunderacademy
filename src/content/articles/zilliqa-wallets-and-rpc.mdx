@@ -1,32 +1,352 @@
 ---
 slug: zilliqa-wallets-and-rpc
 title: Connecting Wallets and RPC on Zilliqa
-excerpt: How to connect with RainbowKit and wagmi, pick RPCs, and query chain data.
+excerpt: Complete guide to integrating wallets with RainbowKit and wagmi, selecting RPC providers, and efficiently querying chain data on Zilliqa.
 level: beginner
 tags:
   - zilliqa
   - wallets
   - rpc
+  - integration
+  - web3
 ---
 
-## Wallets & RPC on Zilliqa
+Building dApps on Zilliqa requires seamless wallet integration and reliable RPC connectivity. This guide covers the complete setup process using modern tools like RainbowKit, wagmi, and viem to create a robust connection layer for your Zilliqa applications.
 
-Use WalletConnect via RainbowKit, and viem to talk to Zilliqa EVM. Keep your RPC keys secure and prefer provider failover in production.
+## Modern Wallet Integration Stack
 
+### Recommended Architecture
 
-### Recommended Stack
+The current best practice for Zilliqa wallet integration combines:
 
-- **wagmi + RainbowKit** for connections and UI.
-- **viem** for robust RPC calls.
-- **WalletConnect** project ID via NEXT_PUBLIC env.
+- **RainbowKit**: Beautiful wallet connection UI
+- **wagmi**: React hooks for Ethereum (and Zilliqa) interactions  
+- **viem**: Type-safe, performant Ethereum library
+- **WalletConnect**: Protocol for connecting mobile wallets
 
-```javascript
-// viem example
-import { createPublicClient, http } from 'viem';
-import { zilliqa } from 'viem/chains';
-const client = createPublicClient({ chain: zilliqa, transport: http() });
+This stack provides excellent developer experience while maintaining compatibility with the broader Ethereum ecosystem.
+
+## Setting Up RainbowKit + wagmi
+
+### 1. Installation
+
+```bash
+npm install @rainbow-me/rainbowkit wagmi viem @tanstack/react-query
 ```
 
-### Queries
+### 2. Basic Configuration
 
-Read contract state with `client.readContract`, and simulate writes with `client.simulateContract` before sending.
+```typescript
+// src/lib/wagmi.ts
+import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { zilliqa, zilliqaTestnet } from 'viem/chains';
+
+export const wagmiConfig = getDefaultConfig({
+  appName: 'My Zilliqa dApp',
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+  chains: [zilliqaTestnet, zilliqa],
+  ssr: true, // Enable if using Next.js SSR
+});
+```
+
+### 3. Provider Setup
+
+```typescript
+// src/components/providers.tsx
+'use client';
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { WagmiProvider } from 'wagmi';
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { wagmiConfig } from '@/lib/wagmi';
+
+import '@rainbow-me/rainbowkit/styles.css';
+
+const queryClient = new QueryClient();
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>
+          {children}
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
+}
+```
+
+## Contract Interaction Patterns
+
+### 1. Reading Contract Data
+
+```typescript
+// src/hooks/use-contract-read.ts
+import { useReadContract } from 'wagmi';
+
+const TREASURE_CHEST_ABI = [
+  {
+    inputs: [],
+    name: 'getTotalDeposits',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [],
+    name: 'captain',
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+] as const;
+
+export function useTreasureChestData(contractAddress: `0x${string}`) {
+  const { data: totalDeposits, isLoading: depositsLoading } = useReadContract({
+    address: contractAddress,
+    abi: TREASURE_CHEST_ABI,
+    functionName: 'getTotalDeposits',
+  });
+
+  const { data: captain, isLoading: captainLoading } = useReadContract({
+    address: contractAddress,
+    abi: TREASURE_CHEST_ABI,
+    functionName: 'captain',
+  });
+
+  return {
+    totalDeposits,
+    captain,
+    isLoading: depositsLoading || captainLoading,
+  };
+}
+```
+
+### 2. Writing to Contracts
+
+```typescript
+// src/hooks/use-contract-write.ts
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther } from 'viem';
+
+const TREASURE_CHEST_WRITE_ABI = [
+  {
+    inputs: [],
+    name: 'depositGold',
+    outputs: [],
+    stateMutability: 'payable',
+    type: 'function'
+  },
+  {
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    name: 'withdrawGold',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+] as const;
+
+export function useTreasureChestActions(contractAddress: `0x${string}`) {
+  const { writeContract, data: hash, isPending } = useWriteContract();
+  
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  const depositGold = (amount: string) => {
+    writeContract({
+      address: contractAddress,
+      abi: TREASURE_CHEST_WRITE_ABI,
+      functionName: 'depositGold',
+      value: parseEther(amount),
+    });
+  };
+
+  const withdrawGold = (amount: string) => {
+    writeContract({
+      address: contractAddress,
+      abi: TREASURE_CHEST_WRITE_ABI,
+      functionName: 'withdrawGold',
+      args: [parseEther(amount)],
+    });
+  };
+
+  return {
+    depositGold,
+    withdrawGold,
+    isPending,
+    isConfirming,
+    isSuccess,
+    transactionHash: hash,
+  };
+}
+```
+
+## Direct viem Usage
+
+For more control or non-React applications, use viem directly:
+
+### 1. Client Setup
+
+```typescript
+// src/lib/viem-client.ts
+import { createPublicClient, createWalletClient, http, custom } from 'viem';
+import { zilliqaTestnet } from 'viem/chains';
+
+// Public client for reading blockchain data
+export const publicClient = createPublicClient({
+  chain: zilliqaTestnet,
+  transport: http(),
+});
+
+// Wallet client for writing transactions (requires wallet connection)
+export const getWalletClient = () => {
+  if (typeof window !== 'undefined' && window.ethereum) {
+    return createWalletClient({
+      chain: zilliqaTestnet,
+      transport: custom(window.ethereum),
+    });
+  }
+  throw new Error('Ethereum wallet not found');
+};
+```
+
+### 2. Reading Contract Data
+
+```typescript
+// src/lib/contract-reads.ts
+import { publicClient } from './viem-client';
+
+const CONTRACT_ADDRESS = '0x1234567890123456789012345678901234567890';
+
+export async function getTotalDeposits() {
+  try {
+    const result = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: ABI,
+      functionName: 'getTotalDeposits',
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error reading contract:', error);
+    throw error;
+  }
+}
+```
+
+## RPC Provider Configuration
+
+### 1. Advanced RPC Configuration
+
+```typescript
+// src/lib/wagmi-advanced.ts
+import { createConfig, http, fallback } from 'wagmi';
+import { zilliqa, zilliqaTestnet } from 'viem/chains';
+
+export const advancedConfig = createConfig({
+  chains: [zilliqaTestnet, zilliqa],
+  transports: {
+    [zilliqaTestnet.id]: fallback([
+      http('https://api.testnet.zilliqa.com'),
+      http('https://backup-testnet-rpc.com'), // Backup RPC
+    ]),
+    [zilliqa.id]: fallback([
+      http('https://api.zilliqa.com'),
+      http('https://backup-mainnet-rpc.com'), // Backup RPC
+    ]),
+  },
+});
+```
+
+## Error Handling and Best Practices
+
+### 1. Comprehensive Error Handling
+
+```typescript
+// src/lib/error-handling.ts
+import { BaseError, ContractFunctionRevertedError } from 'viem';
+
+export function handleContractError(error: unknown) {
+  if (error instanceof BaseError) {
+    const revertError = error.walk(err => err instanceof ContractFunctionRevertedError);
+    
+    if (revertError instanceof ContractFunctionRevertedError) {
+      const errorName = revertError.data?.errorName ?? '';
+      
+      // Handle specific contract errors
+      switch (errorName) {
+        case 'OnlyCaptain':
+          return 'Only the captain can perform this action';
+        case 'InsufficientBalance':
+          return 'Insufficient balance for this operation';
+        case 'ZeroAmount':
+          return 'Amount must be greater than zero';
+        default:
+          return `Contract error: ${errorName}`;
+      }
+    }
+  }
+  
+  return 'An unexpected error occurred';
+}
+```
+
+### 2. Connection Monitoring
+
+```typescript
+// src/hooks/use-connection-monitor.ts
+import { useEffect } from 'react';
+import { useAccount, useChainId } from 'wagmi';
+import { zilliqaTestnet } from 'viem/chains';
+
+export function useConnectionMonitor() {
+  const { isConnected, address } = useAccount();
+  const chainId = useChainId();
+  
+  useEffect(() => {
+    if (isConnected && chainId !== zilliqaTestnet.id) {
+      console.warn('Connected to wrong network. Please switch to Zilliqa Testnet.');
+    }
+  }, [isConnected, chainId]);
+
+  return {
+    isConnected,
+    isCorrectNetwork: chainId === zilliqaTestnet.id,
+    address,
+  };
+}
+```
+
+## Security Considerations
+
+### 1. RPC Security
+- Never expose private RPC endpoints in client-side code
+- Use environment variables for sensitive configuration
+- Implement rate limiting for public endpoints
+- Consider using multiple RPC providers for redundancy
+
+### 2. Wallet Security
+- Always validate user inputs before sending transactions
+- Use simulation before actual transaction execution
+- Implement proper error handling for failed transactions
+- Never store private keys or sensitive data in frontend code
+
+### 3. Contract Interaction Security
+- Validate contract addresses
+- Use type-safe ABIs
+- Implement proper error boundaries
+- Add transaction confirmation UI
+
+## Best Practices Summary
+
+1. **Use Modern Stack**: RainbowKit + wagmi + viem for best developer experience
+2. **Error Handling**: Implement comprehensive error handling and user feedback
+3. **Network Monitoring**: Check network connectivity and chain compatibility
+4. **Transaction UX**: Provide clear feedback on transaction status
+5. **Security First**: Validate inputs, simulate transactions, handle errors gracefully
+6. **Performance**: Batch reads, cache data, use efficient RPC patterns
+7. **Monitoring**: Track RPC health and connection status
+
+By following this guide, you'll have a robust, secure, and user-friendly wallet integration for your Zilliqa dApp that leverages the best tools in the ecosystem while maintaining excellent performance and reliability.

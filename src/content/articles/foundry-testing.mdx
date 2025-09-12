@@ -53,7 +53,7 @@ contract TreasureChestTest is Test {
     
     function setUp() public {
         vm.prank(captain);
-        chest = new TreasureChest(1 ether); // 1 ETH initial gold
+        chest = new TreasureChest{value: 1 ether}(); // 1 ETH initial deposit
         
         // Fund test accounts
         vm.deal(captain, 10 ether);
@@ -71,8 +71,8 @@ contract TreasureChestTest is Test {
 contract TreasureChestUnitTest is TreasureChestTest {
     function testInitialState() public {
         assertEq(chest.captain(), captain);
-        assertEq(chest.gold(), 1 ether);
-        assertEq(chest.getBalance(), 0);
+        assertEq(chest.getTotalDeposits(), 1 ether);
+        assertEq(chest.getBalance(), 1 ether);
     }
     
     function testDepositGold() public {
@@ -84,9 +84,9 @@ contract TreasureChestUnitTest is TreasureChestTest {
         
         chest.depositGold{value: depositAmount}();
         
-        assertEq(chest.gold(), 3 ether); // 1 + 2
+        assertEq(chest.getTotalDeposits(), 3 ether); // 1 + 2
         assertEq(chest.contributions(crew1), depositAmount);
-        assertEq(chest.getBalance(), depositAmount);
+        assertEq(chest.getBalance(), 3 ether);
     }
     
     function testWithdrawGold() public {
@@ -103,7 +103,7 @@ contract TreasureChestUnitTest is TreasureChestTest {
         
         chest.withdrawGold(withdrawAmount);
         
-        assertEq(chest.gold(), 1.5 ether); // 3 - 1.5
+        assertEq(chest.getTotalDeposits(), 1.5 ether); // 3 - 1.5
         assertEq(captain.balance, captainBalanceBefore + withdrawAmount);
     }
 }
@@ -118,7 +118,7 @@ contract TreasureChestAccessTest is TreasureChestTest {
         
         // Non-captain should not be able to withdraw
         vm.prank(pirate);
-        vm.expectRevert("Only the captain can perform this action");
+        vm.expectRevert(abi.encodeWithSignature("OnlyCaptain()"));
         chest.withdrawGold(1 ether);
         
         // Captain should be able to withdraw
@@ -155,14 +155,14 @@ contract TreasureChestFuzzTest is TreasureChestTest {
         // Bound the amount to reasonable values
         amount = bound(amount, 1, 100 ether);
         
-        uint256 goldBefore = chest.gold();
+        uint256 totalDepositsBefore = chest.getTotalDeposits();
         uint256 balanceBefore = chest.getBalance();
         
         vm.deal(crew1, amount);
         vm.prank(crew1);
         chest.depositGold{value: amount}();
         
-        assertEq(chest.gold(), goldBefore + amount);
+        assertEq(chest.getTotalDeposits(), totalDepositsBefore + amount);
         assertEq(chest.getBalance(), balanceBefore + amount);
         assertEq(chest.contributions(crew1), amount);
     }
@@ -177,13 +177,13 @@ contract TreasureChestFuzzTest is TreasureChestTest {
         vm.prank(crew1);
         chest.depositGold{value: depositAmount}();
         
-        uint256 goldBefore = chest.gold();
+        uint256 totalDepositsBefore = chest.getTotalDeposits();
         
         // Test: withdraw
         vm.prank(captain);
         chest.withdrawGold(withdrawAmount);
         
-        assertEq(chest.gold(), goldBefore - withdrawAmount);
+        assertEq(chest.getTotalDeposits(), totalDepositsBefore - withdrawAmount);
     }
 }
 ```
@@ -261,7 +261,7 @@ function testZilliqaPerformance() public {
         chest.depositGold{value: 0.001 ether}();
     }
     
-    assertEq(chest.gold(), 1 ether + (numOperations * 0.001 ether));
+    assertEq(chest.getTotalDeposits(), 1 ether + (numOperations * 0.001 ether));
 }
 ```
 
@@ -290,12 +290,12 @@ function testZilliqaPerformance() public {
 import "forge-std/console.sol";
 
 function testDebugExample() public {
-    console.log("Gold before:", chest.gold());
+    console.log("Total deposits before:", chest.getTotalDeposits());
     
     vm.prank(crew1);
     chest.depositGold{value: 1 ether}();
     
-    console.log("Gold after:", chest.gold());
+    console.log("Total deposits after:", chest.getTotalDeposits());
     console.log("Balance:", chest.getBalance());
 }
 ```

@@ -37,29 +37,60 @@ Here's a simple Solidity example that can run on Zilliqa's EVM:
 
 ```solidity
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.24;
 
 contract TreasureChest {
     address public captain;
-    uint256 public gold;
+    uint256 public totalDeposits;
+    mapping(address => uint256) public contributions;
+    
+    event GoldDeposited(address indexed contributor, uint256 amount);
+    event GoldWithdrawn(address indexed recipient, uint256 amount);
+    
+    error OnlyCaptain();
+    error InsufficientGold(uint256 requested, uint256 available);
+    error TransferFailed();
+    error ZeroAmount();
 
-    constructor(uint256 _initialGold) {
+    constructor() payable {
         captain = msg.sender;
-        gold = _initialGold;
+        if (msg.value > 0) {
+            totalDeposits = msg.value;
+            contributions[msg.sender] = msg.value;
+            emit GoldDeposited(msg.sender, msg.value);
+        }
     }
 
-    function plunder(uint256 amount) public {
-        require(msg.sender == captain, "Only the captain can plunder!");
-        gold += amount;
+    modifier onlyCaptain() {
+        if (msg.sender != captain) revert OnlyCaptain();
+        _;
     }
 
-    function loot(uint256 amount) public {
-        require(gold >= amount, "Not enough gold in the chest!");
-        gold -= amount;
-        payable(msg.sender).transfer(amount);
+    function plunder() external payable {
+        if (msg.value == 0) revert ZeroAmount();
+        
+        totalDeposits += msg.value;
+        contributions[msg.sender] += msg.value;
+        emit GoldDeposited(msg.sender, msg.value);
     }
 
-    receive() external payable {}
+    function loot(uint256 amount) external onlyCaptain {
+        if (amount == 0) revert ZeroAmount();
+        
+        uint256 balance = address(this).balance;
+        if (balance < amount) revert InsufficientGold(amount, balance);
+        
+        totalDeposits -= amount;
+        
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        if (!success) revert TransferFailed();
+        
+        emit GoldWithdrawn(msg.sender, amount);
+    }
+
+    function getBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
 }
 ```
 

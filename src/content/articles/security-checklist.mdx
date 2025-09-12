@@ -72,7 +72,8 @@ contract SecureWithdrawal is ReentrancyGuard {
         require(amount > 0, "No balance");
         
         // External call before state update - DANGEROUS!
-        payable(msg.sender).transfer(amount);
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Transfer failed");
         balances[msg.sender] = 0; // Too late!
     }
     
@@ -85,7 +86,8 @@ contract SecureWithdrawal is ReentrancyGuard {
         balances[msg.sender] = 0;
         
         // External call after state update
-        payable(msg.sender).transfer(amount);
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Transfer failed");
     }
 }
 ```
@@ -115,7 +117,9 @@ contract SafeArithmetic {
         // Safe: Will revert on underflow
         require(balances[msg.sender] >= amount, "Insufficient balance");
         balances[msg.sender] -= amount;
-        payable(msg.sender).transfer(amount);
+        
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Transfer failed");
     }
     
     // For gas optimization in loops (when overflow is impossible)
@@ -161,7 +165,9 @@ contract SafeExternalCalls {
         require(amount > 0, "No pending withdrawal");
         
         pendingWithdrawals[msg.sender] = 0;
-        require(payable(msg.sender).send(amount), "Transfer failed");
+        
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Transfer failed");
     }
 }
 ```
