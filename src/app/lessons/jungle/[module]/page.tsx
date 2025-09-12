@@ -105,7 +105,6 @@ export default async function JungleModulePage({ params }: JungleModulePageProps
   );
 
   const moduleIndex = JUNGLE_MODULES.indexOf(resolvedParams.module);
-  const prevModule = moduleIndex > 0 ? JUNGLE_MODULES[moduleIndex - 1] : null;
 
   // Get the appropriate components for this module
   const ImageComponent = MODULE_IMAGE_COMPONENTS[resolvedParams.module as keyof typeof MODULE_IMAGE_COMPONENTS];
@@ -283,22 +282,12 @@ export default async function JungleModulePage({ params }: JungleModulePageProps
 
       {/* Navigation */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        {prevModule ? (
-          <Button asChild variant="outline">
-            <Link href={`/lessons/jungle/${prevModule}`}>
-              <ChevronLeft className="mr-2 size-4" />
-              Previous: {MODULE_TITLES[prevModule as keyof typeof MODULE_TITLES]}
-            </Link>
-          </Button>
-        ) : (
-          <Button asChild variant="outline">
-            <Link href="/lessons/jungle">
-              <TreePine className="mr-2 size-4" />
-              Back to Jungle Map
-            </Link>
-          </Button>
-        )}
-        
+        <Button asChild variant="outline">
+          <Link href="/lessons/jungle">
+            <TreePine className="mr-2 size-4" />
+            Back to Jungle Map
+          </Link>
+        </Button>
       </div>
     </div>
     </WalletAuthGuard>
