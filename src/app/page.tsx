@@ -688,7 +688,7 @@ export default function Home() {
         </div>
         <div>
           <Image
-            src="/placeholder.svg"
+            src="/deploy-with-confidence.webp"
             alt="Zilliqa focus"
             width={1200}
             height={800}
@@ -724,7 +724,7 @@ export default function Home() {
       <div className="grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-3 text-left">
         <Card className="overflow-hidden">
           <Image
-            src="/placeholder.svg"
+            src="/articles.webp"
             alt="Articles preview"
             width={1200}
             height={800}
@@ -750,7 +750,7 @@ export default function Home() {
 
         <Card className="overflow-hidden">
           <Image
-            src="/placeholder.svg"
+            src="/solidity-reviewer.webp"
             alt="Reviewer preview"
             width={1200}
             height={800}
@@ -776,7 +776,7 @@ export default function Home() {
 
         <Card className="overflow-hidden">
           <Image
-            src="/placeholder.svg"
+            src="/chat.webp"
             alt="Chat preview"
             width={1200}
             height={800}
