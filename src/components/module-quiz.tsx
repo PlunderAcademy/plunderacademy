@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -109,6 +109,9 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
   // Achievement celebration
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
+  
+  // Anti-cheat measures
+  const quizContainerRef = useRef<HTMLDivElement>(null);
 
   // Contract interactions
   const { 
@@ -442,6 +445,59 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
 
     checkClaimedStatus();
   }, [address, moduleSlug]);
+
+  // Anti-cheat protection effects
+  useEffect(() => {
+    if (!isStarted || moduleSlug === 'creating-erc20-tokens') return;
+
+    // Disable right-click context menu
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Block common keyboard shortcuts
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+S, Ctrl+A, Ctrl+C, Ctrl+V
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S' || 
+                      e.key === 'a' || e.key === 'A' || e.key === 'c' || e.key === 'C' || 
+                      e.key === 'v' || e.key === 'V'))
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    // Disable text selection
+    const handleSelectStart = (e: Event) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Disable drag
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Add event listeners
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('selectstart', handleSelectStart);
+    document.addEventListener('dragstart', handleDragStart);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('selectstart', handleSelectStart);
+      document.removeEventListener('dragstart', handleDragStart);
+    };
+  }, [isStarted, moduleSlug]);
+
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -1097,7 +1153,18 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
     const currentAnswer = getCurrentAnswer(question.id);
 
     return (
-    <Card>
+    <Card 
+      ref={quizContainerRef}
+      className="quiz-protected select-none"
+      style={{
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        MozUserSelect: 'none',
+        msUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+        WebkitTapHighlightColor: 'transparent'
+      }}
+    >
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -1214,6 +1281,7 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
             <p className="text-sm text-red-600 dark:text-red-400 mt-1">{submitError}</p>
           </div>
         )}
+
 
         {/* Validation warning for unanswered question */}
         {!isCurrentQuestionAnswered() && currentQuestion < quiz.questions.length - 1 && (
