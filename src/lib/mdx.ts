@@ -179,7 +179,7 @@ const islandMetadata: Record<string, { name: string; title: string; description:
     title: 'Jungle Island - Fundamentals', 
     description: 'Master the fundamental concepts of blockchain technology and EVM development in this comprehensive starting adventure.',
     status: 'available',
-    estimatedHours: '1-2h',
+    estimatedHours: '3-5h',
     icon: '🌴',
     color: 'green',
     order: 1

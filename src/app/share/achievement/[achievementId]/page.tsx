@@ -57,8 +57,14 @@ export async function generateMetadata(
   }
 
   const moduleTitle = getModuleFromAttributes(achievementData.attributes);
-  const shareUrl = `https://plunderacademy.vercel.app/share/achievement/${resolvedParams.achievementId}`;
-  const framedImageUrl = `https://plunderacademy.vercel.app/api/achievement-frame/${resolvedParams.achievementId}`;
+  
+  // Use dynamic URLs based on environment
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : 'https://plunderacademy.vercel.app';
+  
+  const shareUrl = `${baseUrl}/share/achievement/${resolvedParams.achievementId}`;
+  const framedImageUrl = `${baseUrl}/api/achievement-frame/${resolvedParams.achievementId}`;
   
   const shareText = `🏴‍☠️ Just earned "${achievementData.name}" by conquering ${moduleTitle} at Plunder Academy!`;
 
@@ -76,6 +82,7 @@ export async function generateMetadata(
           width: 1200,
           height: 628,
           alt: `${achievementData.name} Achievement NFT`,
+          type: 'image/png',
         },
       ],
       locale: 'en_US',
@@ -85,12 +92,24 @@ export async function generateMetadata(
       card: 'summary_large_image',
       title: `🏴‍☠️ Achievement Unlocked: ${achievementData.name}`,
       description: `${shareText}\n\n⚔️ Set sail to plunderacademy.com and claim your treasure!`,
-      images: [framedImageUrl],
+      images: [
+        {
+          url: framedImageUrl,
+          alt: `${achievementData.name} Achievement NFT`,
+        }
+      ],
       creator: '@PlunderAcademy',
       site: '@PlunderAcademy',
     },
     alternates: {
       canonical: shareUrl,
+    },
+    // Additional meta tags for better Twitter compatibility
+    other: {
+      'twitter:image': framedImageUrl,
+      'twitter:image:width': '1200',
+      'twitter:image:height': '628',
+      'twitter:image:alt': `${achievementData.name} Achievement NFT`,
     },
   };
 }

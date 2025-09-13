@@ -95,9 +95,30 @@ async function main() {
     
   // Deploy MyFirstToken with claimant address
   console.log("Deploying MyFirstToken...");
-  const token = await viem.deployContract("MyFirstToken", [claimantAddress]);
   
-  console.log("✅ MyFirstToken deployed to:", token.address);
+  // Deploy contract and capture transaction hash
+  const deploymentTx = await walletClient.deployContract({
+    abi: (await import("../artifacts/contracts/MyFirstToken.sol/MyFirstToken.json")).abi,
+    bytecode: (await import("../artifacts/contracts/MyFirstToken.sol/MyFirstToken.json")).bytecode as `0x${string}`,
+    args: [claimantAddress],
+  });
+  
+  console.log("⏳ Deployment transaction submitted...");
+  console.log("Deployment transaction hash:", deploymentTx);
+  
+  // Wait for transaction receipt to get contract address
+  const receipt = await publicClient.waitForTransactionReceipt({ 
+    hash: deploymentTx 
+  });
+  
+  const contractAddress = receipt.contractAddress!;
+  console.log("✅ MyFirstToken deployed to:", contractAddress);
+  
+  // Create contract instance for interaction
+  const token = await viem.getContractAt("MyFirstToken", contractAddress);
+  
+  // Display the transaction ID for training portal submission
+  console.log("\n🎯 Transaction ID to submit for your Achievement! -", deploymentTx);
   
   // Wait longer for deployment to be fully activated on Zilliqa testnet
   console.log("\n⏳ Waiting for contract activation...");
@@ -153,11 +174,15 @@ async function main() {
   }
   
   console.log("\n🎉 Deployment completed successfully!");
-  console.log("Contract address:", token.address);
+  console.log("Contract address:", contractAddress);
+  console.log("Transaction ID:", deploymentTx);
   console.log("Network:", networkName);
   console.log("Chain ID:", chainId);
   console.log("Deployer:", walletClient.account.address);
   console.log("Claimant:", claimantAddress);
+  
+  console.log("\n🎯 Transaction ID to submit for your Achievement!");
+  console.log("Submit it at https://plunderacademy.com/lessons/jungle/creating-erc20-tokens");
   
   } catch (error) {
     console.error("❌ Deployment failed:", error);

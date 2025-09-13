@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Trophy, CheckCircle, XCircle, AlertCircle, ExternalLink, Share2 } from "lucide-react";
+import { Clock, Trophy, CheckCircle, XCircle, AlertCircle, ExternalLink, Share2, Copy } from "lucide-react";
 import { QuizMeta, MissionMeta } from "@/lib/mdx";
 import { trainingRegistryABI } from "@/lib/training-registry-abi";
 import { AchievementCelebration } from "@/components/achievement-celebration";
@@ -82,6 +82,18 @@ interface ClaimedAchievement {
   metadataUri?: string;
 }
 
+interface ApiResultData {
+  passed: boolean;
+  feedback?: string;
+  tokenAddress?: string;
+  tokenName?: string;
+  tokenSymbol?: string;
+  method?: string;
+  nextSteps?: string[];
+  retryAllowed?: boolean;
+  error?: string;
+}
+
 export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
   const { address } = useAccount();
   const { fetchWalletAchievements, fetchUnclaimedVouchers } = useAchievements();
@@ -105,6 +117,7 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
   const [step, setStep] = useState<"quiz" | "claim" | "completed">("quiz");
   const [alreadyClaimed, setAlreadyClaimed] = useState(false);
   const [nftImageUrl, setNftImageUrl] = useState<string | null>(null);
+  const [apiResults, setApiResults] = useState<ApiResultData | null>(null); // Store full API results for display
   
   // Achievement celebration
   const [showCelebration, setShowCelebration] = useState(false);
@@ -141,8 +154,8 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
         setTransactionError('Please enter a transaction ID');
         return;
       }
-      if (!/^0x[a-fA-F0-9]{64}$/.test(transactionId.trim())) {
-        setTransactionError('Please enter a valid transaction ID (0x followed by 64 hex characters)');
+      if (!/^0x[a-fA-F0-9]+$/.test(transactionId.trim()) || transactionId.trim().length < 10) {
+        setTransactionError('Please enter a valid transaction hash (0x followed by hex characters)');
         return;
       }
     }
@@ -176,7 +189,7 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
     let submissionData;
     if (isTransactionSubmission) {
       submissionData = {
-        transactionId: transactionId.trim(),
+        transactionHash: transactionId.trim(), // API expects 'transactionHash', not 'transactionId'
         chainId: selectedChain === 'testnet' ? 33101 : 32769,
         claimantAddress: address, // The connected wallet that should be the claimant
         method: submissionMethod // 'factory' or 'deployment'
@@ -211,7 +224,12 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
      *   "walletAddress": "0x...",
      *   "achievementNumber": "0005",
      *   "submissionType": "transaction",
-     *   "submissionData": { "transactionId": "0x..." },
+     *   "submissionData": { 
+     *     "transactionHash": "0x...", 
+     *     "chainId": 33101,
+     *     "claimantAddress": "0x...",
+     *     "method": "factory"
+     *   },
      *   "metadata": { "timestamp": "2024-01-15T10:30:00Z" }
      * }
      */
@@ -286,8 +304,18 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
         
         setResult(quizResult);
         
+        console.log('Processing submission result:', {
+          passed: quizResult.passed,
+          hasVoucher: !!apiResult.voucher,
+          hasSignature: !!apiResult.signature,
+          moduleSlug,
+          isTransactionSubmission
+        });
+        
         // If passed and voucher received, set up for claiming
         if (quizResult.passed && apiResult.voucher && apiResult.signature) {
+          console.log('Setting up claim step with voucher:', apiResult.voucher);
+          setApiResults(apiResult.results); // Store the full results for display
           setVoucher({
             voucher: apiResult.voucher,
             signature: apiResult.signature,
@@ -296,6 +324,14 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
           });
           setStep("claim");
         } else {
+          // For failed submissions, show the specific error message
+          if (!quizResult.passed && apiResult.results?.error) {
+            if (isTransactionSubmission) {
+              setTransactionError(apiResult.results.error);
+            } else {
+              setSubmitError(apiResult.results.error);
+            }
+          }
           setIsCompleted(true);
         }
       } else {
@@ -593,6 +629,7 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
     setStep("quiz");
     setShowCelebration(false);
     setCelebrationData(null);
+    setApiResults(null);
   };
 
   // Generate Twitter share URL using dedicated share pages
@@ -606,7 +643,14 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
     };
 
     const achievementId = moduleToAchievementId[moduleSlug as keyof typeof moduleToAchievementId] || '0001';
-    const sharePageUrl = `https://plunderacademy.vercel.app/share/achievement/${achievementId}`;
+    
+    // Use dynamic URLs based on environment (same logic as share page)
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : process.env.NEXT_PUBLIC_SITE_URL || 
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://plunderacademy.vercel.app');
+    
+    const sharePageUrl = `${baseUrl}/share/achievement/${achievementId}`;
     
     // Simple share text that will be enhanced by the share page's Open Graph meta tags
     const shareText = `🏴‍☠️ Just unlocked a new achievement at @PlunderAcademy! Check it out:`;
@@ -699,8 +743,8 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
       );
     }
 
-    // Module 5: Transaction Submission Interface
-    if (moduleSlug === 'creating-erc20-tokens') {
+    // Module 5: Transaction Submission Interface (only for initial submission, not claim/completed states)
+    if (moduleSlug === 'creating-erc20-tokens' && step === "quiz") {
       if (!isStarted) {
         return (
           <Card>
@@ -990,13 +1034,63 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
         <CardContent className="space-y-6">
           <div className="text-center space-y-2">
             <div className="text-3xl font-bold text-green-600">
-              🎉 Quiz Passed!
+              {moduleSlug === 'creating-erc20-tokens' ? '🎉 Token Created!' : '🎉 Quiz Passed!'}
             </div>
-            <div className="text-lg font-semibold">
-              {result.score}/{result.totalPoints} ({Math.round((result.score / result.totalPoints) * 100)}%)
-            </div>
+            {moduleSlug !== 'creating-erc20-tokens' && (
+              <div className="text-lg font-semibold">
+                {result.score}/{result.totalPoints} ({Math.round((result.score / result.totalPoints) * 100)}%)
+              </div>
+            )}
             <Badge variant="default">PASSED</Badge>
           </div>
+
+          {/* Module 5 specific: Show token creation details */}
+          {moduleSlug === 'creating-erc20-tokens' && apiResults && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+              <h4 className="font-semibold text-green-800 dark:text-green-200 mb-3">🪙 Your Token Details:</h4>
+              <div className="space-y-2 text-sm">
+                {apiResults.tokenName && (
+                  <div className="flex justify-between">
+                    <span className="text-green-700 dark:text-green-300">Name:</span>
+                    <span className="font-medium">{apiResults.tokenName}</span>
+                  </div>
+                )}
+                {apiResults.tokenSymbol && (
+                  <div className="flex justify-between">
+                    <span className="text-green-700 dark:text-green-300">Symbol:</span>
+                    <span className="font-medium">{apiResults.tokenSymbol}</span>
+                  </div>
+                )}
+                {apiResults.tokenAddress && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-green-700 dark:text-green-300">Address:</span>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs bg-green-100 dark:bg-green-800/30 px-2 py-1 rounded font-mono break-all">
+                        {apiResults.tokenAddress}
+                      </code>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => apiResults.tokenAddress && navigator.clipboard.writeText(apiResults.tokenAddress)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="size-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-green-700 dark:text-green-300">Method:</span>
+                  <Badge variant="outline">{apiResults.method === 'factory' ? '🚀 Factory' : '🛠️ Deployment'}</Badge>
+                </div>
+              </div>
+              {apiResults.feedback && (
+                <p className="text-sm text-green-700 dark:text-green-300 mt-3 p-2 bg-green-100 dark:bg-green-800/30 rounded">
+                  ✅ {apiResults.feedback}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
             <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200 mb-2">
@@ -1067,32 +1161,91 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
             ) : (
               <XCircle className="size-5 text-red-500" />
             )}
-            Quiz Results
+            {moduleSlug === 'creating-erc20-tokens' ? 'Token Creation Results' : 'Quiz Results'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="text-center space-y-2">
-            <div className="text-3xl font-bold">
-              {result?.score}/{result?.totalPoints}
-            </div>
-            <div className="text-muted-foreground">
-              {Math.round(((result?.score || 0) / (result?.totalPoints || 1)) * 100)}% Score
-            </div>
+            {moduleSlug !== 'creating-erc20-tokens' && (
+              <>
+                <div className="text-3xl font-bold">
+                  {result?.score}/{result?.totalPoints}
+                </div>
+                <div className="text-muted-foreground">
+                  {Math.round(((result?.score || 0) / (result?.totalPoints || 1)) * 100)}% Score
+                </div>
+              </>
+            )}
+            {moduleSlug === 'creating-erc20-tokens' && (
+              <div className="text-3xl font-bold text-green-600">
+                🎉 Token Successfully Created!
+              </div>
+            )}
             <Badge variant={result?.passed ? "default" : "destructive"}>
               {result?.passed ? "PASSED" : "FAILED"}
             </Badge>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <div className="font-semibold">{formatTime(result?.timeSpent || 0)}</div>
-              <div className="text-sm text-muted-foreground">Time Spent</div>
+          {moduleSlug !== 'creating-erc20-tokens' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-muted/30 rounded-lg">
+                <div className="font-semibold">{formatTime(result?.timeSpent || 0)}</div>
+                <div className="text-sm text-muted-foreground">Time Spent</div>
+              </div>
+              <div className="text-center p-4 bg-muted/30 rounded-lg">
+                <div className="font-semibold">{quiz?.passingScore || 80}%</div>
+                <div className="text-sm text-muted-foreground">Required</div>
+              </div>
             </div>
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <div className="font-semibold">{quiz?.passingScore || 80}%</div>
-              <div className="text-sm text-muted-foreground">Required</div>
+          )}
+
+          {/* Module 5 specific: Show token creation details in completed state */}
+          {moduleSlug === 'creating-erc20-tokens' && apiResults && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+              <h4 className="font-semibold text-green-800 dark:text-green-200 mb-3">🪙 Your Token Details:</h4>
+              <div className="space-y-2 text-sm">
+                {apiResults.tokenName && (
+                  <div className="flex justify-between">
+                    <span className="text-green-700 dark:text-green-300">Name:</span>
+                    <span className="font-medium">{apiResults.tokenName}</span>
+                  </div>
+                )}
+                {apiResults.tokenSymbol && (
+                  <div className="flex justify-between">
+                    <span className="text-green-700 dark:text-green-300">Symbol:</span>
+                    <span className="font-medium">{apiResults.tokenSymbol}</span>
+                  </div>
+                )}
+                {apiResults.tokenAddress && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-green-700 dark:text-green-300">Address:</span>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs bg-green-100 dark:bg-green-800/30 px-2 py-1 rounded font-mono break-all">
+                        {apiResults.tokenAddress}
+                      </code>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => apiResults.tokenAddress && navigator.clipboard.writeText(apiResults.tokenAddress)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="size-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-green-700 dark:text-green-300">Method:</span>
+                  <Badge variant="outline">{apiResults.method === 'factory' ? '🚀 Factory' : '🛠️ Deployment'}</Badge>
+                </div>
+              </div>
+              {apiResults.feedback && (
+                <p className="text-sm text-green-700 dark:text-green-300 mt-3 p-2 bg-green-100 dark:bg-green-800/30 rounded">
+                  ✅ {apiResults.feedback}
+                </p>
+              )}
             </div>
-          </div>
+          )}
 
           {step === "completed" ? (
             <div className="space-y-4">

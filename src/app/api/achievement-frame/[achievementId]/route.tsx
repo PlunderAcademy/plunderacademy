@@ -64,8 +64,8 @@ export async function GET(
     // Convert WebP to PNG for ImageResponse compatibility
     const convertedImageUrl = await convertWebPtoPNGBuffer(achievementData.image);
 
-    // Generate PNG using ImageResponse
-    return new ImageResponse(
+    // Generate PNG using ImageResponse with proper headers
+    const imageResponse = new ImageResponse(
       (
         <div
           style={{
@@ -213,8 +213,21 @@ export async function GET(
       {
         width: 1200,
         height: 628,
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
       }
     );
+
+    // Add additional headers for better Twitter compatibility
+    imageResponse.headers.set('X-Content-Type-Options', 'nosniff');
+    imageResponse.headers.set('X-Frame-Options', 'DENY');
+    
+    return imageResponse;
   } catch (error) {
     console.error('Error generating framed image:', error);
     return new Response('Internal Server Error', { status: 500 });
