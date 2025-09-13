@@ -712,7 +712,7 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               <p className="text-muted-foreground">
-                Deploy your token using the Hardhat environment you set up, then submit your deployment transaction ID to earn your achievement.
+                Deploy your token using the Hardhat environment you set up (or factory method above), then submit your deployment transaction ID to earn your achievement.
               </p>
 
               {/* Connected Wallet Display */}
@@ -730,7 +730,7 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
                 <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">📝 Two Ways to Create Your Token:</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                   <div className="bg-white dark:bg-blue-950/30 p-3 rounded border">
-                    <h5 className="font-medium text-blue-800 dark:text-blue-200 mb-1">🚀 Factory Method (Recommended)</h5>
+                    <h5 className="font-medium text-blue-800 dark:text-blue-200 mb-1">🚀 Factory Method</h5>
                     <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
                       <li>Use our pre-deployed token factory</li>
                       <li>No development setup required</li>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { decodeEventLog } from 'viem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,7 @@ import {
   Loader2
 } from 'lucide-react';
 
-// Factory contract ABI (just the createToken function)
+// Factory contract ABI (createToken function and TokenCreated event)
 const FACTORY_ABI = [
   {
     name: 'createToken',
@@ -30,6 +31,20 @@ const FACTORY_ABI = [
       { name: 'initialSupply', type: 'uint256' }
     ],
     outputs: [{ name: '', type: 'address' }]
+  },
+  {
+    name: 'TokenCreated',
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'creator', type: 'address', indexed: true },
+      { name: 'claimant', type: 'address', indexed: true },
+      { name: 'tokenAddress', type: 'address', indexed: true },
+      { name: 'name', type: 'string', indexed: false },
+      { name: 'symbol', type: 'string', indexed: false },
+      { name: 'initialSupply', type: 'uint256', indexed: false },
+      { name: 'timestamp', type: 'uint256', indexed: false }
+    ]
   }
 ] as const;
 
@@ -40,7 +55,7 @@ const FACTORY_ADDRESSES = {
 };
 
 const BLOCK_EXPLORERS = {
-  testnet: 'https://zilliqa.blockscout.com',
+  testnet: 'https://testnet.zilliqa.blockscout.com',
   mainnet: 'https://zilliqa.blockscout.com'
 };
 
@@ -56,12 +71,12 @@ export function TokenFactoryInterface() {
   // Transaction state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ txHash: string; tokenDetails: { name: string; symbol: string; initialSupply: number; creator: `0x${string}`; chainId: number } } | null>(null);
+  const [success, setSuccess] = useState<{ txHash: string; tokenDetails: { name: string; symbol: string; initialSupply: number; creator: `0x${string}`; chainId: number; tokenAddress?: string } } | null>(null);
   
   // Contract interaction
   const { writeContract, data: hash, isPending } = useWriteContract();
   
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+  const { isLoading: isConfirming, isSuccess: isConfirmed, data: receipt } = useWaitForTransactionReceipt({
     hash,
   });
 
@@ -111,13 +126,39 @@ export function TokenFactoryInterface() {
   };
 
   // Handle successful transaction
-  if (isConfirmed && hash && !success && address) {
+  if (isConfirmed && hash && !success && address && receipt) {
+    let tokenAddress: string | undefined;
+    
+    // Extract token address from TokenCreated event
+    try {
+      for (const log of receipt.logs) {
+        try {
+          const decoded = decodeEventLog({
+            abi: FACTORY_ABI,
+            data: log.data,
+            topics: log.topics,
+          });
+          
+          if (decoded.eventName === 'TokenCreated') {
+            tokenAddress = decoded.args.tokenAddress;
+            break;
+          }
+        } catch {
+          // Skip logs that don't match our ABI
+          continue;
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing transaction logs:', error);
+    }
+    
     const tokenDetails = {
       name: tokenName.trim(),
       symbol: tokenSymbol.trim().toUpperCase(),
       initialSupply: parseInt(initialSupply),
       creator: address,
-      chainId: selectedChain === 'testnet' ? 33101 : 32769
+      chainId: selectedChain === 'testnet' ? 33101 : 32769,
+      tokenAddress
     };
     
     setSuccess({ txHash: hash, tokenDetails });
@@ -161,6 +202,24 @@ export function TokenFactoryInterface() {
                 <span className="text-green-700 dark:text-green-300">Network:</span>
                 <Badge variant="outline">{selectedChain === 'testnet' ? 'Testnet' : 'Mainnet'}</Badge>
               </div>
+              {success.tokenDetails.tokenAddress && (
+                <div className="flex justify-between items-center">
+                  <span className="text-green-700 dark:text-green-300">Contract:</span>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs bg-green-100 dark:bg-green-800/30 px-2 py-1 rounded font-mono break-all">
+                      {success.tokenDetails.tokenAddress}
+                    </code>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => copyToClipboard(success.tokenDetails.tokenAddress!)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Copy className="size-3" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -234,6 +293,11 @@ export function TokenFactoryInterface() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="space-y-2"> 
+          <p className="text-sm text-muted-foreground">
+            Use this method to deploy your token if you didn&apos;t setup your hardhat environment.
+          </p>
+        </div>
         {!isConnected && (
           <div className="flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
             <AlertCircle className="size-4 text-yellow-600" />

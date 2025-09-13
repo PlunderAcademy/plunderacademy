@@ -4,7 +4,7 @@
 
 This document outlines the complete implementation for the Plunder Academy Token Factory system, which provides two paths for users to create ERC-20 tokens:
 
-1. **Factory Method (Recommended)**: Use our pre-deployed factory contract
+1. **Factory Method**: Use our pre-deployed factory contract
 2. **Full Deployment**: Deploy their own contract using Hardhat
 
 ## Factory Contract Code
