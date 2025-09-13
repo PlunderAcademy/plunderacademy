@@ -28,7 +28,6 @@ By the end of this guide, you'll have a complete development setup that enables 
 3. **Node.js 22.10+** - The runtime environment for development tools
 4. **Hardhat 3** - The professional framework for smart contract development
 5. **Hardhat VS Code Extension** - Advanced Solidity support
-6. **Hardhat Ignition** - Declarative deployment system
 
 ## Windows Users: WSL2 Setup (Recommended)
 
@@ -311,15 +310,19 @@ my-first-zilliqa-project/
 import type { HardhatUserConfig } from "hardhat/config";
 
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import hardhatVerifyPlugin from "@nomicfoundation/hardhat-verify";
 import { configVariable } from "hardhat/config";
 import "dotenv/config";
 
 const config: HardhatUserConfig = {
-  plugins: [hardhatToolboxViemPlugin],
+  plugins: [hardhatToolboxViemPlugin, hardhatVerifyPlugin],
   solidity: {
     profiles: {
       default: {
         version: "0.8.28",
+        settings: {
+          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+        },
       },
       production: {
         version: "0.8.28",
@@ -357,6 +360,41 @@ const config: HardhatUserConfig = {
       accounts: [configVariable("ZILLIQA_TESTNET_PRIVATE_KEY")]
     },
   },
+  verify: {
+    // Disable Etherscan since we're using Zilliqa networks
+    etherscan: {
+      enabled: false,
+    },
+    // Blockscout verification (no API key needed)
+    blockscout: {
+      enabled: true,
+    },
+  },
+  // Add custom chain descriptors for Zilliqa networks
+  chainDescriptors: {
+    // Zilliqa Mainnet
+    32769: {
+      name: "Zilliqa",
+      blockExplorers: {
+        blockscout: {
+          name: "Zilliqa Explorer",
+          url: "https://zilliqa.blockscout.com",
+          apiUrl: "https://zilliqa.blockscout.com/api",
+        },
+      },
+    },
+    // Zilliqa Testnet
+    33101: {
+      name: "Zilliqa Testnet",
+      blockExplorers: {
+        blockscout: {
+          name: "Zilliqa Testnet Explorer",
+          url: "https://testnet.zilliqa.blockscout.com",
+          apiUrl: "https://testnet.zilliqa.blockscout.com/api",
+        },
+      },
+    },
+  },
 };
 
 export default config;
@@ -375,12 +413,14 @@ echo "# Add .env to your .gitignore file" >> .env
 **Install additional dependencies:**
 ```bash
 npm install --save-dev dotenv
+npm install --save-dev @nomicfoundation/hardhat-verify
 ```
 
 **Update `hardhat.config.ts`** to load environment variables:
 ```typescript
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import hardhatVerifyPlugin from "@nomicfoundation/hardhat-verify"; // Add this line
 import "dotenv/config"; // Add this line
 
 // ... rest of config stays the same

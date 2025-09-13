@@ -1,0 +1,536 @@
+---
+id: deployment
+module: creating-erc20-tokens
+number: 5.3
+title: Deployment with Hardhat 3
+objective: >-
+  Deploy your MyFirstToken contract using modern Hardhat 3 deployment scripts to both local networks and Zilliqa testnet.
+slug: deployment
+---
+
+## Deployment with Hardhat 3
+
+### Why Manual Deployment Scripts?
+
+**Hardhat Ignition vs Manual Scripts:**
+
+While Hardhat Ignition provides declarative deployments, **Zilliqa networks are not yet fully supported** by Ignition. Manual deployment scripts offer:
+
+- **Full control** over deployment process
+- **Better debugging** capabilities 
+- **Network compatibility** with all EVM chains including Zilliqa
+- **Custom logic** during deployment (transfers, setup calls, etc.)
+- **Detailed logging** for verification and troubleshooting
+
+### Setting Up Package.json Scripts
+
+**First, let's add convenient npm scripts to your `package.json`:**
+
+```json
+{
+  "name": "my-first-token",
+  "version": "0.12.18",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/MyFirstToken.test.ts",
+    "test:solidity": "forge test",
+    "deploy:local": "npx hardhat run scripts/deploy-myfirsttoken.ts",
+    "deploy:zilliqaTestnet": "HARDHAT_NETWORK=zilliqaTestnet npx hardhat run scripts/deploy-myfirsttoken.ts --network zilliqaTestnet",
+    "interact:local": "npx hardhat run scripts/interact.ts",
+    "interact:zilliqaTestnet": "HARDHAT_NETWORK=zilliqaTestnet npx hardhat run scripts/interact.ts --network zilliqaTestnet"
+  },
+  "keywords": [],
+  "author": "Your Name <your.email@example.com>",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ignition": "^3.0.3",
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.0",
+    "@types/node": "^22.18.3",
+    "dotenv": "^17.2.2",
+    "forge-std": "github:foundry-rs/forge-std#v1.9.4",
+    "hardhat": "^3.0.6",
+    "typescript": "~5.8.0",
+    "viem": "^2.37.5"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0"
+  }
+}
+```
+
+### Creating the Deployment Script
+
+**Create `scripts/deploy-myfirsttoken.ts`:**
+```typescript
+import { network } from "hardhat";
+
+// Get the current network name from Hardhat runtime
+const networkName = process.env.HARDHAT_NETWORK || "localhost";
+console.log(`Deploying MyFirstToken contract to ${networkName}...`);
+
+const { viem } = await network.connect({
+  network: networkName,
+});
+
+const publicClient = await viem.getPublicClient();
+const walletClients = await viem.getWalletClients();
+const [walletClient] = walletClients;
+
+async function main() {
+  try {
+    
+  // Use second wallet as claimant if available, otherwise use a default address or the same wallet
+  const claimantAddress = (process.env.CLAIMANT_ADDRESS || 
+                         (walletClients.length > 1 ? walletClients[1].account.address : walletClient.account.address)) as `0x${string}`;
+  
+  console.log("Deploying from account:", walletClient.account.address);
+  console.log("Claimant will be:", claimantAddress);
+  
+  // Show network info
+  const chainId = await publicClient.getChainId();
+  console.log("Network:", networkName);
+  console.log("Chain ID:", chainId);
+    
+  // Deploy MyFirstToken with claimant address
+  console.log("Deploying MyFirstToken...");
+  const token = await viem.deployContract("MyFirstToken", [claimantAddress]);
+  
+  console.log("✅ MyFirstToken deployed to:", token.address);
+  
+  // Wait longer for deployment to be fully activated on Zilliqa testnet
+  console.log("\n⏳ Waiting for contract activation...");
+  await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+  
+  // Verify deployment by checking basic properties (with error handling)
+  console.log("\n📋 Verifying deployment...");
+  try {
+    const name = await token.read.name();
+    const symbol = await token.read.symbol();
+    const decimals = await token.read.decimals();
+    const totalSupply = await token.read.totalSupply();
+    const claimant = await token.read.claimant();
+    const deployerBalance = await token.read.balanceOf([walletClient.account.address]);
+    
+    console.log("Token name:", name);
+    console.log("Token symbol:", symbol);
+    console.log("Decimals:", decimals.toString());
+    console.log("Total supply:", (Number(totalSupply) / 1e18).toLocaleString(), "tokens");
+    console.log("Claimant address:", claimant);
+    console.log("Deployer balance:", (Number(deployerBalance) / 1e18).toLocaleString(), "tokens");
+  } catch (verificationError) {
+    console.log("⚠️  Contract verification failed (contract may need more time to activate)");
+    console.log("This is normal on some networks. The contract was deployed successfully.");
+    console.log("You can verify the contract manually later using the interact script.");
+  }
+  
+  // Optional: Transfer some tokens to the claimant as a test (only if different from deployer)
+  if (claimantAddress.toLowerCase() !== walletClient.account.address.toLowerCase()) {
+    console.log("\n🔄 Transferring 1000 tokens to claimant...");
+    const transferAmount = BigInt(1000 * 1e18); // 1000 tokens
+    const transferTx = await token.write.transfer([claimantAddress as `0x${string}`, transferAmount]);
+    
+    console.log("Transfer transaction hash:", transferTx);
+    
+    // Wait for transaction and get receipt
+    const receipt = await publicClient.waitForTransactionReceipt({ 
+      hash: transferTx 
+    });
+    
+    console.log("✅ Transfer confirmed in block:", receipt.blockNumber);
+    
+    // Check balances after transfer
+    const deployerBalanceAfter = await token.read.balanceOf([walletClient.account.address]);
+    const claimantBalance = await token.read.balanceOf([claimantAddress as `0x${string}`]);
+    
+    console.log("Deployer balance after transfer:", (Number(deployerBalanceAfter) / 1e18).toLocaleString(), "tokens");
+    console.log("Claimant balance:", (Number(claimantBalance) / 1e18).toLocaleString(), "tokens");
+  } else {
+    console.log("\n🔄 Skipping transfer (claimant is same as deployer)");
+    const deployerBalance = await token.read.balanceOf([walletClient.account.address]);
+    console.log("Deployer/Claimant balance:", (Number(deployerBalance) / 1e18).toLocaleString(), "tokens");
+  }
+  
+  console.log("\n🎉 Deployment completed successfully!");
+  console.log("Contract address:", token.address);
+  console.log("Network:", networkName);
+  console.log("Chain ID:", chainId);
+  console.log("Deployer:", walletClient.account.address);
+  console.log("Claimant:", claimantAddress);
+  
+  } catch (error) {
+    console.error("❌ Deployment failed:", error);
+    process.exit(1);
+  }
+}
+
+main().catch(console.error);
+```
+
+### Local Deployment Testing
+
+**Deploy to local Hardhat network:**
+
+```bash
+# Terminal 1: Start local blockchain
+npx hardhat node
+
+# Terminal 2: Deploy to local network using npm script
+npm run deploy:local
+```
+
+**Expected local deployment output:**
+```
+Deploying MyFirstToken contract to localhost...
+Deploying from account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Claimant will be: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+Network: localhost
+Chain ID: 31337
+Deploying MyFirstToken...
+✅ MyFirstToken deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+📋 Verifying deployment...
+Token name: My First Token
+Token symbol: MFT
+Decimals: 18
+Total supply: 1,000,000 tokens
+Claimant address: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+Deployer balance: 1,000,000 tokens
+
+🔄 Transferring 1000 tokens to claimant...
+Transfer transaction hash: 0x1234...
+✅ Transfer confirmed in block: 2n
+Deployer balance after transfer: 999,000 tokens
+Claimant balance: 1,000 tokens
+
+🎉 Deployment completed successfully!
+```
+
+### Setting Up Testnet Deployment
+
+Before deploying to Zilliqa testnet, you need a dedicated development wallet with testnet ZIL.
+
+#### Understanding Wallet Setup
+
+**You'll be working with two wallet addresses:**
+
+**Development Wallet** (newly generated): Used for deploying contracts and paying gas fees
+   - Gets a fresh private key for security
+   - Funded with testnet ZIL from the faucet
+   - Used for deployment transactions only
+
+**Training Portal Wallet** (your existing wallet): Used for achievement verification
+   - The wallet you use to connect to Plunder Academy
+   - Set as the `claimant` in your token contract
+   - Used to verify you completed the training module
+
+#### Create a Fresh Development Wallet
+
+**Generate a new private key for development** (never use your main wallet):
+
+```bash
+# Create a fresh private key for development only
+openssl rand -hex 32 | sed 's/^/ZILLIQA_TESTNET_PRIVATE_KEY=0x/' > .env
+echo "ZILLIQA_MAINNET_PRIVATE_KEY=0x_your_production_key_here_when_ready" >> .env
+echo "CLAIMANT_ADDRESS=your_training_portal_wallet_address_here" >> .env
+echo "" >> .env
+echo "# IMPORTANT: Never commit this file to version control" >> .env
+echo "# Add .env to your .gitignore file" >> .env
+echo "# This wallet is for development/testing only" >> .env
+echo "# CLAIMANT_ADDRESS should be your main wallet connected to the training portal" >> .env
+```
+
+**Display your new private key** to import into MetaMask:
+```bash
+cat .env
+```
+Copy the private key (the part after `ZILLIQA_TESTNET_PRIVATE_KEY=0x`)
+
+**Set up your CLAIMANT_ADDRESS:**
+1. **Copy your training portal wallet address** (the one you use to connect to Plunder Academy)
+2. **Edit the `.env` file** and replace `your_training_portal_wallet_address_here` with your actual address
+3. This ensures achievement verification works correctly when you complete the module
+
+**Import the development wallet into MetaMask:**
+- Open MetaMask → Account menu → Import Account  
+- Select "Private Key" as import type
+- Paste your generated private key (from ZILLIQA_TESTNET_PRIVATE_KEY)
+- Click "Import"
+- ⚠️ **This is a development-only wallet - never use for real funds**
+
+**Add Zilliqa testnet to MetaMask** (if not already configured):
+- Network Name: `Zilliqa Testnet`
+- RPC URL: `https://api.testnet.zilliqa.com`
+- Chain ID: `33101`
+- Currency Symbol: `ZIL`
+- Block Explorer: `https://testnet.zilliqa.blockscout.com`
+
+**Fund your development wallet** with testnet ZIL:
+- Copy your new wallet address from MetaMask
+- Visit [Zilliqa Testnet Faucet](https://faucet.testnet.zilliqa.com)
+- Paste your wallet address
+- Request testnet ZIL (you'll receive 100 ZIL for testing)
+- Wait 1-2 minutes for the transaction to confirm
+
+### Deploy to Zilliqa Testnet
+
+**Deploy your contract to testnet:**
+```bash
+npm run deploy:zilliqaTestnet
+```
+
+**Expected testnet deployment output:**
+```
+Deploying MyFirstToken contract to zilliqaTestnet...
+Deploying from account: 0xa1b2c3d4e5f6789012345678901234567890abcd
+Claimant will be: 0xYourTrainingPortalWalletAddress...
+Network: zilliqaTestnet
+Chain ID: 33101
+Deploying MyFirstToken...
+✅ MyFirstToken deployed to: 0x1234567890123456789012345678901234567890
+
+📋 Verifying deployment...
+Token name: My First Token
+Token symbol: MFT
+Decimals: 18
+Total supply: 1,000,000 tokens
+Claimant address: 0xYourTrainingPortalWalletAddress...
+Deployer balance: 1,000,000 tokens
+
+🔄 Transferring 1000 tokens to claimant...
+Transfer transaction hash: 0xabcd1234567890...
+✅ Transfer confirmed in block: 8423891n
+Deployer balance after transfer: 999,000 tokens
+Claimant balance: 1,000 tokens
+
+🎉 Deployment completed successfully!
+Contract address: 0x1234567890123456789012345678901234567890
+Network: zilliqaTestnet
+Chain ID: 33101
+Deployer: 0xa1b2c3d4e5f6789012345678901234567890abcd
+Claimant: 0xYourTrainingPortalWalletAddress...
+```
+
+**Note:** If your CLAIMANT_ADDRESS is the same as your deployer address, you'll see:
+```
+🔄 Skipping transfer (claimant is same as deployer)
+Deployer/Claimant balance: 1,000,000 tokens
+```
+
+### Post-Deployment Verification
+
+**Verify your deployment:**
+
+**Check contract on Zilliqa Blockscout:** 
+   - Visit https://testnet.zilliqa.blockscout.com
+   - Search for your contract address
+   - Verify the deployment transaction succeeded
+   - Check the contract creation and token transfer transactions
+
+## Creating Interaction Scripts
+
+### Contract Interaction Script
+
+**Create `scripts/interact.ts`:**
+
+```typescript
+import { network } from "hardhat";
+import { formatEther } from "viem";
+
+async function main() {
+  // Get contract address from environment variable or use default
+  const contractAddress = process.env.CONTRACT_ADDRESS;
+  const networkName = process.env.HARDHAT_NETWORK || "localhost";
+  
+  if (!contractAddress) {
+    console.error("❌ Please provide CONTRACT_ADDRESS environment variable");
+    console.log("Usage: CONTRACT_ADDRESS=0x... npm run interact");
+    process.exit(1);
+  }
+
+  console.log(`Interacting with MyFirstToken on ${networkName}...`);
+  console.log("Contract address:", contractAddress);
+  
+  try {
+    const { viem } = await network.connect({
+      network: networkName,
+    });
+
+    const publicClient = await viem.getPublicClient();
+    const [walletClient] = await viem.getWalletClients();
+    
+    console.log("Using account:", walletClient.account.address);
+    
+    // Show network info
+    const chainId = await publicClient.getChainId();
+    console.log("Network:", networkName);
+    console.log("Chain ID:", chainId);
+    
+    // Get the contract instance using viem
+    const token = await viem.getContractAt("MyFirstToken", contractAddress as `0x${string}`);
+    
+    // Get contract info
+    console.log("\n=== Token Information ===");
+    const name = await token.read.name();
+    const symbol = await token.read.symbol();
+    const decimals = await token.read.decimals();
+    const totalSupply = await token.read.totalSupply();
+    const claimant = await token.read.claimant();
+    
+    console.log("Token Name:", name);
+    console.log("Token Symbol:", symbol);
+    console.log("Decimals:", decimals.toString());
+    console.log("Total Supply:", formatEther(totalSupply), "tokens");
+    console.log("Claimant Address:", claimant);
+    
+    // Get current user info
+    console.log("\n=== Current User Information ===");
+    console.log("User Address:", walletClient.account.address);
+    const userBalance = await token.read.balanceOf([walletClient.account.address]);
+    console.log("User Balance:", formatEther(userBalance), "tokens");
+    
+    // Get claimant balance
+    console.log("\n=== Claimant Information ===");
+    const claimantBalance = await token.read.balanceOf([claimant]);
+    console.log("Claimant Balance:", formatEther(claimantBalance), "tokens");
+    
+    // Show total supply distribution
+    console.log("\n=== Supply Distribution ===");
+    const totalSupplyFormatted = Number(formatEther(totalSupply));
+    const userBalanceFormatted = Number(formatEther(userBalance));
+    const claimantBalanceFormatted = Number(formatEther(claimantBalance));
+    const otherBalance = totalSupplyFormatted - userBalanceFormatted - claimantBalanceFormatted;
+    
+    console.log("Current User:", userBalanceFormatted.toLocaleString(), "tokens");
+    console.log("Claimant:", claimantBalanceFormatted.toLocaleString(), "tokens");
+    console.log("Others/Distributed:", otherBalance.toLocaleString(), "tokens");
+    console.log("Total:", totalSupplyFormatted.toLocaleString(), "tokens");
+    
+    console.log("\n✅ Contract interaction completed successfully!");
+    
+  } catch (error) {
+    console.error("❌ Interaction failed:", error);
+    process.exit(1);
+  }
+}
+
+main().catch(console.error);
+```
+
+### Using the Interaction Script
+
+**Run interaction script for different networks:**
+
+```bash
+# For local deployment (replace with your contract address)
+CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3 npm run interact:local
+
+# For testnet deployment (replace with your contract address)  
+CONTRACT_ADDRESS=0x1234567890123456789012345678901234567890 npm run interact:zilliqaTestnet
+```
+
+**Expected interaction output:**
+```
+Interacting with MyFirstToken on zilliqaTestnet...
+Contract address: 0x1234567890123456789012345678901234567890
+Using account: 0xa1b2c3d4e5f6789012345678901234567890abcd
+Network: zilliqaTestnet
+Chain ID: 33101
+
+=== Token Information ===
+Token Name: My First Token
+Token Symbol: MFT
+Decimals: 18
+Total Supply: 1000000 tokens
+Claimant Address: 0xb2c3d4e5f6789012345678901234567890abcdef1
+
+=== Current User Information ===
+User Address: 0xa1b2c3d4e5f6789012345678901234567890abcd
+User Balance: 999,000 tokens
+
+=== Claimant Information ===
+Claimant Balance: 1,000 tokens
+
+=== Supply Distribution ===
+Current User: 999,000 tokens
+Claimant: 1,000 tokens
+Others/Distributed: 0 tokens
+Total: 1,000,000 tokens
+
+✅ Contract interaction completed successfully!
+```
+
+## Quick Development Workflow
+
+### Daily Development Commands
+
+**Your most-used commands for efficient development:**
+
+```bash
+# 1. Test your changes
+npm test                    # Run Node.js tests
+npm run test:solidity       # Run Solidity tests
+npx hardhat test            # Run both
+
+# 2. Deploy locally for quick testing
+npx hardhat node           # Terminal 1: Start local blockchain
+npm run deploy:local       # Terminal 2: Deploy to local network
+
+# 3. Test locally with MetaMask
+# Connect MetaMask to localhost:8545, Chain ID 31337
+# Import a test account private key from hardhat node output
+
+# 4. Deploy to testnet when ready
+npm run deploy:zilliqaTestnet
+
+# 5. Interact with deployed contracts
+CONTRACT_ADDRESS=0x... npm run interact:local
+CONTRACT_ADDRESS=0x... npm run interact:zilliqaTestnet
+```
+
+### Production Deployment Considerations
+
+**Before mainnet deployment:**
+
+✅ **Code Review:** Have the contract reviewed by multiple developers \
+✅ **Security Audit:** Consider professional security audit for significant projects \
+✅ **Comprehensive Testing:** All tests pass with high coverage \
+✅ **Gas Optimization:** Analyze and optimize gas usage \
+✅ **Documentation:** Complete documentation and comments \
+✅ **Multi-sig Setup:** Consider multi-signature wallets for admin functions
+
+### Mainnet Deployment Process
+
+**When ready for production:**
+
+1. **Create a dedicated mainnet private key** (hardware wallet recommended)
+2. **Add mainnet configuration** to hardhat.config.ts
+3. **Fund the deployment wallet** with sufficient ZIL for deployment
+4. **Deploy using the script:**
+   ```bash
+   npm run deploy:zilliqaMainnet  # You'll need to add this script
+   ```
+
+### Post-Deployment Tasks
+
+**After successful deployment:**
+
+1. **Contract Verification:** Submit source code to block explorer
+2. **Security Monitoring:** Set up monitoring for unusual activity  
+3. **Documentation:** Update all documentation with contract addresses
+4. **Community Announcement:** Announce deployment to your community
+5. **Exchange Listings:** Begin process for exchange listings if applicable
+
+## Deployment Summary
+
+Your MyFirstToken contract deployment setup now includes:
+
+✅ **Modern Hardhat 3 deployment scripts** with full error handling and logging \
+✅ **Automated npm scripts** for streamlined development workflow \
+✅ **Local testing environment** with Hardhat node integration \
+✅ **Testnet deployment** with proper wallet setup and funding instructions \
+✅ **Contract interaction scripts** for post-deployment verification and management \
+✅ **Production-ready patterns** scalable to more complex token projects
+
+You've successfully learned how to deploy smart contracts professionally using modern tooling. The next module will explore and interact with your token and production best practices!

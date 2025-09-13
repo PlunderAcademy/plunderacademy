@@ -749,22 +749,6 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
                   </div>
                 </div>
               </div>
-
-              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
-                <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">💡 Deployment Command:</h4>
-                <div className="bg-amber-100 dark:bg-amber-800/30 p-3 rounded border font-mono text-sm">
-                  <p className="text-amber-700 dark:text-amber-300">
-                    npx hardhat ignition deploy ignition/modules/MyFirstToken.ts --network zilliqaTestnet --parameters &apos;{"{"}
-                    &quot;MyFirstTokenModule&quot;: {"{"}
-                    &quot;claimant&quot;: &quot;{address}&quot;
-                    {"}"} {"}"}&apos;
-                  </p>
-                </div>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                  Remember to update your deployment module to accept the claimant parameter!
-                </p>
-              </div>
-
               <Button onClick={handleStartQuiz} className="w-full">
                 Submit Transaction ID
               </Button>
@@ -805,7 +789,7 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
                       onChange={(e) => setSubmissionMethod(e.target.value as 'factory')}
                       className="w-4 h-4 text-primary"
                     />
-                    <span className="text-sm">🚀 Token Factory (Recommended)</span>
+                    <span className="text-sm">🚀 Token Factory</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -897,8 +881,8 @@ export function ModuleQuiz({ quiz, missionData, moduleSlug }: ModuleQuizProps) {
                   <p className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-1">🛠️ Full Deployment Instructions:</p>
                   <ul className="text-xs text-orange-700 dark:text-orange-300 space-y-1 list-disc list-inside">
                     <li>Complete the Hardhat setup from previous modules</li>
-                    <li>Deploy using: npx hardhat ignition deploy ignition/modules/MyFirstToken.ts</li>
-                    <li>Include --parameters with your wallet address as claimant</li>
+                    <li>Deploy it to Zilliqa Testnet</li>
+                    <li>Rememeber to set your training portal wallet address as claimant</li>
                     <li>Copy the deployment transaction hash from the output</li>
                   </ul>
                 </div>

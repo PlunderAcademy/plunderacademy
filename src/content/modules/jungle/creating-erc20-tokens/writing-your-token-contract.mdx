@@ -127,13 +127,14 @@ Building on your existing Hardhat 3 environment, let's create a dedicated token 
 4. **Initialize Hardhat 3 project:**
    ```bash
    npm init -y
-   npx hardhat@latest init
+   npx hardhat@latest --init
    ```
-5. **Choose project configuration:**
-   - ✅ **"Create a TypeScript project"**
-   - ✅ **Use current directory**
-   - ✅ **Add .gitignore**
-   - ✅ **Install dependencies**
+5. **Choose the following when prompted:**
+   - ✅ **Hardhat 3** (recommended - all of the modules will use this)
+   - ✅ **Use default path** (current directory - default)
+   - ✅ **A TypeScript Hardhat project using Node Test Runner and Viem** (recommended)
+   - ✅ **Hardhat only supports ESM - true or Y to switch** (required)
+   - ✅ **Install dependencies** (will install required packages automatically)
 
 ### Installing OpenZeppelin Contracts
 
@@ -150,34 +151,92 @@ OpenZeppelin provides battle-tested, secure implementations that are used by tho
 **Update your `hardhat.config.ts` for Zilliqa:**
 
 ```typescript
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
+import type { HardhatUserConfig } from "hardhat/config";
+
+import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import hardhatVerifyPlugin from "@nomicfoundation/hardhat-verify";
+import { configVariable } from "hardhat/config";
 import "dotenv/config";
 
 const config: HardhatUserConfig = {
+  plugins: [hardhatToolboxViemPlugin, hardhatVerifyPlugin],
   solidity: {
-    version: "0.8.28",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
+    profiles: {
+      default: {
+        version: "0.8.28",
+        settings: {
+          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+        },
       },
-      evmVersion: "shanghai", // Required for Zilliqa compatibility
+      production: {
+        version: "0.8.28",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+        },
+      },
     },
   },
   networks: {
-    hardhat: {
-      chainId: 31337,
+    hardhatMainnet: {
+      type: "edr-simulated",
+      chainType: "l1",
     },
-    zilliqaTestnet: {
-      url: "https://api.testnet.zilliqa.com",
-      chainId: 33101,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    hardhatOp: {
+      type: "edr-simulated",
+      chainType: "op",
     },
     zilliqaMainnet: {
-      url: "https://api.zilliqa.com",
+      type: "http",
+      chainType: "l1",
       chainId: 32769,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      url: "https://api.zilliqa.com",
+      accounts: [configVariable("ZILLIQA_MAINNET_PRIVATE_KEY")]
+    },
+    zilliqaTestnet: {
+      type: "http",
+      chainType: "l1",
+      chainId: 33101,
+      url: "https://api.testnet.zilliqa.com",
+      accounts: [configVariable("ZILLIQA_TESTNET_PRIVATE_KEY")]
+    },
+  },
+  verify: {
+    // Disable Etherscan since we're using Zilliqa networks
+    etherscan: {
+      enabled: false,
+    },
+    // Blockscout verification (no API key needed)
+    blockscout: {
+      enabled: true,
+    },
+  },
+  // Add custom chain descriptors for Zilliqa networks
+  chainDescriptors: {
+    // Zilliqa Mainnet
+    32769: {
+      name: "Zilliqa",
+      blockExplorers: {
+        blockscout: {
+          name: "Zilliqa Explorer",
+          url: "https://zilliqa.blockscout.com",
+          apiUrl: "https://zilliqa.blockscout.com/api",
+        },
+      },
+    },
+    // Zilliqa Testnet
+    33101: {
+      name: "Zilliqa Testnet",
+      blockExplorers: {
+        blockscout: {
+          name: "Zilliqa Testnet Explorer",
+          url: "https://testnet.zilliqa.blockscout.com",
+          apiUrl: "https://testnet.zilliqa.blockscout.com/api",
+        },
+      },
     },
   },
 };
@@ -185,10 +244,20 @@ const config: HardhatUserConfig = {
 export default config;
 ```
 
-**Create your `.env` file:**
+**Create environment variables file** (`.env`):
 ```bash
-echo "PRIVATE_KEY=your_metamask_private_key_here" > .env
-echo ".env" >> .gitignore
+# Create .env file (never commit this to version control)
+echo "# Environment variables for development" > .env
+echo "ZILLIQA_TESTNET_PRIVATE_KEY=your_testnet_private_key_here" >> .env
+echo "" >> .env
+echo "# Note: Never commit this file to version control" >> .env
+echo "# Add .env to your .gitignore file" >> .env
+```
+
+**Install additional dependencies:**
+```bash
+npm install --save-dev dotenv
+npm install --save-dev @nomicfoundation/hardhat-verify
 ```
 
 ## Creating Your Simple Token Contract
@@ -197,7 +266,7 @@ echo ".env" >> .gitignore
 
 **Remove the default Counter contract:**
 ```bash
-rm contracts/Counter.sol contracts/Counter.t.sol
+rm contracts/Counter.sol contracts/Counter.t.sol test/Counter.ts
 ```
 
 **Create `contracts/MyFirstToken.sol`:**
@@ -306,12 +375,12 @@ _mint(msg.sender, 1000000 * 10**18);
 **Real-world analogy:** Think of this like having a work laptop (for sensitive operations) and a personal phone (for daily use). You wouldn't use your work credentials on your personal device, and vice versa.
 
 **Best Practice Security Setup:**
-- **Connected Wallet (MetaMask):** Your main wallet for claiming achievements
+**Connected Wallet (MetaMask):** Your main wallet for claiming achievements
   - This is your "hot" wallet that's connected to websites
   - Contains smaller amounts for regular transactions
   - Used for interacting with DApps and learning platforms
 
-- **Deployment Wallet:** A separate wallet for deploying contracts
+**Deployment Wallet:** A separate wallet for deploying contracts
   - Can be a new wallet with just enough ZIL for deployment
   - Not connected to websites regularly
   - More secure for serious development work
@@ -345,56 +414,179 @@ If you see errors, double-check:
 
 ### Testing Your Simple Token
 
-**Create a basic test file `test/MyFirstToken.test.ts`:**
+Hardhat 3 offers two distinct testing approaches, each with unique advantages. Let's explore both to understand when to use each approach.
+
+## Node.js Tests vs Solidity Tests
+
+**Node.js Tests** use TypeScript/JavaScript with blockchain simulation, ideal for:
+- Complex integration testing
+- Frontend/backend integration
+- Gas cost analysis and optimization
+- Async operations and event handling
+
+**Solidity Tests** run directly on the EVM, perfect for:
+- Unit testing smart contract logic
+- Fuzzing and property-based testing
+- Gas-efficient test execution
+- Testing edge cases and invariants
+
+## Option 1: Node.js Testing (TypeScript)
+
+**Create `test/MyFirstToken.test.ts`:**
 
 ```typescript
-import { expect } from "chai";
-import { ethers } from "hardhat";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { parseEther, zeroAddress, getAddress } from "viem";
 
-describe("MyFirstToken", function () {
+import { network } from "hardhat";
+
+describe("MyFirstToken", async function () {
+  const { viem } = await network.connect();
+  const publicClient = await viem.getPublicClient();
+  const [owner, claimant] = await viem.getWalletClients();
+
   it("Should deploy with correct initial state", async function () {
-    const [owner, claimant] = await ethers.getSigners();
-    
-    const MyFirstToken = await ethers.getContractFactory("MyFirstToken");
-    const token = await MyFirstToken.deploy(claimant.address);
+    const token = await viem.deployContract("MyFirstToken", [claimant.account.address]);
     
     // Check basic properties
-    expect(await token.name()).to.equal("My First Token");
-    expect(await token.symbol()).to.equal("MFT");
-    expect(await token.decimals()).to.equal(18);
-    expect(await token.totalSupply()).to.equal(ethers.parseEther("1000000"));
+    assert.equal(await token.read.name(), "My First Token");
+    assert.equal(await token.read.symbol(), "MFT");
+    assert.equal(await token.read.decimals(), 18);
+    assert.equal(await token.read.totalSupply(), parseEther("1000000"));
     
     // Check claimant is set correctly
-    expect(await token.claimant()).to.equal(claimant.address);
+    assert.equal(getAddress(await token.read.claimant()), getAddress(claimant.account.address));
     
     // Check that deployer received all tokens
-    expect(await token.balanceOf(owner.address)).to.equal(ethers.parseEther("1000000"));
+    assert.equal(await token.read.balanceOf([owner.account.address]), parseEther("1000000"));
   });
   
   it("Should transfer tokens correctly", async function () {
-    const [owner, claimant, addr1] = await ethers.getSigners();
+    const [ownerClient, claimantClient, addr1Client] = await viem.getWalletClients();
     
-    const MyFirstToken = await ethers.getContractFactory("MyFirstToken");
-    const token = await MyFirstToken.deploy(claimant.address);
+    const token = await viem.deployContract("MyFirstToken", [claimantClient.account.address]);
     
     // Transfer 1000 tokens to addr1
-    await token.transfer(addr1.address, ethers.parseEther("1000"));
+    await token.write.transfer([addr1Client.account.address, parseEther("1000")]);
     
-    expect(await token.balanceOf(addr1.address)).to.equal(ethers.parseEther("1000"));
-    expect(await token.balanceOf(owner.address)).to.equal(ethers.parseEther("999000"));
+    assert.equal(await token.read.balanceOf([addr1Client.account.address]), parseEther("1000"));
+    assert.equal(await token.read.balanceOf([ownerClient.account.address]), parseEther("999000"));
   });
   
   it("Should reject zero address as claimant", async function () {
-    const MyFirstToken = await ethers.getContractFactory("MyFirstToken");
-    
-    await expect(
-      MyFirstToken.deploy(ethers.ZeroAddress)
-    ).to.be.revertedWith("Claimant cannot be zero address");
+    await assert.rejects(
+      async () => {
+        await viem.deployContract("MyFirstToken", [zeroAddress]);
+      },
+      /Claimant cannot be zero address/
+    );
   });
 });
 ```
 
-**Run the tests:**
+## Option 2: Solidity Testing
+
+**Create `contracts/MyFirstToken.t.sol`:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {MyFirstToken} from "./MyFirstToken.sol";
+import {Test} from "forge-std/Test.sol";
+
+contract MyFirstTokenTest is Test {
+    MyFirstToken token;
+    address owner;
+    address claimant;
+    address user1;
+    address user2;
+
+    function setUp() public {
+        owner = address(this);
+        claimant = makeAddr("claimant");
+        user1 = makeAddr("user1");
+        user2 = makeAddr("user2");
+        
+        token = new MyFirstToken(claimant);
+    }
+
+    function test_InitialState() public view {
+        require(keccak256(bytes(token.name())) == keccak256(bytes("My First Token")), "Name should be 'My First Token'");
+        require(keccak256(bytes(token.symbol())) == keccak256(bytes("MFT")), "Symbol should be 'MFT'");
+        require(token.decimals() == 18, "Decimals should be 18");
+        require(token.totalSupply() == 1000000 * 10**18, "Total supply should be 1 million tokens");
+        require(token.claimant() == claimant, "Claimant should be set correctly");
+        require(token.balanceOf(owner) == 1000000 * 10**18, "Owner should have all tokens initially");
+    }
+
+    function test_Transfer() public {
+        uint256 transferAmount = 1000 * 10**18;
+        uint256 initialOwnerBalance = token.balanceOf(owner);
+        
+        token.transfer(user1, transferAmount);
+        
+        require(token.balanceOf(user1) == transferAmount, "User1 should receive transferred tokens");
+        require(token.balanceOf(owner) == initialOwnerBalance - transferAmount, "Owner balance should decrease");
+    }
+
+    function test_ZeroAddressClaimant() public {
+        vm.expectRevert("Claimant cannot be zero address");
+        new MyFirstToken(address(0));
+    }
+
+    function testFuzz_Transfer(uint256 amount) public {
+        // Bound the amount to be within the owner's balance
+        amount = bound(amount, 0, token.balanceOf(owner));
+        
+        uint256 initialOwnerBalance = token.balanceOf(owner);
+        uint256 initialUser1Balance = token.balanceOf(user1);
+        
+        token.transfer(user1, amount);
+        
+        require(token.balanceOf(user1) == initialUser1Balance + amount, "User1 balance should increase by amount");
+        require(token.balanceOf(owner) == initialOwnerBalance - amount, "Owner balance should decrease by amount");
+    }
+
+    function test_TransferMoreThanBalance() public {
+        uint256 ownerBalance = token.balanceOf(owner);
+        uint256 excessiveAmount = ownerBalance + 1;
+        
+        vm.expectRevert();
+        token.transfer(user1, excessiveAmount);
+    }
+
+    function test_ClaimantIsImmutable() public view {
+        // Test that claimant cannot be changed (it's a public variable, no setter)
+        require(token.claimant() == claimant, "Claimant should remain unchanged");
+    }
+}
+```
+
+## Key Differences Explained
+
+### 1. **Setup and Imports**
+- **Node.js**: Uses `viem` for type-safe Ethereum interactions, `node:test` for testing framework
+- **Solidity**: Imports Foundry's `Test` contract, uses `vm` cheatcodes for testing utilities
+
+### 2. **Test Structure**
+- **Node.js**: Async/await pattern, describes tests in JavaScript functions
+- **Solidity**: Synchronous functions prefixed with `test_`, native Solidity syntax
+
+### 3. **Assertions**
+- **Node.js**: Uses `assert.equal()` and `assert.rejects()` for validation
+- **Solidity**: Uses `require()` statements and `vm.expectRevert()` for error handling
+
+### 4. **Advanced Features**
+- **Node.js**: Better for complex async operations, event testing, gas analysis
+- **Solidity**: Includes fuzzing with `testFuzz_Transfer()`, property-based testing
+
+### 5. **Performance**
+- **Node.js**: Slower due to JSON-RPC communication with test network
+- **Solidity**: Faster execution directly on EVM, efficient for unit tests
+
+## Running Your Tests
 
 ```bash
 npx hardhat test
@@ -402,11 +594,28 @@ npx hardhat test
 
 **Expected output:**
 ```
-  MyFirstToken
-    ✓ Should deploy with correct initial state
-    ✓ Should transfer tokens correctly
+Running Solidity tests
 
-  2 passing
+  contracts/MyFirstToken.t.sol:MyFirstTokenTest
+    ✔ test_ZeroAddressClaimant()
+    ✔ test_TransferMoreThanBalance()
+    ✔ test_Transfer()
+    ✔ test_InitialState()
+    ✔ test_ClaimantIsImmutable()
+    ✔ testFuzz_Transfer(uint256) (runs: 256)
+
+
+  6 passing
+
+Running node:test tests
+
+  MyFirstToken
+    ✔ Should deploy with correct initial state (210ms)
+    ✔ Should transfer tokens correctly (183ms)
+    ✔ Should reject zero address as claimant (143ms)
+
+
+  3 passing (32945ms)
 ```
 
 ## What Your Simple Token Can Do
@@ -623,7 +832,7 @@ contract MyFirstToken is ERC20 {
 1. ✅ **Created simple token** with OpenZeppelin
 2. ✅ **Understood every line** of code
 3. ✅ **Learned professional features** available
-4. 🔄 **Next: Testing and deployment** with Hardhat 3
+4. 🔄 **Next: Deployment** with Hardhat 3
 5. 🔄 **Then: Integration and management** best practices
 
 Remember: The best token is one that serves your actual needs. Start simple, deploy early, and add complexity only when necessary!
