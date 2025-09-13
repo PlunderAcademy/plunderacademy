@@ -32,6 +32,9 @@ export function AnimatedAchievementCard({
       case "0003": return "elastic";
       case "0004": return "flip";
       case "0005": return "tada";
+      // Secret achievements
+      case "1001": return "glow";
+      case "1002": return "heartbeat";
       default: return "wobble";
     }
   };

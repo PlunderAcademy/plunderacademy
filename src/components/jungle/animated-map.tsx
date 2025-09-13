@@ -24,6 +24,9 @@ const pathPoints = [
   { x: 71, y: 76, label: "Location 5", progress: 100 },  // Center of monument
 ];
 
+// Treasure chest coordinates (over the existing chest in the image, slightly down and left from location 4)
+const treasureChestPosition = { x: 56, y: 62 };
+
 // Create curved path string for SVG
 const createPathString = (points: typeof pathPoints) => {
   if (points.length === 0) return '';
@@ -86,11 +89,142 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
   const [completedLocations, setCompletedLocations] = useState<Set<number>>(new Set());
   const [maxCompletedLocation, setMaxCompletedLocation] = useState(0);
   
+  // Treasure hunt state
+  const [treasureClicks, setTreasureClicks] = useState(0);
+  const [treasureFound, setTreasureFound] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isSubmittingSecret, setIsSubmittingSecret] = useState(false);
+  const [secretError, setSecretError] = useState<string | null>(null);
+  const [showDirtParticles, setShowDirtParticles] = useState(false);
+  
   // No modal needed - info shown on image hover
 
   // Animation timing
   const animationDuration = 8000; // 8 seconds total
 
+  // Secret achievement submission function
+  const submitSecretAchievement = async () => {
+    if (!address) {
+      setSecretError('Please connect your wallet to claim this secret');
+      return;
+    }
+    
+    setIsSubmittingSecret(true);
+    setSecretError(null);
+    
+    const requestPayload = {
+      walletAddress: address,
+      achievementNumber: "1001",
+      submissionType: "secret",
+      submissionData: {
+        secretAnswer: "FIRSTSECRET"
+      },
+      metadata: {
+        timestamp: new Date().toISOString(),
+        discoveryMethod: "treasure_hunt"
+      }
+    };
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PLUNDER_ACADEMY_API}/api/v1/vouchers/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload),
+      });
+      
+      const responseText = await response.text();
+      let apiResult;
+      
+      try {
+        apiResult = JSON.parse(responseText);
+      } catch {
+        throw new Error(`API returned invalid JSON. Status: ${response.status}`);
+      }
+      
+      if (response.ok && apiResult.success) {
+        // Success! Fresh treasure discovery
+        setTreasureFound(true);
+        setShowSuccessModal(true);
+        // Refresh achievement data to pick up the new voucher
+        window.dispatchEvent(new CustomEvent('achievementClaimed', { 
+          detail: { timestamp: Date.now() } 
+        }));
+      } else {
+        // Check if this is an "already completed" error - treat as success
+        const errorMessage = apiResult.error || 'Failed to claim secret achievement';
+        if (errorMessage.toLowerCase().includes('already completed') || 
+            errorMessage.toLowerCase().includes('already claimed') ||
+            errorMessage.toLowerCase().includes('already exists')) {
+          // This is actually a success case - they already found the treasure
+          // Just show sparkles, no modal since they've seen the success before
+          setTreasureFound(true);
+          setShowSuccessModal(false);
+          return;
+        }
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error('Error submitting secret achievement:', error);
+      setSecretError(error instanceof Error ? error.message : 'Failed to claim secret achievement');
+    } finally {
+      setIsSubmittingSecret(false);
+    }
+  };
+
+  // Play digging sound effect
+  const playDigSound = () => {
+    try {
+      // Create a simple digging sound using Web Audio API
+      const AudioContextClass = window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+      
+      const audioContext = new AudioContextClass();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Create a "thud" sound
+      oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.1);
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+    } catch {
+      // Fallback - no sound if Web Audio API not available
+      console.log('Audio not available');
+    }
+  };
+
+  // Handle treasure chest clicks
+  const handleTreasureClick = async () => {
+    if (!address || treasureFound || isSubmittingSecret) return;
+    
+    const newClickCount = treasureClicks + 1;
+    setTreasureClicks(newClickCount);
+    
+    // Play digging sound
+    playDigSound();
+    
+    // Show quick dirt particle animation
+    setShowDirtParticles(true);
+    
+    // Reset animations quickly
+    setTimeout(() => {
+      setShowDirtParticles(false);
+    }, 600);
+    
+    // On 4th click, submit the secret achievement
+    if (newClickCount >= 4) {
+      await submitSecretAchievement();
+    }
+  };
 
   // Helper functions for category styling
   const getCategoryIcon = (category: Achievement["category"]) => {
@@ -118,6 +252,15 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
       // Map achievements to locations (taskCode 1-5 corresponds to locations 0-4 in our array)
       const completed = new Set<number>();
       let maxLocation = 0;
+      
+      // Check for secret achievement (taskCode 1001)
+      const hasSecretAchievement = walletAchievements.some(achievement => 
+        achievement.isClaimed && achievement.tokenId === 1001
+      );
+      
+      if (hasSecretAchievement) {
+        setTreasureFound(true);
+      }
       
       walletAchievements.forEach(achievement => {
         if (achievement.isClaimed && achievement.tokenId >= 1 && achievement.tokenId <= 5) {
@@ -155,6 +298,8 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
       setCurrentStep(0);
       setCompletedLocations(new Set());
       setMaxCompletedLocation(0);
+      setTreasureFound(false); // Reset treasure when disconnecting
+      setShowSuccessModal(false); // Reset modal
     }
   }, [address, isConnected, mode, walletAchievements]);
 
@@ -272,6 +417,21 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
                     }
                   }
                   
+                  @keyframes fly-up {
+                    0% {
+                      opacity: 1;
+                      r: 0.3;
+                    }
+                    50% {
+                      opacity: 0.8;
+                      r: 0.2;
+                    }
+                    100% {
+                      opacity: 0;
+                      r: 0.1;
+                    }
+                  }
+                  
                   .animated-path {
                     stroke: #ef4444;
                     stroke-width: 1.2;
@@ -377,6 +537,156 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
 
               return markerContent;
             })}
+            
+            {/* Hidden Treasure Area (Secret Achievement) */}
+            {address && !treasureFound && (
+              <g>
+                {/* Dirt particles animation */}
+                {showDirtParticles && (
+                  <>
+                    {/* Main dirt chunks */}
+                    <circle
+                      cx={treasureChestPosition.x - 0.3}
+                      cy={treasureChestPosition.y - 0.5}
+                      r="0.3"
+                      className="fill-amber-700"
+                      style={{
+                        animation: 'fly-up 0.6s ease-out forwards',
+                        animationDelay: '0s'
+                      }}
+                    />
+                    <circle
+                      cx={treasureChestPosition.x + 0.4}
+                      cy={treasureChestPosition.y - 0.8}
+                      r="0.25"
+                      className="fill-amber-600"
+                      style={{
+                        animation: 'fly-up 0.6s ease-out forwards',
+                        animationDelay: '0.1s'
+                      }}
+                    />
+                    <circle
+                      cx={treasureChestPosition.x + 0.1}
+                      cy={treasureChestPosition.y - 0.3}
+                      r="0.25"
+                      className="fill-amber-800"
+                      style={{
+                        animation: 'fly-up 0.6s ease-out forwards',
+                        animationDelay: '0.2s'
+                      }}
+                    />
+                    <circle
+                      cx={treasureChestPosition.x - 0.2}
+                      cy={treasureChestPosition.y - 0.6}
+                      r="0.2"
+                      className="fill-amber-900"
+                      style={{
+                        animation: 'fly-up 0.6s ease-out forwards',
+                        animationDelay: '0.15s'
+                      }}
+                    />
+                    
+                    {/* Additional smaller particles */}
+                    <circle
+                      cx={treasureChestPosition.x + 0.6}
+                      cy={treasureChestPosition.y - 0.4}
+                      r="0.15"
+                      className="fill-amber-500"
+                      style={{
+                        animation: 'fly-up 0.5s ease-out forwards',
+                        animationDelay: '0.05s'
+                      }}
+                    />
+                    <circle
+                      cx={treasureChestPosition.x - 0.5}
+                      cy={treasureChestPosition.y - 0.2}
+                      r="0.18"
+                      className="fill-amber-800"
+                      style={{
+                        animation: 'fly-up 0.55s ease-out forwards',
+                        animationDelay: '0.08s'
+                      }}
+                    />
+                    <circle
+                      cx={treasureChestPosition.x + 0.2}
+                      cy={treasureChestPosition.y - 0.9}
+                      r="0.12"
+                      className="fill-amber-700"
+                      style={{
+                        animation: 'fly-up 0.45s ease-out forwards',
+                        animationDelay: '0.25s'
+                      }}
+                    />
+                    <circle
+                      cx={treasureChestPosition.x - 0.6}
+                      cy={treasureChestPosition.y - 0.7}
+                      r="0.14"
+                      className="fill-amber-600"
+                      style={{
+                        animation: 'fly-up 0.5s ease-out forwards',
+                        animationDelay: '0.18s'
+                      }}
+                    />
+                    <circle
+                      cx={treasureChestPosition.x + 0.3}
+                      cy={treasureChestPosition.y - 0.1}
+                      r="0.16"
+                      className="fill-amber-900"
+                      style={{
+                        animation: 'fly-up 0.6s ease-out forwards',
+                        animationDelay: '0.12s'
+                      }}
+                    />
+                  </>
+                )}
+                
+                {/* Success sparkles after treasure found */}
+                {treasureFound && (
+                  <>
+                    <text
+                      x={treasureChestPosition.x}
+                      y={treasureChestPosition.y - 2}
+                      className="fill-yellow-300 animate-pulse"
+                      textAnchor="middle"
+                      fontSize="2"
+                    >
+                      ✨
+                    </text>
+                    <text
+                      x={treasureChestPosition.x - 1.5}
+                      y={treasureChestPosition.y - 1}
+                      className="fill-yellow-400 animate-pulse"
+                      textAnchor="middle"
+                      fontSize="1.5"
+                      style={{ animationDelay: '0.3s' }}
+                    >
+                      ✨
+                    </text>
+                    <text
+                      x={treasureChestPosition.x + 1.5}
+                      y={treasureChestPosition.y - 0.5}
+                      className="fill-yellow-300 animate-pulse"
+                      textAnchor="middle"
+                      fontSize="1.5"
+                      style={{ animationDelay: '0.6s' }}
+                    >
+                      ✨
+                    </text>
+                  </>
+                )}
+              </g>
+            )}
+
+            {/* Invisible clickable area for treasure */}
+            {address && !treasureFound && !isSubmittingSecret && (
+              <circle
+                cx={treasureChestPosition.x}
+                cy={treasureChestPosition.y}
+                r="2"
+                className="fill-transparent cursor-pointer hover:fill-yellow-400/10 transition-colors"
+                onClick={handleTreasureClick}
+              />
+            )}
           </svg>
           
           {/* Hover cards for all locations */}
@@ -590,6 +900,48 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
             );
           })}
         </div>
+        
+        {/* Secret Achievement Success Message */}
+        {showSuccessModal && (
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-gradient-to-br from-yellow-400 to-amber-600 p-8 rounded-xl shadow-2xl text-center max-w-md mx-4 border-4 border-yellow-300 animate-pulse">
+              <div className="text-6xl mb-4">🏆</div>
+              <h2 className="text-2xl font-bold text-white mb-2">Secret Achievement Discovered!</h2>
+              <h3 className="text-lg font-semibold text-yellow-100 mb-4">Secret Explorer</h3>
+              <p className="text-yellow-100 mb-6">
+                You&apos;ve found the hidden treasure! 🎉
+              </p>
+              <div className="space-y-3">
+                <p className="text-sm text-yellow-200 bg-black/20 p-3 rounded-lg">
+                  📜 Check your achievements and unclaimed vouchers to claim your NFT!
+                </p>
+                <button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg transition-colors border border-white/30"
+                >
+                  Continue Exploring
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Error Message */}
+        {secretError && (
+          <div className="absolute top-4 right-4 bg-red-500/90 backdrop-blur text-white p-4 rounded-lg shadow-lg max-w-md z-40">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">⚠️</span>
+              <span className="font-semibold">Secret Quest Failed</span>
+            </div>
+            <p className="text-sm">{secretError}</p>
+            <button
+              onClick={() => setSecretError(null)}
+              className="mt-2 text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         
         {/* Current location info */}
         <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur rounded-lg p-3 border">

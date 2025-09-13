@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAchievements } from "@/hooks/use-achievements";
-import { AchievementCelebration } from "@/components/achievement-celebration";
 import { AnimatedAchievementCard } from "@/components/animated-achievement-card";
 import { ALL_ACHIEVEMENTS, type Achievement } from "@/lib/achievements-config";
 import { 
@@ -41,7 +40,6 @@ export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }:
     isUnclaimedClaimPending,
     isUnclaimedConfirming,
     isUnclaimedConfirmed,
-    isUnclaimedConfirmed: celebrationTrigger,
     unclaimedClaimError,
     unclaimedHash,
     fetchUnclaimedVouchers,
@@ -57,49 +55,74 @@ export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }:
     }
   }, [isOpen, fetchWalletAchievements, fetchUnclaimedVouchers]);
 
-  // Celebration state
-  const [showCelebration, setShowCelebration] = React.useState(false);
-  const [celebrationData, setCelebrationData] = React.useState<{
+  // Inline celebration state for voucher claims
+  const [showInlineCelebration, setShowInlineCelebration] = React.useState(false);
+  const [inlineCelebrationData, setInlineCelebrationData] = React.useState<{
     name?: string;
     description?: string;
     image?: string;
     achievementNumber: string;
     category?: Achievement["category"];
-    attributes?: Array<{
-      trait_type: string;
-      value: string | number;
-    }>;
   } | null>(null);
 
-  // Track last confirmed state to trigger celebration
-  const lastConfirmedRef = React.useRef(false);
+  // Track the currently claiming voucher for celebration
+  const [currentlyClaimingVoucher, setCurrentlyClaimingVoucher] = React.useState<{
+    achievementNumber: string;
+    taskCode: number;
+    createdAt: string;
+    voucherSignature: string;
+  } | null>(null);
 
   // No longer loading metadata for placeholders since we only show achievement number and ???
 
-  React.useEffect(() => {
-    if (celebrationTrigger && !lastConfirmedRef.current) {
-      // Achievement was just confirmed - show celebration
-      const latestClaimed = walletAchievements
-        .filter(a => a.isClaimed)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
-      if (latestClaimed) {
-        const metadata = achievementMetadata[latestClaimed.achievementNumber];
-        const demoAchievement = ALL_ACHIEVEMENTS.find(d => d.taskCode === latestClaimed.tokenId);
-        
-        setCelebrationData({
-          name: metadata?.name || demoAchievement?.title,
-          description: metadata?.description || demoAchievement?.description,
-          image: metadata?.image,
-          achievementNumber: latestClaimed.achievementNumber,
-          category: demoAchievement?.category,
-          attributes: metadata?.attributes
-        });
-        setShowCelebration(true);
-      }
+  // Track unclaimed voucher claims for inline celebration
+  const lastUnclaimedConfirmedRef = React.useRef(false);
+  
+  React.useEffect(() => {
+    if (isUnclaimedConfirmed && !lastUnclaimedConfirmedRef.current && currentlyClaimingVoucher) {
+      // An unclaimed voucher was just successfully claimed
+      // Use the tracked voucher data for inline celebration
+      const metadata = achievementMetadata[currentlyClaimingVoucher.achievementNumber];
+      const achievement = ALL_ACHIEVEMENTS.find(a => a.taskCode === currentlyClaimingVoucher.taskCode);
+      
+      setInlineCelebrationData({
+        name: metadata?.name || achievement?.title || "Secret Explorer",
+        description: metadata?.description || achievement?.description || "Achievement unlocked!",
+        image: metadata?.image,
+        achievementNumber: currentlyClaimingVoucher.achievementNumber,
+        category: achievement?.category || "advanced"
+      });
+      
+      setShowInlineCelebration(true);
+      
+      // Immediately trigger header refresh event
+      window.dispatchEvent(new CustomEvent('achievementClaimed', { 
+        detail: { timestamp: Date.now() } 
+      }));
+      
+      // Auto-hide celebration after 5 seconds
+      setTimeout(() => {
+        setShowInlineCelebration(false);
+        setInlineCelebrationData(null);
+        setCurrentlyClaimingVoucher(null);
+      }, 5000);
+      
+      // Refresh data immediately and then again after delay
+      fetchWalletAchievements();
+      fetchUnclaimedVouchers();
+      
+      setTimeout(() => {
+        fetchWalletAchievements();
+        fetchUnclaimedVouchers();
+        // Trigger another header refresh event after data refresh
+        window.dispatchEvent(new CustomEvent('achievementClaimed', { 
+          detail: { timestamp: Date.now() } 
+        }));
+      }, 2000);
     }
-    lastConfirmedRef.current = celebrationTrigger;
-  }, [celebrationTrigger, walletAchievements, achievementMetadata]);
+    lastUnclaimedConfirmedRef.current = isUnclaimedConfirmed;
+  }, [isUnclaimedConfirmed, currentlyClaimingVoucher, achievementMetadata, fetchWalletAchievements, fetchUnclaimedVouchers]);
 
   const getCategoryIcon = (category: Achievement["category"]) => {
     switch (category) {
@@ -132,6 +155,62 @@ export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }:
               Track your progress and claim earned achievements
             </DialogDescription>
           </DialogHeader>
+
+          {/* Inline Achievement Celebration */}
+          {showInlineCelebration && inlineCelebrationData && (
+            <div className="mx-6 mb-4">
+              <div className="bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 rounded-xl p-1 animate-pulse">
+                <div className="bg-background rounded-lg p-6 space-y-4">
+                  {/* Fireworks emojis */}
+                  <div className="text-center space-y-2">
+                    <div className="text-4xl animate-bounce">🎉✨🏆✨🎉</div>
+                    <h3 className="text-2xl font-bold text-primary">Achievement Unlocked!</h3>
+                  </div>
+                  
+                  {/* Achievement details */}
+                  <div className="flex items-center justify-center gap-4">
+                    {inlineCelebrationData.image && (
+                      <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        <Image
+                          src={inlineCelebrationData.image}
+                          alt={inlineCelebrationData.name || "Achievement"}
+                          width={80}
+                          height={80}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            if (target.src.includes('.webp')) {
+                              target.src = target.src.replace('.webp', '.png');
+                            }
+                          }}
+                          unoptimized
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="flex-1 text-center space-y-2">
+                      <h4 className="text-xl font-semibold">{inlineCelebrationData.name}</h4>
+                      <p className="text-sm text-muted-foreground">{inlineCelebrationData.description}</p>
+                      <div className="flex items-center justify-center gap-2">
+                        <Badge className={getCategoryColor(inlineCelebrationData.category || "advanced")}>
+                          {getCategoryIcon(inlineCelebrationData.category || "advanced")}
+                          <span className="ml-1 capitalize">{inlineCelebrationData.category}</span>
+                        </Badge>
+                        <Badge variant="outline">#{inlineCelebrationData.achievementNumber}</Badge>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Success message */}
+                  <div className="text-center p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                    <p className="text-green-700 dark:text-green-300 font-medium text-sm">
+                      🎊 NFT successfully claimed to your wallet!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           
           <Tabs defaultValue="achievements" className="flex-1 flex flex-col overflow-hidden">
             <TabsList className="grid w-full grid-cols-2 flex-shrink-0 mb-4">
@@ -447,7 +526,10 @@ export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }:
                             </div>
                             
                             <Button
-                              onClick={() => claimUnclaimedVoucher(unclaimedVoucher)}
+                              onClick={() => {
+                                setCurrentlyClaimingVoucher(unclaimedVoucher);
+                                claimUnclaimedVoucher(unclaimedVoucher);
+                              }}
                               disabled={isClaiming || isUnclaimedClaimPending || isUnclaimedConfirming}
                               className="w-full"
                               size="sm"
@@ -503,12 +585,6 @@ export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }:
         </DialogContent>
       </Dialog>
 
-      {/* Achievement Celebration */}
-      <AchievementCelebration
-        isVisible={showCelebration}
-        onClose={() => setShowCelebration(false)}
-        achievementData={celebrationData || undefined}
-      />
     </>
   );
 }

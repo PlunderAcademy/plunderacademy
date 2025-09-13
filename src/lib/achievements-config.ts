@@ -55,6 +55,13 @@ export const ALL_ACHIEVEMENTS: Achievement[] = [
     title: "Advanced Developer",
     description: "Complete advanced blockchain development challenges",
     category: "advanced"
+  },
+  // Secret Achievements (1001+)
+  {
+    taskCode: 1001,
+    title: "Secret Explorer",
+    description: "Discovered a hidden treasure in the academy",
+    category: "advanced"
   }
   // Add new achievements here following the same pattern
   // {

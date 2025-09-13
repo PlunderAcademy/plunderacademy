@@ -36,12 +36,27 @@ export function HeaderAchievements({ onOpenModal }: HeaderAchievementsProps) {
   // Listen for achievement claimed events
   React.useEffect(() => {
     const handleAchievementClaimed = (event: CustomEvent) => {
-      // Force refresh the achievement data
+      // Force refresh the achievement data immediately
       fetchWalletAchievements();
       fetchUnclaimedVouchers();
       // Force component re-render
       setLastUpdateTime(Date.now());
       forceUpdate();
+      
+      // Schedule additional refreshes to ensure data is up to date
+      setTimeout(() => {
+        fetchWalletAchievements();
+        fetchUnclaimedVouchers();
+        setLastUpdateTime(Date.now());
+        forceUpdate();
+      }, 1000);
+      
+      setTimeout(() => {
+        fetchWalletAchievements();
+        fetchUnclaimedVouchers();
+        setLastUpdateTime(Date.now());
+        forceUpdate();
+      }, 3000);
     };
 
     window.addEventListener('achievementClaimed', handleAchievementClaimed as EventListener);
