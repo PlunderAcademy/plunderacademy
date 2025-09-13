@@ -54,7 +54,7 @@ export function MapZoom() {
           </div>
 
           {/* Desert Island - Top Right */}
-          <div className="absolute top-[20%] left-[75%] group/desert">
+          {/* <div className="absolute top-[20%] left-[75%] group/desert">
             <div className="relative">
               <div className="relative bg-orange-600/60 backdrop-blur-sm rounded-full p-3 border-2 border-white/30 shadow-lg">
                 <div className="w-6 h-6 rounded-full bg-orange-300"></div>
@@ -64,10 +64,10 @@ export function MapZoom() {
                 <div className="text-xs text-orange-600">Coming Soon</div>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Ice Island - Top Left */}
-          <div className="absolute top-[20%] left-[25%] group/ice">
+          {/* <div className="absolute top-[20%] left-[25%] group/ice">
             <div className="relative">
               <div className="relative bg-blue-600/60 backdrop-blur-sm rounded-full p-3 border-2 border-white/30 shadow-lg">
                 <div className="w-6 h-6 rounded-full bg-blue-300"></div>
@@ -77,10 +77,10 @@ export function MapZoom() {
                 <div className="text-xs text-blue-600">Coming Soon</div>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Mushroom Island - Bottom Right */}
-          <div className="absolute bottom-[20%] left-[70%] group/mushroom">
+          {/* <div className="absolute bottom-[20%] left-[70%] group/mushroom">
             <div className="relative">
               <div className="relative bg-purple-600/60 backdrop-blur-sm rounded-full p-3 border-2 border-white/30 shadow-lg">
                 <div className="w-6 h-6 rounded-full bg-purple-300"></div>
@@ -90,10 +90,10 @@ export function MapZoom() {
                 <div className="text-xs text-purple-600">Coming Soon</div>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Volcano Island - Bottom Left */}
-          <div className="absolute bottom-[20%] left-[25%] group/volcano">
+          {/* <div className="absolute bottom-[20%] left-[25%] group/volcano">
             <div className="relative">
               <div className="relative bg-red-600/60 backdrop-blur-sm rounded-full p-3 border-2 border-white/30 shadow-lg">
                 <div className="w-6 h-6 rounded-full bg-red-300"></div>
@@ -103,7 +103,7 @@ export function MapZoom() {
                 <div className="text-xs text-red-600">Coming Soon</div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 
