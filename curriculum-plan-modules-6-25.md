@@ -140,7 +140,7 @@ Consolidated blockchain concepts with double practicals using real contracts
 ### Module 17: Access Control & Airdrop Patterns
 
 - Role-based access control patterns
-- Merkle tree airdrops for gas efficiency
+- Airdrops for gas efficiency
 - Whitelist and claiming mechanisms
 - Multi-signature patterns
 - Emergency pause and recovery patterns
@@ -280,7 +280,7 @@ Advanced security aligned with AI auditor
 
 1. **Module 10:** Staking Contract (time-locked staking, rewards, withdrawal mechanisms)
 2. **Module 14:** NFT Collection with Reveal Mechanics and Royalties
-3. **Module 17:** Airdropper Contract (Merkle tree airdrops, access control)
+3. **Module 17:** Airdropper Contract (Airdrops, access control)
 4. **Module 18:** Random Number Generator (commit-reveal pattern)
 5. **Module 21:** Upgradable Contract (proxy patterns, safe upgrades)
 6. **Module 24:** Simple dApp Interface (wallet connection, contract interactions)
