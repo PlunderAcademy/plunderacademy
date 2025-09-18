@@ -1,8 +1,8 @@
-# Plunder Academy Curriculum Plan: Modules 6-22
+# Plunder Academy Curriculum Plan: Extra Islands and Modules
 
 ## Overview
 
-This document outlines the focused smart contract development curriculum for Plunder Academy modules 6-22, building on the foundation established in modules 1-5. The curriculum is organized into 4 main sections with practical deployments using battle-tested contracts.
+This document outlines the focused smart contract development curriculum for Plunder Academy modules 6-22, building on the foundation established in modules 1-5. The curriculum is organized into 4 main islands with practical deployments using battle-tested contracts.
 
 **Total Modules:** 17 additional (22 total) then Module 23 to do in Milestone 3
 **Focus:** Practical EVM Solidity Development
@@ -12,11 +12,11 @@ This document outlines the focused smart contract development curriculum for Plu
 
 ---
 
-## SECTION 2: Advanced Solidity (Modules 6-10)
+## Island 2: Advanced Solidity (Modules 1-5)
 
-Building on the token from Section 1
+Building on the token from Island 1 (Jungle)
 
-### Module 6: Advanced Solidity Foundations
+### Module 1: Advanced Solidity Foundations
 
 - Contract inheritance patterns & abstract contracts
 - Interface design and implementation
@@ -27,7 +27,7 @@ Building on the token from Section 1
 
 **Interactive Element:** *Code Completion* - Complete inheritance patterns, library imports, contract calls, and event indexing
 
-### Module 7: Advanced Data Structures & Error Handling
+### Module 2: Advanced Data Structures & Error Handling
 
 - Complex mappings, structs, and arrays
 - Storage vs memory vs calldata optimization
@@ -38,7 +38,7 @@ Building on the token from Section 1
 
 **Interactive Element:** *Quiz* - Multiple choice on gas optimization, error patterns, and security vulnerabilities
 
-### Module 8: Testing Fundamentals
+### Module 3: Testing Fundamentals
 
 - Testing framework setup (Hardhat with Foundry)
 - Unit testing patterns and best practices
@@ -48,7 +48,7 @@ Building on the token from Section 1
 
 **Interactive Element:** *Code Completion* - Complete test functions and security tests
 
-### Module 9: Staking Concepts & Time-Based Logic
+### Module 4: Staking Concepts & Time-Based Logic
 
 - Staking contract architecture and patterns
 - Time-based logic: block.timestamp, durations, locks
@@ -58,7 +58,7 @@ Building on the token from Section 1
 
 **Interactive Element:** *Configuration Builder* - Set staking parameters and reward rates
 
-### Module 10: PRACTICAL
+### Module 5: PRACTICAL
 
 Deploy: Staking Contract
 
@@ -70,11 +70,11 @@ Deploy: Staking Contract
 
 ---
 
-## SECTION 3: Token & NFT Launchpad (Modules 11-13)
+## ISLAND 3: Token & NFT Launchpad (Modules 1-3)
 
 Focused NFT mastery anchored to deployables
 
-### Module 11: ERC721 Standards & Implementation
+### Module 1: ERC721 Standards & Implementation
 
 - ERC721 core implementation
 - Enumerable and burnable extensions
@@ -84,7 +84,7 @@ Focused NFT mastery anchored to deployables
 
 **Interactive Element:** *Code Completion* - Complete NFT contract functions and security checks
 
-### Module 12: Advanced NFT Features
+### Module 2: Advanced NFT Features
 
 - Metadata standards and best practices
 - IPFS integration basics
@@ -94,7 +94,7 @@ Focused NFT mastery anchored to deployables
 
 **Interactive Element:** *Configuration Builder* - Set up metadata URIs and minting phases
 
-### Module 13: PRACTICAL
+### Module 3: PRACTICAL
 
 Deploy: NFT Collection
 
@@ -106,11 +106,11 @@ Deploy: NFT Collection
 
 ---
 
-## SECTION 4: On-Chain Systems & Upgradeability (Modules 14-19)
+## ISLAND 4: On-Chain Systems & Upgradeability (Modules 1-6)
 
 Consolidated blockchain concepts with double practicals using real contracts
 
-### Module 14: DeFi Fundamentals & Simple Swaps
+### Module 1: DeFi Fundamentals & Simple Swaps
 
 - Token economics and liquidity concepts
 - Simple swap mechanics (deposit token A for token B at set rate)
@@ -120,9 +120,9 @@ Consolidated blockchain concepts with double practicals using real contracts
 
 **Interactive Element:** *Configuration Builder* - Set swap parameters and exchange rates
 
-### Module 15: Oracles, Randomness & Airdrop Patterns
+### Module 2: Oracles, Randomness & Airdrop Patterns
 
-- Oracle problem and decentralized solutions
+- Oracle problem and decentralized solutions (Chainlink Price feeds)
 - Commit-reveal sequences and verifiable randomness inputs
 - Timeboxed commits, reveals, and claim windows
 - Airdrops for gas efficiency and fair distribution
@@ -131,7 +131,7 @@ Consolidated blockchain concepts with double practicals using real contracts
 
 **Interactive Element:** *Deploy: Airdropper Contract* - Build oracle-aware commit-reveal airdrop flows
 
-### Module 16: PRACTICAL
+### Module 3: PRACTICAL
 
 Deploy: Random Number Generator with Commit/Reveal
 
@@ -141,7 +141,7 @@ Deploy: Random Number Generator with Commit/Reveal
 - Anti-manipulation safeguards
 - Integration with gaming or lottery mechanics
 
-### Module 17: Proxy Patterns & Upgradeability
+### Module 4: Proxy Patterns & Upgradeability
 
 - Transparent vs UUPS proxy patterns
 - Storage collision prevention
@@ -149,7 +149,7 @@ Deploy: Random Number Generator with Commit/Reveal
 - OpenZeppelin upgrades framework
 **Interactive Element:** *Quiz* - Multiple choice on proxy patterns and upgrade safety
 
-### Module 18: Gas Optimization & Security Patterns
+### Module 5: Gas Optimization & Security Patterns
 
 - Advanced gas optimization techniques
 - Storage packing and slot optimization
@@ -159,7 +159,7 @@ Deploy: Random Number Generator with Commit/Reveal
 
 **Interactive Element:** *Code Completion* - Complete optimization patterns and security checks
 
-### Module 19: PRACTICAL
+### Module 6: PRACTICAL
 
 Deploy: Upgradable Contract
 
@@ -171,11 +171,11 @@ Deploy: Upgradable Contract
 
 ---
 
-## SECTION 5: Frontend Integration (Modules 20-22)
+## ISLAND 5: Frontend Integration (Modules 1-3)
 
 Essential Web3 frontend skills for contract interaction
 
-### Module 20: Web3 Frontend Basics
+### Module 1: Web3 Frontend Basics
 
 - Wallet connection with RainbowKit
 - Web3 libraries: viem and wagmi basics
@@ -185,7 +185,7 @@ Essential Web3 frontend skills for contract interaction
 
 **Interactive Element:** *Code Completion* - Complete wallet connection and contract reading
 
-### Module 21: Contract Interactions & Error Handling
+### Module 2: Contract Interactions & Error Handling
 
 - Writing to contracts (transactions)
 - Transaction status monitoring
@@ -195,7 +195,7 @@ Essential Web3 frontend skills for contract interaction
 
 **Interactive Element:** *Code Completion* - Complete transaction handling and error management
 
-### Module 22: PRACTICAL
+### Module 3: PRACTICAL
 
 Build: Simple dApp Interface
 
@@ -206,7 +206,7 @@ Build: Simple dApp Interface
 - Handle common errors gracefully
 - Mobile-responsive design
 
-## OPTIONAL MODULE 23: Advanced Security Patterns"'
+## OPTIONAL MODULE: Advanced Security Patterns"'
 
 Advanced security aligned with AI auditor
 
@@ -232,36 +232,32 @@ Advanced security aligned with AI auditor
 
 **Description:** Fill-in-the-blank style coding exercises
 **Usage:** Complete contract functions, imports, security implementations, frontend integration
-**Modules:** 6, 8, 11, 18, 20, 21
 
 ### 2. Configuration Builder
 
 **Description:** Parameter setting with sliders and interactive inputs
 **Usage:** Contract parameters, staking rates, swap rates, metadata configuration
-**Modules:** 9, 12, 14
 
 ### 3. Deploy Challenge
 
 **Description:** Guided build-and-deploy exercises using battle-tested templates
 **Usage:** Staking, NFT collections, airdrops, randomness workflows, upgradeable contracts, full-stack dApps
-**Modules:** 10, 13, 15, 16, 19, 22
 
 ### 4. Traditional Quiz
 
 **Description:** Multiple choice questions
 **Usage:** Knowledge assessment on concepts, security patterns, and best practices
-**Modules:** 7, 17
 
 ---
 
 ## Practical Deployment Summary
 
-1. **Module 10:** Staking Contract (time-locked staking, rewards, withdrawal mechanisms)
-2. **Module 13:** NFT Collection with Reveal Mechanics and Royalties
-3. **Module 15:** Airdropper Contract
-4. **Module 16:** Random Number Generator (commit-reveal pattern)
-5. **Module 19:** Upgradable Contract (proxy patterns, safe upgrades)
-6. **Module 22:** Simple dApp Interface (wallet connection, contract interactions)
+1. Staking Contract (time-locked staking, rewards, withdrawal mechanisms)
+2. NFT Collection with Reveal Mechanics and Royalties
+3. Airdropper Contract
+4. Random Number Generator (commit-reveal pattern)
+5. Upgradable Contract (proxy patterns, safe upgrades)
+6. Simple dApp Interface (wallet connection, contract interactions)
 
 ---
 
@@ -281,7 +277,7 @@ These will be articles we will write up for the portal also
 
 ## Interface Improvements
 
-- Feedback loops/analytics logging, for modules and ai tools.
+- Feedback loops/analytics logging, for modules and ai tools. see (milestone-2-feedback-analytics-design.md)
 
 - Enhancements to the AI Auditor and AI Chatbot to take them from Alpha level, to Beta level.  Likely 80% there just more more buildout on the prompt.
 
