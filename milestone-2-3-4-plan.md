@@ -206,24 +206,6 @@ Build: Simple dApp Interface
 - Handle common errors gracefully
 - Mobile-responsive design
 
-## OPTIONAL MODULE: Advanced Security Patterns"'
-
-Advanced security aligned with AI auditor
-
-- Role-based access control patterns
-- Emergency pause and recovery procedures
-- AI auditor findings interpretation
-- Security checklist and audit preparation
-- Common vulnerability patterns deep dive
-- Incident response and escalation playbooks
-- Advanced attack vectors and prevention
-- Smart contract audit methodology
-
-**Interactive Element:** *Security Audit Simulator* - Upload contracts to AI reviewer and practice interpreting results
-**Integration:** Direct connection to AI reviewer tool with guided security analysis
-
-*Note: This module will be developed as part of a future security-focused expansion.*
-
 ---
 
 ## Interactive Element Types (4 Total + Quizzes)
@@ -263,18 +245,6 @@ Advanced security aligned with AI auditor
 
 *This focused curriculum covers smart contract development fundamentals, NFT creation, essential blockchain patterns, upgradeability, and basic frontend integration in 17 streamlined modules. The 6 practical deployments provide hands-on experience with real-world contracts, ensuring graduates can immediately contribute to EVM development projects.*
 
-## Articles
-
-These will be articles we will write up for the portal also
-
-- Graphnode (inc https://basecamp.thegraph.com/)
-- Thirdweb (need to ensure it works on Zilliqa)
-- Scaffoldeth (https://scaffoldeth.io/)
-- Remix
-- Foundry
-- OpenZepplin
-- ERC1155 Multi-Token Standards & Use Cases
-
 ## Interface Improvements
 
 - Feedback loops/analytics logging, for modules and ai tools. see (milestone-2-feedback-analytics-design.md)
@@ -301,8 +271,6 @@ Context-aware responses based on user progress
 
 - Configuration Builder Interactive Element Type - Parameter setting with sliders and interactive inputs
 
-- Secret achievements - lets get 5-10 in (We could move this to Milestone 3)
-
 ## Graphics needed
 
 - 4 new islands - note the sections have different amount of modules - not sure where module 23 fits in M3 but leave a feature on one of the islands.
@@ -315,9 +283,47 @@ Context-aware responses based on user progress
 - Top level map redesign, and island maps
 - Top graphics for all of them - animate if time
 - Achievement cards for 18 modules
-- Achievement cards for 5-10 secrets (We could move this to Milestone 3)
 
-## Secret Achievement Ideas (We don't need to do all of them, these also could be moved to Milestone 3)
+## Milestone 3 (2-3 weeks)
+
+### MODULE: Advanced Security Patterns"'
+
+Advanced security aligned with AI auditor
+
+- Role-based access control patterns
+- Emergency pause and recovery procedures
+- AI auditor findings interpretation
+- Security checklist and audit preparation
+- Common vulnerability patterns deep dive
+- Incident response and escalation playbooks
+- Advanced attack vectors and prevention
+- Smart contract audit methodology
+
+**Interactive Element:** *Security Audit Simulator* - Upload contracts to AI reviewer and practice interpreting results
+**Integration:** Direct connection to AI reviewer tool with guided security analysis
+
+*Note: This module will be developed as part of a future security-focused expansion.*
+
+### Articles (Moved to Milestone 3)
+
+These will be articles we will write up for the portal also
+
+- Graphnode (inc https://basecamp.thegraph.com/)
+- Thirdweb (need to ensure it works on Zilliqa)
+- Scaffoldeth (https://scaffoldeth.io/)
+- Remix
+- Foundry
+- OpenZepplin
+- ERC1155 Multi-Token Standards & Use Cases
+
+- Reporting
+- User Feedback enhancements
+- AI Tool "Optimization" - Add 2-3 more vulnerability patterns to system prompt, Expand system prompt with ~20 more query examples
+- Security Best Practices Module
+
+### Secret Achievement Ideas (Moved to Milestone 3)
+
+- Graphics for Achievement cards for 5-10 secrets (We could move this to Milestone 3)
 
 Reviewer
 
@@ -349,13 +355,6 @@ Time-Based Secrets (Def Milestone 3/4)
 
 - "Talk Like a Pirate Day" - Use the platform on September 19th "Special Event type achievements" - we can issue vouchers ourselves for ppl to claim.
 - Any event we hold we can give out codes if ppl register their wallet
-
-## Other stuff for Milestone 3 (1-2 weeks)
-
-- Reporting
-- User Feedback enhancements
-- AI Tool "Optimization" - Add 2-3 more vulnerability patterns to system prompt, Expand system prompt with ~20 more query examples
-- Security Best Practices Module
 
 ## Milestone 4 (1-2 weeks)
 
