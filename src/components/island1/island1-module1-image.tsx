@@ -9,7 +9,7 @@ export function JungleModule1Image() {
       <div className="relative w-full aspect-[16/9]">
         {/* Base image */}
         <Image
-          src="/islands/island1/jungle-module1-image.webp"
+          src="/islands/island1/island1-module1-image.webp"
           alt="Blockchain Fundamentals Adventure Scene"
           fill
           className="object-cover"

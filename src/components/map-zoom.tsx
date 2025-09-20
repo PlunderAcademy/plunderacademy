@@ -13,7 +13,7 @@ export function MapZoom() {
     if (isZooming) return;
     setIsZooming(true);
     setTimeout(() => {
-      router.push("/lessons/jungle");
+      router.push("/lessons/island1");
     }, 500);
   };
 

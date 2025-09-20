@@ -8,7 +8,7 @@ export function JungleModule5Image() {
     <Card className="relative overflow-hidden">
       <div className="relative w-full aspect-[16/9]">
         <Image
-          src="/islands/island1/jungle-module5-image.webp"
+          src="/islands/island1/island1-module5-image.webp"
           alt="Creating ERC20 Tokens Adventure Scene"
           fill
           className="object-cover"
@@ -83,7 +83,7 @@ export function JungleModule5Image() {
           {/* Atmospheric Jungle Mist */}
           <div className="absolute inset-0">
             {/* Bottom mist layer */}
-            <div className="absolute bottom-[0%] left-[0%] w-full h-[15%] bg-gradient-to-t from-green-200/20 via-green-300/10 to-transparent jungle-mist animate-mist-drift-base"></div>
+            <div className="absolute bottom-[0%] left-[0%] w-full h-[15%] bg-gradient-to-t from-green-200/20 via-green-300/10 to-transparent island1-mist animate-mist-drift-base"></div>
             
             {/* Floating mist wisps */}
             <div className="absolute bottom-[5%] left-[15%] w-[80px] h-[25px] bg-green-200/15 rounded-full mist-wisp animate-mist-drift-1"></div>
@@ -95,7 +95,7 @@ export function JungleModule5Image() {
           <div className="absolute inset-0">
             {/* General atmospheric enhancement */}
             <div className="absolute top-[0%] left-[0%] w-full h-[60%] bg-gradient-to-b from-yellow-300/5 via-orange-400/8 to-transparent atmospheric-glow animate-temple-atmosphere"></div>
-            <div className="absolute bottom-[0%] left-[0%] w-full h-[40%] bg-gradient-to-t from-green-400/8 via-yellow-300/5 to-transparent atmospheric-glow animate-jungle-atmosphere"></div>
+            <div className="absolute bottom-[0%] left-[0%] w-full h-[40%] bg-gradient-to-t from-green-400/8 via-yellow-300/5 to-transparent atmospheric-glow animate-island1-atmosphere"></div>
           </div>
         </div>
 
@@ -241,7 +241,7 @@ export function JungleModule5Image() {
             50% { opacity: 1; }
           }
           
-          @keyframes jungle-atmosphere {
+          @keyframes island1-atmosphere {
             0%, 100% { opacity: 0.6; }
             50% { opacity: 0.9; }
           }
@@ -415,8 +415,8 @@ export function JungleModule5Image() {
             animation: temple-atmosphere 18s ease-in-out infinite;
           }
           
-          .animate-jungle-atmosphere {
-            animation: jungle-atmosphere 22s ease-in-out infinite 5s;
+          .animate-island1-atmosphere {
+            animation: island1-atmosphere 22s ease-in-out infinite 5s;
           }
           
           .animate-laser-beam-main {

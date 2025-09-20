@@ -16,13 +16,13 @@ import { WalletAuthGuard } from "@/components/wallet-auth-guard";
 import MDXContent from "@/components/mdx-content";
 
 // Import jungle module components
-import { JungleModule1Image } from "@/components/island1/jungle-module1-image";
-import { JungleModule2Image } from "@/components/island1/jungle-module2-image";
-import { JungleModule3Image } from "@/components/island1/jungle-module3-image";
-import { JungleModule4Image } from "@/components/island1/jungle-module4-image";
-import { JungleModule5Image } from "@/components/island1/jungle-module5-image";
+import { JungleModule1Image } from "@/components/island1/island1-module1-image";
+import { JungleModule2Image } from "@/components/island1/island1-module2-image";
+import { JungleModule3Image } from "@/components/island1/island1-module3-image";
+import { JungleModule4Image } from "@/components/island1/island1-module4-image";
+import { JungleModule5Image } from "@/components/island1/island1-module5-image";
 import { JungleStory } from "@/components/island1/story";
-import { ModuleQuiz } from "@/components/module-quiz";
+import { InteractiveElement } from "@/components/interactive-elements";
 import { TokenFactoryInterface } from "@/components/token-factory-interface";
 
 interface JungleModulePageProps {
@@ -125,7 +125,7 @@ export default async function JungleModulePage({ params }: JungleModulePageProps
           Lessons
         </Link>
         <ChevronLeft className="size-4 rotate-180" />
-        <Link href="/lessons/jungle" className="hover:text-foreground flex items-center gap-1">
+        <Link href="/lessons/island1" className="hover:text-foreground flex items-center gap-1">
           <TreePine className="size-3" />
           Jungle Island
         </Link>
@@ -253,25 +253,25 @@ export default async function JungleModulePage({ params }: JungleModulePageProps
         <TokenFactoryInterface />
       )}
 
-      {/* Quiz Section */}
+      {/* Interactive Element Section */}
       {(quizData || resolvedParams.module === 'creating-erc20-tokens') ? (
-        <ModuleQuiz quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
+        <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
       ) : (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="size-5" />
-              Module Quiz
+              Interactive Element
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center p-8">
             <div className="bg-muted/30 rounded-lg p-12 border-2 border-dashed border-muted-foreground/20 space-y-4">
-              <p className="text-lg text-muted-foreground">Quiz Content TBA</p>
+              <p className="text-lg text-muted-foreground">Interactive Content TBA</p>
               <p className="text-sm text-muted-foreground">
-                Interactive quiz for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+                Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
               </p>
               <Button disabled className="mt-4">
-                Submit Quiz for Achievement
+                Complete Interactive Element
               </Button>
             </div>
           </CardContent>
@@ -283,7 +283,7 @@ export default async function JungleModulePage({ params }: JungleModulePageProps
       {/* Navigation */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Button asChild variant="outline">
-          <Link href="/lessons/jungle">
+          <Link href="/lessons/island1">
             <TreePine className="mr-2 size-4" />
             Back to Jungle Map
           </Link>

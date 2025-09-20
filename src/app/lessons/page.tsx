@@ -147,7 +147,7 @@ export default async function LessonsPage() {
                 <div className={`relative h-48 overflow-hidden ${island.status === 'available' ? '' : 'bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900'}`}>
                   {island.status === 'available' && island.slug === 'jungle' && (
                     <Image
-                      src="/islands/island1/jungle-map.webp"
+                      src="/islands/island1/island1-map.webp"
                       alt={island.title}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-110"

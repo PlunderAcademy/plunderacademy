@@ -4,7 +4,7 @@ Plunder Academy is an EVM training portal built around Zilliqa 2.0. It combines 
 
 ## Features
 
-- Structured "Treasure Map" curriculum with wallet-gated access, mission storytelling, module quizzes, and animated progress trackers.
+- Structured "Treasure Map" curriculum with wallet-gated access, mission storytelling, interactive learning elements (quizzes, deploy challenges), and animated progress trackers.
 - MDX powered content library for long-form Zilliqa and Solidity articles that surface in-app cards and landing page highlights.
 - AI Solidity reviewer and chat assistant backed by the `ai` SDK, with configurable system prompts in `src/app/api/**/chat-system-prompt.md` and `reviewer-system-prompt.md`.
 - Achievement and voucher flow that talks to the Plunder Academy API, fetches NFT metadata, and submits proofs to the on-chain training registry.
@@ -69,13 +69,23 @@ src/
         blockchain-fundamentals/  # Module lessons (MDX with front matter)
         ...
         missions/                 # Narrative story content rendered in Jungle modules
-        quizzes/                  # Quiz definitions parsed into interactive flows
+        quizzes/                  # Interactive element definitions (quizzes, challenges) parsed into learning flows
 ```
 
 - **Articles**: add MDX files with front matter (`title`, `excerpt`, `level`, `tags`, `slug`). They are surfaced on the landing page, `/articles`, and the learning order is controlled inside `getArticles`.
 - **Lessons**: each module folder (for example `src/content/modules/island1/creating-erc20-tokens`) contains numbered MDX lessons with objective metadata. Lessons render inside the module tab strip.
-- **Quizzes and missions**: place MDX definitions inside `missions/` and `quizzes/`. The parser in `src/lib/mdx.ts` converts headings like `### Question 1` into the interactive quiz component.
+- **Quizzes and missions**: place MDX definitions inside `missions/` and `quizzes/`. The parser in `src/lib/mdx.ts` converts headings like `### Question 1` into interactive elements (traditional quizzes, deploy challenges, etc.).
 - **Custom components**: interactive MDX blocks (animated maps, token factory UI, achievement celebration) live under `src/components`. Expose them through `MDXContent` if you want them inside markdown.
+
+## Interactive Learning Elements
+
+The platform supports multiple types of interactive learning activities through a modular system at `src/components/interactive-elements/`:
+
+- **Traditional Quiz** (`quiz/`): Multiple choice questions with timer, anti-cheat measures, and automated scoring
+- **Deploy Challenge** (`deploy-challenge/`): Guided deployment exercises with transaction verification (used in Module 5 for token creation)
+- **Shared utilities** (`shared/`): Common achievement claiming, voucher submission, and result display components
+
+Future interactive types planned: Code Completion (fill-in-the-blank coding) and Configuration Builder (parameter tuning with sliders). The `InteractiveElement` orchestrator automatically selects the appropriate element type based on module configuration and available data.
 
 ## AI Copilots
 
@@ -87,7 +97,7 @@ src/
 
 - Wallet gating uses `wagmi` + `RainbowKit` with chains defined in `src/lib/wagmi.ts`. Switch to mainnet by exporting the commented configuration and supplying the mainnet factory address.
 - The `useAchievements` hook calls the Plunder Academy API (`NEXT_PUBLIC_PLUNDER_ACADEMY_API`) to fetch vouchers and NFT metadata, then submits signatures to the training registry contract at `NEXT_PUBLIC_PLUNDER_ACADEMY_CONTRACT_ADDRESS`.
-- `src/components/module-quiz.tsx` handles quizzes, voucher submission, transaction verification, and triggers celebration modals. Module 5 also embeds the `TokenFactoryInterface` for hands-on deployments.
+- The modular interactive elements system (`src/components/interactive-elements/`) handles different learning activities: traditional quizzes with automated scoring, deploy challenges with transaction verification, and achievement claiming flows. Module 5 uses the deploy challenge system alongside the `TokenFactoryInterface` for hands-on token deployments.
 - Additional implementation notes for the token factory live in `TOKEN_FACTORY_IMPLEMENTATION.md`.
 
 ## Deployment Notes
