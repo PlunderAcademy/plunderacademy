@@ -8,7 +8,7 @@ export function JungleModule5Image() {
     <Card className="relative overflow-hidden">
       <div className="relative w-full aspect-[16/9]">
         <Image
-          src="/islands/jungle/jungle-module5-image.webp"
+          src="/islands/island1/jungle-module5-image.webp"
           alt="Creating ERC20 Tokens Adventure Scene"
           fill
           className="object-cover"

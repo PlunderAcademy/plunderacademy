@@ -460,7 +460,7 @@ export async function getLessonByIds(moduleSlug: string, lessonSlug: string) {
 
 export async function getMissionByModule(moduleSlug: string): Promise<MissionMeta | null> {
   try {
-    const missionsDirectory = path.join(process.cwd(), 'src/content/modules/jungle/missions');
+    const missionsDirectory = path.join(process.cwd(), 'src/content/modules/island1/missions');
     const missionFileName = `${moduleSlug}-mission.mdx`;
     const fullPath = path.join(missionsDirectory, missionFileName);
     
@@ -494,7 +494,7 @@ export async function getMissionByModule(moduleSlug: string): Promise<MissionMet
 
 export async function getQuizByModule(moduleSlug: string): Promise<QuizMeta | null> {
   try {
-    const quizzesDirectory = path.join(process.cwd(), 'src/content/modules/jungle/quizzes');
+    const quizzesDirectory = path.join(process.cwd(), 'src/content/modules/island1/quizzes');
     const quizFileName = `${moduleSlug}-quiz.mdx`;
     const fullPath = path.join(quizzesDirectory, quizFileName);
     

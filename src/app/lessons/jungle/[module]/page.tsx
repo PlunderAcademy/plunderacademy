@@ -16,12 +16,12 @@ import { WalletAuthGuard } from "@/components/wallet-auth-guard";
 import MDXContent from "@/components/mdx-content";
 
 // Import jungle module components
-import { JungleModule1Image } from "@/components/jungle/jungle-module1-image";
-import { JungleModule2Image } from "@/components/jungle/jungle-module2-image";
-import { JungleModule3Image } from "@/components/jungle/jungle-module3-image";
-import { JungleModule4Image } from "@/components/jungle/jungle-module4-image";
-import { JungleModule5Image } from "@/components/jungle/jungle-module5-image";
-import { JungleStory } from "@/components/jungle/story";
+import { JungleModule1Image } from "@/components/island1/jungle-module1-image";
+import { JungleModule2Image } from "@/components/island1/jungle-module2-image";
+import { JungleModule3Image } from "@/components/island1/jungle-module3-image";
+import { JungleModule4Image } from "@/components/island1/jungle-module4-image";
+import { JungleModule5Image } from "@/components/island1/jungle-module5-image";
+import { JungleStory } from "@/components/island1/story";
 import { ModuleQuiz } from "@/components/module-quiz";
 import { TokenFactoryInterface } from "@/components/token-factory-interface";
 

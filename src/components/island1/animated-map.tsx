@@ -377,7 +377,7 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
 
   // Helper function to get module background image
   const getModuleImage = (moduleIndex: number) => {
-    return `/islands/jungle/jungle-module${moduleIndex + 1}-image.webp`;
+    return `/islands/island1/jungle-module${moduleIndex + 1}-image.webp`;
   };
 
   const pathString = createPathString(pathPoints);
@@ -391,7 +391,7 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
         <div className="relative w-full h-[90vh]">
           {/* Map Image */}
           <Image
-            src="/islands/jungle/jungle-map.webp"
+            src="/islands/island1/jungle-map.webp"
             alt="Jungle Island Map"
             fill
             className="object-contain"
@@ -719,7 +719,7 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
                     }}
                     onClick={() => {
                       if (isAvailable && isConnected) {
-                        router.push(`/lessons/jungle/${moduleSlug}`);
+                        router.push(`/lessons/island1/${moduleSlug}`);
                       }
                     }}
                   />

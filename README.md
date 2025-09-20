@@ -65,7 +65,7 @@ src/
   content/
     articles/                 # Standalone Zilliqa and Solidity deep dives (MDX)
     modules/
-      jungle/
+      island1/
         blockchain-fundamentals/  # Module lessons (MDX with front matter)
         ...
         missions/                 # Narrative story content rendered in Jungle modules
@@ -73,7 +73,7 @@ src/
 ```
 
 - **Articles**: add MDX files with front matter (`title`, `excerpt`, `level`, `tags`, `slug`). They are surfaced on the landing page, `/articles`, and the learning order is controlled inside `getArticles`.
-- **Lessons**: each module folder (for example `src/content/modules/jungle/creating-erc20-tokens`) contains numbered MDX lessons with objective metadata. Lessons render inside the module tab strip.
+- **Lessons**: each module folder (for example `src/content/modules/island1/creating-erc20-tokens`) contains numbered MDX lessons with objective metadata. Lessons render inside the module tab strip.
 - **Quizzes and missions**: place MDX definitions inside `missions/` and `quizzes/`. The parser in `src/lib/mdx.ts` converts headings like `### Question 1` into the interactive quiz component.
 - **Custom components**: interactive MDX blocks (animated maps, token factory UI, achievement celebration) live under `src/components`. Expose them through `MDXContent` if you want them inside markdown.
 

@@ -1,4 +1,4 @@
-import { AnimatedMap } from "@/components/jungle/animated-map";
+import { AnimatedMap } from "@/components/island1/animated-map";
 import { TreePine, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { getModules } from "@/lib/mdx";

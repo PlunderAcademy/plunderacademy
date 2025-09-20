@@ -9,7 +9,7 @@ export function JungleModule3Image() {
       <div className="relative w-full aspect-[16/9]">
         {/* Base image */}
         <Image
-          src="/islands/jungle/jungle-module3-image.webp"
+          src="/islands/island1/jungle-module3-image.webp"
           alt="Volcanic Pirate Castle Adventure Scene"
           fill
           className="object-cover"
