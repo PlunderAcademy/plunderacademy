@@ -75,7 +75,7 @@ export function TokenDeployChallenge({ moduleSlug, missionData }: DeployElementP
     const requestPayload = {
       walletAddress: address,
       achievementNumber,
-      submissionType: 'transaction',
+      submissionType: 'transaction' as const,
       submissionData,
       metadata: {
         timestamp: new Date().toISOString()

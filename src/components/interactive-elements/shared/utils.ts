@@ -1,4 +1,4 @@
-import { ApiResponse, ClaimedAchievement } from "./types";
+import { ApiResponse, ClaimedAchievement, ApiSubmissionPayload, NFTMetadata } from "./types";
 
 // Module to achievement number mapping
 export const MODULE_TO_ACHIEVEMENT_MAP: Record<string, string> = {
@@ -27,7 +27,7 @@ export function formatTime(seconds: number): string {
 }
 
 // Submit to API with proper error handling
-export async function submitToAPI(payload: any): Promise<ApiResponse> {
+export async function submitToAPI(payload: ApiSubmissionPayload): Promise<ApiResponse> {
   console.log('Submitting with payload:', payload);
   
   try {
@@ -109,7 +109,7 @@ export function generateTwitterShare(moduleSlug: string): string {
 }
 
 // Load NFT metadata for achievement celebration
-export async function loadNFTMetadata(achievementNumber: string): Promise<any> {
+export async function loadNFTMetadata(achievementNumber: string): Promise<NFTMetadata | null> {
   try {
     const metadataUrl = `https://static.plunderswap.com/training/${achievementNumber}.json`;
     const response = await fetch(metadataUrl);

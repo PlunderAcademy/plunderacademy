@@ -21,7 +21,9 @@ export type {
   QuizElementProps,
   DeployElementProps,
   InteractiveStep,
-  ApiResponse
+  ApiResponse,
+  ApiSubmissionPayload,
+  NFTMetadata
 } from "./shared/types";
 
 // Shared Utilities

@@ -70,12 +70,47 @@ export interface QuizElementProps extends BaseInteractiveElementProps {
 }
 
 // Deploy challenge specific interfaces
-export interface DeployElementProps extends BaseInteractiveElementProps {
-  // Add deploy-specific props as needed
-}
+export type DeployElementProps = BaseInteractiveElementProps;
 
 // Step management for interactive elements
 export type InteractiveStep = "initial" | "active" | "claim" | "completed";
+
+// API submission payload
+export interface ApiSubmissionPayload {
+  walletAddress: string;
+  achievementNumber: string;
+  submissionType: 'quiz' | 'transaction' | 'contract' | 'custom';
+  submissionData: {
+    // Quiz submission
+    answers?: Record<string, string>;
+    // Transaction submission
+    transactionHash?: string;
+    chainId?: number;
+    claimantAddress?: string;
+    method?: 'factory' | 'deployment';
+    // Future: other submission types
+    [key: string]: unknown;
+  };
+  metadata: {
+    timestamp: string;
+    timeSpent?: number;
+    [key: string]: unknown;
+  };
+}
+
+// NFT metadata structure
+export interface NFTMetadata {
+  name: string;
+  description: string;
+  image: string;
+  attributes?: Array<{
+    trait_type: string;
+    value: string | number;
+  }>;
+  external_url?: string;
+  background_color?: string;
+  animation_url?: string;
+}
 
 // Common API response format
 export interface ApiResponse {

@@ -91,7 +91,7 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
     const requestPayload = {
       walletAddress: address,
       achievementNumber,
-      submissionType: 'quiz',
+      submissionType: 'quiz' as const,
       submissionData: { answers: formattedAnswers },
       metadata: {
         timestamp: new Date().toISOString(),
