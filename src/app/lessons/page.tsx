@@ -250,24 +250,20 @@ export default async function LessonsPage() {
                   )}
                   
                   {/* Explore Button */}
-                  {island.status === 'available' ? (
-                    <Button 
-                      asChild 
-                      className="w-full bg-gradient-to-r from-primary via-primary to-primary/80 hover:from-primary/90 hover:via-primary hover:to-primary text-white shadow-lg group-hover:shadow-xl transition-all duration-300 text-base font-semibold"
-                      size="lg"
-                    >
-                      <Link href={`/lessons/${island.slug}`}>
-                        <Compass className="mr-2 size-4" />
-                        Explore Island
-                        <ChevronRight className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Button disabled className="w-full" size="lg">
+                  <Button 
+                    asChild 
+                    className={`w-full ${island.status === 'available' 
+                      ? 'bg-gradient-to-r from-primary via-primary to-primary/80 hover:from-primary/90 hover:via-primary hover:to-primary text-white shadow-lg group-hover:shadow-xl' 
+                      : 'bg-gradient-to-r from-slate-400 to-slate-500 text-white opacity-75'
+                    } transition-all duration-300 text-base font-semibold`}
+                    size="lg"
+                  >
+                    <Link href={`/lessons/island${index + 1}`}>
                       <Compass className="mr-2 size-4" />
-                      Coming Soon
-                    </Button>
-                  )}
+                      {island.status === 'available' ? 'Explore Island' : 'Preview Island'}
+                      <ChevronRight className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
+                    </Link>
+                  </Button>
                 </div>
                 
                 {/* Hover Glow */}
@@ -301,7 +297,7 @@ export default async function LessonsPage() {
           <CardContent className="text-center space-y-6 relative">
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Button asChild size="lg" className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white">
-                <Link href={`/lessons/${islands.find(island => island.status === 'available')?.slug || 'jungle'}`}>
+                <Link href="/lessons/island1">
                   <Ship className="mr-2 size-4" />
                   Begin the Adventure
                 </Link>

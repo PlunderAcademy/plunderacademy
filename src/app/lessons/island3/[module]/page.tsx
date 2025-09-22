@@ -1,0 +1,270 @@
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { 
+  ChevronLeft, 
+  Snowflake,
+  BookOpen,
+  Trophy
+} from "lucide-react";
+import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from "@/lib/mdx";
+import { WalletAuthGuard } from "@/components/wallet-auth-guard";
+import MDXContent from "@/components/mdx-content";
+
+interface IceModulePageProps {
+  params: Promise<{
+    module: string;
+  }>;
+}
+
+// Ice island modules
+const ICE_MODULES = [
+  'erc721-standards-implementation',
+  'advanced-nft-features',
+  'nft-collection-practical'
+];
+
+const MODULE_TITLES = {
+  'erc721-standards-implementation': 'ERC721 Standards & Implementation',
+  'advanced-nft-features': 'Advanced NFT Features',
+  'nft-collection-practical': 'NFT Collection Practical'
+};
+
+export async function generateStaticParams() {
+  return ICE_MODULES.map(module => ({
+    module
+  }));
+}
+
+export default async function IceModulePage({ params }: IceModulePageProps) {
+  const resolvedParams = await params;
+  
+  // Check if this is a valid ice module
+  if (!ICE_MODULES.includes(resolvedParams.module)) {
+    notFound();
+  }
+  
+  const modules = await getModules();
+  const currentModule = modules.find(m => m.slug === resolvedParams.module);
+  
+  if (!currentModule) {
+    notFound();
+  }
+
+  // Load mission data from MDX
+  const missionData = await getMissionByModule(resolvedParams.module);
+  
+  // Load quiz data from MDX
+  const quizData = await getQuizByModule(resolvedParams.module);
+
+  // Load lesson content for tabs
+  const lessonContents = await Promise.all(
+    currentModule.lessons.map(async (lesson) => {
+      try {
+        const lessonData = await getLessonByIds(resolvedParams.module, lesson.slug);
+        return {
+          ...lesson,
+          content: lessonData.content
+        };
+      } catch (error) {
+        console.error(`Error loading lesson ${lesson.slug}:`, error);
+        return {
+          ...lesson,
+          content: null
+        };
+      }
+    })
+  );
+
+  const moduleIndex = ICE_MODULES.indexOf(resolvedParams.module);
+
+  return (
+    <WalletAuthGuard 
+      title="Wallet Required for Module Access"
+      description="Please connect your wallet to access learning modules and track your progress."
+    >
+      <div className="mx-auto max-w-6xl space-y-8">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Link href="/" className="hover:text-foreground">
+            Home
+          </Link>
+          <ChevronLeft className="size-4 rotate-180" />
+          <Link href="/lessons" className="hover:text-foreground">
+            Lessons
+          </Link>
+          <ChevronLeft className="size-4 rotate-180" />
+          <Link href="/lessons/island3" className="hover:text-foreground flex items-center gap-1">
+            <Snowflake className="size-3" />
+            Ice Island
+          </Link>
+          <ChevronLeft className="size-4 rotate-180" />
+          <span className="text-foreground">{MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}</span>
+        </div>
+
+        {/* Module Header */}
+        <div className="space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="font-mono">
+                  Module {moduleIndex + 1}
+                </Badge>
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  🧊 Ice Island
+                </Badge>
+              </div>
+              <h1 className="text-4xl font-bold tracking-tight">
+                {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+              </h1>
+            </div>
+          </div>
+        </div>
+
+        {/* Animated Image Section */}
+        <div>
+          <Card className="p-8 text-center">
+            <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-12 border-2 border-dashed border-blue-300 dark:border-blue-700">
+              <div className="text-6xl opacity-60 mb-4">🧊</div>
+              <p className="text-lg text-blue-700 dark:text-blue-300 font-semibold">Ice Adventure Scene</p>
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+                Animated adventure scene for Module {moduleIndex + 1} coming in Milestone 2
+              </p>
+            </div>
+          </Card>
+        </div>
+
+        {/* Mission Story Section */}
+        <div>
+          {missionData ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl text-blue-800 dark:text-blue-200">
+                  {missionData.title}
+                </CardTitle>
+                <p className="text-blue-600 dark:text-blue-400">{missionData.subtitle}</p>
+              </CardHeader>
+              <CardContent>
+                <div className="prose dark:prose-invert max-w-none">
+                  <MDXContent content={missionData.content} />
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="p-8 text-center">
+              <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-12 border-2 border-dashed border-blue-300 dark:border-blue-700">
+                <p className="text-lg text-blue-700 dark:text-blue-300 font-semibold">Mission Story TBA</p>
+                <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+                  Ice adventure story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+                </p>
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Module Content Tabs */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="size-5" />
+              Module Content
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue={lessonContents[0]?.slug} className="space-y-4">
+              <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 p-2">
+                {lessonContents.map((lesson, index) => (
+                  <TabsTrigger 
+                    key={lesson.slug} 
+                    value={lesson.slug}
+                    className="text-xs md:text-sm px-3 py-2 whitespace-nowrap"
+                  >
+                    <span className="flex items-center gap-1">
+                      <span className="bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                        {index + 1}
+                      </span>
+                      {lesson.title.replace(/^\d+\.\d+\s*/, '')}
+                    </span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {lessonContents.map((lesson) => (
+                <TabsContent key={lesson.slug} value={lesson.slug} className="space-y-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-xl font-semibold mb-2">{lesson.title}</h3>
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <p className="text-sm font-medium text-blue-700 dark:text-blue-300">🎯 Learning Objective:</p>
+                        <p className="text-sm text-blue-600 dark:text-blue-400">{lesson.objective}</p>
+                      </div>
+                    </div>
+                    <Separator />
+                    <div className="prose dark:prose-invert max-w-none">
+                      {lesson.content ? (
+                        <MDXContent content={lesson.content} />
+                      ) : (
+                        <div className="text-center p-8 bg-blue-50 dark:bg-blue-950/30 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg">
+                          <p className="text-lg text-blue-700 dark:text-blue-300">Content Coming in Milestone 2</p>
+                          <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+                            Lesson content for &ldquo;{lesson.title}&rdquo; will be added in the next milestone
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    {lesson.practicalTakeaway && (
+                      <>
+                        <Separator />
+                        <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">💡 Practical Takeaway:</p>
+                          <p className="text-sm text-blue-600 dark:text-blue-400">{lesson.practicalTakeaway}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Interactive Element Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="size-5" />
+              Interactive Element
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center p-8">
+            <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-12 border-2 border-dashed border-blue-300 dark:border-blue-700 space-y-4">
+              <div className="text-4xl opacity-60">🎯</div>
+              <p className="text-lg text-blue-700 dark:text-blue-300 font-semibold">Interactive Content Coming Soon</p>
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+              </p>
+              <Button disabled className="mt-4">
+                Complete Interactive Element
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Separator />
+
+        {/* Navigation */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Button asChild variant="outline">
+          <Link href="/lessons/island3">
+            <Snowflake className="mr-2 size-4" />
+            Back to Ice Island
+          </Link>
+        </Button>
+        </div>
+      </div>
+    </WalletAuthGuard>
+  );
+}

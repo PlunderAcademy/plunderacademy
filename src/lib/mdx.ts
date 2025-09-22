@@ -186,40 +186,40 @@ const islandMetadata: Record<string, { name: string; title: string; description:
   },
   'desert': {
     name: 'Desert Island',
-    title: 'Desert Island - Advanced Concepts',
-    description: 'Advanced blockchain concepts and specialized development techniques. Coming in future updates.',
+    title: 'Desert Island - Advanced Solidity',
+    description: 'Build advanced Solidity skills with inheritance, testing, staking contracts, and complex data structures.',
     status: 'coming-soon', 
-    estimatedHours: 'TBA',
+    estimatedHours: '5-8h',
     icon: '🏜️',
     color: 'orange',
     order: 2
   },
   'ice': {
     name: 'Ice Island',
-    title: 'Ice Island - Security & Optimization',
-    description: 'Deep dive into security practices and performance optimization techniques.',
+    title: 'Ice Island - Token & NFT Launchpad',
+    description: 'Master NFT creation, metadata handling, and token collection deployments with modern standards.',
     status: 'coming-soon',
-    estimatedHours: 'TBA', 
+    estimatedHours: '3-4h', 
     icon: '🧊',
     color: 'blue',
     order: 3
   },
   'mushroom': {
     name: 'Mushroom Island',
-    title: 'Mushroom Island - DeFi Protocols',
-    description: 'Explore decentralized finance protocols and advanced smart contract patterns.',
+    title: 'Mushroom Island - On-Chain Systems',
+    description: 'Explore DeFi protocols, oracles, upgradeability patterns, and advanced blockchain architecture.',
     status: 'coming-soon',
-    estimatedHours: 'TBA',
+    estimatedHours: '6-9h',
     icon: '🍄', 
     color: 'purple',
     order: 4
   },
   'volcano': {
     name: 'Volcano Island', 
-    title: 'Volcano Island - Enterprise Development',
-    description: 'Enterprise-grade development practices and scalable blockchain solutions.',
+    title: 'Volcano Island - Frontend Integration',
+    description: 'Connect smart contracts to web applications with modern Web3 libraries and user interfaces.',
     status: 'coming-soon',
-    estimatedHours: 'TBA',
+    estimatedHours: '3-5h',
     icon: '🌋',
     color: 'red',
     order: 5
@@ -252,6 +252,7 @@ export async function getModules(): Promise<ModuleMeta[]> {
   
   // Module metadata - now using slugs and including island info
   const moduleMetadata: Record<string, { title: string; description: string; order: number; island: string }> = {
+    // Island 1: Jungle (Fundamentals)
     'blockchain-fundamentals': {
       title: 'Blockchain Fundamentals',
       description: 'Gain a thorough understanding of blockchain\'s fundamental characteristics, technical structure, and growing real-world impact.',
@@ -281,6 +282,112 @@ export async function getModules(): Promise<ModuleMeta[]> {
       description: 'Learn how to create, deploy, and manage ERC-20 tokens on Zilliqa EVM using OpenZeppelin\'s secure contract libraries.',
       order: 5,
       island: 'jungle'
+    },
+    // Island 2: Desert (Advanced Solidity)
+    'advanced-solidity-foundations': {
+      title: 'Advanced Solidity Foundations',
+      description: 'Master contract inheritance, interfaces, events, libraries, and OpenZeppelin ecosystem integration.',
+      order: 6,
+      island: 'desert'
+    },
+    'advanced-data-structures-error-handling': {
+      title: 'Advanced Data Structures & Error Handling',
+      description: 'Learn complex mappings, gas optimization, custom errors, and security patterns like reentrancy guards.',
+      order: 7,
+      island: 'desert'
+    },
+    'testing-fundamentals': {
+      title: 'Testing Fundamentals',
+      description: 'Set up testing frameworks, write unit tests, and implement test-driven development for smart contracts.',
+      order: 8,
+      island: 'desert'
+    },
+    'staking-concepts-time-logic': {
+      title: 'Staking Concepts & Time-Based Logic',
+      description: 'Understand staking architecture, time-based logic, reward calculations, and security considerations.',
+      order: 9,
+      island: 'desert'
+    },
+    'staking-contract-practical': {
+      title: 'Staking Contract Practical',
+      description: 'Deploy a complete staking contract with time-locked staking, rewards, and comprehensive testing.',
+      order: 10,
+      island: 'desert'
+    },
+    // Island 3: Ice (Token & NFT Launchpad)
+    'erc721-standards-implementation': {
+      title: 'ERC721 Standards & Implementation',
+      description: 'Implement ERC721 NFTs with enumerable extensions, gas-efficient minting, and security best practices.',
+      order: 11,
+      island: 'ice'
+    },
+    'advanced-nft-features': {
+      title: 'Advanced NFT Features',
+      description: 'Add metadata standards, IPFS integration, reveal mechanics, royalties, and multi-phase minting.',
+      order: 12,
+      island: 'ice'
+    },
+    'nft-collection-practical': {
+      title: 'NFT Collection Practical',
+      description: 'Deploy a complete NFT collection with reveal mechanics, royalties, and IPFS metadata integration.',
+      order: 13,
+      island: 'ice'
+    },
+    // Island 4: Mushroom (On-Chain Systems & Upgradeability)
+    'defi-fundamentals-simple-swaps': {
+      title: 'DeFi Fundamentals & Simple Swaps',
+      description: 'Learn token economics, liquidity concepts, simple swap mechanics, and DeFi security considerations.',
+      order: 14,
+      island: 'mushroom'
+    },
+    'oracles-randomness-airdrop-patterns': {
+      title: 'Oracles, Randomness & Airdrop Patterns',
+      description: 'Implement Chainlink oracles, commit-reveal sequences, and efficient airdrop mechanisms.',
+      order: 15,
+      island: 'mushroom'
+    },
+    'random-number-generator-practical': {
+      title: 'Random Number Generator Practical',
+      description: 'Deploy a fair randomness generator using commit-reveal patterns with anti-manipulation safeguards.',
+      order: 16,
+      island: 'mushroom'
+    },
+    'proxy-patterns-upgradeability': {
+      title: 'Proxy Patterns & Upgradeability',
+      description: 'Master transparent and UUPS proxy patterns, storage collision prevention, and upgrade safety.',
+      order: 17,
+      island: 'mushroom'
+    },
+    'gas-optimization-security-patterns': {
+      title: 'Gas Optimization & Security Patterns',
+      description: 'Advanced gas optimization techniques, storage packing, vulnerability patterns, and audit preparation.',
+      order: 18,
+      island: 'mushroom'
+    },
+    'upgradable-contract-practical': {
+      title: 'Upgradable Contract Practical',
+      description: 'Deploy upgradable contracts using proven templates with safe upgrade mechanisms and testing.',
+      order: 19,
+      island: 'mushroom'
+    },
+    // Island 5: Volcano (Frontend Integration)
+    'web3-frontend-basics': {
+      title: 'Web3 Frontend Basics',
+      description: 'Connect wallets with RainbowKit, use wagmi and viem, read contract data, and handle networks.',
+      order: 20,
+      island: 'volcano'
+    },
+    'contract-interactions-error-handling': {
+      title: 'Contract Interactions & Error Handling',
+      description: 'Write to contracts, monitor transactions, estimate gas, handle errors, and listen to events.',
+      order: 21,
+      island: 'volcano'
+    },
+    'dapp-interface-practical': {
+      title: 'dApp Interface Practical',
+      description: 'Build a complete dApp interface with wallet connection, contract interactions, and mobile design.',
+      order: 22,
+      island: 'volcano'
     }
   };
   
@@ -460,32 +567,38 @@ export async function getLessonByIds(moduleSlug: string, lessonSlug: string) {
 
 export async function getMissionByModule(moduleSlug: string): Promise<MissionMeta | null> {
   try {
-    const missionsDirectory = path.join(process.cwd(), 'src/content/modules/island1/missions');
-    const missionFileName = `${moduleSlug}-mission.mdx`;
-    const fullPath = path.join(missionsDirectory, missionFileName);
+    // Find which island this module belongs to
+    const islandDirs = fs.readdirSync(modulesDirectory)
+      .filter(name => fs.statSync(path.join(modulesDirectory, name)).isDirectory());
     
-    if (!fs.existsSync(fullPath)) {
-      return null;
+    for (const islandDir of islandDirs) {
+      const missionsDirectory = path.join(modulesDirectory, islandDir, 'missions');
+      const missionFileName = `${moduleSlug}-mission.mdx`;
+      const fullPath = path.join(missionsDirectory, missionFileName);
+      
+      if (fs.existsSync(fullPath)) {
+        const fileContents = fs.readFileSync(fullPath, 'utf8');
+        const { data, content } = matter(fileContents);
+        
+        // Parse content into intro and monologue sections
+        const sections = content.split('---').map(section => section.trim()).filter(Boolean);
+        const storyIntro = sections[0] || '';
+        const monologue = sections.slice(1).filter(section => section.length > 0);
+        
+        return {
+          title: data.title,
+          subtitle: data.subtitle,
+          objective: data.objective,
+          module: data.module || moduleSlug,
+          content,
+          storyIntro,
+          monologue,
+          achievementReward: data.achievementReward,
+        };
+      }
     }
     
-    const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data, content } = matter(fileContents);
-    
-    // Parse content into intro and monologue sections
-    const sections = content.split('---').map(section => section.trim()).filter(Boolean);
-    const storyIntro = sections[0] || '';
-    const monologue = sections.slice(1).filter(section => section.length > 0);
-    
-    return {
-      title: data.title,
-      subtitle: data.subtitle,
-      objective: data.objective,
-      module: data.module || moduleSlug,
-      content,
-      storyIntro,
-      monologue,
-      achievementReward: data.achievementReward,
-    };
+    return null;
   } catch (error) {
     console.error(`Error loading mission for module ${moduleSlug}:`, error);
     return null;
@@ -494,32 +607,38 @@ export async function getMissionByModule(moduleSlug: string): Promise<MissionMet
 
 export async function getQuizByModule(moduleSlug: string): Promise<QuizMeta | null> {
   try {
-    const quizzesDirectory = path.join(process.cwd(), 'src/content/modules/island1/quizzes');
-    const quizFileName = `${moduleSlug}-quiz.mdx`;
-    const fullPath = path.join(quizzesDirectory, quizFileName);
+    // Find which island this module belongs to
+    const islandDirs = fs.readdirSync(modulesDirectory)
+      .filter(name => fs.statSync(path.join(modulesDirectory, name)).isDirectory());
     
-    if (!fs.existsSync(fullPath)) {
-      return null;
+    for (const islandDir of islandDirs) {
+      const quizzesDirectory = path.join(modulesDirectory, islandDir, 'quizzes');
+      const quizFileName = `${moduleSlug}-quiz.mdx`;
+      const fullPath = path.join(quizzesDirectory, quizFileName);
+      
+      if (fs.existsSync(fullPath)) {
+        const fileContents = fs.readFileSync(fullPath, 'utf8');
+        const { data, content } = matter(fileContents);
+        
+        // Parse quiz questions from content
+        const questions = parseQuizQuestions(content);
+        
+        return {
+          id: data.id,
+          slug: data.slug,
+          module: data.module,
+          title: data.title,
+          description: data.description,
+          totalQuestions: data.totalQuestions,
+          passingScore: data.passingScore,
+          timeLimit: data.timeLimit,
+          questions,
+          content,
+        };
+      }
     }
     
-    const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data, content } = matter(fileContents);
-    
-    // Parse quiz questions from content
-    const questions = parseQuizQuestions(content);
-    
-    return {
-      id: data.id,
-      slug: data.slug,
-      module: data.module,
-      title: data.title,
-      description: data.description,
-      totalQuestions: data.totalQuestions,
-      passingScore: data.passingScore,
-      timeLimit: data.timeLimit,
-      questions,
-      content,
-    };
+    return null;
   } catch (error) {
     console.error(`Error loading quiz for module ${moduleSlug}:`, error);
     return null;

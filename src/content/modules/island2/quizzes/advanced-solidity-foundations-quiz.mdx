@@ -1,0 +1,97 @@
+---
+id: "advanced-solidity-foundations-quiz"
+slug: "advanced-solidity-foundations-quiz"
+module: "advanced-solidity-foundations"
+title: "Advanced Solidity Foundations Quiz"
+description: "Test your knowledge of inheritance patterns, interface design, and advanced Solidity architecture"
+totalQuestions: 5
+passingScore: 80
+timeLimit: 600
+---
+
+### Question 1
+
+**Type:** Multiple Choice
+**Points:** 20
+**Lesson:** inheritance-patterns
+
+Which of the following best describes the purpose of abstract contracts in Solidity?
+
+**Options:**
+- A) To provide gas optimization for contract deployment
+- B) To define a template with some implemented and some unimplemented functions that cannot be deployed directly
+- C) To create contracts that can only be called by other contracts
+- D) To implement multiple inheritance without conflicts
+
+---
+
+### Question 2
+
+**Type:** Multiple Choice
+**Points:** 20
+**Lesson:** interface-design
+
+What is the main advantage of using interfaces in smart contract design?
+
+**Options:**
+- A) They reduce gas costs for all function calls
+- B) They enable loose coupling and interoperability between contracts
+- C) They automatically implement security features
+- D) They provide built-in upgrade mechanisms
+
+---
+
+### Question 3
+
+**Type:** Multiple Select
+**Points:** 20
+**Lesson:** inheritance-patterns
+
+Which of the following are valid solutions to the Diamond Problem in Solidity? (Select all that apply)
+
+**Options:**
+- A) Using explicit override specification: `override(ParentA, ParentB)`
+- B) Avoiding multiple inheritance entirely
+- C) Using composition instead of inheritance
+- D) Implementing linearization through careful ordering
+
+---
+
+### Question 4
+
+**Type:** Multiple Choice
+**Points:** 20
+**Lesson:** interface-design
+
+In the following interface design, what principle is being violated?
+
+```solidity
+interface IBadDesign {
+    function transfer(address to, uint256 amount) external;
+    function calculateTaxes() external;
+    function generateHTMLReport() external;
+    function validateUserKYC(bytes32 data) external;
+}
+```
+
+**Options:**
+- A) Interface Segregation Principle - too many unrelated responsibilities
+- B) Single Responsibility Principle - functions do too much
+- C) Open/Closed Principle - interface is not extensible
+- D) Liskov Substitution Principle - implementations might not be substitutable
+
+---
+
+### Question 5
+
+**Type:** Multiple Choice
+**Points:** 20
+**Lesson:** interface-design
+
+When using the factory pattern with interfaces, what is the primary benefit?
+
+**Options:**
+- A) Reduced deployment costs for all contracts
+- B) Automatic security auditing of created contracts
+- C) Standardized creation process and guaranteed interface compliance
+- D) Built-in upgrade capabilities for all created contracts
