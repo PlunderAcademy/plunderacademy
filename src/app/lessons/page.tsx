@@ -63,10 +63,10 @@ export default async function LessonsPage() {
             </h1>
             <p className="mx-auto max-w-3xl text-xl text-slate-300">
               Navigate through five legendary modules and discover the treasures of blockchain development.
-              Each island holds valuable knowledge to make you a true EVM pirate.
+              Each location holds valuable knowledge to make you a true EVM pirate.
             </p>
             <p className="mx-auto max-w-3xl text-xl text-slate-300">
-              NOTE: The map is a work in progress and will be updated as we build out content in Milestone Two.  The other islands are placeholders and may be different than the ones shown here.
+              NOTE: The map is a work in progress and will be updated as we build out content in Milestone Two.  The other locations are placeholders and may be different than the ones shown here.
             </p>
           </div>
           
@@ -135,7 +135,7 @@ export default async function LessonsPage() {
               Choose Your Next Adventure
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Each island holds ancient secrets of blockchain mastery. Start your journey and collect treasures of knowledge along the way.
+              Each location holds ancient secrets of blockchain mastery. Start your journey and collect treasures of knowledge along the way.
             </p>
           </div>
           
