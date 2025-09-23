@@ -208,27 +208,146 @@ Build: Simple dApp Interface
 
 ---
 
-## Interactive Element Types (4 Total + Quizzes)
+## Interactive Element Types (6 Total + Mixed Quiz Questions)
 
-### 1. Code Completion
+### 1. Drag & Drop Code Puzzle
 
-**Description:** Fill-in-the-blank style coding exercises
-**Usage:** Complete contract functions, imports, security implementations, frontend integration
+**Description:** Arrange code blocks in correct order to build smart contracts
+**Usage:** Contract structure, function ordering, import sequences, inheritance patterns
+**Status:** ✅ Prototype complete and working
 
-### 2. Configuration Builder
+### 2. Timeline Builder
 
-**Description:** Parameter setting with sliders and interactive inputs
-**Usage:** Contract parameters, staking rates, swap rates, metadata configuration
+**Description:** Drag events into chronological order for process understanding
+**Usage:** Transaction lifecycle, deployment steps, DeFi protocol flows, consensus mechanisms
+**Status:** ✅ Prototype complete
 
-### 3. Deploy Challenge
+### 3. Concept Matching
+
+**Description:** Drag concepts from left column to match definitions on right
+**Usage:** Solidity terminology, blockchain concepts, security patterns, DeFi terms
+**Status:** ✅ Prototype complete with improved UX
+
+### 4. Word Jumble
+
+**Description:** Unscramble letters to form blockchain and Solidity terminology
+**Usage:** Vocabulary reinforcement, terminology learning, concept recall
+**Status:** ✅ Prototype complete with auto-scrambling
+
+### 5. True/False Statements
+
+**Description:** Drag statements into "True" or "False" drop zones
+**Usage:** Solidity syntax validation, security concept verification, general knowledge assessment
+**Status:** 🎯 Next prototype to build
+**Examples:**
+
+- "This syntax is correct: `uint256 public balance;`" → TRUE
+- "Reentrancy attacks are prevented by `external` visibility" → FALSE
+- "Gas fees are paid in Bitcoin" → FALSE
+
+### 6. Deploy Challenge
 
 **Description:** Guided build-and-deploy exercises using battle-tested templates
 **Usage:** Staking, NFT collections, airdrops, randomness workflows, upgradeable contracts, full-stack dApps
 
-### 4. Traditional Quiz
+### 7. Traditional Quiz
 
-**Description:** Multiple choice questions
+**Description:** Multiple choice and multiple select questions
 **Usage:** Knowledge assessment on concepts, security patterns, and best practices
+
+---
+
+## 🎯 Key Innovation: Mixed Question Types Within Quizzes
+
+**Breakthrough Approach:** Instead of replacing entire quizzes, integrate new interactive elements as **question types within existing quiz framework**.
+
+### Benefits
+
+- ✅ **Unified scoring system** - All questions worth points toward final score
+- ✅ **Consistent timer and navigation** - Same quiz flow with varied engagement
+- ✅ **Achievement claiming** - Single completion for mixed question types
+- ✅ **Prevents quiz fatigue** - No more 16 straight multiple choice questions
+- ✅ **Different learning styles** - Visual, kinesthetic, analytical approaches
+
+### Example Mixed Quiz Flow
+
+``` text
+Question 1-2: Multiple Choice (12 pts)
+Question 3: Word Jumble - "SOLIDITY" (8 pts)
+Question 4-5: Multiple Choice (12 pts) 
+Question 6: Concept Matching - 4 pairs (10 pts)
+Question 7-8: Multiple Choice (12 pts)
+Question 9: Timeline Builder - Transaction flow (12 pts)
+Question 10-12: Multiple Choice (18 pts)
+```
+
+### Technical Implementation
+
+- Extend QuizQuestion type to include: `'word-jumble' | 'concept-matching' | 'timeline-builder' | 'drag-drop-puzzle' | 'true-false-statements'`
+- Add conditional rendering in `traditional-quiz.tsx`
+- Each interactive element handles its own completion state and scoring
+- MDX questions define type-specific data (word to scramble, concepts to match, events to sequence, statements to categorize, etc.)
+
+### Future Development
+
+- Start with 1-2 interactive questions per quiz
+- Gradually increase variety as more prototypes are developed
+- A/B test engagement vs traditional all-multiple-choice quizzes
+
+---
+
+## 🚀 Gamification Features: Rapid Fire Mode
+
+### Time Attack Challenge System
+
+**Concept:** Transform quiz experience with progressive time pressure and visual urgency to increase engagement and perceived fun through controlled stress response.
+
+### Core Features
+
+#### Progressive Countdown
+
+- **Level 1:** 45 seconds per question (comfortable pace)
+- **Level 2:** 30 seconds per question (moderate pressure)  
+- **Level 3:** 20 seconds per question (high intensity)
+- **Level 4:** 15 seconds per question (expert challenge)
+
+#### Visual & Audio Cues
+
+- **Pulsating timer** that intensifies as time runs low
+- **Color progression:** Green → Yellow → Orange → Red
+- **Heartbeat animation** when under 10 seconds
+- **Bonus points** for quick correct answers
+- **Speed multipliers** for consecutive fast answers
+
+#### Implementation Strategy
+
+- **Normal Mode:** Current quiz experience (default)
+- **Challenge Mode:** Rapid fire with time attack features
+- **Unlock system:** Challenge mode unlocks after completing normal mode
+- **Leaderboards:** Track fastest completion times per module
+
+#### Question Type Adaptations
+
+- **Multiple Choice:** Standard rapid fire (15-45 seconds)
+- **Word Jumble:** Shorter words, faster scrambling (20-30 seconds)
+- **Concept Matching:** Fewer pairs, simplified UI (25-35 seconds)
+- **Timeline Builder:** Fewer events, clearer visual cues (30-40 seconds)
+- **True/False Statements:** Multiple statements, batch scoring (20-30 seconds)
+
+#### Psychological Benefits
+
+- ✅ **Increased engagement** through controlled pressure
+- ✅ **Flow state induction** via time constraints
+- ✅ **Replay value** with personal best tracking
+- ✅ **Skill demonstration** for advanced learners
+- ✅ **Gamified learning** without losing educational value
+
+### Technical Notes
+
+- Build as **mode selector** in existing quiz framework
+- **Preserve all functionality:** scoring, achievements, wallet integration
+- **Add performance tracking:** completion time, accuracy under pressure
+- **Optional feature:** Users can choose normal or challenge mode per quiz
 
 ---
 
