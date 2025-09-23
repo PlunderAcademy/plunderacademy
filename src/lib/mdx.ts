@@ -185,43 +185,43 @@ const islandMetadata: Record<string, { name: string; title: string; description:
     order: 1
   },
   'desert': {
-    name: 'Desert Island',
-    title: 'Desert Island - Advanced Solidity',
-    description: 'Build advanced Solidity skills with inheritance, testing, staking contracts, and complex data structures.',
+    name: 'Frost Peak',
+    title: 'Frost Peak - Advanced Solidity',
+    description: 'Scale the heights of advanced Solidity development with inheritance, testing, staking contracts, and complex data structures.',
     status: 'coming-soon', 
     estimatedHours: '5-8h',
-    icon: '🏜️',
-    color: 'orange',
+    icon: '❄️',
+    color: 'blue',
     order: 2
   },
   'ice': {
-    name: 'Ice Island',
-    title: 'Ice Island - Token & NFT Launchpad',
-    description: 'Master NFT creation, metadata handling, and token collection deployments with modern standards.',
+    name: 'Desert Bluff',
+    title: 'Desert Bluff - Token & NFT Launchpad',
+    description: 'Navigate the vast dunes of NFT creation, metadata handling, and token collection deployments with modern standards.',
     status: 'coming-soon',
     estimatedHours: '3-4h', 
-    icon: '🧊',
-    color: 'blue',
+    icon: '🏜️',
+    color: 'orange',
     order: 3
   },
   'mushroom': {
-    name: 'Mushroom Island',
-    title: 'Mushroom Island - On-Chain Systems',
-    description: 'Explore DeFi protocols, oracles, upgradeability patterns, and advanced blockchain architecture.',
+    name: 'Gilded Bastion',
+    title: 'Gilded Bastion - On-Chain Systems',
+    description: 'Discover the treasures of DeFi protocols, oracles, upgradeability patterns, and advanced blockchain architecture.',
     status: 'coming-soon',
     estimatedHours: '6-9h',
-    icon: '🍄', 
-    color: 'purple',
+    icon: '🏰',
+    color: 'yellow',
     order: 4
   },
   'volcano': {
-    name: 'Volcano Island', 
-    title: 'Volcano Island - Frontend Integration',
-    description: 'Connect smart contracts to web applications with modern Web3 libraries and user interfaces.',
+    name: 'Neon Haven', 
+    title: 'Neon Haven - Frontend Integration',
+    description: 'Enter the digital metropolis and connect smart contracts to web applications with modern Web3 libraries and user interfaces.',
     status: 'coming-soon',
     estimatedHours: '3-5h',
-    icon: '🌋',
-    color: 'red',
+    icon: '🌃',
+    color: 'cyan',
     order: 5
   }
 };

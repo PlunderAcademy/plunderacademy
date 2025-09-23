@@ -85,7 +85,7 @@ export default async function LessonsPage() {
                   )}
                 </div>
                 <div className={`text-xs font-medium ${island.status === 'available' ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Island {index + 1}
+                  Location {index + 1}
                 </div>
                 <div className={`text-sm leading-tight ${island.status === 'available' ? 'text-slate-300' : 'text-slate-500'}`}>
                   {island.status === 'available' ? island.title : 'Coming Soon'}
@@ -99,7 +99,7 @@ export default async function LessonsPage() {
             <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10">
               <div className="flex items-center justify-center gap-2 text-2xl font-bold text-white mb-1">
                 <Ship className="size-6 text-blue-400" />
-                {islands.filter(island => island.status === 'available').length} Island{islands.filter(island => island.status === 'available').length !== 1 ? 's' : ''}
+                {islands.filter(island => island.status === 'available').length} Location{islands.filter(island => island.status === 'available').length !== 1 ? 's' : ''}
               </div>
               <div className="text-sm text-slate-400">Available Now</div>
             </div>
@@ -260,7 +260,7 @@ export default async function LessonsPage() {
                   >
                     <Link href={`/lessons/island${index + 1}`}>
                       <Compass className="mr-2 size-4" />
-                      {island.status === 'available' ? 'Explore Island' : 'Preview Island'}
+                      {island.status === 'available' ? 'Explore Location' : 'Preview Location'}
                       <ChevronRight className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
                     </Link>
                   </Button>
