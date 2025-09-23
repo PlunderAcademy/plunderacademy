@@ -343,7 +343,7 @@ export function TimelineBuilder() {
                   Timeline Completed! 🎉
                 </h4>
                 <p className="text-sm text-green-700 dark:text-green-300">
-                  You've successfully arranged the transaction lifecycle in the correct chronological order. 
+                  You&apos;ve successfully arranged the transaction lifecycle in the correct chronological order. 
                   Ready to claim your achievement!
                 </p>
               </div>

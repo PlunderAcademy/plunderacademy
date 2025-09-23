@@ -346,7 +346,7 @@ export function ConceptMatching() {
                         </Badge>
                         {showHints && !isMatched && (
                           <div className="text-xs opacity-70 mt-1">
-                            Matches: "{CONCEPT_PAIRS.find(p => p.id === concept.pairId)?.definition}"
+                            Matches: &quot;{CONCEPT_PAIRS.find(p => p.id === concept.pairId)?.definition}&quot;
                           </div>
                         )}
                       </div>
@@ -448,7 +448,7 @@ export function ConceptMatching() {
                   All Concepts Matched! 🎉
                 </h4>
                 <p className="text-sm text-green-700 dark:text-green-300">
-                  You've successfully matched all {CONCEPT_PAIRS.length} blockchain concepts with their definitions. 
+                  You&apos;ve successfully matched all {CONCEPT_PAIRS.length} blockchain concepts with their definitions. 
                   Ready to claim your achievement!
                 </p>
               </div>
