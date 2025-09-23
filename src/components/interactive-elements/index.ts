@@ -6,6 +6,12 @@ export type { InteractiveElementProps, ModuleQuizProps } from "./interactive-ele
 export { TraditionalQuiz } from "./quiz/traditional-quiz";
 export { TokenDeployChallenge } from "./deploy-challenge/token-deploy-challenge";
 
+// Prototype Interactive Elements
+export { DragDropCodePuzzle } from "./prototypes/drag-drop-puzzle";
+export { TimelineBuilder } from "./prototypes/timeline-builder";
+export { ConceptMatching } from "./prototypes/concept-matching";
+export { WordJumble } from "./prototypes/word-jumble";
+
 // Shared Components
 export { AchievementClaimSection } from "./shared/achievement-claim-section";
 
