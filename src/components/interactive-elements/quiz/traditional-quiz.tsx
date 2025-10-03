@@ -415,10 +415,10 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
           <h3 className="text-lg font-semibold select-none">{question.question}</h3>
           
           {/* Interactive Question Types */}
-          {question.type === 'word-jumble' && question.interactiveData?.word && (
+          {question.type === 'word-jumble' && question.interactiveData?.scrambled && (
             <WordJumbleCompact
               data={{
-                word: question.interactiveData.word,
+                word: question.interactiveData.word || '',
                 hint: question.interactiveData.hint || '',
                 scrambled: question.interactiveData.scrambled
               }}
