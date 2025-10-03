@@ -168,7 +168,8 @@ export function ConceptMatchingCompact({
   };
 
   const handleSubmit = () => {
-    if (Object.keys(matches).length < data.pairs.length) return;
+    const requiredCount = data.pairs?.length || data.concepts?.length || 0;
+    if (Object.keys(matches).length < requiredCount) return;
 
     setIsSubmitted(true);
 
@@ -317,7 +318,7 @@ export function ConceptMatchingCompact({
 
       {/* Status */}
       <div className="text-center text-sm text-muted-foreground">
-        {Object.keys(matches).length}/{data.pairs.length} matched
+        {Object.keys(matches).length}/{data.pairs?.length || data.concepts?.length || 0} matched
         {isSubmitted && mode === 'assessment' && (
           <span className="block text-blue-600 dark:text-blue-400 mt-1">
             Answers submitted!

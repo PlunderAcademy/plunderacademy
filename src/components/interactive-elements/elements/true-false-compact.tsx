@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export interface TrueFalseStatement {
   id: string;
   text: string;
-  correctAnswer: boolean;
+  correctAnswer?: boolean;  // Optional for assessment mode
   explanation?: string;
 }
 
@@ -105,7 +105,7 @@ export function TrueFalseCompact({
   };
 
   const getStatementStatus = (statement: ClassifiedStatement) => {
-    if (!showFeedback || mode === 'assessment' || !isSubmitted) return null;
+    if (!showFeedback || mode === 'assessment' || !isSubmitted || statement.correctAnswer === undefined) return null;
     return statement.userAnswer === statement.correctAnswer ? 'correct' : 'incorrect';
   };
 

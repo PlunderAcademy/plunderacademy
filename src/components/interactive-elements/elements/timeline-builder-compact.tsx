@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export interface TimelineEvent {
   id: string;
   text: string;
-  correctPosition: number;
+  correctPosition?: number;  // Optional for assessment mode
 }
 
 export interface TimelineBuilderData {
@@ -91,7 +91,7 @@ export function TimelineBuilderCompact({
   };
 
   const getEventStatus = (event: TimelineEvent, index: number) => {
-    if (!showFeedback || mode === 'assessment' || !isSubmitted) return null;
+    if (!showFeedback || mode === 'assessment' || !isSubmitted || event.correctPosition === undefined) return null;
     return event.correctPosition === index ? 'correct' : 'incorrect';
   };
 

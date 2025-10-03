@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export interface CodeBlock {
   id: string;
   content: string;
-  correctPosition: number;
+  correctPosition?: number;  // Optional for assessment mode
 }
 
 export interface DragDropPuzzleData {
@@ -91,7 +91,7 @@ export function DragDropPuzzleCompact({
   };
 
   const getBlockStatus = (block: CodeBlock, index: number) => {
-    if (!showFeedback || mode === 'assessment' || !isSubmitted) return null;
+    if (!showFeedback || mode === 'assessment' || !isSubmitted || block.correctPosition === undefined) return null;
     return block.correctPosition === index ? 'correct' : 'incorrect';
   };
 
