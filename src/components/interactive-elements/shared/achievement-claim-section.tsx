@@ -319,23 +319,6 @@ export function AchievementClaimSection({
             >
               {isClaimPending || isConfirming ? "Claiming..." : "Claim Achievement"}
             </Button>
-
-            {/* Share to Twitter Button */}
-            <div className="text-center">
-              <Button
-                onClick={() => window.open(generateTwitterShare(moduleSlug), '_blank')}
-                className="bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 mx-auto"
-              >
-                <Share2 className="size-4" />
-                Share Achievement on X
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2">
-                🏴‍☠️ Spread the word about your epic achievement!
-              </p>
-              <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                ✨ Your achievement preview will automatically appear in the tweet!
-              </p>
-            </div>
           </div>
         ) : (
           <div className="space-y-4">

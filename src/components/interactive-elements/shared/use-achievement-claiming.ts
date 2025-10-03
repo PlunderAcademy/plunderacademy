@@ -136,6 +136,8 @@ export function useAchievementClaiming({ moduleSlug, missionData }: UseAchieveme
       // Set NFT image for display in completed section
       setNftImageUrl(getNFTImageUrl(getAchievementNumber(moduleSlug) || "0001"));
       
+      // Mark as claimed and set step to completed
+      setAlreadyClaimed(true);
       setStep("completed");
     }
   }, [isConfirmed, hash, voucher, missionData, moduleSlug]);
