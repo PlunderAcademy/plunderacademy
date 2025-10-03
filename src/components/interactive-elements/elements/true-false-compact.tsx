@@ -23,7 +23,7 @@ interface ClassifiedStatement extends TrueFalseStatement {
 interface TrueFalseCompactProps {
   data: TrueFalseData;
   mode?: 'learning' | 'assessment';
-  onComplete?: (answer: { statements: Array<{ id: string; answer: boolean }> }) => void;
+  onComplete?: (answer: { classifications: Array<{ id: string; answer: boolean }> }) => void;
   showFeedback?: boolean;
 }
 
@@ -100,7 +100,7 @@ export function TrueFalseCompact({
         ...trueStatements.map(s => ({ id: s.id, answer: true })),
         ...falseStatements.map(s => ({ id: s.id, answer: false }))
       ];
-      onComplete({ statements: answers });
+      onComplete({ classifications: answers });
     }
   };
 

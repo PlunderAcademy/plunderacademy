@@ -18,7 +18,7 @@ export interface DragDropPuzzleData {
 interface DragDropPuzzleCompactProps {
   data: DragDropPuzzleData;
   mode?: 'learning' | 'assessment';
-  onComplete?: (answer: { codeBlocks: string[] }) => void;
+  onComplete?: (answer: { sequence: string[] }) => void;
   showFeedback?: boolean;
 }
 
@@ -86,7 +86,7 @@ export function DragDropPuzzleCompact({
 
     if (onComplete) {
       const sequence = placedBlocks.map(b => b!.id);
-      onComplete({ codeBlocks: sequence });
+      onComplete({ sequence });
     }
   };
 
