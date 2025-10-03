@@ -25,7 +25,7 @@ Building on the token from Island 1 (Jungle)
 - OpenZeppelin ecosystem deep dive
 - Contract-to-contract interactions
 
-**Interactive Element:** *Code Completion* - Complete inheritance patterns, library imports, contract calls, and event indexing
+**Interactive Element:** *Quiz* - Complete inheritance patterns, library imports, contract calls, and event indexing
 
 ### Module 2: Advanced Data Structures & Error Handling
 
@@ -46,7 +46,7 @@ Building on the token from Island 1 (Jungle)
 - Testing state changes and events
 - Security-focused testing basics
 
-**Interactive Element:** *Code Completion* - Complete test functions and security tests
+**Interactive Element:** *Quiz* - Complete test functions and security tests
 
 ### Module 4: Staking Concepts & Time-Based Logic
 
@@ -56,7 +56,7 @@ Building on the token from Island 1 (Jungle)
 - Custom modifiers for time constraints
 - Staking security considerations
 
-**Interactive Element:** *Configuration Builder* - Set staking parameters and reward rates
+**Interactive Element:** *Quiz* - Set staking parameters and reward rates
 
 ### Module 5: PRACTICAL
 
@@ -82,7 +82,7 @@ Focused NFT mastery anchored to deployables
 - NFT security considerations: Access control and mint limits
 - Basic metadata handling
 
-**Interactive Element:** *Code Completion* - Complete NFT contract functions and security checks
+**Interactive Element:** *Quiz* - Complete NFT contract functions and security checks
 
 ### Module 2: Advanced NFT Features
 
@@ -92,7 +92,7 @@ Focused NFT mastery anchored to deployables
 - Royalty standards (EIP-2981)
 - Multi-phase minting concepts
 
-**Interactive Element:** *Configuration Builder* - Set up metadata URIs and minting phases
+**Interactive Element:** *Quiz* - Set up metadata URIs and minting phases
 
 ### Module 3: PRACTICAL
 
@@ -118,7 +118,7 @@ Consolidated blockchain concepts with double practicals using real contracts
 - DeFi security considerations
 - Contract-to-contract token transfers
 
-**Interactive Element:** *Configuration Builder* - Set swap parameters and exchange rates
+**Interactive Element:** *Quiz* - Set swap parameters and exchange rates
 
 ### Module 2: Oracles, Randomness & Airdrop Patterns
 
@@ -157,7 +157,7 @@ Deploy: Random Number Generator with Commit/Reveal
 - Security checklist and audit preparation
 - Performance measurement and profiling
 
-**Interactive Element:** *Code Completion* - Complete optimization patterns and security checks
+**Interactive Element:** *Quiz* - Complete optimization patterns and security checks
 
 ### Module 6: PRACTICAL
 
@@ -183,7 +183,7 @@ Essential Web3 frontend skills for contract interaction
 - Network switching and chain management
 - Basic error handling patterns
 
-**Interactive Element:** *Code Completion* - Complete wallet connection and contract reading
+**Interactive Element:** *Quiz* - Complete wallet connection and contract reading
 
 ### Module 2: Contract Interactions & Error Handling
 
@@ -193,7 +193,7 @@ Essential Web3 frontend skills for contract interaction
 - Error handling and user feedback
 - Event listening and real-time updates
 
-**Interactive Element:** *Code Completion* - Complete transaction handling and error management
+**Interactive Element:** *Quiz* - Complete transaction handling and error management
 
 ### Module 3: PRACTICAL
 
@@ -208,148 +208,81 @@ Build: Simple dApp Interface
 
 ---
 
-## Interactive Element Types (6 Total + Mixed Quiz Questions)
+## ✅ Interactive Element Types (COMPLETED - Milestone 2)
 
-### 1. Drag & Drop Code Puzzle
+All 5 new interactive element types have been successfully implemented with dual-mode architecture for both learning and assessment use cases.
 
-**Description:** Arrange code blocks in correct order to build smart contracts
-**Usage:** Contract structure, function ordering, import sequences, inheritance patterns
-**Status:** ✅ Prototype complete and working
+### Implementation Status: COMPLETE
 
-### 2. Timeline Builder
+**Completed Elements:**
 
-**Description:** Drag events into chronological order for process understanding
-**Usage:** Transaction lifecycle, deployment steps, DeFi protocol flows, consensus mechanisms
-**Status:** ✅ Prototype complete
+1. ✅ Word Jumble - Unscramble blockchain terminology
+2. ✅ Concept Matching - Drag concepts to match definitions
+3. ✅ Timeline Builder - Arrange events chronologically
+4. ✅ True/False Statements - Classify statements (3-column drag-drop)
+5. ✅ Drag & Drop Code Puzzle - Arrange code blocks in correct order
+6. ✅ Deploy Challenge - Already implemented (Module 5)
+7. ✅ Traditional Quiz - Now supports mixed question types
 
-### 3. Concept Matching
+### Dual-Mode Architecture (IMPLEMENTED)
 
-**Description:** Drag concepts from left column to match definitions on right
-**Usage:** Solidity terminology, blockchain concepts, security patterns, DeFi terms
-**Status:** ✅ Prototype complete with improved UX
+All elements support both learning (with feedback) and assessment (quiz validation) modes:
 
-### 4. Word Jumble
+- **Learning Mode**: Immediate feedback, unlimited retries, hints, explanations
+- **Assessment Mode**: No feedback, blue/neutral colors, captures structured JSON for API grading
+- **Security**: Quiz MDX files don't expose correct answers in source code
+- **Partial Credit**: Backend can award points based on correctness percentage
 
-**Description:** Unscramble letters to form blockchain and Solidity terminology
-**Usage:** Vocabulary reinforcement, terminology learning, concept recall
-**Status:** ✅ Prototype complete with auto-scrambling
+### Integration Complete
 
-### 5. True/False Statements
+- **Lesson Integration**: MDX components available (`<WordJumble />`, `<ConceptMatching />`, etc.)
+- **Quiz Integration**: Mixed with traditional multiple choice in quiz MDX files
+- **API Format**: Standardized JSON submission format for all element types
+- **Documentation**: Comprehensive docs in `src/components/interactive-elements/README.md`
 
-**Description:** Drag statements into "True" or "False" drop zones
-**Usage:** Solidity syntax validation, security concept verification, general knowledge assessment
-**Status:** 🎯 Next prototype to build
-**Examples:**
+### Deployed in Module 1 Quizzes
 
-- "This syntax is correct: `uint256 public balance;`" → TRUE
-- "Reentrancy attacks are prevented by `external` visibility" → FALSE
-- "Gas fees are paid in Bitcoin" → FALSE
+All 4 quizzes in Island 1 now include at least one interactive element:
 
-### 6. Deploy Challenge
+- blockchain-fundamentals-quiz: Word Jumble
+- evm-fundamentals-quiz: Concept Matching  
+- intro-to-solidity-quiz: Timeline Builder
+- zilliqa-evm-setup-quiz: True/False + Drag-Drop Puzzle
 
-**Description:** Guided build-and-deploy exercises using battle-tested templates
-**Usage:** Staking, NFT collections, airdrops, randomness workflows, upgradeable contracts, full-stack dApps
-
-### 7. Traditional Quiz
-
-**Description:** Multiple choice and multiple select questions
-**Usage:** Knowledge assessment on concepts, security patterns, and best practices
+See `README.md` for detailed usage documentation and API formats.
 
 ---
 
-## 🎯 Key Innovation: Mixed Question Types Within Quizzes
+### Technical Implementation Details
 
-**Breakthrough Approach:** Instead of replacing entire quizzes, integrate new interactive elements as **question types within existing quiz framework**.
+For complete implementation documentation, see:
 
-### Benefits
+- `README.md` - Overview and usage examples
+- `src/components/interactive-elements/README.md` - Detailed technical docs
+- Quiz MDX files in `src/content/modules/island1/quizzes/` - Live examples
 
-- ✅ **Unified scoring system** - All questions worth points toward final score
-- ✅ **Consistent timer and navigation** - Same quiz flow with varied engagement
-- ✅ **Achievement claiming** - Single completion for mixed question types
-- ✅ **Prevents quiz fatigue** - No more 16 straight multiple choice questions
-- ✅ **Different learning styles** - Visual, kinesthetic, analytical approaches
+### API Submission Format
 
-### Example Mixed Quiz Flow
+All interactive element answers are submitted as stringified JSON within the quiz answers object:
 
-``` text
-Question 1-2: Multiple Choice (12 pts)
-Question 3: Word Jumble - "SOLIDITY" (8 pts)
-Question 4-5: Multiple Choice (12 pts) 
-Question 6: Concept Matching - 4 pairs (10 pts)
-Question 7-8: Multiple Choice (12 pts)
-Question 9: Timeline Builder - Transaction flow (12 pts)
-Question 10-12: Multiple Choice (18 pts)
+```typescript
+{
+  walletAddress: "0x...",
+  achievementNumber: "1",
+  submissionType: "quiz",
+  submissionData: {
+    answers: {
+      "q1": "B",  // Traditional
+      "q2": "A,C,D",  // Traditional
+      "q3": "{\"type\":\"word-jumble\",\"userResponse\":{\"word\":\"BLOCKCHAIN\"}}",  // Interactive
+      "q4": "{\"type\":\"concept-matching\",\"userResponse\":{\"pairs\":[...]}}"  // Interactive
+    }
+  },
+  metadata: { timestamp: "...", timeSpent: 456 }
+}
 ```
 
-### Technical Implementation
-
-- Extend QuizQuestion type to include: `'word-jumble' | 'concept-matching' | 'timeline-builder' | 'drag-drop-puzzle' | 'true-false-statements'`
-- Add conditional rendering in `traditional-quiz.tsx`
-- Each interactive element handles its own completion state and scoring
-- MDX questions define type-specific data (word to scramble, concepts to match, events to sequence, statements to categorize, etc.)
-
-### Future Development
-
-- Start with 1-2 interactive questions per quiz
-- Gradually increase variety as more prototypes are developed
-- A/B test engagement vs traditional all-multiple-choice quizzes
-
----
-
-## 🚀 Gamification Features: Rapid Fire Mode
-
-### Time Attack Challenge System
-
-**Concept:** Transform quiz experience with progressive time pressure and visual urgency to increase engagement and perceived fun through controlled stress response.
-
-### Core Features
-
-#### Progressive Countdown
-
-- **Level 1:** 45 seconds per question (comfortable pace)
-- **Level 2:** 30 seconds per question (moderate pressure)  
-- **Level 3:** 20 seconds per question (high intensity)
-- **Level 4:** 15 seconds per question (expert challenge)
-
-#### Visual & Audio Cues
-
-- **Pulsating timer** that intensifies as time runs low
-- **Color progression:** Green → Yellow → Orange → Red
-- **Heartbeat animation** when under 10 seconds
-- **Bonus points** for quick correct answers
-- **Speed multipliers** for consecutive fast answers
-
-#### Implementation Strategy
-
-- **Normal Mode:** Current quiz experience (default)
-- **Challenge Mode:** Rapid fire with time attack features
-- **Unlock system:** Challenge mode unlocks after completing normal mode
-- **Leaderboards:** Track fastest completion times per module
-
-#### Question Type Adaptations
-
-- **Multiple Choice:** Standard rapid fire (15-45 seconds)
-- **Word Jumble:** Shorter words, faster scrambling (20-30 seconds)
-- **Concept Matching:** Fewer pairs, simplified UI (25-35 seconds)
-- **Timeline Builder:** Fewer events, clearer visual cues (30-40 seconds)
-- **True/False Statements:** Multiple statements, batch scoring (20-30 seconds)
-
-#### Psychological Benefits
-
-- ✅ **Increased engagement** through controlled pressure
-- ✅ **Flow state induction** via time constraints
-- ✅ **Replay value** with personal best tracking
-- ✅ **Skill demonstration** for advanced learners
-- ✅ **Gamified learning** without losing educational value
-
-### Technical Notes
-
-- Build as **mode selector** in existing quiz framework
-- **Preserve all functionality:** scoring, achievements, wallet integration
-- **Add performance tracking:** completion time, accuracy under pressure
-- **Optional feature:** Users can choose normal or challenge mode per quiz
-
----
+Backend detects JSON-formatted answers and parses them for grading. See README for complete grading pseudocode.
 
 ## Practical Deployment Summary
 
@@ -422,6 +355,59 @@ Advanced security aligned with AI auditor
 **Integration:** Direct connection to AI reviewer tool with guided security analysis
 
 *Note: This module will be developed as part of a future security-focused expansion.*
+
+## 🚀 Gamification Features: Rapid Fire Mode (maybe - M3 or M4)
+
+### Time Attack Challenge System
+
+**Concept:** Transform quiz experience with progressive time pressure and visual urgency to increase engagement and perceived fun through controlled stress response.
+
+### Core Features
+
+#### Progressive Countdown
+
+- **Level 1:** 45 seconds per question (comfortable pace)
+- **Level 2:** 30 seconds per question (moderate pressure)  
+- **Level 3:** 20 seconds per question (high intensity)
+- **Level 4:** 15 seconds per question (expert challenge)
+
+#### Visual & Audio Cues
+
+- **Pulsating timer** that intensifies as time runs low
+- **Color progression:** Green → Yellow → Orange → Red
+- **Heartbeat animation** when under 10 seconds
+- **Bonus points** for quick correct answers
+- **Speed multipliers** for consecutive fast answers
+
+#### Implementation Strategy
+
+- **Normal Mode:** Current quiz experience (default)
+- **Challenge Mode:** Rapid fire with time attack features
+- **Unlock system:** Challenge mode unlocks after completing normal mode
+- **Leaderboards:** Track fastest completion times per module
+
+#### Question Type Adaptations
+
+- **Multiple Choice:** Standard rapid fire (15-45 seconds)
+- **Word Jumble:** Shorter words, faster scrambling (20-30 seconds)
+- **Concept Matching:** Fewer pairs, simplified UI (25-35 seconds)
+- **Timeline Builder:** Fewer events, clearer visual cues (30-40 seconds)
+- **True/False Statements:** Multiple statements, batch scoring (20-30 seconds)
+
+#### Psychological Benefits
+
+- ✅ **Increased engagement** through controlled pressure
+- ✅ **Flow state induction** via time constraints
+- ✅ **Replay value** with personal best tracking
+- ✅ **Skill demonstration** for advanced learners
+- ✅ **Gamified learning** without losing educational value
+
+### Technical Notes
+
+- Build as **mode selector** in existing quiz framework
+- **Preserve all functionality:** scoring, achievements, wallet integration
+- **Add performance tracking:** completion time, accuracy under pressure
+- **Optional feature:** Users can choose normal or challenge mode per quiz
 
 ### Articles (Moved to Milestone 3)
 

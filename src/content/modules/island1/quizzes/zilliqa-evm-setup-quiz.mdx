@@ -97,17 +97,43 @@ What is the purpose of the claimant address in the token contract?
 ---
 
 ### Question 6
-**Type:** Multiple Choice
-**Points:** 7
-**Lesson:** 5.2 Writing Your Token Contract
+**Type:** True/False Statements
+**Points:** 8
+**Lesson:** 4.2 Installing and Configuring MetaMask
 
-Which OpenZeppelin contract provides basic ERC-20 functionality?
+Classify each statement as True or False:
 
-**Options:**
-- A) Ownable.sol for access control
-- B) ERC20.sol for standard token functions
-- C) Pausable.sol for emergency stops
-- D) AccessControl.sol for role management
+**Interactive Data:**
+```json
+{
+  "statements": [
+    {"id": "stmt-1", "text": "MetaMask can connect to multiple blockchain networks including Zilliqa EVM"},
+    {"id": "stmt-2", "text": "Your MetaMask seed phrase should be stored in cloud storage for easy access"},
+    {"id": "stmt-3", "text": "Chain ID 33101 is used for Zilliqa EVM testnet"},
+    {"id": "stmt-4", "text": "You need to pay real money for testnet ZIL tokens"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT for backend validation:
+{
+  "type": "true-false-statements",
+  "userResponse": {
+    "classifications": [
+      {"id": "stmt-1", "answer": true},   // User's true/false classifications
+      {"id": "stmt-2", "answer": false},
+      {"id": "stmt-3", "answer": true},
+      {"id": "stmt-4", "answer": false}
+    ]
+  }
+}
+CORRECT ANSWERS:
+stmt-1: TRUE  (MetaMask can connect to multiple blockchain networks including Zilliqa EVM)
+stmt-2: FALSE (Your MetaMask seed phrase should be stored in cloud storage for easy access)
+stmt-3: TRUE  (Chain ID 33101 is used for Zilliqa EVM testnet)
+stmt-4: FALSE (You need to pay real money for testnet ZIL tokens)
+-->
 
 ---
 
@@ -127,17 +153,40 @@ What does the _mint function do in an ERC-20 token?
 ---
 
 ### Question 8
-**Type:** Multiple Choice
-**Points:** 7
-**Lesson:** 5.3 Testing and Deployment
+**Type:** Drag & Drop Puzzle
+**Points:** 8
+**Lesson:** 4.1 Development Environment Setup
 
-What is the main purpose of writing unit tests for your token contract?
+Arrange these Hardhat setup steps in the correct order:
 
-**Options:**
-- A) To make the contract run faster
-- B) To catch bugs and ensure functions work correctly before deployment
-- C) To reduce deployment costs
-- D) To automatically deploy to mainnet
+**Interactive Data:**
+```json
+{
+  "codeBlocks": [
+    {"id": "step-1", "content": "npm init -y"},
+    {"id": "step-2", "content": "npm install --save-dev hardhat"},
+    {"id": "step-3", "content": "npx hardhat init"},
+    {"id": "step-4", "content": "Configure hardhat.config.js with Zilliqa network"},
+    {"id": "step-5", "content": "Add your private key to .env file"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT for backend validation:
+{
+  "type": "drag-drop-puzzle",
+  "userResponse": {
+    "sequence": ["step-1", "step-2", "step-3", "step-4", "step-5"]  // User's ordered block IDs
+  }
+}
+CORRECT ORDER:
+1. step-1 (npm init -y)
+2. step-2 (npm install --save-dev hardhat)
+3. step-3 (npx hardhat init)
+4. step-4 (Configure hardhat.config.js with Zilliqa network)
+5. step-5 (Add your private key to .env file)
+-->
 
 ---
 

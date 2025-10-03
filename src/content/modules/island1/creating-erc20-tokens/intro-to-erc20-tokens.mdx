@@ -265,3 +265,19 @@ In this module, we'll create a comprehensive, production-ready ERC-20 token with
 By the end of this module, you'll have built a professional-grade token contract and understand how to deploy, verify, and interact with it across different networks. You'll also have the knowledge to customize tokens for specific use cases while maintaining security and compatibility standards.
 
 Ready to build your first professional token? Let's dive into the development process!
+
+## 🎮 Interactive Practice
+
+Arrange these ERC-20 function implementations in the correct order for a typical token contract:
+
+<DragDropPuzzle codeBlocks={[
+  {"id": "block-1", "content": "pragma solidity ^0.8.19;", "correctPosition": 0},
+  {"id": "block-2", "content": "import \"@openzeppelin/contracts/token/ERC20/ERC20.sol\";", "correctPosition": 1},
+  {"id": "block-3", "content": "contract MyToken is ERC20 {", "correctPosition": 2},
+  {"id": "block-4", "content": "    constructor() ERC20(\"MyToken\", \"MTK\") {", "correctPosition": 3},
+  {"id": "block-5", "content": "        _mint(msg.sender, 1000000 * 10**decimals());", "correctPosition": 4},
+  {"id": "block-6", "content": "    }", "correctPosition": 5},
+  {"id": "block-7", "content": "}", "correctPosition": 6}
+]} />
+
+This interactive exercise shows you the basic structure of an ERC-20 token contract that you'll be building in this module.

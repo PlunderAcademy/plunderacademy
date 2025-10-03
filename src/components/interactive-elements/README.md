@@ -1,6 +1,6 @@
 # Interactive Elements
 
-This folder contains the modular interactive element system for Plunder Academy. The system supports multiple types of interactive learning elements and is designed to be easily extensible.
+This folder contains the modular dual-mode interactive element system for Plunder Academy. The system supports multiple types of interactive learning elements, each capable of operating in both learning mode (with immediate feedback) and assessment mode (for quiz validation).
 
 ## Structure
 
@@ -8,6 +8,7 @@ This folder contains the modular interactive element system for Plunder Academy.
 interactive-elements/
 ├── index.ts                          # Main exports and backwards compatibility
 ├── interactive-element.tsx           # Main orchestrator component
+├── mdx-components.tsx                # MDX wrapper components for lesson integration
 ├── README.md                         # This file
 ├── shared/                           # Shared utilities and components
 │   ├── types.ts                     # Common TypeScript interfaces
@@ -15,51 +16,194 @@ interactive-elements/
 │   ├── use-achievement-claiming.ts   # Hook for achievement claiming
 │   └── achievement-claim-section.tsx # Shared claim/results UI
 ├── quiz/                            # Traditional quiz implementation
-│   └── traditional-quiz.tsx
-└── deploy-challenge/                # Deploy challenge implementation
-    └── token-deploy-challenge.tsx
+│   └── traditional-quiz.tsx         # Supports mixed question types
+├── elements/                        # All interactive element components
+│   ├── word-jumble-compact.tsx      # Unscramble terminology
+│   ├── concept-matching-compact.tsx # Match concepts with definitions
+│   ├── timeline-builder-compact.tsx # Arrange events chronologically
+│   ├── true-false-compact.tsx       # Classify true/false statements
+│   ├── drag-drop-puzzle-compact.tsx # Arrange code blocks in order
+│   └── token-deploy-challenge.tsx # Guided token deployment
+└── prototypes/                      # Development prototypes (unused in production)
 ```
 
-## Current Interactive Element Types
+## Interactive Element Types
 
 ### 1. Traditional Quiz
 - **File**: `quiz/traditional-quiz.tsx`
-- **Description**: Multiple choice questions with automated scoring
-- **Usage**: Modules 1-4 (blockchain-fundamentals, evm-fundamentals, intro-to-solidity, zilliqa-evm-setup)
-- **Features**: Timer, anti-cheat measures, progress tracking, achievement claiming
+- **Description**: Multiple choice and multiple select questions with automated scoring
+- **Usage**: All module quizzes (Modules 1-5), now supports mixed question types
+- **Features**: Timer, anti-cheat measures (selective for interactive elements), progress tracking, achievement claiming
+- **Mixed Questions**: Can include Word Jumble, Concept Matching, Timeline Builder, True/False, and Drag-Drop puzzles within quizzes
 
-### 2. Deploy Challenge
-- **File**: `deploy-challenge/token-deploy-challenge.tsx`
+### 2. Word Jumble
+- **File**: `elements/word-jumble-compact.tsx`
+- **Description**: Unscramble letters to form blockchain and Solidity terminology
+- **Usage**: Vocabulary reinforcement, terminology learning
+- **Modes**: Learning (shows answer on completion) | Assessment (captures answer for API)
+- **Features**: Auto-scrambling, hints, time tracking, visual feedback (learning mode only)
+
+### 3. Concept Matching
+- **File**: `elements/concept-matching-compact.tsx`
+- **Description**: Drag concepts from left column to match definitions on right
+- **Usage**: Terminology, blockchain concepts, security patterns, DeFi terms
+- **Modes**: Learning (validates matches) | Assessment (captures pairs for API)
+- **Features**: Category badges, immediate feedback (learning mode), partial credit support
+- **Data Formats**: 
+  - Learning: Full `pairs` with correct answers
+  - Assessment: Separate `concepts` and `definitions` arrays (no answers exposed)
+
+### 4. Timeline Builder
+- **File**: `elements/timeline-builder-compact.tsx`
+- **Description**: Drag events into chronological order
+- **Usage**: Transaction lifecycle, deployment steps, protocol flows, consensus mechanisms
+- **Modes**: Learning (shows correct positions) | Assessment (captures sequence for API)
+- **Features**: Visual feedback (learning mode), partial credit for correctly positioned events
+
+### 5. True/False Statements
+- **File**: `elements/true-false-compact.tsx`
+- **Description**: Drag statements into "True" or "False" columns (3-column layout with "Unclassified")
+- **Usage**: Syntax validation, security concepts, knowledge verification
+- **Modes**: Learning (shows correct classifications) | Assessment (captures answers for API)
+- **Features**: Category badges, difficulty indicators, explanations, partial credit per correct classification
+
+### 6. Drag & Drop Code Puzzle
+- **File**: `elements/drag-drop-puzzle-compact.tsx`
+- **Description**: Arrange code blocks in correct order
+- **Usage**: Contract structure, function ordering, import sequences, inheritance patterns
+- **Modes**: Learning (shows correct order) | Assessment (captures sequence for API)
+- **Features**: Syntax highlighting, visual feedback (learning mode), partial credit support
+
+### 7. Deploy Challenge
+- **File**: `elements/deploy-challenge/token-deploy-challenge.tsx`
 - **Description**: Guided deployment exercises with transaction verification
 - **Usage**: Module 5 (creating-erc20-tokens)
 - **Features**: Transaction submission, multiple deployment methods, result verification
 
-## Future Interactive Element Types (Milestone 2)
+## Dual-Mode Architecture
 
-### 3. Code Completion
-- **Planned File**: `code-completion/code-completion.tsx`
-- **Description**: Fill-in-the-blank style coding exercises
-- **Usage**: Advanced modules for hands-on coding practice
+**CRITICAL DESIGN**: All interactive elements support two distinct operational modes with different behaviors.
 
-### 4. Configuration Builder
-- **Planned File**: `configuration-builder/configuration-builder.tsx`
-- **Description**: Parameter setting with sliders and interactive inputs
-- **Usage**: Modules involving contract configuration and parameter tuning
+### Mode 1: Learning (Standalone in Lessons)
+- **Purpose**: Educational practice with immediate feedback
+- **Feedback**: ✅ Show correct/incorrect answers immediately
+- **Visual Cues**: Green/red indicators, success/error states, hints, explanations
+- **API**: ❌ No submission
+- **Retry**: ✅ Unlimited attempts
+- **Data Format**: Includes correct answers for validation
 
-## How It Works
+### Mode 2: Assessment (Within Quizzes)
+- **Purpose**: Knowledge validation for achievement claiming
+- **Feedback**: ❌ NO answers or correctness shown
+- **Visual Cues**: Blue/neutral colors only, no validation indicators
+- **API**: ✅ Captures structured data for backend submission
+- **Retry**: ❌ Single submission with quiz
+- **Data Format**: No correct answers exposed in source code (security)
 
-The `InteractiveElement` component acts as the main orchestrator:
+### Component Props
 
-1. **Input**: Receives quiz data, mission data, and module slug
-2. **Decision**: Determines which interactive element type to render based on:
-   - Module configuration (e.g., module 5 uses deploy challenge)
-   - Available data (quiz data available = traditional quiz)
-   - Future: Explicit interactive element type specification
-3. **Rendering**: Renders the appropriate interactive element component
+```typescript
+interface InteractiveElementProps {
+  data: ElementSpecificData;
+  mode?: 'learning' | 'assessment';  // Default: 'learning'
+  onComplete?: (answer: InteractiveAnswer) => void;  // Required for assessment
+  showFeedback?: boolean;  // Default: true for learning, false for assessment
+}
+```
 
 ## Usage
 
-### Basic Usage (Current)
+### In Lesson Content (Learning Mode)
+
+Interactive elements are available as MDX components:
+
+```mdx
+<!-- Word Jumble -->
+<WordJumble 
+  word="BLOCKCHAIN" 
+  hint="Distributed ledger technology" 
+/>
+
+<!-- Concept Matching -->
+<ConceptMatching pairs={[
+  {
+    "conceptId": "evm",
+    "definitionId": "def-evm",
+    "concept": "EVM",
+    "definition": "Virtual machine that executes smart contract bytecode",
+    "category": "core"
+  },
+  {
+    "conceptId": "gas",
+    "definitionId": "def-gas",
+    "concept": "Gas",
+    "definition": "Unit measuring computational work on EVM",
+    "category": "resources"
+  }
+]} />
+
+<!-- Timeline Builder -->
+<TimelineBuilder events={[
+  {"id": "evt-1", "text": "Transaction created", "correctPosition": 0},
+  {"id": "evt-2", "text": "Transaction signed", "correctPosition": 1},
+  {"id": "evt-3", "text": "Transaction broadcast", "correctPosition": 2}
+]} />
+
+<!-- True/False -->
+<TrueFalse statements={[
+  {
+    "id": "s1",
+    "text": "Solidity is compiled to bytecode",
+    "correctAnswer": true,
+    "explanation": "Solidity compiles to EVM bytecode for execution"
+  }
+]} />
+
+<!-- Drag & Drop Puzzle -->
+<DragDropPuzzle codeBlocks={[
+  {"id": "b1", "content": "pragma solidity ^0.8.0;", "correctPosition": 0},
+  {"id": "b2", "content": "contract MyToken {", "correctPosition": 1},
+  {"id": "b3", "content": "  string public name;", "correctPosition": 2}
+]} />
+```
+
+### In Quiz Content (Assessment Mode)
+
+Quiz MDX files use a different format that **does not expose correct answers**:
+
+```mdx
+### Question 3
+**Type:** Word Jumble
+**Points:** 6
+**Lesson:** 1.1 Introduction to Blockchain
+
+Unscramble this blockchain term:
+
+**Interactive Data:**
+```json
+{
+  "hint": "Distributed ledger technology",
+  "scrambled": "LKCOHBCANI"
+}
+```
+
+<!--
+API ANSWER FORMAT for backend validation:
+{
+  "type": "word-jumble",
+  "userResponse": {
+    "word": "BLOCKCHAIN",
+    "timeSpent": 45
+  }
+}
+CORRECT ANSWER: "BLOCKCHAIN"
+-->
+```
+
+**Security Note**: Correct answers are ONLY in HTML comments, never in the Interactive Data JSON. The frontend cannot validate quiz answers.
+
+### Quiz Orchestrator Usage
+
 ```tsx
 import { InteractiveElement } from "@/components/interactive-elements";
 
@@ -70,22 +214,124 @@ import { InteractiveElement } from "@/components/interactive-elements";
 />
 ```
 
-### Backwards Compatibility
-```tsx
-import { ModuleQuiz } from "@/components/interactive-elements";
+The `TraditionalQuiz` component automatically:
+1. Detects interactive question types
+2. Renders appropriate compact component
+3. Passes `mode="assessment"` and `showFeedback={false}`
+4. Captures user responses as JSON strings
+5. Submits all answers (traditional + interactive) to API
 
-// Still works - ModuleQuiz is an alias for InteractiveElement
-<ModuleQuiz quiz={quizData} missionData={missionData} moduleSlug={moduleSlug} />
+## API Answer Formats
+
+All interactive elements submit structured JSON data to the backend for grading:
+
+### Word Jumble
+```json
+{
+  "type": "word-jumble",
+  "userResponse": {
+    "word": "BLOCKCHAIN",
+    "timeSpent": 45
+  }
+}
+```
+**Grading**: Binary (correct/incorrect), optional time bonus
+
+### Concept Matching
+```json
+{
+  "type": "concept-matching",
+  "userResponse": {
+    "pairs": [
+      {"conceptId": "gas", "definitionId": "def-gas"},
+      {"conceptId": "wei", "definitionId": "def-wei"}
+    ]
+  }
+}
+```
+**Grading**: Partial credit per correct pair
+
+### Timeline Builder
+```json
+{
+  "type": "timeline-builder",
+  "userResponse": {
+    "sequence": ["evt-1", "evt-2", "evt-3", "evt-4"]
+  }
+}
+```
+**Grading**: Partial credit for correctly positioned events
+
+### True/False Statements
+```json
+{
+  "type": "true-false-statements",
+  "userResponse": {
+    "classifications": [
+      {"id": "stmt-1", "answer": true},
+      {"id": "stmt-2", "answer": false}
+    ]
+  }
+}
+```
+**Grading**: Partial credit per correct classification
+
+### Drag & Drop Puzzle
+```json
+{
+  "type": "drag-drop-puzzle",
+  "userResponse": {
+    "sequence": ["block-1", "block-2", "block-3", "block-4"]
+  }
+}
+```
+**Grading**: Partial credit for correctly positioned blocks
+
+### Backend Grading Pseudocode
+
+```python
+def grade_quiz_answer(question_id, user_answer, correct_answer_data, max_points):
+    # Detect interactive element by checking if answer is JSON
+    if is_json_string(user_answer):
+        interactive = json.loads(user_answer)
+        element_type = interactive['type']
+        user_response = interactive['userResponse']
+        
+        if element_type == 'concept-matching':
+            correct_pairs = correct_answer_data['pairs']
+            correct_count = count_matching_pairs(user_response['pairs'], correct_pairs)
+            return (correct_count / len(correct_pairs)) * max_points
+            
+        elif element_type == 'timeline-builder':
+            correct_sequence = correct_answer_data['sequence']
+            correct_positions = count_correct_positions(user_response['sequence'], correct_sequence)
+            return (correct_positions / len(correct_sequence)) * max_points
+            
+        elif element_type == 'word-jumble':
+            return max_points if user_response['word'].upper() == correct_answer_data['word'].upper() else 0
+            
+        elif element_type == 'true-false-statements':
+            correct_classifications = correct_answer_data['classifications']
+            correct_count = count_correct_classifications(user_response['classifications'], correct_classifications)
+            return (correct_count / len(correct_classifications)) * max_points
+            
+        elif element_type == 'drag-drop-puzzle':
+            correct_sequence = correct_answer_data['sequence']
+            correct_positions = count_correct_positions(user_response['sequence'], correct_sequence)
+            return (correct_positions / len(correct_sequence)) * max_points
+    else:
+        # Traditional multiple choice/select
+        return grade_traditional_answer(user_answer, correct_answer_data, max_points)
 ```
 
 ## Adding New Interactive Element Types
 
-### Step 1: Create Component Folder
-Create a new folder under `interactive-elements/` for your element type:
+### Step 1: Create Component in elements/
+Create a new file under `interactive-elements/elements/` for your element type:
 ```
 interactive-elements/
-└── your-element-type/
-    └── your-element.tsx
+└── elements/
+    └── your-element-compact.tsx
 ```
 
 ### Step 2: Define Types
@@ -97,21 +343,75 @@ export interface YourElementProps extends BaseInteractiveElementProps {
 }
 ```
 
-### Step 3: Implement Component
+### Step 3: Implement Dual-Mode Component
 Create your component following the pattern of existing elements:
 ```tsx
-export function YourElement({ missionData, moduleSlug, yourData }: YourElementProps) {
-  // Use the achievement claiming hook
-  const achievementClaiming = useAchievementClaiming({ moduleSlug, missionData });
+interface YourElementCompactProps {
+  data: YourElementData;
+  mode?: 'learning' | 'assessment';
+  onComplete?: (answer: YourElementAnswer) => void;
+  showFeedback?: boolean;
+}
+
+export function YourElementCompact({
+  data,
+  mode = 'learning',
+  onComplete,
+  showFeedback = true
+}: YourElementCompactProps) {
+  const [userResponse, setUserResponse] = useState<YourResponseType>(initialState);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   
-  // Your component logic here
+  const handleSubmit = () => {
+    setIsSubmitted(true);
+    
+    if (onComplete) {
+      onComplete({
+        type: 'your-element-type',
+        userResponse: userResponse
+      });
+    }
+  };
   
-  // Use shared components for results/claiming
+  const getValidationStatus = (item: YourItemType) => {
+    // Only validate in learning mode with correct answer data
+    if (!showFeedback || mode === 'assessment' || !data.correctAnswers) return null;
+    
+    // Your validation logic
+    return isCorrect ? 'correct' : 'incorrect';
+  };
+  
   return (
-    <AchievementClaimSection ... />
+    <div className="space-y-4" data-interactive="true">
+      {/* Your interactive UI */}
+      
+      {/* Conditional styling based on mode */}
+      <div className={cn(
+        "p-2 border-2",
+        mode === 'assessment'
+          ? "border-blue-400 bg-blue-50"  // Neutral assessment colors
+          : status === 'correct'
+            ? "border-green-400 bg-green-50"  // Learning feedback
+            : "border-red-400 bg-red-50"
+      )}>
+        {/* Item content */}
+      </div>
+      
+      {/* Submit button */}
+      <Button onClick={handleSubmit} disabled={!isComplete}>
+        {mode === 'assessment' ? 'Submit Answer' : 'Check Answer'}
+      </Button>
+    </div>
   );
 }
 ```
+
+**Key Requirements:**
+- Support both learning and assessment modes
+- Use `data-interactive="true"` on root element (for quiz anti-cheat)
+- Blue/neutral colors in assessment mode
+- Green/red feedback only in learning mode
+- Call `onComplete` callback with structured answer
 
 ### Step 4: Update Orchestrator
 Add your element type to `interactive-element.tsx`:

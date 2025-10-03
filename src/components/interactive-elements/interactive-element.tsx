@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Trophy } from "lucide-react";
 import { QuizMeta, MissionMeta } from "@/lib/mdx";
 import { TraditionalQuiz } from "./quiz/traditional-quiz";
-import { TokenDeployChallenge } from "./deploy-challenge/token-deploy-challenge";
+import { TokenDeployChallenge } from "./elements/token-deploy-challenge";
 import { isTransactionSubmissionModule } from "./shared/utils";
 
 // TODO: These will be added in future milestones

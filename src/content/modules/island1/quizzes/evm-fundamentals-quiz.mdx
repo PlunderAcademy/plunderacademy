@@ -97,17 +97,49 @@ What role does ABI (Application Binary Interface) serve in contract interaction?
 ---
 
 ### Question 6
-**Type:** Multiple Choice
-**Points:** 7
+**Type:** Concept Matching
+**Points:** 8
 **Lesson:** 2.3 Gas Mechanism
 
-Why do transactions on EVM require gas?
+Match each EVM concept with its definition:
 
-**Options:**
-- A) To slow down the network intentionally
-- B) To prevent infinite loops and compensate validators for computational work
-- C) To add encryption to transactions
-- D) To store transaction data permanently
+**Interactive Data:**
+```json
+{
+  "concepts": [
+    {"id": "gas", "text": "Gas", "category": "execution"},
+    {"id": "wei", "text": "Wei", "category": "currency"},
+    {"id": "opcode", "text": "Opcode", "category": "execution"},
+    {"id": "storage", "text": "Storage", "category": "memory"}
+  ],
+  "definitions": [
+    {"id": "def-gas", "text": "Unit that measures computational work on EVM"},
+    {"id": "def-wei", "text": "Smallest denomination of ether (10^-18 ETH)"},
+    {"id": "def-opcode", "text": "Basic instruction in EVM bytecode"},
+    {"id": "def-storage", "text": "Permanent key-value data store for contracts"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT for backend validation:
+{
+  "type": "concept-matching",
+  "userResponse": {
+    "pairs": [
+      {"conceptId": "gas", "definitionId": "def-gas"},      // User's matches
+      {"conceptId": "wei", "definitionId": "def-wei"},
+      {"conceptId": "opcode", "definitionId": "def-opcode"},
+      {"conceptId": "storage", "definitionId": "def-storage"}
+    ]
+  }
+}
+CORRECT PAIRS:
+gas -> def-gas
+wei -> def-wei
+opcode -> def-opcode
+storage -> def-storage
+-->
 
 ---
 

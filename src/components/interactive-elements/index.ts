@@ -4,13 +4,14 @@ export type { InteractiveElementProps, ModuleQuizProps } from "./interactive-ele
 
 // Individual Interactive Element Types
 export { TraditionalQuiz } from "./quiz/traditional-quiz";
-export { TokenDeployChallenge } from "./deploy-challenge/token-deploy-challenge";
+export { TokenDeployChallenge } from "./elements/token-deploy-challenge";
 
-// Prototype Interactive Elements
-export { DragDropCodePuzzle } from "./prototypes/drag-drop-puzzle";
-export { TimelineBuilder } from "./prototypes/timeline-builder";
-export { ConceptMatching } from "./prototypes/concept-matching";
-export { WordJumble } from "./prototypes/word-jumble";
+// Interactive Elements (Compact Production Versions)
+export { WordJumbleCompact } from "./elements/word-jumble-compact";
+export { ConceptMatchingCompact } from "./elements/concept-matching-compact";
+export { TimelineBuilderCompact } from "./elements/timeline-builder-compact";
+export { TrueFalseCompact } from "./elements/true-false-compact";
+export { DragDropPuzzleCompact } from "./elements/drag-drop-puzzle-compact";
 
 // Shared Components
 export { AchievementClaimSection } from "./shared/achievement-claim-section";

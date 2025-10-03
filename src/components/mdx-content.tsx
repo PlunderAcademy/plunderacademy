@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { compile, run } from '@mdx-js/mdx';
 import * as runtime from 'react/jsx-runtime';
 import { useEffect, useRef, useState } from 'react';
+import { WordJumble, ConceptMatching, TimelineBuilder, TrueFalse, DragDropPuzzle } from '@/components/interactive-elements/mdx-components';
 
 type MDXComponent = React.ComponentPropsWithoutRef<'div'>;
 
@@ -81,6 +82,12 @@ const components = {
   img: (props: React.ComponentPropsWithoutRef<'img'>) => (
     <img className="rounded-lg my-6 max-w-full" alt="" {...props} />
   ),
+  // Interactive learning components
+  WordJumble,
+  ConceptMatching,
+  TimelineBuilder,
+  TrueFalse,
+  DragDropPuzzle,
 };
 
 interface MDXContentProps {

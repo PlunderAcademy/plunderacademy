@@ -79,13 +79,106 @@ src/
 
 ## Interactive Learning Elements
 
-The platform supports multiple types of interactive learning activities through a modular system at `src/components/interactive-elements/`:
+The platform supports multiple types of interactive learning activities through a modular dual-mode system at `src/components/interactive-elements/`:
 
-- **Traditional Quiz** (`quiz/`): Multiple choice questions with timer, anti-cheat measures, and automated scoring
-- **Deploy Challenge** (`deploy-challenge/`): Guided deployment exercises with transaction verification (used in Module 5 for token creation)
+### Interactive Element Types
+
+#### Quiz & Assessment Components
+- **Traditional Quiz** (`quiz/traditional-quiz.tsx`): Multiple choice and multiple select questions with timer, anti-cheat measures, and automated scoring
+- **Word Jumble** (`elements/word-jumble-compact.tsx`): Unscramble blockchain and Solidity terminology
+- **Concept Matching** (`elements/concept-matching-compact.tsx`): Drag concepts to match their definitions
+- **Timeline Builder** (`elements/timeline-builder-compact.tsx`): Arrange events in chronological order
+- **True/False Statements** (`elements/true-false-compact.tsx`): Classify statements as true or false by dragging into columns
+- **Drag & Drop Code Puzzle** (`elements/drag-drop-puzzle-compact.tsx`): Arrange code blocks in the correct sequence
+
+#### Deployment Components
+- **Deploy Challenge** (`elements/deploy-challenge/token-deploy-challenge.tsx`): Guided deployment exercises with transaction verification (Module 5 token creation)
+
+#### Shared Infrastructure
 - **Shared utilities** (`shared/`): Common achievement claiming, voucher submission, and result display components
+- **MDX Components** (`mdx-components.tsx`): Wrapper components for easy MDX integration
 
-Future interactive types planned: Code Completion (fill-in-the-blank coding) and Configuration Builder (parameter tuning with sliders). The `InteractiveElement` orchestrator automatically selects the appropriate element type based on module configuration and available data.
+### Dual-Mode Architecture
+
+All interactive elements support two distinct modes:
+
+**Learning Mode** (in lesson content):
+- ✅ Immediate visual feedback (green/red indicators)
+- ✅ Show correct answers on completion
+- ✅ Hints and explanations available
+- ✅ Unlimited retry attempts
+- ❌ No API submission
+
+**Assessment Mode** (in quizzes):
+- ❌ No visual feedback or answer validation
+- ❌ Correct answers never revealed
+- ✅ Captures user responses as structured JSON
+- ✅ Submitted to backend API for grading
+- ✅ Supports partial credit scoring
+- ⚠️ Single submission with quiz
+
+### Using Interactive Elements in MDX
+
+Interactive elements can be easily embedded in lesson MDX files:
+
+```mdx
+<!-- Word Jumble -->
+<WordJumble word="BLOCKCHAIN" hint="Distributed ledger technology" />
+
+<!-- Concept Matching -->
+<ConceptMatching pairs={[
+  {"conceptId": "evm", "definitionId": "def-evm", "concept": "EVM", "definition": "Virtual machine for smart contracts", "category": "core"}
+]} />
+
+<!-- Timeline Builder -->
+<TimelineBuilder events={[
+  {"id": "evt-1", "text": "Transaction created", "correctPosition": 0},
+  {"id": "evt-2", "text": "Transaction signed", "correctPosition": 1}
+]} />
+
+<!-- True/False -->
+<TrueFalse statements={[
+  {"id": "s1", "text": "Solidity is compiled to bytecode", "correctAnswer": true, "explanation": "Solidity compiles to EVM bytecode"}
+]} />
+
+<!-- Drag & Drop Puzzle -->
+<DragDropPuzzle codeBlocks={[
+  {"id": "b1", "content": "pragma solidity ^0.8.0;", "correctPosition": 0},
+  {"id": "b2", "content": "contract MyToken {", "correctPosition": 1}
+]} />
+```
+
+### Quiz Integration
+
+Interactive elements can be mixed with traditional multiple choice questions in quizzes. The MDX format uses separate data structures for assessment mode (no correct answers exposed):
+
+```mdx
+### Question 3
+**Type:** Word Jumble
+**Points:** 6
+**Lesson:** 1.1 Introduction
+
+Unscramble this term:
+
+**Interactive Data:**
+```json
+{
+  "hint": "Distributed ledger technology",
+  "scrambled": "LKCOHBCANI"
+}
+```
+
+<!--
+API ANSWER FORMAT:
+{
+  "type": "word-jumble",
+  "userResponse": {"word": "BLOCKCHAIN", "timeSpent": 45}
+}
+CORRECT ANSWER: "BLOCKCHAIN"
+-->
+```
+
+See `src/components/interactive-elements/README.md` for detailed integration documentation.
 
 ## AI Copilots
 
@@ -99,6 +192,38 @@ Future interactive types planned: Code Completion (fill-in-the-blank coding) and
 - The `useAchievements` hook calls the Plunder Academy API (`NEXT_PUBLIC_PLUNDER_ACADEMY_API`) to fetch vouchers and NFT metadata, then submits signatures to the training registry contract at `NEXT_PUBLIC_PLUNDER_ACADEMY_CONTRACT_ADDRESS`.
 - The modular interactive elements system (`src/components/interactive-elements/`) handles different learning activities: traditional quizzes with automated scoring, deploy challenges with transaction verification, and achievement claiming flows. Module 5 uses the deploy challenge system alongside the `TokenFactoryInterface` for hands-on token deployments.
 - Additional implementation notes for the token factory live in `TOKEN_FACTORY_IMPLEMENTATION.md`.
+
+### API Submission Format
+
+Quiz submissions now support mixed question types including interactive elements. All answers are submitted as a single payload:
+
+```typescript
+{
+  walletAddress: "0x...",
+  achievementNumber: "1",
+  submissionType: "quiz",
+  submissionData: {
+    answers: {
+      // Traditional multiple choice/select
+      "q1": "B",
+      "q2": "A,C,D",
+      
+      // Interactive elements (stringified JSON)
+      "q3": "{\"type\":\"word-jumble\",\"userResponse\":{\"word\":\"BLOCKCHAIN\",\"timeSpent\":45}}",
+      "q4": "{\"type\":\"concept-matching\",\"userResponse\":{\"pairs\":[{\"conceptId\":\"gas\",\"definitionId\":\"def-gas\"}]}}",
+      "q5": "{\"type\":\"timeline-builder\",\"userResponse\":{\"sequence\":[\"evt-1\",\"evt-2\",\"evt-3\"]}}",
+      "q6": "{\"type\":\"true-false-statements\",\"userResponse\":{\"classifications\":[{\"id\":\"s1\",\"answer\":true}]}}",
+      "q7": "{\"type\":\"drag-drop-puzzle\",\"userResponse\":{\"sequence\":[\"block-1\",\"block-2\",\"block-3\"]}}"
+    }
+  },
+  metadata: {
+    timestamp: "2025-01-15T10:30:00Z",
+    timeSpent: 456
+  }
+}
+```
+
+The backend should detect JSON-formatted answers and parse them to extract the `type` and `userResponse` for appropriate grading logic. Interactive elements support partial credit scoring based on the number of correct matches, positions, or classifications.
 
 ## Deployment Notes
 

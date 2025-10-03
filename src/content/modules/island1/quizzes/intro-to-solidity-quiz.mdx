@@ -112,11 +112,40 @@ What is a struct used for in Solidity?
 ---
 
 ### Question 7
-**Type:** Multiple Choice
-**Points:** 7
-**Lesson:** 3.3 Data Structures — Structs, Arrays, Mappings
+**Type:** Timeline Builder
+**Points:** 8
+**Lesson:** 3.2 Functions, Visibility, and Access Control
 
-How do you declare a dynamic array of structs named people?
+Arrange these steps in the correct order for a typical Solidity function execution with a modifier:
+
+**Interactive Data:**
+```json
+{
+  "events": [
+    {"id": "evt-1", "text": "Function is called by external user"},
+    {"id": "evt-2", "text": "Modifier checks are executed (e.g., onlyOwner)"},
+    {"id": "evt-3", "text": "Function body logic executes"},
+    {"id": "evt-4", "text": "State changes are written to storage"},
+    {"id": "evt-5", "text": "Events are emitted (if any)"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT for backend validation:
+{
+  "type": "timeline-builder",
+  "userResponse": {
+    "sequence": ["evt-1", "evt-2", "evt-3", "evt-4", "evt-5"]  // User's ordered event IDs
+  }
+}
+CORRECT ORDER:
+1. evt-1 (Function is called by external user)
+2. evt-2 (Modifier checks are executed)
+3. evt-3 (Function body logic executes)
+4. evt-4 (State changes are written to storage)
+5. evt-5 (Events are emitted)
+-->
 
 **Options:**
 - A) Person[] public people;

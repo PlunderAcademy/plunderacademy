@@ -39,11 +39,28 @@ export type MissionMeta = {
 
 export type QuizQuestion = {
   id: number;
-  type: 'multiple-choice' | 'multiple-select';
+  type: 'multiple-choice' | 'multiple-select' | 'word-jumble' | 'concept-matching' | 'timeline-builder' | 'drag-drop-puzzle' | 'true-false-statements';
   lesson: string;
   question: string;
   options: string[];
   points: number;
+  // Interactive element specific data
+  interactiveData?: {
+    // Word Jumble
+    word?: string;  // Only in learning mode
+    hint?: string;
+    scrambled?: string;
+    // Concept Matching
+    pairs?: Array<{ conceptId: string; definitionId: string; concept: string; definition: string; category?: string }>;  // Learning mode
+    concepts?: Array<{ id: string; text: string; category?: string }>;  // Assessment mode (no answers)
+    definitions?: Array<{ id: string; text: string }>;  // Assessment mode (no answers)
+    // Timeline Builder
+    events?: Array<{ id: string; text: string; correctPosition?: number }>;  // correctPosition only in learning mode
+    // Drag & Drop Puzzle
+    codeBlocks?: Array<{ id: string; content: string; correctPosition?: number }>;  // correctPosition only in learning mode
+    // True/False
+    statements?: Array<{ id: string; text: string; correctAnswer?: boolean; explanation?: string }>;  // correctAnswer only in learning mode
+  };
 };
 
 export type QuizMeta = {
@@ -653,22 +670,58 @@ function parseQuizQuestions(content: string): QuizQuestion[] {
   
   questionBlocks.forEach((block, index) => {
     const lines = block.trim().split('\n');
-    let type: 'multiple-choice' | 'multiple-select' = 'multiple-choice';
+    let type: QuizQuestion['type'] = 'multiple-choice';
     let points = 1;
     let lesson = '';
     let question = '';
     const options: string[] = [];
+    let interactiveData: QuizQuestion['interactiveData'] = undefined;
     
     // Parse each line of the question block
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       
       if (line.startsWith('**Type:**')) {
-        type = line.includes('Multiple Select') ? 'multiple-select' : 'multiple-choice';
+        const typeStr = line.replace('**Type:**', '').trim().toLowerCase();
+        if (typeStr.includes('multiple select')) {
+          type = 'multiple-select';
+        } else if (typeStr.includes('word jumble')) {
+          type = 'word-jumble';
+        } else if (typeStr.includes('concept matching')) {
+          type = 'concept-matching';
+        } else if (typeStr.includes('timeline')) {
+          type = 'timeline-builder';
+        } else if (typeStr.includes('drag') || typeStr.includes('puzzle')) {
+          type = 'drag-drop-puzzle';
+        } else if (typeStr.includes('true') || typeStr.includes('false')) {
+          type = 'true-false-statements';
+        } else {
+          type = 'multiple-choice';
+        }
       } else if (line.startsWith('**Points:**')) {
         points = parseInt(line.replace('**Points:**', '').trim()) || 1;
       } else if (line.startsWith('**Lesson:**')) {
         lesson = line.replace('**Lesson:**', '').trim();
+      } else if (line.startsWith('**Interactive Data:**')) {
+        // Parse JSON block for interactive data
+        let jsonStart = -1;
+        let jsonEnd = -1;
+        for (let j = i + 1; j < lines.length; j++) {
+          if (lines[j].trim() === '```json') {
+            jsonStart = j + 1;
+          } else if (lines[j].trim() === '```' && jsonStart !== -1) {
+            jsonEnd = j;
+            break;
+          }
+        }
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          const jsonStr = lines.slice(jsonStart, jsonEnd).join('\n');
+          try {
+            interactiveData = JSON.parse(jsonStr);
+          } catch (e) {
+            console.error('Error parsing interactive data JSON:', e);
+          }
+        }
       } else if (line.startsWith('**Options:**')) {
         // Start parsing options from the next line
         for (let j = i + 1; j < lines.length; j++) {
@@ -680,12 +733,13 @@ function parseQuizQuestions(content: string): QuizQuestion[] {
           }
         }
         break;
-      } else if (line && !line.startsWith('**') && !line.startsWith('-') && !line.startsWith('#') && !question) {
+      } else if (line && !line.startsWith('**') && !line.startsWith('-') && !line.startsWith('#') && !line.startsWith('```') && !question) {
         question = line;
       }
     }
     
-    if (question && options.length > 0) {
+    // For interactive elements, options may not be required
+    if (question && (options.length > 0 || interactiveData)) {
       questions.push({
         id: index + 1,
         type,
@@ -693,6 +747,7 @@ function parseQuizQuestions(content: string): QuizQuestion[] {
         question,
         options,
         points,
+        interactiveData,
       });
     }
   });

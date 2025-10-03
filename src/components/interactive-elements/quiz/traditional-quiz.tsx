@@ -23,6 +23,11 @@ import {
   getAchievementNumber, 
   formatTime 
 } from "../shared/utils";
+import { WordJumbleCompact } from "../elements/word-jumble-compact";
+import { ConceptMatchingCompact } from "../elements/concept-matching-compact";
+import { TimelineBuilderCompact } from "../elements/timeline-builder-compact";
+import { TrueFalseCompact } from "../elements/true-false-compact";
+import { DragDropPuzzleCompact } from "../elements/drag-drop-puzzle-compact";
 
 export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementProps) {
   const { address } = useAccount();
@@ -150,11 +155,10 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
       return false;
     };
 
-    // Block common keyboard shortcuts
+    // Block common keyboard shortcuts (but allow F12 for devtools)
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+S, Ctrl+A, Ctrl+C, Ctrl+V
+      // Block Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+S, Ctrl+A, Ctrl+C, Ctrl+V
       if (
-        e.key === 'F12' ||
         (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
         (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S' || 
                       e.key === 'a' || e.key === 'A' || e.key === 'c' || e.key === 'C' || 
@@ -171,8 +175,13 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
       return false;
     };
 
-    // Disable drag
+    // Disable drag (but allow for interactive elements)
     const handleDragStart = (e: DragEvent) => {
+      const target = e.target as HTMLElement;
+      // Allow dragging if the element or any parent has data-interactive attribute
+      if (target.closest('[data-interactive="true"]')) {
+        return; // Allow drag for interactive elements
+      }
       e.preventDefault();
       return false;
     };
@@ -218,6 +227,15 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
     const answer = getCurrentAnswer(questionId);
     if (Array.isArray(answer)) {
       return answer.length > 0;
+    }
+    // Check if it's a JSON string (interactive element)
+    if (typeof answer === 'string' && answer.startsWith('{')) {
+      try {
+        JSON.parse(answer);
+        return true;
+      } catch {
+        return false;
+      }
     }
     return answer !== '';
   };
@@ -360,15 +378,7 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
   return (
     <Card 
       ref={quizContainerRef}
-      className="quiz-protected select-none"
-      style={{
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        MozUserSelect: 'none',
-        msUserSelect: 'none',
-        WebkitTouchCallout: 'none',
-        WebkitTapHighlightColor: 'transparent'
-      }}
+      className="quiz-protected"
     >
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -402,8 +412,89 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
             </Badge>
           </div>
           
-          <h3 className="text-lg font-semibold">{question.question}</h3>
+          <h3 className="text-lg font-semibold select-none">{question.question}</h3>
           
+          {/* Interactive Question Types */}
+          {question.type === 'word-jumble' && question.interactiveData?.word && (
+            <WordJumbleCompact
+              data={{
+                word: question.interactiveData.word,
+                hint: question.interactiveData.hint || '',
+                scrambled: question.interactiveData.scrambled
+              }}
+              mode="assessment"
+              showFeedback={false}
+              onComplete={(answer) => {
+                handleAnswerChange(question.id, JSON.stringify({
+                  type: 'word-jumble',
+                  userResponse: { word: answer.word, timeSpent: answer.timeSpent }
+                }));
+              }}
+            />
+          )}
+
+          {question.type === 'concept-matching' && (question.interactiveData?.pairs || (question.interactiveData?.concepts && question.interactiveData?.definitions)) && (
+            <ConceptMatchingCompact
+              data={{
+                pairs: question.interactiveData.pairs,
+                concepts: question.interactiveData.concepts,
+                definitions: question.interactiveData.definitions
+              }}
+              mode="assessment"
+              showFeedback={false}
+              onComplete={(answer) => {
+                handleAnswerChange(question.id, JSON.stringify({
+                  type: 'concept-matching',
+                  userResponse: answer
+                }));
+              }}
+            />
+          )}
+
+          {question.type === 'timeline-builder' && question.interactiveData?.events && (
+            <TimelineBuilderCompact
+              data={{ events: question.interactiveData.events }}
+              mode="assessment"
+              showFeedback={false}
+              onComplete={(answer) => {
+                handleAnswerChange(question.id, JSON.stringify({
+                  type: 'timeline-builder',
+                  userResponse: answer
+                }));
+              }}
+            />
+          )}
+
+          {question.type === 'true-false-statements' && question.interactiveData?.statements && (
+            <TrueFalseCompact
+              data={{ statements: question.interactiveData.statements }}
+              mode="assessment"
+              showFeedback={false}
+              onComplete={(answer) => {
+                handleAnswerChange(question.id, JSON.stringify({
+                  type: 'true-false-statements',
+                  userResponse: answer
+                }));
+              }}
+            />
+          )}
+
+          {question.type === 'drag-drop-puzzle' && question.interactiveData?.codeBlocks && (
+            <DragDropPuzzleCompact
+              data={{ codeBlocks: question.interactiveData.codeBlocks }}
+              mode="assessment"
+              showFeedback={false}
+              onComplete={(answer) => {
+                handleAnswerChange(question.id, JSON.stringify({
+                  type: 'drag-drop-puzzle',
+                  userResponse: answer
+                }));
+              }}
+            />
+          )}
+
+          {/* Traditional Multiple Choice/Select */}
+          {(question.type === 'multiple-choice' || question.type === 'multiple-select') && (
           <div className="space-y-3">
             {question.options.map((option, index) => {
               const optionKey = option.split(')')[0].replace('-', '').trim();
@@ -433,7 +524,7 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
                       }}
                       className="mt-1 w-4 h-4 text-primary"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 select-none">
                       <span className={`text-sm ${isSelected ? 'font-medium text-primary' : ''}`}>
                         {optionText}
                       </span>
@@ -462,7 +553,7 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
                       onChange={() => handleAnswerChange(question.id, optionKey)}
                       className="mt-1 w-4 h-4 text-primary"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 select-none">
                       <span className={`text-sm ${isSelected ? 'font-medium text-primary' : ''}`}>
                         {optionText}
                       </span>
@@ -475,6 +566,7 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
               }
             })}
           </div>
+          )}
         </div>
 
         {submitError && (
