@@ -282,6 +282,7 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
         result={result}
         apiResults={apiResults}
         alreadyClaimed={achievementClaiming.alreadyClaimed}
+        justClaimed={achievementClaiming.justClaimed}
         nftImageUrl={achievementClaiming.nftImageUrl}
         hash={achievementClaiming.hash}
         isClaimPending={achievementClaiming.isClaimPending}
@@ -303,6 +304,7 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
           result={result}
           apiResults={apiResults}
           alreadyClaimed={achievementClaiming.alreadyClaimed}
+          justClaimed={achievementClaiming.justClaimed}
           nftImageUrl={achievementClaiming.nftImageUrl}
           hash={achievementClaiming.hash}
           isClaimPending={achievementClaiming.isClaimPending}

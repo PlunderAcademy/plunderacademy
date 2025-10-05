@@ -22,6 +22,7 @@ interface AchievementClaimSectionProps {
   result?: QuizResult | null;
   apiResults?: ApiResultData | null;
   alreadyClaimed: boolean;
+  justClaimed?: boolean;
   nftImageUrl?: string | null;
   hash?: string;
   isClaimPending?: boolean;
@@ -37,6 +38,7 @@ export function AchievementClaimSection({
   result,
   apiResults,
   alreadyClaimed,
+  justClaimed = false,
   nftImageUrl,
   hash,
   isClaimPending,
@@ -55,7 +57,7 @@ export function AchievementClaimSection({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="size-5 text-green-500" />
-            Achievement Already Claimed
+            {justClaimed ? 'Achievement Claimed!' : 'Achievement Already Claimed'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -100,7 +102,7 @@ export function AchievementClaimSection({
 
           <div className="text-center p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
             <p className="text-green-700 dark:text-green-300 font-semibold">
-              🎉 You have already claimed this achievement!
+              {justClaimed ? '🎉 Your achievement has been successfully claimed!' : '🎉 You have already claimed this achievement!'}
             </p>
             <p className="text-sm text-green-600 dark:text-green-400 mt-1">
               Your NFT achievement is safely stored in your wallet.

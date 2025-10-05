@@ -145,6 +145,7 @@ export function TokenDeployChallenge({ moduleSlug, missionData }: DeployElementP
         result={result}
         apiResults={apiResults}
         alreadyClaimed={achievementClaiming.alreadyClaimed}
+        justClaimed={achievementClaiming.justClaimed}
         nftImageUrl={achievementClaiming.nftImageUrl}
         hash={achievementClaiming.hash}
         isClaimPending={achievementClaiming.isClaimPending}
@@ -166,6 +167,7 @@ export function TokenDeployChallenge({ moduleSlug, missionData }: DeployElementP
           result={result}
           apiResults={apiResults}
           alreadyClaimed={achievementClaiming.alreadyClaimed}
+          justClaimed={achievementClaiming.justClaimed}
           nftImageUrl={achievementClaiming.nftImageUrl}
           hash={achievementClaiming.hash}
           isClaimPending={achievementClaiming.isClaimPending}

@@ -31,6 +31,7 @@ export function useAchievementClaiming({ moduleSlug, missionData }: UseAchieveme
   const [step, setStep] = useState<InteractiveStep>("initial");
   const [voucher, setVoucher] = useState<VoucherResponse | null>(null);
   const [alreadyClaimed, setAlreadyClaimed] = useState(false);
+  const [justClaimed, setJustClaimed] = useState(false);
   const [nftImageUrl, setNftImageUrl] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
@@ -136,8 +137,8 @@ export function useAchievementClaiming({ moduleSlug, missionData }: UseAchieveme
       // Set NFT image for display in completed section
       setNftImageUrl(getNFTImageUrl(getAchievementNumber(moduleSlug) || "0001"));
       
-      // Mark as claimed and set step to completed
-      setAlreadyClaimed(true);
+      // Mark as just claimed (not alreadyClaimed yet - that happens after celebration)
+      setJustClaimed(true);
       setStep("completed");
     }
   }, [isConfirmed, hash, voucher, missionData, moduleSlug]);
@@ -161,6 +162,9 @@ export function useAchievementClaiming({ moduleSlug, missionData }: UseAchieveme
   // Handle celebration close
   const handleCelebrationClose = useCallback(() => {
     setShowCelebration(false);
+    // Now mark as already claimed (after celebration)
+    setAlreadyClaimed(true);
+    
     // Refresh when celebration closes (after 8 seconds - perfect timing for backend processing)
     fetchWalletAchievements();
     fetchUnclaimedVouchers();
@@ -189,6 +193,7 @@ export function useAchievementClaiming({ moduleSlug, missionData }: UseAchieveme
     voucher,
     setVoucher,
     alreadyClaimed,
+    justClaimed,
     nftImageUrl,
     setNftImageUrl,
     showCelebration,
