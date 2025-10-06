@@ -32,13 +32,24 @@ import {
   type TextFeedbackItem,
 } from "@/lib/system-analytics-api";
 
+interface LeaderboardData {
+  timeframe: string;
+  topLearners: Array<{
+    walletAddress: string;
+    achievementCount: number;
+    aiInteractions: number;
+    avgFeedbackRating: number;
+    rank: number;
+  }>;
+}
+
 /**
  * System-wide analytics dashboard for platform administrators.
  * Shows aggregate metrics across all users and platform health indicators.
  */
 export function SystemAnalyticsDashboard() {
   const [analytics, setAnalytics] = React.useState<SystemAnalytics | null>(null);
-  const [leaderboard, setLeaderboard] = React.useState<any>(null);
+  const [leaderboard, setLeaderboard] = React.useState<LeaderboardData | null>(null);
   const [moduleFeedback, setModuleFeedback] = React.useState<ModuleFeedbackItem[]>([]);
   const [textFeedback, setTextFeedback] = React.useState<TextFeedbackItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -91,7 +102,7 @@ export function SystemAnalyticsDashboard() {
     );
   }
 
-  const { platform, modules, tools, queryCategories, timeSeries, recentActivity } = analytics;
+  const { platform, modules, tools, queryCategories, recentActivity } = analytics;
 
   const StatCard = ({
     icon: Icon,
@@ -518,7 +529,7 @@ export function SystemAnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {leaderboard.topLearners.map((learner: any, index: number) => (
+              {leaderboard.topLearners.map((learner) => (
                 <div
                   key={learner.walletAddress}
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
