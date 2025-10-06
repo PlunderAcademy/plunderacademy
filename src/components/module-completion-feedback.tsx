@@ -83,8 +83,8 @@ export function ModuleCompletionFeedback({
     label: string;
     category: keyof typeof ratings;
   }) => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium">{label}</label>
+    <div className="space-y-1">
+      <label className="text-xs font-medium">{label}</label>
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((rating) => (
           <button
@@ -106,7 +106,7 @@ export function ModuleCompletionFeedback({
   );
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w-md mx-auto overflow-hidden">
       <CardHeader>
         <CardTitle>Module Feedback</CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -114,9 +114,9 @@ export function ModuleCompletionFeedback({
         </p>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 overflow-x-hidden px-4 py-4">
         {/* Rating Sections */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <RatingInput label="Content Difficulty" category="contentDifficulty" />
           <RatingInput label="Content Clarity" category="contentClarity" />
           <RatingInput label="Practical Value" category="practicalValue" />
@@ -127,9 +127,9 @@ export function ModuleCompletionFeedback({
         </div>
 
         {/* Text Feedback */}
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">
+        <div className="space-y-3 w-full max-w-full overflow-hidden">
+          <div className="w-full max-w-full overflow-hidden">
+            <label className="text-xs font-medium mb-1 block">
               What worked well in this module?
             </label>
             <Textarea
@@ -141,11 +141,13 @@ export function ModuleCompletionFeedback({
                 }))
               }
               placeholder="Share what you found most valuable..."
+              className="w-full max-w-full resize-none min-h-[60px] break-words [overflow-wrap:anywhere] [field-sizing:initial] whitespace-pre-wrap"
+              rows={2}
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">
+          <div className="w-full max-w-full overflow-hidden">
+            <label className="text-xs font-medium mb-1 block">
               Suggestions for improvement
             </label>
             <Textarea
@@ -157,11 +159,13 @@ export function ModuleCompletionFeedback({
                 }))
               }
               placeholder="How can we make this module better?"
+              className="w-full max-w-full resize-none min-h-[60px] break-words [overflow-wrap:anywhere] [field-sizing:initial] whitespace-pre-wrap"
+              rows={2}
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">
+          <div className="w-full max-w-full overflow-hidden">
+            <label className="text-xs font-medium mb-1 block">
               Additional topics you&apos;d like to see
             </label>
             <Textarea
@@ -173,31 +177,34 @@ export function ModuleCompletionFeedback({
                 }))
               }
               placeholder="What else would you like to learn about?"
+              className="w-full max-w-full resize-none min-h-[60px] break-words [overflow-wrap:anywhere] [field-sizing:initial] whitespace-pre-wrap"
+              rows={2}
             />
           </div>
         </div>
 
         {/* Additional Questions */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
-            <label className="text-sm font-medium mb-2 block">
+            <label className="text-xs font-medium mb-1 block">
               Approximately how long did this module take? (minutes)
             </label>
             <input
               type="number"
               value={timeSpent || ""}
               onChange={(e) => setTimeSpent(Number(e.target.value))}
-              className="w-full p-2 border rounded-md bg-background"
+              className="w-full max-w-xs px-3 py-1.5 text-sm border rounded-md bg-background"
               placeholder="e.g., 90"
+              min="0"
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
+          <div className="space-y-1">
+            <label className="text-xs font-medium">
               Did you use external resources to complete this module?
             </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="flex gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer text-sm">
                 <input
                   type="radio"
                   checked={externalResources === true}
@@ -206,7 +213,7 @@ export function ModuleCompletionFeedback({
                 />
                 Yes
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-1.5 cursor-pointer text-sm">
                 <input
                   type="radio"
                   checked={externalResources === false}
@@ -218,12 +225,12 @@ export function ModuleCompletionFeedback({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
+          <div className="space-y-1">
+            <label className="text-xs font-medium">
               Were the AI tools (chat assistant, code reviewer) helpful?
             </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="flex gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer text-sm">
                 <input
                   type="radio"
                   checked={aiToolsHelpful === true}
@@ -232,7 +239,7 @@ export function ModuleCompletionFeedback({
                 />
                 Yes
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-1.5 cursor-pointer text-sm">
                 <input
                   type="radio"
                   checked={aiToolsHelpful === false}
@@ -241,7 +248,7 @@ export function ModuleCompletionFeedback({
                 />
                 No
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-1.5 cursor-pointer text-sm">
                 <input
                   type="radio"
                   checked={aiToolsHelpful === undefined}

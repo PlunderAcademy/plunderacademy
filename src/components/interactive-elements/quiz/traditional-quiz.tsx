@@ -311,7 +311,7 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
         {/* Module Completion Feedback - Shows when manually triggered */}
         {showManualFeedback && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="max-h-[90vh] overflow-y-auto p-4">
+            <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden px-2 py-4">
               <ModuleCompletionFeedback
                 moduleSlug={moduleSlug}
                 achievementCodes={[getAchievementNumber(moduleSlug) || "0001"]}
@@ -361,7 +361,7 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
         {/* Module Completion Feedback - Shows when manually triggered via button */}
         {showManualFeedback && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="max-h-[90vh] overflow-y-auto p-4">
+            <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden px-2 py-4">
               <ModuleCompletionFeedback
                 moduleSlug={moduleSlug}
                 achievementCodes={[getAchievementNumber(moduleSlug) || "0001"]}
