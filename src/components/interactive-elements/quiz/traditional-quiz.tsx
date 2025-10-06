@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Trophy, CheckCircle, AlertCircle } from "lucide-react";
+import { Clock, Trophy, CheckCircle, AlertCircle, MessageSquare } from "lucide-react";
 import { AchievementCelebration } from "@/components/achievement-celebration";
+import { ModuleCompletionFeedback } from "@/components/module-completion-feedback";
 import { AchievementClaimSection } from "../shared/achievement-claim-section";
 import { useAchievementClaiming } from "../shared/use-achievement-claiming";
 import { 
@@ -42,12 +43,22 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [apiResults, setApiResults] = useState<ApiResultData | null>(null);
+  const [showManualFeedback, setShowManualFeedback] = useState(false);
   
   // Anti-cheat measures
   const quizContainerRef = useRef<HTMLDivElement>(null);
 
   // Achievement claiming functionality
   const achievementClaiming = useAchievementClaiming({ moduleSlug, missionData });
+  
+  // Manual feedback handler
+  const handleShowFeedback = () => {
+    const achievementNumber = getAchievementNumber(moduleSlug);
+    if (achievementNumber) {
+      // If feedback already completed, still allow them to view/resubmit
+      setShowManualFeedback(true);
+    }
+  };
 
   // Timer effect
   useEffect(() => {
@@ -275,27 +286,8 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
 
   // If already claimed, skip to completed view
   if (achievementClaiming.alreadyClaimed) {
-    return (
-      <AchievementClaimSection
-        moduleSlug={moduleSlug}
-        missionData={missionData}
-        result={result}
-        apiResults={apiResults}
-        alreadyClaimed={achievementClaiming.alreadyClaimed}
-        justClaimed={achievementClaiming.justClaimed}
-        nftImageUrl={achievementClaiming.nftImageUrl}
-        hash={achievementClaiming.hash}
-        isClaimPending={achievementClaiming.isClaimPending}
-        isConfirming={achievementClaiming.isConfirming}
-        claimError={achievementClaiming.claimError}
-        onClaimAchievement={achievementClaiming.handleClaimAchievement}
-        onRetake={handleRetakeQuiz}
-      />
-    );
-  }
-
-  // Quiz Results & Claiming Flow
-  if (achievementClaiming.step === "claim" || achievementClaiming.step === "completed" || (isCompleted && result)) {
+    const hasFeedbackCompleted = achievementClaiming.feedbackPrompt.hasFeedbackBeenCompleted(moduleSlug);
+    
     return (
       <>
         <AchievementClaimSection
@@ -312,6 +304,51 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
           claimError={achievementClaiming.claimError}
           onClaimAchievement={achievementClaiming.handleClaimAchievement}
           onRetake={handleRetakeQuiz}
+          onShowFeedback={handleShowFeedback}
+          hasFeedbackCompleted={hasFeedbackCompleted}
+        />
+        
+        {/* Module Completion Feedback - Shows when manually triggered */}
+        {showManualFeedback && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="max-h-[90vh] overflow-y-auto p-4">
+              <ModuleCompletionFeedback
+                moduleSlug={moduleSlug}
+                achievementCodes={[getAchievementNumber(moduleSlug) || "0001"]}
+                onComplete={() => {
+                  achievementClaiming.feedbackPrompt.markFeedbackCompleted(moduleSlug);
+                  setShowManualFeedback(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Quiz Results & Claiming Flow
+  if (achievementClaiming.step === "claim" || achievementClaiming.step === "completed" || (isCompleted && result)) {
+    const hasFeedbackCompleted = achievementClaiming.feedbackPrompt.hasFeedbackBeenCompleted(moduleSlug);
+    
+    return (
+      <>
+        <AchievementClaimSection
+          moduleSlug={moduleSlug}
+          missionData={missionData}
+          result={result}
+          apiResults={apiResults}
+          alreadyClaimed={achievementClaiming.alreadyClaimed}
+          justClaimed={achievementClaiming.justClaimed}
+          nftImageUrl={achievementClaiming.nftImageUrl}
+          hash={achievementClaiming.hash}
+          isClaimPending={achievementClaiming.isClaimPending}
+          isConfirming={achievementClaiming.isConfirming}
+          claimError={achievementClaiming.claimError}
+          onClaimAchievement={achievementClaiming.handleClaimAchievement}
+          onRetake={handleRetakeQuiz}
+          onShowFeedback={handleShowFeedback}
+          hasFeedbackCompleted={hasFeedbackCompleted}
         />
         
         {/* Achievement Celebration */}
@@ -320,6 +357,22 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
           onClose={achievementClaiming.handleCelebrationClose}
           achievementData={achievementClaiming.celebrationData ?? undefined}
         />
+        
+        {/* Module Completion Feedback - Shows when manually triggered via button */}
+        {showManualFeedback && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="max-h-[90vh] overflow-y-auto p-4">
+              <ModuleCompletionFeedback
+                moduleSlug={moduleSlug}
+                achievementCodes={[getAchievementNumber(moduleSlug) || "0001"]}
+                onComplete={() => {
+                  achievementClaiming.feedbackPrompt.markFeedbackCompleted(moduleSlug);
+                  setShowManualFeedback(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
       </>
     );
   }

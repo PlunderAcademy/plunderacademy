@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { trainingRegistryABI } from "@/lib/training-registry-abi";
 import { useAchievements } from "@/hooks/use-achievements";
+import { useModuleFeedbackPrompt } from "@/hooks/use-module-feedback-prompt";
 import { 
   VoucherResponse, 
   CelebrationData, 
@@ -26,6 +27,7 @@ interface UseAchievementClaimingProps {
 export function useAchievementClaiming({ moduleSlug, missionData }: UseAchievementClaimingProps) {
   const { address } = useAccount();
   const { fetchWalletAchievements, fetchUnclaimedVouchers } = useAchievements();
+  const feedbackPrompt = useModuleFeedbackPrompt();
   
   // States
   const [step, setStep] = useState<InteractiveStep>("initial");
@@ -208,6 +210,9 @@ export function useAchievementClaiming({ moduleSlug, missionData }: UseAchieveme
     
     // Functions
     handleClaimAchievement,
-    handleCelebrationClose
+    handleCelebrationClose,
+    
+    // Feedback prompt states
+    feedbackPrompt
   };
 }

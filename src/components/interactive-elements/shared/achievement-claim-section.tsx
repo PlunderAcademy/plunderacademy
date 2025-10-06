@@ -10,7 +10,8 @@ import {
   AlertCircle, 
   ExternalLink, 
   Share2, 
-  Copy 
+  Copy,
+  MessageSquare
 } from "lucide-react";
 import { MissionMeta } from "@/lib/mdx";
 import { ApiResultData, QuizResult } from "./types";
@@ -30,6 +31,8 @@ interface AchievementClaimSectionProps {
   claimError?: Error | null;
   onClaimAchievement: () => void;
   onRetake?: () => void;
+  onShowFeedback?: () => void;
+  hasFeedbackCompleted?: boolean;
 }
 
 export function AchievementClaimSection({
@@ -45,7 +48,9 @@ export function AchievementClaimSection({
   isConfirming,
   claimError,
   onClaimAchievement,
-  onRetake
+  onRetake,
+  onShowFeedback,
+  hasFeedbackCompleted
 }: AchievementClaimSectionProps) {
   
   const isTransactionModule = isTransactionSubmissionModule(moduleSlug);
@@ -109,17 +114,30 @@ export function AchievementClaimSection({
             </p>
           </div>
 
-          {/* Share to Twitter Button */}
-          <div className="text-center pt-4">
-            <Button
-              onClick={() => window.open(generateTwitterShare(moduleSlug), '_blank')}
-              className="bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 mx-auto"
-            >
-              <Share2 className="size-4" />
-              Share Achievement on X
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2">
-              🏴‍☠️ Spread the word about your epic achievement!
+          {/* Share to Twitter and Feedback Buttons */}
+          <div className="text-center pt-4 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button
+                onClick={() => window.open(generateTwitterShare(moduleSlug), '_blank')}
+                className="bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+              >
+                <Share2 className="size-4" />
+                Share Achievement on X
+              </Button>
+              
+              {onShowFeedback && (
+                <Button
+                  onClick={onShowFeedback}
+                  variant="outline"
+                  className="flex items-center gap-2 border-2 hover:bg-accent"
+                >
+                  <MessageSquare className="size-4" />
+                  Give Feedback
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              🏴‍☠️ Share your achievement & help us improve!
             </p>
           </div>
         </CardContent>

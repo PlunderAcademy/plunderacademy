@@ -299,7 +299,7 @@ Backend detects JSON-formatted answers and parses them for grading. See README f
 
 ## Interface Improvements
 
-- Feedback loops/analytics logging, for modules and ai tools. see (milestone-2-feedback-analytics-design.md)
+- Feedback loops/analytics logging, for modules and ai tools. see (milestone-2-feedback-analytics-design.md) (COMPLETED - Milestone 2)
 
 - Enhancements to the AI Auditor and AI Chatbot to take them from Alpha level, to Beta level.  Likely 80% there just more more buildout on the prompt.
 
@@ -318,10 +318,6 @@ Expand with real user questions from testing
 Reference specific lessons in responses
 Guide users to relevant modules based on questions
 Context-aware responses based on user progress
-
-- Code completion Interactive Element Type - Fill-in-the-blank style coding exercises
-
-- Configuration Builder Interactive Element Type - Parameter setting with sliders and interactive inputs
 
 ## Graphics needed
 

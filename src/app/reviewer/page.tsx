@@ -6,8 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCompletion } from "@ai-sdk/react";
 import { Response } from "@/components/ai-elements/response";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
+import { AIFeedback } from "@/components/ai-feedback";
+import { useSession } from "@/lib/session-context";
+import { trackAIInteraction } from "@/lib/feedback-api";
 
 export default function ReviewerPage() {
+  const { address, sessionId } = useSession();
   const [code, setCode] = React.useState<string>(
     `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
@@ -27,14 +31,65 @@ contract OverflowToken {
     }
 }`
   );
+  const [interactionId, setInteractionId] = React.useState<string>();
+  const [startTime, setStartTime] = React.useState<number>(0);
+  
+  // Track if we've already submitted tracking for current interaction
+  const hasTrackedRef = React.useRef(false);
+
   const { completion, complete, isLoading, error } = useCompletion({
     api: "/api/reviewer",
     streamProtocol: "text",
   });
 
   async function onReview() {
+    // Generate interaction ID and track start time
+    const id = crypto.randomUUID();
+    setInteractionId(id);
+    setStartTime(Date.now());
+    hasTrackedRef.current = false; // Reset tracking flag for new review
+    
     await complete(code);
   }
+
+  // Track interaction ONLY when streaming completes
+  React.useEffect(() => {
+    // Only track once when:
+    // 1. Stream has finished (isLoading is false)
+    // 2. We have a completion
+    // 3. We haven't already tracked this interaction
+    // 4. We have all required data
+    if (
+      !isLoading &&
+      completion &&
+      interactionId &&
+      address &&
+      startTime > 0 &&
+      !hasTrackedRef.current
+    ) {
+      hasTrackedRef.current = true; // Mark as tracked
+      
+      const durationMs = Date.now() - startTime;
+      
+      // Count vulnerabilities mentioned in response (rough heuristic)
+      const vulnerabilityCount = (
+        completion.match(/###\s+\d+\./g) || []
+      ).length;
+
+      // Track the interaction
+      trackAIInteraction({
+        id: interactionId,
+        walletAddress: address,
+        toolType: "auditor",
+        inputLength: code.length,
+        outputLength: completion.length,
+        modelUsed: "openai/gpt-oss-120b", // Match your default model
+        durationMs,
+        vulnerabilitiesFound: vulnerabilityCount,
+        sessionId,
+      });
+    }
+  }, [isLoading, completion, interactionId, address, code.length, startTime, sessionId]);
 
   return (
     <WalletAuthGuard 
@@ -72,10 +127,18 @@ contract OverflowToken {
           <div className="min-h-[380px] rounded-md border bg-card p-4 text-sm">
             {error ? (
               <span className="text-destructive">{error.message}</span>
-                       ) : completion ? (
-               <div className="prose max-w-none">
-                 <Response>{completion}</Response>
-               </div>
+            ) : completion ? (
+              <>
+                <div className="prose max-w-none">
+                  <Response>{completion}</Response>
+                </div>
+                {interactionId && (
+                  <AIFeedback
+                    interactionId={interactionId}
+                    toolType="auditor"
+                  />
+                )}
+              </>
             ) : (
               <span className="text-muted-foreground">No findings yet.</span>
             )}

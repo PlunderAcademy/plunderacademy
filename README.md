@@ -186,6 +186,18 @@ See `src/components/interactive-elements/README.md` for detailed integration doc
 - Reviewer endpoint: `src/app/api/reviewer/route.ts` performs contract reviews with temperature `0.2`. Adjust sections or formatting by editing `src/app/api/reviewer/reviewer-system-prompt.md`.
 - Frontend hooks: `/chat` uses `useChat` and `/reviewer` uses `useCompletion`. Both pages are behind `WalletAuthGuard` so learners must connect a wallet.
 
+## Feedback & Analytics
+
+The platform includes a comprehensive feedback and analytics system to track learning outcomes and continuously improve the AI tools:
+
+- **AI Interaction Tracking**: Automatically captures usage metrics for the code reviewer and chat assistant (response times, input/output lengths, vulnerability counts, query categories)
+- **User Feedback Collection**: Thumbs up/down buttons, star ratings, and detailed text feedback on every AI response with smart debouncing and local caching to minimize API calls
+- **Module Completion Surveys**: Optional feedback forms after earning achievements that collect ratings on content difficulty, clarity, practical value, and pace
+- **Personal Analytics Dashboard**: User-facing analytics at `/analytics` showing AI tool usage stats, satisfaction rates, module progress, and personalized learning insights
+- **Session Management**: Persistent session IDs in localStorage track user activity across page reloads while maintaining privacy (wallet addresses only, no PII)
+
+The frontend (`src/lib/feedback-api.ts`, `src/components/ai-feedback.tsx`, `src/components/user-analytics-dashboard.tsx`) is fully implemented and connects to the Plunder Academy API. Backend implementation requires 4 new API endpoints and 3 database tables. The system is designed to be non-intrusive with optional feedback, skip options everywhere, and all tracking happening in the background without disrupting the learning flow.
+
 ## Achievements and On-Chain Flow
 
 - Wallet gating uses `wagmi` + `RainbowKit` with chains defined in `src/lib/wagmi.ts`. Switch to mainnet by exporting the commented configuration and supplying the mainnet factory address.

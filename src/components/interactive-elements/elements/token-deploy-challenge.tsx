@@ -5,8 +5,9 @@ import { useAccount } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, AlertCircle } from "lucide-react";
+import { Trophy, AlertCircle, MessageSquare } from "lucide-react";
 import { AchievementCelebration } from "@/components/achievement-celebration";
+import { ModuleCompletionFeedback } from "@/components/module-completion-feedback";
 import { AchievementClaimSection } from "../shared/achievement-claim-section";
 import { useAchievementClaiming } from "../shared/use-achievement-claiming";
 import { 
@@ -32,9 +33,18 @@ export function TokenDeployChallenge({ moduleSlug, missionData }: DeployElementP
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<QuizResult | null>(null);
   const [apiResults, setApiResults] = useState<ApiResultData | null>(null);
+  const [showManualFeedback, setShowManualFeedback] = useState(false);
 
   // Achievement claiming functionality
   const achievementClaiming = useAchievementClaiming({ moduleSlug, missionData });
+  
+  // Manual feedback handler
+  const handleShowFeedback = () => {
+    const achievementNumber = getAchievementNumber(moduleSlug);
+    if (achievementNumber) {
+      setShowManualFeedback(true);
+    }
+  };
 
   // Handle transaction submission
   const handleSubmit = useCallback(async () => {
@@ -138,27 +148,8 @@ export function TokenDeployChallenge({ moduleSlug, missionData }: DeployElementP
 
   // If already claimed, skip to completed view
   if (achievementClaiming.alreadyClaimed) {
-    return (
-      <AchievementClaimSection
-        moduleSlug={moduleSlug}
-        missionData={missionData}
-        result={result}
-        apiResults={apiResults}
-        alreadyClaimed={achievementClaiming.alreadyClaimed}
-        justClaimed={achievementClaiming.justClaimed}
-        nftImageUrl={achievementClaiming.nftImageUrl}
-        hash={achievementClaiming.hash}
-        isClaimPending={achievementClaiming.isClaimPending}
-        isConfirming={achievementClaiming.isConfirming}
-        claimError={achievementClaiming.claimError}
-        onClaimAchievement={achievementClaiming.handleClaimAchievement}
-        onRetake={handleRetake}
-      />
-    );
-  }
-
-  // Results & Claiming Flow
-  if (achievementClaiming.step === "claim" || achievementClaiming.step === "completed" || result) {
+    const hasFeedbackCompleted = achievementClaiming.feedbackPrompt.hasFeedbackBeenCompleted(moduleSlug);
+    
     return (
       <>
         <AchievementClaimSection
@@ -175,6 +166,51 @@ export function TokenDeployChallenge({ moduleSlug, missionData }: DeployElementP
           claimError={achievementClaiming.claimError}
           onClaimAchievement={achievementClaiming.handleClaimAchievement}
           onRetake={handleRetake}
+          onShowFeedback={handleShowFeedback}
+          hasFeedbackCompleted={hasFeedbackCompleted}
+        />
+        
+        {/* Module Completion Feedback Modal */}
+        {showManualFeedback && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="max-h-[90vh] overflow-y-auto p-4">
+              <ModuleCompletionFeedback
+                moduleSlug={moduleSlug}
+                achievementCodes={[getAchievementNumber(moduleSlug) || "0005"]}
+                onComplete={() => {
+                  achievementClaiming.feedbackPrompt.markFeedbackCompleted(moduleSlug);
+                  setShowManualFeedback(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Results & Claiming Flow
+  if (achievementClaiming.step === "claim" || achievementClaiming.step === "completed" || result) {
+    const hasFeedbackCompleted = achievementClaiming.feedbackPrompt.hasFeedbackBeenCompleted(moduleSlug);
+    
+    return (
+      <>
+        <AchievementClaimSection
+          moduleSlug={moduleSlug}
+          missionData={missionData}
+          result={result}
+          apiResults={apiResults}
+          alreadyClaimed={achievementClaiming.alreadyClaimed}
+          justClaimed={achievementClaiming.justClaimed}
+          nftImageUrl={achievementClaiming.nftImageUrl}
+          hash={achievementClaiming.hash}
+          isClaimPending={achievementClaiming.isClaimPending}
+          isConfirming={achievementClaiming.isConfirming}
+          claimError={achievementClaiming.claimError}
+          onClaimAchievement={achievementClaiming.handleClaimAchievement}
+          onRetake={handleRetake}
+          onShowFeedback={handleShowFeedback}
+          hasFeedbackCompleted={hasFeedbackCompleted}
         />
         
         {/* Achievement Celebration */}
@@ -183,6 +219,22 @@ export function TokenDeployChallenge({ moduleSlug, missionData }: DeployElementP
           onClose={achievementClaiming.handleCelebrationClose}
           achievementData={achievementClaiming.celebrationData ?? undefined}
         />
+        
+        {/* Module Completion Feedback - Shows when manually triggered via button */}
+        {showManualFeedback && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="max-h-[90vh] overflow-y-auto p-4">
+              <ModuleCompletionFeedback
+                moduleSlug={moduleSlug}
+                achievementCodes={[getAchievementNumber(moduleSlug) || "0005"]}
+                onComplete={() => {
+                  achievementClaiming.feedbackPrompt.markFeedbackCompleted(moduleSlug);
+                  setShowManualFeedback(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
       </>
     );
   }

@@ -22,22 +22,132 @@ import {
 import { Response } from "@/components/ai-elements/response";
 import { Loader } from "@/components/ai-elements/loader";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
+import { AIFeedback } from "@/components/ai-feedback";
+import { useSession } from "@/lib/session-context";
+import { trackAIInteraction } from "@/lib/feedback-api";
 
 export default function ChatPage() {
+  const { address, sessionId } = useSession();
   const { messages, sendMessage, status } = useChat();
   const [input, setInput] = React.useState("");
   const isLoading = status === "submitted" || status === "streaming";
+  
+  // Track interaction IDs for each assistant message
+  const [interactionIds, setInteractionIds] = React.useState<Record<number, string>>({});
+  const [messageTiming, setMessageTiming] = React.useState<Record<number, { startTime: number; inputText: string }>>({});
+  
+  // Track which interactions have been submitted to avoid duplicates
+  const trackedInteractionsRef = React.useRef<Set<string>>(new Set());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
+    
+    // Generate interaction ID for tracking
+    const id = crypto.randomUUID();
+    const currentMessageCount = messages.length;
+    
+    // Store timing data indexed by message position
+    setMessageTiming(prev => ({
+      ...prev,
+      [currentMessageCount]: { // User message will be at this index
+        startTime: Date.now(),
+        inputText: input.trim()
+      }
+    }));
+    
     sendMessage({ text: input.trim() });
     setInput("");
+    
+    // Store the interaction ID for the assistant message (next position)
+    setInteractionIds(prev => ({
+      ...prev,
+      [currentMessageCount + 1]: id // Assistant message will be at this index
+    }));
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
   };
+
+  // Track interaction ONLY when streaming completes
+  React.useEffect(() => {
+    // Only track when streaming is done
+    if (isLoading) return;
+    if (messages.length === 0 || !address) return;
+
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role !== "assistant") return;
+
+    const assistantMessageIndex = messages.length - 1;
+    const interactionId = interactionIds[assistantMessageIndex];
+    if (!interactionId) return;
+    
+    // Check if we've already tracked this interaction
+    if (trackedInteractionsRef.current.has(interactionId)) return;
+
+    // Find the corresponding user message timing (previous index)
+    const userMessageIndex = assistantMessageIndex - 1;
+    const timing = messageTiming[userMessageIndex];
+    if (!timing) {
+      console.warn(`No timing data found for message index ${userMessageIndex}`);
+      return;
+    }
+
+    // Mark as tracked before making the API call
+    trackedInteractionsRef.current.add(interactionId);
+
+    const durationMs = Date.now() - timing.startTime;
+    
+    // Get assistant message content
+    const assistantContent = Array.isArray(lastMessage.parts)
+      ? lastMessage.parts
+          .filter((p) => p?.type === "text")
+          .map((p) => (p.type === "text" ? p.text : ""))
+          .join("\n\n")
+      : "";
+
+    // Categorize the query
+    const queryLower = timing.inputText.toLowerCase();
+    let queryCategory = "general";
+    if (queryLower.includes("setup") || queryLower.includes("install") || queryLower.includes("configure")) {
+      queryCategory = "setup";
+    } else if (queryLower.includes("error") || queryLower.includes("debug") || queryLower.includes("fix")) {
+      queryCategory = "debugging";
+    } else if (queryLower.includes("how") || queryLower.includes("what") || queryLower.includes("explain")) {
+      queryCategory = "concepts";
+    } else if (queryLower.includes("deploy") || queryLower.includes("mainnet") || queryLower.includes("production")) {
+      queryCategory = "deployment";
+    }
+
+    console.log('Tracking chat interaction:', {
+      interactionId,
+      assistantMessageIndex,
+      userMessageIndex,
+      inputLength: timing.inputText.length,
+      outputLength: assistantContent.length,
+    });
+
+    // Track the interaction
+    trackAIInteraction({
+      id: interactionId,
+      walletAddress: address,
+      toolType: "chat",
+      inputLength: timing.inputText.length,
+      outputLength: assistantContent.length,
+      modelUsed: "openai/gpt-oss-120b", // Match your default model
+      durationMs,
+      queryCategory,
+      sessionId,
+    });
+
+    // Clean up old timing data
+    setMessageTiming(prev => {
+      const newTiming = { ...prev };
+      delete newTiming[userMessageIndex];
+      return newTiming;
+    });
+  }, [isLoading, messages, address, sessionId, interactionIds, messageTiming]);
 
   return (
     <WalletAuthGuard 
@@ -66,7 +176,7 @@ export default function ChatPage() {
               </Message>
             )}
             
-            {messages.map((message: UIMessage) => (
+            {messages.map((message: UIMessage, index: number) => (
               <Message key={message.id} from={message.role}>
                 {message.role === "assistant" && (
                   <MessageAvatar src="/ai-avatar.svg" name="AI" />
@@ -86,16 +196,24 @@ export default function ChatPage() {
                           ))
                       : null
                   ) : (
-                    <div className="prose max-w-none">
-                      <Response>
-                        {Array.isArray(message.parts)
-                          ? message.parts
-                              .filter((p) => p?.type === "text")
-                              .map((p) => (p.type === "text" ? p.text : ""))
-                              .join("\n\n")
-                          : ""}
-                      </Response>
-                    </div>
+                    <>
+                      <div className="prose max-w-none">
+                        <Response>
+                          {Array.isArray(message.parts)
+                            ? message.parts
+                                .filter((p) => p?.type === "text")
+                                .map((p) => (p.type === "text" ? p.text : ""))
+                                .join("\n\n")
+                            : ""}
+                        </Response>
+                      </div>
+                      {interactionIds[index] && (
+                        <AIFeedback
+                          interactionId={interactionIds[index]}
+                          toolType="chat"
+                        />
+                      )}
+                    </>
                   )}
                 </MessageContent>
               </Message>
