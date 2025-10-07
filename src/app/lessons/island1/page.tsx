@@ -1,4 +1,4 @@
-import { AnimatedMap } from "@/components/island1/animated-map";
+import { JungleExperience } from "@/components/island1/jungle-experience";
 import { TreePine, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { getModules } from "@/lib/mdx";
@@ -31,12 +31,11 @@ export default async function JunglePage() {
           Jungle Island
         </h1>
         <p className="text-lg text-muted-foreground">
-          Navigate through 5 modules to master blockchain development
+          Navigate through {jungleModules.length} modules to master blockchain development
         </p>
       </div>
-      
-      {/* Interactive jungle map - numbers will link to modules */}
-      <AnimatedMap mode="real" modules={jungleModules} />
+
+      <JungleExperience modules={jungleModules} />
     </div>
   );
 }

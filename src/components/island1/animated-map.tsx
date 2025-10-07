@@ -61,7 +61,7 @@ const createPathString = (points: typeof pathPoints) => {
 // These interfaces are now imported from the shared config
 
 // Module slugs mapping to jungle modules in order
-const JUNGLE_MODULES = [
+export const JUNGLE_MODULES = [
   'blockchain-fundamentals',
   'evm-fundamentals', 
   'intro-to-solidity',
@@ -69,13 +69,60 @@ const JUNGLE_MODULES = [
   'creating-erc20-tokens'
 ];
 
+type MarkerState = "completed" | "next" | "available" | "locked";
+
+const getMarkerVisual = (state: MarkerState) => {
+  switch (state) {
+    case "completed":
+      return {
+        fill: "#16a34a",
+        stroke: "#065f46",
+        text: "#f8fafc",
+        halo: "rgba(74, 222, 128, 0.35)",
+        shadow: "0 0 12px rgba(74, 222, 128, 0.55)",
+      };
+    case "next":
+      return {
+        fill: "#f97316",
+        stroke: "#9a3412",
+        text: "#fff7ed",
+        halo: "rgba(251, 146, 60, 0.4)",
+        shadow: "0 0 14px rgba(251, 146, 60, 0.6)",
+      };
+    case "available":
+      return {
+        fill: "#2563eb",
+        stroke: "#1e3a8a",
+        text: "#eff6ff",
+        halo: "rgba(37, 99, 235, 0.35)",
+        shadow: "0 0 10px rgba(59, 130, 246, 0.45)",
+      };
+    case "locked":
+    default:
+      return {
+        fill: "#1f2937",
+        stroke: "#0f172a",
+        text: "#cbd5f5",
+        halo: "rgba(148, 163, 184, 0.25)",
+        shadow: "0 0 8px rgba(148, 163, 184, 0.25)",
+        opacity: 0.75,
+      };
+  }
+};
+
 interface AnimatedMapProps {
   autoStart?: boolean;
   mode?: "demo" | "real"; // New prop to switch between demo and real data
   modules?: ModuleMeta[]; // Module data passed from server component
+  highlightedModuleSlug?: string | null;
 }
 
-export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: AnimatedMapProps) {
+export function AnimatedMap({
+  autoStart = false,
+  mode = "demo",
+  modules = [],
+  highlightedModuleSlug = null,
+}: AnimatedMapProps) {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -87,7 +134,6 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
   
   // Local state for map-specific logic
   const [completedLocations, setCompletedLocations] = useState<Set<number>>(new Set());
-  const [maxCompletedLocation, setMaxCompletedLocation] = useState(0);
   
   // Treasure hunt state
   const [treasureClicks, setTreasureClicks] = useState(0);
@@ -271,8 +317,6 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
       });
       
       setCompletedLocations(completed);
-      setMaxCompletedLocation(maxLocation);
-      
       // Show progress line to the NEXT module after the last completed one
       if (maxLocation >= 0 && completed.size > 0) {
         // If we've completed modules, show path to the next one
@@ -297,7 +341,6 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
       setProgress(0);
       setCurrentStep(0);
       setCompletedLocations(new Set());
-      setMaxCompletedLocation(0);
       setTreasureFound(false); // Reset treasure when disconnecting
       setShowSuccessModal(false); // Reset modal
     }
@@ -383,18 +426,23 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
   const pathString = createPathString(pathPoints);
 
   const nextAvailableModule = getNextAvailableModule();
+  const MARKER_RADIUS = 2.4;
+  const HALO_RADIUS = 3.2;
 
   return (
     <div className="w-full space-y-6">
       {/* Map Container */}
-      <Card className="relative overflow-hidden mx-auto w-full">
-        <div className="relative w-full h-[90vh]">
+      <Card className="relative mx-auto w-full overflow-hidden py-0">
+        <div
+          className="relative mx-auto w-full aspect-square"
+          style={{ maxHeight: "80vh" }}
+        >
           {/* Map Image */}
           <Image
             src="/islands/island1/island1-map.webp"
             alt="Jungle Island Map"
             fill
-            className="object-contain"
+            className="object-cover"
             priority
           />
           
@@ -479,22 +527,51 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
             
             {/* Location markers */}
             {pathPoints.map((point, index) => {
+              const moduleSlug = JUNGLE_MODULES[index] ?? modules[index]?.slug ?? null;
               const locationStatus = getLocationStatus(index);
               const isActive = index === currentStep && isPlaying;
               const isCompleted = locationStatus === "completed";
               const isAvailable = isModuleAvailable(index);
               const isNextModule = nextAvailableModule === index;
+              const isHighlighted = moduleSlug ? highlightedModuleSlug === moduleSlug : false;
+              const markerState: MarkerState = isCompleted
+                ? "completed"
+                : isNextModule && isAvailable
+                ? "next"
+                : isAvailable
+                ? "available"
+                : "locked";
+              const markerVisual = getMarkerVisual(markerState);
+              const circleRadius = isHighlighted ? MARKER_RADIUS + 0.5 : MARKER_RADIUS;
+              const haloRadius = isHighlighted ? HALO_RADIUS + 0.8 : HALO_RADIUS;
+              const haloOpacityBase = markerState === "locked" ? 0.25 : 0.5;
+              const haloOpacity = Math.min(1, haloOpacityBase + (isHighlighted ? 0.2 : 0));
               
               const markerContent = (
                 <g key={index}>
-                  {/* CTA Glow for next available module */}
-                  {isNextModule && !isCompleted && (
+                  {/* Halo */}
+                  {markerVisual.halo && (
                     <circle
                       cx={point.x}
                       cy={point.y}
-                      r="3.5"
-                      className="fill-amber-400/30 animate-pulse"
-                      strokeWidth="0"
+                      r={haloRadius}
+                      fill={markerVisual.halo}
+                      opacity={haloOpacity}
+                      style={{ transition: "all 200ms ease" }}
+                      pointerEvents="none"
+                    />
+                  )}
+                  {isHighlighted && (
+                    <circle
+                      cx={point.x}
+                      cy={point.y}
+                      r={circleRadius + 1}
+                      fill="none"
+                      stroke={markerVisual.stroke}
+                      strokeWidth="0.7"
+                      strokeOpacity={0.65}
+                      style={{ transition: "all 200ms ease" }}
+                      pointerEvents="none"
                     />
                   )}
                   
@@ -502,33 +579,36 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
                   <circle
                     cx={point.x}
                     cy={point.y}
-                    r="1.8"
+                    r={circleRadius}
                     className={cn(
                       "transition-all duration-500",
-                      isCompleted
-                        ? "fill-green-500 stroke-green-700" 
-                        : isAvailable
-                        ? isNextModule 
-                          ? "fill-amber-500 stroke-amber-700" 
-                          : "fill-blue-500 stroke-blue-700"
-                        : "fill-gray-300 stroke-gray-500",
                       isActive && "animate-pulse",
                       isAvailable && "cursor-pointer"
                     )}
-                    strokeWidth="0.8"
+                    strokeWidth="0.7"
+                    style={{
+                      fill: markerVisual.fill,
+                      stroke: markerVisual.stroke,
+                      filter: `drop-shadow(${markerVisual.shadow})`,
+                      opacity: markerVisual.opacity ?? 1,
+                      transition: "all 200ms ease",
+                    }}
                   />
                   
                   {/* Location number or checkmark */}
                   <text
                     x={point.x}
-                    y={point.y + 1}
-                    className={cn(
-                      "fill-white text-center",
-                      isAvailable && "cursor-pointer"
-                    )}
+                    y={point.y}
+                    className="select-none text-center font-semibold"
                     textAnchor="middle"
-                    fontSize="2.5"
-                    fontWeight="bold"
+                    fontSize={isHighlighted ? 2.7 : 2.4}
+                    dominantBaseline="middle"
+                    alignmentBaseline="middle"
+                    style={{
+                      fill: markerVisual.text,
+                      pointerEvents: "none",
+                    }}
+                    dy="0.1"
                   >
                     {mode === "real" && isCompleted ? "✓" : index + 1}
                   </text>
@@ -698,7 +778,7 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
             const metadata = achievementMetadata[achievementNumber];
             const isCompleted = locationStatus === "completed";
             const isAvailable = isModuleAvailable(index);
-            const moduleSlug = JUNGLE_MODULES[index];
+            const moduleSlug = JUNGLE_MODULES[index] ?? modules[index]?.slug ?? "";
             const moduleData = modules.find(m => m.slug === moduleSlug);
             
             return (
@@ -718,7 +798,7 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
                       zIndex: 10
                     }}
                     onClick={() => {
-                      if (isAvailable && isConnected) {
+                      if (isAvailable && isConnected && moduleSlug) {
                         router.push(`/lessons/island1/${moduleSlug}`);
                       }
                     }}
@@ -943,36 +1023,6 @@ export function AnimatedMap({ autoStart = false, mode = "demo", modules = [] }: 
           </div>
         )}
         
-        {/* Current location info */}
-        <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur rounded-lg p-3 border">
-          {mode === "real" && address ? (
-            <>
-              <p className="text-sm font-medium">
-                Your Progress: {completedLocations.size}/5 Modules
-              </p>
-              {maxCompletedLocation >= 0 && completedLocations.size > 0 && (
-                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Latest: Module {maxCompletedLocation + 1} Complete! ✓
-                </p>
-              )}
-              {completedLocations.size === 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Start with Module 1: Blockchain Fundamentals
-                </p>
-              )}
-            </>
-          ) : mode === "real" && !address ? (
-            <p className="text-sm font-medium text-muted-foreground">
-              Connect wallet to view your progress
-            </p>
-          ) : (
-            <>
-              <p className="text-sm font-medium">
-                Navigate through 5 modules to master blockchain development
-              </p>
-            </>
-          )}
-        </div>
       </Card>
     </div>
   );
