@@ -1,0 +1,25 @@
+{
+  "name": "EVM Fundamentals Master",
+  "description": "Completed the EVM Fundamentals module and mastered the basics of Ethereum Virtual Machine operations.",
+  "image": "/achievements/images/1.webp",
+  "attributes": [
+    {
+      "trait_type": "Module",
+      "value": "EVM Fundamentals"
+    },
+    {
+      "trait_type": "Difficulty",
+      "value": "Beginner"
+    },
+    {
+      "trait_type": "Island",
+      "value": "Island 1"
+    },
+    {
+      "trait_type": "Completion Date",
+      "value": "2024"
+    }
+  ],
+  "external_url": "https://plunderacademy.com/achievements/1",
+  "background_color": "000000"
+}

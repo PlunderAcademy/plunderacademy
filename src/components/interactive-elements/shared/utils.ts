@@ -111,8 +111,17 @@ export function generateTwitterShare(moduleSlug: string): string {
 // Load NFT metadata for achievement celebration
 export async function loadNFTMetadata(achievementNumber: string): Promise<NFTMetadata | null> {
   try {
-    const metadataUrl = `https://static.plunderswap.com/training/${achievementNumber}.json`;
-    const response = await fetch(metadataUrl);
+    // Try local metadata first, fallback to external CDN
+    const localMetadataUrl = `/achievements/metadata/${achievementNumber}.json`;
+    const externalMetadataUrl = `https://static.plunderswap.com/training/${achievementNumber}.json`;
+    
+    // Try local first
+    let response = await fetch(localMetadataUrl);
+    if (!response.ok) {
+      // Fallback to external
+      response = await fetch(externalMetadataUrl);
+    }
+    
     if (response.ok) {
       return await response.json();
     }
@@ -124,5 +133,6 @@ export async function loadNFTMetadata(achievementNumber: string): Promise<NFTMet
 
 // Get NFT image URL for achievement
 export function getNFTImageUrl(achievementNumber: string): string {
-  return `https://static.plunderswap.com/training/images/${achievementNumber}.webp`;
+  // Use local images if available, fallback to external CDN
+  return `/achievements/images/${achievementNumber}.webp`;
 }
