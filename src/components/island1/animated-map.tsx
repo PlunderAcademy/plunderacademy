@@ -5,7 +5,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { ModuleMeta } from "@/lib/mdx";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { CheckCircle2, BookOpen, Shield, Gauge, Trophy } from "lucide-react";
@@ -17,15 +16,15 @@ import { ALL_ACHIEVEMENTS, type Achievement } from "@/lib/achievements-config";
 // Updated to match the image layout with 5 numbered locations
 // progress: exact percentage of path line to draw to reach this location
 const pathPoints = [
-  { x: 35, y: 85, label: "Location 1", progress: 0 },   // Right of the boat
-  { x: 35, y: 34, label: "Location 2", progress: 35 },   // In front of wood house
-  { x: 70, y: 27, label: "Location 3", progress: 60 },   // Castle door
-  { x: 55, y: 50, label: "Location 4", progress: 80 },   // Base of right side of temple
-  { x: 71, y: 76, label: "Location 5", progress: 100 },  // Center of monument
+  { x: 30, y: 75, label: "Location 1", progress: 0 },   // Right of the boat
+  { x: 28, y: 30, label: "Location 2", progress: 35 },   // In front of wood house
+  { x: 73, y: 25, label: "Location 3", progress: 60 },   // Castle door
+  { x: 57, y: 45, label: "Location 4", progress: 80 },   // Base of right side of temple
+  { x: 72, y: 70, label: "Location 5", progress: 100 },  // Center of monument
 ];
 
 // Treasure chest coordinates (over the existing chest in the image, slightly down and left from location 4)
-const treasureChestPosition = { x: 56, y: 62 };
+const treasureChestPosition = { x: 55, y: 59 };
 
 // Create curved path string for SVG
 const createPathString = (points: typeof pathPoints) => {
@@ -432,17 +431,17 @@ export function AnimatedMap({
   return (
     <div className="w-full space-y-6">
       {/* Map Container */}
-      <Card className="relative mx-auto w-full overflow-hidden py-0">
+      <div className="relative mx-auto w-full overflow-hidden rounded-xl">
         <div
-          className="relative mx-auto w-full aspect-square"
-          style={{ maxHeight: "80vh" }}
+          className="relative mx-auto w-full"
+          style={{ aspectRatio: "800 / 1328", maxHeight: "80vh" }}
         >
           {/* Map Image */}
           <Image
             src="/islands/island1/island1-map.webp"
             alt="Jungle Island Map"
             fill
-            className="object-cover"
+            className="object-contain"
             priority
           />
           
@@ -599,16 +598,14 @@ export function AnimatedMap({
                   <text
                     x={point.x}
                     y={point.y}
-                    className="select-none text-center font-semibold"
+                    className="select-none text-center font-bold"
                     textAnchor="middle"
                     fontSize={isHighlighted ? 2.7 : 2.4}
-                    dominantBaseline="middle"
-                    alignmentBaseline="middle"
+                    dominantBaseline="central"
                     style={{
                       fill: markerVisual.text,
                       pointerEvents: "none",
                     }}
-                    dy="0.1"
                   >
                     {mode === "real" && isCompleted ? "✓" : index + 1}
                   </text>
@@ -1023,7 +1020,7 @@ export function AnimatedMap({
           </div>
         )}
         
-      </Card>
+      </div>
     </div>
   );
 }

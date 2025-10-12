@@ -201,7 +201,7 @@ const islandMetadata: Record<string, { name: string; title: string; description:
     color: 'green',
     order: 1
   },
-  'desert': {
+  'frost': {
     name: 'Frost Peak',
     title: 'Frost Peak - Advanced Solidity',
     description: 'Scale the heights of advanced Solidity development with inheritance, testing, staking contracts, and complex data structures.',
@@ -211,7 +211,7 @@ const islandMetadata: Record<string, { name: string; title: string; description:
     color: 'blue',
     order: 2
   },
-  'ice': {
+  'desert': {
     name: 'Desert Bluff',
     title: 'Desert Bluff - Token & NFT Launchpad',
     description: 'Navigate the vast dunes of NFT creation, metadata handling, and token collection deployments with modern standards.',
@@ -221,7 +221,7 @@ const islandMetadata: Record<string, { name: string; title: string; description:
     color: 'orange',
     order: 3
   },
-  'mushroom': {
+  'castle': {
     name: 'Gilded Bastion',
     title: 'Gilded Bastion - On-Chain Systems',
     description: 'Discover the treasures of DeFi protocols, oracles, upgradeability patterns, and advanced blockchain architecture.',
@@ -231,7 +231,7 @@ const islandMetadata: Record<string, { name: string; title: string; description:
     color: 'yellow',
     order: 4
   },
-  'volcano': {
+  'neon': {
     name: 'Neon Haven', 
     title: 'Neon Haven - Frontend Integration',
     description: 'Enter the digital metropolis and connect smart contracts to web applications with modern Web3 libraries and user interfaces.',
@@ -300,111 +300,111 @@ export async function getModules(): Promise<ModuleMeta[]> {
       order: 5,
       island: 'jungle'
     },
-    // Island 2: Desert (Advanced Solidity)
+    // Island 2: Frost Peak (Advanced Solidity)
     'advanced-solidity-foundations': {
       title: 'Advanced Solidity Foundations',
       description: 'Master contract inheritance, interfaces, events, libraries, and OpenZeppelin ecosystem integration.',
       order: 6,
-      island: 'desert'
+      island: 'frost'
     },
     'advanced-data-structures-error-handling': {
       title: 'Advanced Data Structures & Error Handling',
       description: 'Learn complex mappings, gas optimization, custom errors, and security patterns like reentrancy guards.',
       order: 7,
-      island: 'desert'
+      island: 'frost'
     },
     'testing-fundamentals': {
       title: 'Testing Fundamentals',
       description: 'Set up testing frameworks, write unit tests, and implement test-driven development for smart contracts.',
       order: 8,
-      island: 'desert'
+      island: 'frost'
     },
     'staking-concepts-time-logic': {
       title: 'Staking Concepts & Time-Based Logic',
       description: 'Understand staking architecture, time-based logic, reward calculations, and security considerations.',
       order: 9,
-      island: 'desert'
+      island: 'frost'
     },
     'staking-contract-practical': {
       title: 'Staking Contract Practical',
       description: 'Deploy a complete staking contract with time-locked staking, rewards, and comprehensive testing.',
       order: 10,
-      island: 'desert'
+      island: 'frost'
     },
-    // Island 3: Ice (Token & NFT Launchpad)
+    // Island 3: Desert Bluff (Token & NFT Launchpad)
     'erc721-standards-implementation': {
       title: 'ERC721 Standards & Implementation',
       description: 'Implement ERC721 NFTs with enumerable extensions, gas-efficient minting, and security best practices.',
       order: 11,
-      island: 'ice'
+      island: 'desert'
     },
     'advanced-nft-features': {
       title: 'Advanced NFT Features',
       description: 'Add metadata standards, IPFS integration, reveal mechanics, royalties, and multi-phase minting.',
       order: 12,
-      island: 'ice'
+      island: 'desert'
     },
     'nft-collection-practical': {
       title: 'NFT Collection Practical',
       description: 'Deploy a complete NFT collection with reveal mechanics, royalties, and IPFS metadata integration.',
       order: 13,
-      island: 'ice'
+      island: 'desert'
     },
-    // Island 4: Mushroom (On-Chain Systems & Upgradeability)
+    // Island 4: Gilded Bastion (On-Chain Systems & Upgradeability)
     'defi-fundamentals-simple-swaps': {
       title: 'DeFi Fundamentals & Simple Swaps',
       description: 'Learn token economics, liquidity concepts, simple swap mechanics, and DeFi security considerations.',
       order: 14,
-      island: 'mushroom'
+      island: 'castle'
     },
     'oracles-randomness-airdrop-patterns': {
       title: 'Oracles, Randomness & Airdrop Patterns',
       description: 'Implement Chainlink oracles, commit-reveal sequences, and efficient airdrop mechanisms.',
       order: 15,
-      island: 'mushroom'
+      island: 'castle'
     },
     'random-number-generator-practical': {
       title: 'Random Number Generator Practical',
       description: 'Deploy a fair randomness generator using commit-reveal patterns with anti-manipulation safeguards.',
       order: 16,
-      island: 'mushroom'
+      island: 'castle'
     },
     'proxy-patterns-upgradeability': {
       title: 'Proxy Patterns & Upgradeability',
       description: 'Master transparent and UUPS proxy patterns, storage collision prevention, and upgrade safety.',
       order: 17,
-      island: 'mushroom'
+      island: 'castle'
     },
     'gas-optimization-security-patterns': {
       title: 'Gas Optimization & Security Patterns',
       description: 'Advanced gas optimization techniques, storage packing, vulnerability patterns, and audit preparation.',
       order: 18,
-      island: 'mushroom'
+      island: 'castle'
     },
     'upgradable-contract-practical': {
       title: 'Upgradable Contract Practical',
       description: 'Deploy upgradable contracts using proven templates with safe upgrade mechanisms and testing.',
       order: 19,
-      island: 'mushroom'
+      island: 'castle'
     },
-    // Island 5: Volcano (Frontend Integration)
+    // Island 5: Neon Haven (Frontend Integration)
     'web3-frontend-basics': {
       title: 'Web3 Frontend Basics',
       description: 'Connect wallets with RainbowKit, use wagmi and viem, read contract data, and handle networks.',
       order: 20,
-      island: 'volcano'
+      island: 'neon'
     },
     'contract-interactions-error-handling': {
       title: 'Contract Interactions & Error Handling',
       description: 'Write to contracts, monitor transactions, estimate gas, handle errors, and listen to events.',
       order: 21,
-      island: 'volcano'
+      island: 'neon'
     },
     'dapp-interface-practical': {
       title: 'dApp Interface Practical',
       description: 'Build a complete dApp interface with wallet connection, contract interactions, and mobile design.',
       order: 22,
-      island: 'volcano'
+      island: 'neon'
     }
   };
   

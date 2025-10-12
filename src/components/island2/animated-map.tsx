@@ -1,54 +1,95 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { ModuleMeta } from "@/lib/mdx";
+
+// Frost Peak module slugs in order
+export const FROST_MODULES = [
+  'advanced-solidity-foundations',
+  'advanced-data-structures-error-handling',
+  'testing-fundamentals',
+  'staking-concepts-time-logic',
+  'staking-contract-practical'
+];
+
+// Simple vertical path for now - adjust coordinates later
+const pathPoints = [
+  { x: 50, y: 80, label: "Location 1", progress: 0 },
+  { x: 50, y: 60, label: "Location 2", progress: 25 },
+  { x: 50, y: 45, label: "Location 3", progress: 50 },
+  { x: 50, y: 30, label: "Location 4", progress: 75 },
+  { x: 50, y: 15, label: "Location 5", progress: 100 },
+];
 
 interface FrostAnimatedMapProps {
   mode?: "preview" | "real";
   modules: ModuleMeta[];
+  highlightedModuleSlug?: string | null;
 }
 
-export function FrostAnimatedMap({ mode = "real", modules }: FrostAnimatedMapProps) {
+export function FrostAnimatedMap({ mode = "real", modules, highlightedModuleSlug = null }: FrostAnimatedMapProps) {
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <Card className="aspect-video bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-950/50 dark:to-cyan-950/50 border-2 border-dashed border-blue-300 dark:border-blue-700">
-        <div className="h-full flex items-center justify-center p-8">
-          <div className="text-center space-y-6">
-            <div className="text-8xl opacity-40">❄️</div>
-            <div className="space-y-3">
-              <h3 className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-                Frost Peak Interactive Map
-              </h3>
-              <p className="text-blue-600 dark:text-blue-400 max-w-md">
-                Animated mountain expedition featuring {modules.length} advanced Solidity modules with interactive waypoints and progress tracking.
-              </p>
-              <div className="pt-4">
-                <Button disabled variant="outline" className="border-blue-400 text-blue-700 dark:text-blue-300">
-                  Map Coming in Milestone 2
-                </Button>
-              </div>
-            </div>
+    <div className="w-full space-y-6">
+      {/* Map Container */}
+      <div className="relative mx-auto w-full overflow-hidden rounded-xl">
+        <div
+          className="relative mx-auto w-full"
+          style={{ aspectRatio: "800 / 1328", maxHeight: "80vh" }}
+        >
+          {/* Map Image */}
+          <Image
+            src="/islands/island2/island2-map.webp"
+            alt="Frost Peak Map"
+            fill
+            className="object-contain"
+            priority
+          />
+          
+          {/* SVG Overlay for path and markers - to be implemented */}
+          <svg
+            className="absolute inset-0 w-full h-full"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
+            {/* Simple vertical path */}
+            <line
+              x1="50"
+              y1="80"
+              x2="50"
+              y2="15"
+              stroke="#3b82f6"
+              strokeWidth="0.5"
+              strokeDasharray="2 2"
+              opacity="0.3"
+            />
             
-            {/* Module Preview */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-6">
-              {modules.map((module, index) => (
-                <div 
-                  key={module.slug}
-                  className="p-3 bg-blue-200/50 dark:bg-blue-800/30 rounded-lg border border-blue-300 dark:border-blue-700"
+            {/* Location markers - placeholders for now */}
+            {pathPoints.map((point, index) => (
+              <g key={index}>
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r="2"
+                  fill="#3b82f6"
+                  stroke="#1e3a8a"
+                  strokeWidth="0.5"
+                />
+                <text
+                  x={point.x}
+                  y={point.y}
+                  className="select-none text-center font-bold"
+                  textAnchor="middle"
+                  fontSize="2"
+                  dominantBaseline="central"
+                  fill="white"
                 >
-                  <div className="w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <span className="text-xs font-bold text-white">{index + 1}</span>
-                  </div>
-                  <p className="text-xs text-blue-800 dark:text-blue-200 font-medium truncate">
-                    {module.title}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+                  {index + 1}
+                </text>
+              </g>
+            ))}
+          </svg>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

@@ -1,54 +1,100 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { ModuleMeta } from "@/lib/mdx";
 
-interface MushroomAnimatedMapProps {
+// Gilded Bastion module slugs in order
+export const CASTLE_MODULES = [
+  'defi-fundamentals-simple-swaps',
+  'oracles-randomness-airdrop-patterns',
+  'random-number-generator-practical',
+  'proxy-patterns-upgradeability',
+  'gas-optimization-security-patterns',
+  'upgradable-contract-practical'
+];
+
+// Simple vertical path for now - adjust coordinates later
+const pathPoints = [
+  { x: 50, y: 82, label: "Location 1", progress: 0 },
+  { x: 50, y: 66, label: "Location 2", progress: 20 },
+  { x: 50, y: 52, label: "Location 3", progress: 40 },
+  { x: 50, y: 38, label: "Location 4", progress: 60 },
+  { x: 50, y: 26, label: "Location 5", progress: 80 },
+  { x: 50, y: 12, label: "Location 6", progress: 100 },
+];
+
+interface CastleAnimatedMapProps {
   mode?: "preview" | "real";
   modules: ModuleMeta[];
+  highlightedModuleSlug?: string | null;
 }
 
-export function MushroomAnimatedMap({ mode = "real", modules }: MushroomAnimatedMapProps) {
+export function CastleAnimatedMap({ mode = "real", modules, highlightedModuleSlug = null }: CastleAnimatedMapProps) {
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <Card className="aspect-video bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-950/50 dark:to-pink-950/50 border-2 border-dashed border-purple-300 dark:border-purple-700">
-        <div className="h-full flex items-center justify-center p-8">
-          <div className="text-center space-y-6">
-            <div className="text-8xl opacity-40">🍄</div>
-            <div className="space-y-3">
-              <h3 className="text-2xl font-bold text-purple-800 dark:text-purple-200">
-                Mushroom Island Interactive Map
-              </h3>
-              <p className="text-purple-600 dark:text-purple-400 max-w-md">
-                Animated on-chain systems map with {modules.length} advanced modules covering DeFi, oracles, and upgradeability patterns.
-              </p>
-              <div className="pt-4">
-                <Button disabled variant="outline" className="border-purple-400 text-purple-700 dark:text-purple-300">
-                  Map Coming in Milestone 2
-                </Button>
-              </div>
-            </div>
+    <div className="w-full space-y-6">
+      {/* Map Container */}
+      <div className="relative mx-auto w-full overflow-hidden rounded-xl">
+        <div
+          className="relative mx-auto w-full"
+          style={{ aspectRatio: "800 / 1328", maxHeight: "80vh" }}
+        >
+          {/* Map Image */}
+          <Image
+            src="/islands/island4/island4-map.webp"
+            alt="Gilded Bastion Map"
+            fill
+            className="object-contain"
+            priority
+          />
+          
+          {/* SVG Overlay for path and markers - to be implemented */}
+          <svg
+            className="absolute inset-0 w-full h-full"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
+            {/* Simple vertical path */}
+            <line
+              x1="50"
+              y1="82"
+              x2="50"
+              y2="12"
+              stroke="#eab308"
+              strokeWidth="0.5"
+              strokeDasharray="2 2"
+              opacity="0.3"
+            />
             
-            {/* Module Preview */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-6">
-              {modules.map((module, index) => (
-                <div 
-                  key={module.slug}
-                  className="p-3 bg-purple-200/50 dark:bg-purple-800/30 rounded-lg border border-purple-300 dark:border-purple-700"
+            {/* Location markers - placeholders for now */}
+            {pathPoints.map((point, index) => (
+              <g key={index}>
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r="2"
+                  fill="#eab308"
+                  stroke="#854d0e"
+                  strokeWidth="0.5"
+                />
+                <text
+                  x={point.x}
+                  y={point.y}
+                  className="select-none text-center font-bold"
+                  textAnchor="middle"
+                  fontSize="2"
+                  dominantBaseline="central"
+                  fill="white"
                 >
-                  <div className="w-6 h-6 bg-purple-400 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <span className="text-xs font-bold text-white">{index + 1}</span>
-                  </div>
-                  <p className="text-xs text-purple-800 dark:text-purple-200 font-medium truncate">
-                    {module.title}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+                  {index + 1}
+                </text>
+              </g>
+            ))}
+          </svg>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
+
+// Keep old export name for backwards compatibility
+export const MushroomAnimatedMap = CastleAnimatedMap;
