@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { 
   ChevronLeft, 
+  Crown,
   BookOpen,
   Trophy
 } from "lucide-react";
@@ -14,14 +15,14 @@ import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from 
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
 import MDXContent from "@/components/mdx-content";
 
-interface MushroomModulePageProps {
+interface CastleModulePageProps {
   params: Promise<{
     module: string;
   }>;
 }
 
-// Mushroom island modules
-const MUSHROOM_MODULES = [
+// Gilded Bastion modules
+const CASTLE_MODULES = [
   'defi-fundamentals-simple-swaps',
   'oracles-randomness-airdrop-patterns',
   'random-number-generator-practical',
@@ -40,16 +41,16 @@ const MODULE_TITLES = {
 };
 
 export async function generateStaticParams() {
-  return MUSHROOM_MODULES.map(module => ({
+  return CASTLE_MODULES.map(module => ({
     module
   }));
 }
 
-export default async function MushroomModulePage({ params }: MushroomModulePageProps) {
+export default async function CastleModulePage({ params }: CastleModulePageProps) {
   const resolvedParams = await params;
   
-  // Check if this is a valid mushroom module
-  if (!MUSHROOM_MODULES.includes(resolvedParams.module)) {
+  // Check if this is a valid Gilded Bastion module
+  if (!CASTLE_MODULES.includes(resolvedParams.module)) {
     notFound();
   }
   
@@ -85,7 +86,7 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
     })
   );
 
-  const moduleIndex = MUSHROOM_MODULES.indexOf(resolvedParams.module);
+  const moduleIndex = CASTLE_MODULES.indexOf(resolvedParams.module);
 
   return (
     <WalletAuthGuard 
@@ -104,7 +105,8 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
           </Link>
           <ChevronLeft className="size-4 rotate-180" />
           <Link href="/lessons/island4" className="hover:text-foreground flex items-center gap-1">
-            🍄 Mushroom Island
+            <Crown className="size-3" />
+            Gilded Bastion
           </Link>
           <ChevronLeft className="size-4 rotate-180" />
           <span className="text-foreground">{MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}</span>
@@ -119,7 +121,7 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
                   Module {moduleIndex + 1}
                 </Badge>
                 <Badge variant="secondary" className="flex items-center gap-1">
-                  🍄 Mushroom Island
+                  🏰 Gilded Bastion
                 </Badge>
               </div>
               <h1 className="text-4xl font-bold tracking-tight">
@@ -132,10 +134,10 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
         {/* Animated Image Section */}
         <div>
           <Card className="p-8 text-center">
-            <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-12 border-2 border-dashed border-purple-300 dark:border-purple-700">
-              <div className="text-6xl opacity-60 mb-4">🍄</div>
-              <p className="text-lg text-purple-700 dark:text-purple-300 font-semibold">Mushroom Adventure Scene</p>
-              <p className="text-sm text-purple-600 dark:text-purple-400 mt-2">
+            <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg p-12 border-2 border-dashed border-yellow-300 dark:border-yellow-700">
+              <div className="text-6xl opacity-60 mb-4">🏰</div>
+              <p className="text-lg text-yellow-700 dark:text-yellow-300 font-semibold">Gilded Bastion Adventure Scene</p>
+              <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
                 Animated adventure scene for Module {moduleIndex + 1} coming in Milestone 2
               </p>
             </div>
@@ -147,10 +149,10 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
           {missionData ? (
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl text-purple-800 dark:text-purple-200">
+                <CardTitle className="text-2xl text-yellow-800 dark:text-yellow-200">
                   {missionData.title}
                 </CardTitle>
-                <p className="text-purple-600 dark:text-purple-400">{missionData.subtitle}</p>
+                <p className="text-yellow-600 dark:text-yellow-400">{missionData.subtitle}</p>
               </CardHeader>
               <CardContent>
                 <div className="prose dark:prose-invert max-w-none">
@@ -160,10 +162,10 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
             </Card>
           ) : (
             <Card className="p-8 text-center">
-              <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-12 border-2 border-dashed border-purple-300 dark:border-purple-700">
-                <p className="text-lg text-purple-700 dark:text-purple-300 font-semibold">Mission Story TBA</p>
-                <p className="text-sm text-purple-600 dark:text-purple-400 mt-2">
-                  Mushroom adventure story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+              <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg p-12 border-2 border-dashed border-yellow-300 dark:border-yellow-700">
+                <p className="text-lg text-yellow-700 dark:text-yellow-300 font-semibold">Mission Story TBA</p>
+                <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+                  Gilded Bastion adventure story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
                 </p>
               </div>
             </Card>
@@ -188,7 +190,7 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
                     className="text-xs md:text-sm px-3 py-2 whitespace-nowrap"
                   >
                     <span className="flex items-center gap-1">
-                      <span className="bg-purple-500/20 text-purple-700 dark:text-purple-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                      <span className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
                         {index + 1}
                       </span>
                       {lesson.title.replace(/^\d+\.\d+\s*/, '')}
@@ -201,9 +203,9 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-xl font-semibold mb-2">{lesson.title}</h3>
-                      <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg">
-                        <p className="text-sm font-medium text-purple-700 dark:text-purple-300">🎯 Learning Objective:</p>
-                        <p className="text-sm text-purple-600 dark:text-purple-400">{lesson.objective}</p>
+                      <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                        <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">🎯 Learning Objective:</p>
+                        <p className="text-sm text-yellow-600 dark:text-yellow-400">{lesson.objective}</p>
                       </div>
                     </div>
                     <Separator />
@@ -211,9 +213,9 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
                       {lesson.content ? (
                         <MDXContent content={lesson.content} />
                       ) : (
-                        <div className="text-center p-8 bg-purple-50 dark:bg-purple-950/30 border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg">
-                          <p className="text-lg text-purple-700 dark:text-purple-300">Content Coming in Milestone 2</p>
-                          <p className="text-sm text-purple-600 dark:text-purple-400 mt-2">
+                        <div className="text-center p-8 bg-yellow-50 dark:bg-yellow-950/30 border-2 border-dashed border-yellow-300 dark:border-yellow-700 rounded-lg">
+                          <p className="text-lg text-yellow-700 dark:text-yellow-300">Content Coming in Milestone 2</p>
+                          <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
                             Lesson content for &ldquo;{lesson.title}&rdquo; will be added in the next milestone
                           </p>
                         </div>
@@ -222,9 +224,9 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
                     {lesson.practicalTakeaway && (
                       <>
                         <Separator />
-                        <div className="p-3 bg-purple-500/5 border border-purple-500/20 rounded-lg">
-                          <p className="text-sm font-medium text-purple-700 dark:text-purple-300">💡 Practical Takeaway:</p>
-                          <p className="text-sm text-purple-600 dark:text-purple-400">{lesson.practicalTakeaway}</p>
+                        <div className="p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
+                          <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">💡 Practical Takeaway:</p>
+                          <p className="text-sm text-yellow-600 dark:text-yellow-400">{lesson.practicalTakeaway}</p>
                         </div>
                       </>
                     )}
@@ -244,10 +246,10 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center p-8">
-            <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-12 border-2 border-dashed border-purple-300 dark:border-purple-700 space-y-4">
+            <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg p-12 border-2 border-dashed border-yellow-300 dark:border-yellow-700 space-y-4">
               <div className="text-4xl opacity-60">🎯</div>
-              <p className="text-lg text-purple-700 dark:text-purple-300 font-semibold">Interactive Content Coming Soon</p>
-              <p className="text-sm text-purple-600 dark:text-purple-400">
+              <p className="text-lg text-yellow-700 dark:text-yellow-300 font-semibold">Interactive Content Coming Soon</p>
+              <p className="text-sm text-yellow-600 dark:text-yellow-400">
                 Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
               </p>
               <Button disabled className="mt-4">
@@ -263,7 +265,8 @@ export default async function MushroomModulePage({ params }: MushroomModulePageP
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Button asChild variant="outline">
             <Link href="/lessons/island4">
-              🍄 Back to Mushroom Island
+              <Crown className="mr-2 size-4" />
+              Back to Gilded Bastion
             </Link>
           </Button>
         </div>

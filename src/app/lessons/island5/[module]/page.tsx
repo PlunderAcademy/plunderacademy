@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { 
   ChevronLeft, 
-  Flame,
+  Zap,
   BookOpen,
   Trophy
 } from "lucide-react";
@@ -15,14 +15,14 @@ import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from 
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
 import MDXContent from "@/components/mdx-content";
 
-interface VolcanoModulePageProps {
+interface NeonModulePageProps {
   params: Promise<{
     module: string;
   }>;
 }
 
-// Volcano island modules
-const VOLCANO_MODULES = [
+// Neon Haven modules
+const NEON_MODULES = [
   'web3-frontend-basics',
   'contract-interactions-error-handling',
   'dapp-interface-practical'
@@ -35,16 +35,16 @@ const MODULE_TITLES = {
 };
 
 export async function generateStaticParams() {
-  return VOLCANO_MODULES.map(module => ({
+  return NEON_MODULES.map(module => ({
     module
   }));
 }
 
-export default async function VolcanoModulePage({ params }: VolcanoModulePageProps) {
+export default async function NeonModulePage({ params }: NeonModulePageProps) {
   const resolvedParams = await params;
   
-  // Check if this is a valid volcano module
-  if (!VOLCANO_MODULES.includes(resolvedParams.module)) {
+  // Check if this is a valid Neon Haven module
+  if (!NEON_MODULES.includes(resolvedParams.module)) {
     notFound();
   }
   
@@ -80,7 +80,7 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
     })
   );
 
-  const moduleIndex = VOLCANO_MODULES.indexOf(resolvedParams.module);
+  const moduleIndex = NEON_MODULES.indexOf(resolvedParams.module);
 
   return (
     <WalletAuthGuard 
@@ -99,8 +99,8 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
           </Link>
           <ChevronLeft className="size-4 rotate-180" />
           <Link href="/lessons/island5" className="hover:text-foreground flex items-center gap-1">
-            <Flame className="size-3" />
-            Volcano Island
+            <Zap className="size-3" />
+            Neon Haven
           </Link>
           <ChevronLeft className="size-4 rotate-180" />
           <span className="text-foreground">{MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}</span>
@@ -115,7 +115,7 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
                   Module {moduleIndex + 1}
                 </Badge>
                 <Badge variant="secondary" className="flex items-center gap-1">
-                  🌋 Volcano Island
+                  🌃 Neon Haven
                 </Badge>
               </div>
               <h1 className="text-4xl font-bold tracking-tight">
@@ -128,10 +128,10 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
         {/* Animated Image Section */}
         <div>
           <Card className="p-8 text-center">
-            <div className="bg-red-50 dark:bg-red-950/30 rounded-lg p-12 border-2 border-dashed border-red-300 dark:border-red-700">
-              <div className="text-6xl opacity-60 mb-4">🌋</div>
-              <p className="text-lg text-red-700 dark:text-red-300 font-semibold">Volcano Adventure Scene</p>
-              <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+            <div className="bg-cyan-50 dark:bg-cyan-950/30 rounded-lg p-12 border-2 border-dashed border-cyan-300 dark:border-cyan-700">
+              <div className="text-6xl opacity-60 mb-4">🌃</div>
+              <p className="text-lg text-cyan-700 dark:text-cyan-300 font-semibold">Neon Haven Adventure Scene</p>
+              <p className="text-sm text-cyan-600 dark:text-cyan-400 mt-2">
                 Animated adventure scene for Module {moduleIndex + 1} coming in Milestone 2
               </p>
             </div>
@@ -143,10 +143,10 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
           {missionData ? (
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl text-red-800 dark:text-red-200">
+                <CardTitle className="text-2xl text-cyan-800 dark:text-cyan-200">
                   {missionData.title}
                 </CardTitle>
-                <p className="text-red-600 dark:text-red-400">{missionData.subtitle}</p>
+                <p className="text-cyan-600 dark:text-cyan-400">{missionData.subtitle}</p>
               </CardHeader>
               <CardContent>
                 <div className="prose dark:prose-invert max-w-none">
@@ -156,10 +156,10 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
             </Card>
           ) : (
             <Card className="p-8 text-center">
-              <div className="bg-red-50 dark:bg-red-950/30 rounded-lg p-12 border-2 border-dashed border-red-300 dark:border-red-700">
-                <p className="text-lg text-red-700 dark:text-red-300 font-semibold">Mission Story TBA</p>
-                <p className="text-sm text-red-600 dark:text-red-400 mt-2">
-                  Volcano adventure story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+              <div className="bg-cyan-50 dark:bg-cyan-950/30 rounded-lg p-12 border-2 border-dashed border-cyan-300 dark:border-cyan-700">
+                <p className="text-lg text-cyan-700 dark:text-cyan-300 font-semibold">Mission Story TBA</p>
+                <p className="text-sm text-cyan-600 dark:text-cyan-400 mt-2">
+                  Neon Haven adventure story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
                 </p>
               </div>
             </Card>
@@ -184,7 +184,7 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
                     className="text-xs md:text-sm px-3 py-2 whitespace-nowrap"
                   >
                     <span className="flex items-center gap-1">
-                      <span className="bg-red-500/20 text-red-700 dark:text-red-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                      <span className="bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
                         {index + 1}
                       </span>
                       {lesson.title.replace(/^\d+\.\d+\s*/, '')}
@@ -197,9 +197,9 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-xl font-semibold mb-2">{lesson.title}</h3>
-                      <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
-                        <p className="text-sm font-medium text-red-700 dark:text-red-300">🎯 Learning Objective:</p>
-                        <p className="text-sm text-red-600 dark:text-red-400">{lesson.objective}</p>
+                      <div className="p-3 bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-200 dark:border-cyan-800 rounded-lg">
+                        <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">🎯 Learning Objective:</p>
+                        <p className="text-sm text-cyan-600 dark:text-cyan-400">{lesson.objective}</p>
                       </div>
                     </div>
                     <Separator />
@@ -207,9 +207,9 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
                       {lesson.content ? (
                         <MDXContent content={lesson.content} />
                       ) : (
-                        <div className="text-center p-8 bg-red-50 dark:bg-red-950/30 border-2 border-dashed border-red-300 dark:border-red-700 rounded-lg">
-                          <p className="text-lg text-red-700 dark:text-red-300">Content Coming in Milestone 2</p>
-                          <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                        <div className="text-center p-8 bg-cyan-50 dark:bg-cyan-950/30 border-2 border-dashed border-cyan-300 dark:border-cyan-700 rounded-lg">
+                          <p className="text-lg text-cyan-700 dark:text-cyan-300">Content Coming in Milestone 2</p>
+                          <p className="text-sm text-cyan-600 dark:text-cyan-400 mt-2">
                             Lesson content for &ldquo;{lesson.title}&rdquo; will be added in the next milestone
                           </p>
                         </div>
@@ -218,9 +218,9 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
                     {lesson.practicalTakeaway && (
                       <>
                         <Separator />
-                        <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-lg">
-                          <p className="text-sm font-medium text-red-700 dark:text-red-300">💡 Practical Takeaway:</p>
-                          <p className="text-sm text-red-600 dark:text-red-400">{lesson.practicalTakeaway}</p>
+                        <div className="p-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
+                          <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">💡 Practical Takeaway:</p>
+                          <p className="text-sm text-cyan-600 dark:text-cyan-400">{lesson.practicalTakeaway}</p>
                         </div>
                       </>
                     )}
@@ -240,10 +240,10 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center p-8">
-            <div className="bg-red-50 dark:bg-red-950/30 rounded-lg p-12 border-2 border-dashed border-red-300 dark:border-red-700 space-y-4">
+            <div className="bg-cyan-50 dark:bg-cyan-950/30 rounded-lg p-12 border-2 border-dashed border-cyan-300 dark:border-cyan-700 space-y-4">
               <div className="text-4xl opacity-60">🎯</div>
-              <p className="text-lg text-red-700 dark:text-red-300 font-semibold">Interactive Content Coming Soon</p>
-              <p className="text-sm text-red-600 dark:text-red-400">
+              <p className="text-lg text-cyan-700 dark:text-cyan-300 font-semibold">Interactive Content Coming Soon</p>
+              <p className="text-sm text-cyan-600 dark:text-cyan-400">
                 Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
               </p>
               <Button disabled className="mt-4">
@@ -259,8 +259,8 @@ export default async function VolcanoModulePage({ params }: VolcanoModulePagePro
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Button asChild variant="outline">
             <Link href="/lessons/island5">
-              <Flame className="mr-2 size-4" />
-              Back to Volcano Island
+              <Zap className="mr-2 size-4" />
+              Back to Neon Haven
             </Link>
           </Button>
         </div>

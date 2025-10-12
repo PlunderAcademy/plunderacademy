@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { 
   ChevronLeft, 
-  Snowflake,
+  Mountain,
   BookOpen,
   Trophy
 } from "lucide-react";
@@ -15,14 +15,14 @@ import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from 
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
 import MDXContent from "@/components/mdx-content";
 
-interface IceModulePageProps {
+interface DesertModulePageProps {
   params: Promise<{
     module: string;
   }>;
 }
 
-// Ice island modules
-const ICE_MODULES = [
+// Desert Bluff modules
+const DESERT_MODULES = [
   'erc721-standards-implementation',
   'advanced-nft-features',
   'nft-collection-practical'
@@ -35,16 +35,16 @@ const MODULE_TITLES = {
 };
 
 export async function generateStaticParams() {
-  return ICE_MODULES.map(module => ({
+  return DESERT_MODULES.map(module => ({
     module
   }));
 }
 
-export default async function IceModulePage({ params }: IceModulePageProps) {
+export default async function DesertModulePage({ params }: DesertModulePageProps) {
   const resolvedParams = await params;
   
-  // Check if this is a valid ice module
-  if (!ICE_MODULES.includes(resolvedParams.module)) {
+  // Check if this is a valid Desert Bluff module
+  if (!DESERT_MODULES.includes(resolvedParams.module)) {
     notFound();
   }
   
@@ -80,7 +80,7 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
     })
   );
 
-  const moduleIndex = ICE_MODULES.indexOf(resolvedParams.module);
+  const moduleIndex = DESERT_MODULES.indexOf(resolvedParams.module);
 
   return (
     <WalletAuthGuard 
@@ -99,8 +99,8 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
           </Link>
           <ChevronLeft className="size-4 rotate-180" />
           <Link href="/lessons/island3" className="hover:text-foreground flex items-center gap-1">
-            <Snowflake className="size-3" />
-            Ice Island
+            <Mountain className="size-3" />
+            Desert Bluff
           </Link>
           <ChevronLeft className="size-4 rotate-180" />
           <span className="text-foreground">{MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}</span>
@@ -115,7 +115,7 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
                   Module {moduleIndex + 1}
                 </Badge>
                 <Badge variant="secondary" className="flex items-center gap-1">
-                  🧊 Ice Island
+                  🏜️ Desert Bluff
                 </Badge>
               </div>
               <h1 className="text-4xl font-bold tracking-tight">
@@ -128,10 +128,10 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
         {/* Animated Image Section */}
         <div>
           <Card className="p-8 text-center">
-            <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-12 border-2 border-dashed border-blue-300 dark:border-blue-700">
-              <div className="text-6xl opacity-60 mb-4">🧊</div>
-              <p className="text-lg text-blue-700 dark:text-blue-300 font-semibold">Ice Adventure Scene</p>
-              <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+            <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-12 border-2 border-dashed border-orange-300 dark:border-orange-700">
+              <div className="text-6xl opacity-60 mb-4">🏜️</div>
+              <p className="text-lg text-orange-700 dark:text-orange-300 font-semibold">Desert Bluff Adventure Scene</p>
+              <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
                 Animated adventure scene for Module {moduleIndex + 1} coming in Milestone 2
               </p>
             </div>
@@ -143,10 +143,10 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
           {missionData ? (
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl text-blue-800 dark:text-blue-200">
+                <CardTitle className="text-2xl text-orange-800 dark:text-orange-200">
                   {missionData.title}
                 </CardTitle>
-                <p className="text-blue-600 dark:text-blue-400">{missionData.subtitle}</p>
+                <p className="text-orange-600 dark:text-orange-400">{missionData.subtitle}</p>
               </CardHeader>
               <CardContent>
                 <div className="prose dark:prose-invert max-w-none">
@@ -156,10 +156,10 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
             </Card>
           ) : (
             <Card className="p-8 text-center">
-              <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-12 border-2 border-dashed border-blue-300 dark:border-blue-700">
-                <p className="text-lg text-blue-700 dark:text-blue-300 font-semibold">Mission Story TBA</p>
-                <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
-                  Ice adventure story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+              <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-12 border-2 border-dashed border-orange-300 dark:border-orange-700">
+                <p className="text-lg text-orange-700 dark:text-orange-300 font-semibold">Mission Story TBA</p>
+                <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
+                  Desert Bluff adventure story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
                 </p>
               </div>
             </Card>
@@ -184,7 +184,7 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
                     className="text-xs md:text-sm px-3 py-2 whitespace-nowrap"
                   >
                     <span className="flex items-center gap-1">
-                      <span className="bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                      <span className="bg-orange-500/20 text-orange-700 dark:text-orange-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
                         {index + 1}
                       </span>
                       {lesson.title.replace(/^\d+\.\d+\s*/, '')}
@@ -197,9 +197,9 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-xl font-semibold mb-2">{lesson.title}</h3>
-                      <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-                        <p className="text-sm font-medium text-blue-700 dark:text-blue-300">🎯 Learning Objective:</p>
-                        <p className="text-sm text-blue-600 dark:text-blue-400">{lesson.objective}</p>
+                      <div className="p-3 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg">
+                        <p className="text-sm font-medium text-orange-700 dark:text-orange-300">🎯 Learning Objective:</p>
+                        <p className="text-sm text-orange-600 dark:text-orange-400">{lesson.objective}</p>
                       </div>
                     </div>
                     <Separator />
@@ -207,9 +207,9 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
                       {lesson.content ? (
                         <MDXContent content={lesson.content} />
                       ) : (
-                        <div className="text-center p-8 bg-blue-50 dark:bg-blue-950/30 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg">
-                          <p className="text-lg text-blue-700 dark:text-blue-300">Content Coming in Milestone 2</p>
-                          <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+                        <div className="text-center p-8 bg-orange-50 dark:bg-orange-950/30 border-2 border-dashed border-orange-300 dark:border-orange-700 rounded-lg">
+                          <p className="text-lg text-orange-700 dark:text-orange-300">Content Coming in Milestone 2</p>
+                          <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
                             Lesson content for &ldquo;{lesson.title}&rdquo; will be added in the next milestone
                           </p>
                         </div>
@@ -218,9 +218,9 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
                     {lesson.practicalTakeaway && (
                       <>
                         <Separator />
-                        <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
-                          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">💡 Practical Takeaway:</p>
-                          <p className="text-sm text-blue-600 dark:text-blue-400">{lesson.practicalTakeaway}</p>
+                        <div className="p-3 bg-orange-500/5 border border-orange-500/20 rounded-lg">
+                          <p className="text-sm font-medium text-orange-700 dark:text-orange-300">💡 Practical Takeaway:</p>
+                          <p className="text-sm text-orange-600 dark:text-orange-400">{lesson.practicalTakeaway}</p>
                         </div>
                       </>
                     )}
@@ -240,10 +240,10 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center p-8">
-            <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-12 border-2 border-dashed border-blue-300 dark:border-blue-700 space-y-4">
+            <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-12 border-2 border-dashed border-orange-300 dark:border-orange-700 space-y-4">
               <div className="text-4xl opacity-60">🎯</div>
-              <p className="text-lg text-blue-700 dark:text-blue-300 font-semibold">Interactive Content Coming Soon</p>
-              <p className="text-sm text-blue-600 dark:text-blue-400">
+              <p className="text-lg text-orange-700 dark:text-orange-300 font-semibold">Interactive Content Coming Soon</p>
+              <p className="text-sm text-orange-600 dark:text-orange-400">
                 Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
               </p>
               <Button disabled className="mt-4">
@@ -259,8 +259,8 @@ export default async function IceModulePage({ params }: IceModulePageProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Button asChild variant="outline">
           <Link href="/lessons/island3">
-            <Snowflake className="mr-2 size-4" />
-            Back to Ice Island
+            <Mountain className="mr-2 size-4" />
+            Back to Desert Bluff
           </Link>
         </Button>
         </div>
