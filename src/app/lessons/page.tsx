@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
   BookOpen, 
-  Clock, 
   ChevronRight,
   MapPin,
   Compass,
@@ -46,78 +45,24 @@ export default async function LessonsPage() {
         </div>
         
         {/* Content */}
-        <div className="relative mx-auto max-w-6xl px-4 py-16">
-          <div className="text-center space-y-8 mb-16">
-            <div className="inline-flex items-center rounded-full border border-amber-500/50 bg-amber-500/10 px-4 py-2 text-sm text-amber-300">
-              <Compass className="mr-2 size-4" />
-              Chart Your Course to Mastery
-            </div>
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white">
+        <div className="relative mx-auto max-w-6xl px-4 py-10">
+          <div className="text-center space-y-4 mb-8">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white">
               <span className="bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 bg-clip-text text-transparent">
                 Treasure Map
               </span>
               <br />
-              <span className="text-3xl md:text-5xl text-slate-300">
+              <span className="text-2xl md:text-4xl text-slate-300">
                 to EVM Mastery
               </span>
             </h1>
-            <p className="mx-auto max-w-3xl text-xl text-slate-300">
-              Navigate through five legendary modules and discover the treasures of blockchain development.
-              Each location holds valuable knowledge to make you a true EVM pirate.
-            </p>
-            <p className="mx-auto max-w-3xl text-xl text-slate-300">
-              NOTE: The map is a work in progress and will be updated as we build out content in Milestone Two.  The other locations are placeholders and may be different than the ones shown here.
+            <p className="mx-auto max-w-2xl text-base md:text-lg text-slate-300">
+              Navigate through five legendary islands and discover the treasures of blockchain development.
             </p>
           </div>
           
           {/* Overall Adventure Map (click anywhere to zoom + navigate) */}
-          <MapZoom />
-          
-          {/* Islands Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-            {islands.map((island, index) => (
-              <div key={island.slug} className="text-center space-y-2">
-                <div className={`mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-${island.color}-500/${island.status === 'available' ? '20' : '10'} to-${island.color}-600/${island.status === 'available' ? '20' : '10'} border-2 border-${island.color}-500/${island.status === 'available' ? '30' : '20'} flex items-center justify-center ${island.status === 'coming-soon' ? 'opacity-60' : ''}`}>
-                  {island.slug === 'jungle' ? (
-                    <TreePine className="size-8 text-white" />
-                  ) : (
-                    <span className="text-2xl">{island.icon}</span>
-                  )}
-                </div>
-                <div className={`text-xs font-medium ${island.status === 'available' ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Location {index + 1}
-                </div>
-                <div className={`text-sm leading-tight ${island.status === 'available' ? 'text-slate-300' : 'text-slate-500'}`}>
-                  {island.status === 'available' ? island.title : 'Coming Soon'}
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {/* Journey Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10">
-              <div className="flex items-center justify-center gap-2 text-2xl font-bold text-white mb-1">
-                <Ship className="size-6 text-blue-400" />
-                {islands.filter(island => island.status === 'available').length} Location{islands.filter(island => island.status === 'available').length !== 1 ? 's' : ''}
-              </div>
-              <div className="text-sm text-slate-400">Available Now</div>
-            </div>
-            <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10">
-              <div className="flex items-center justify-center gap-2 text-2xl font-bold text-white mb-1">
-                <Trophy className="size-6 text-amber-400" />
-                {islands.find(island => island.status === 'available')?.modules.reduce((acc, module) => acc + module.lessons.length, 0) || 0}+ Lessons
-              </div>
-              <div className="text-sm text-slate-400">In Available Islands</div>
-            </div>
-            <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10">
-              <div className="flex items-center justify-center gap-2 text-2xl font-bold text-white mb-1">
-                <Clock className="size-6 text-green-400" />
-                {islands.find(island => island.status === 'available')?.estimatedHours || 'TBA'}
-              </div>
-              <div className="text-sm text-slate-400">{islands.find(island => island.status === 'available')?.name || 'Adventure'}</div>
-            </div>
-          </div>
+          <MapZoom islands={islands} />
         </div>
       </div>
       
