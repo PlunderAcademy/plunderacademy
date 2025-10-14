@@ -219,7 +219,7 @@ export default function Home() {
               <div className="grid grid-cols-3 gap-8 py-6 border-t border-border/50">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-foreground mb-1">
-                    25+
+                    70+
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Interactive Lessons
@@ -227,7 +227,7 @@ export default function Home() {
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-foreground mb-1">
-                    5
+                    22
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Core Modules
@@ -235,7 +235,7 @@ export default function Home() {
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-foreground mb-1">
-                    15-20h
+                    20-40h
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Total Duration
@@ -470,7 +470,7 @@ export default function Home() {
             Deploy with confidence on Zilliqa
           </h3>
           <p className="text-muted-foreground">
-            Connect with RainbowKit and wagmi, powered by WalletConnect. Use the
+            Connect with RainbowKit and wagmi. Use the
             Zilliqa EVM chain via viem for a familiar developer experience with
             fast finality.
           </p>
