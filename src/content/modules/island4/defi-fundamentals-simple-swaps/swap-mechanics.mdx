@@ -10,4 +10,87 @@ practicalTakeaway: "Build secure swap contracts that handle price impact and pre
 
 # Simple Swap Mechanics and Security
 
-*Content coming in Milestone 2*
+## Set the stage
+
+Swaps move value between tokens using pool reserves. Implementation details vary, but safe patterns don’t: use interfaces, enforce CEI, check `minOut`, and emit stable events. You’ll see a minimal single‑pool swap with slippage protection.
+
+## Core ideas
+
+- Interact via interfaces (no hard dependencies)
+- CEI: Checks → Effects → Interactions; guard reentrancy on value‑moving flows
+- Slippage: caller supplies `minOut` (and optionally a deadline)
+- Safe transfers: use SafeERC20; don’t assume return booleans
+- Events: index subjects (trader, tokens) for analytics
+
+## Code in practice
+
+### 1) Single‑pool swap with `minOut` and events
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+interface IPair { function token0() external view returns (address); function getReserves() external view returns (uint112,uint112,uint32); function swap(uint256,uint256,address,bytes calldata) external; }
+
+contract SimpleSwapRouter is ReentrancyGuard {
+  using SafeERC20 for IERC20;
+  event Swapped(address indexed trader, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
+
+  function _amountOut(uint256 dx, uint256 x, uint256 y, uint256 feeBps) internal pure returns (uint256) {
+    uint256 dxFee = dx * (10_000 - feeBps);
+    return (dxFee * y) / (x * 10_000 + dxFee);
+  }
+
+  function swapExact(IPair pair, IERC20 tokenIn, IERC20 tokenOut, uint256 amountIn, uint256 minOut, uint256 feeBps, address to) external nonReentrant {
+    (uint112 r0, uint112 r1,) = pair.getReserves();
+    (uint256 x, uint256 y) = tokenIn == IERC20(pair.token0()) ? (uint256(r0), uint256(r1)) : (uint256(r1), uint256(r0));
+    uint256 amountOut = _amountOut(amountIn, x, y, feeBps);
+    require(amountOut >= minOut, "SLIPPAGE");
+    tokenIn.safeTransferFrom(msg.sender, address(pair), amountIn);
+    if (tokenIn == IERC20(pair.token0())) pair.swap(0, amountOut, to, new bytes(0)); else pair.swap(amountOut, 0, to, new bytes(0));
+    emit Swapped(msg.sender, address(tokenIn), address(tokenOut), amountIn, amountOut);
+  }
+}
+```
+
+Takeaway: compute quotes from fresh reserves, enforce `minOut`, CEI, and emit a single `Swapped` event.
+
+### 2) Optional deadline guard
+
+```solidity
+// Add to swapExact signature: uint256 deadline
+require(block.timestamp <= deadline, "EXPIRED");
+```
+
+Takeaway: deadlines cap latency risk in volatile markets and during MEV.
+
+## Practice and reflection
+
+- Identify where CEI is applied in the `swapExact` flow
+- Decide a reasonable default fee bps for your pool and why
+
+{/* Drag & Drop Puzzle: order swap steps */}
+<DragDropPuzzle codeBlocks={[
+  {"id":"s1","content":"(r0, r1,) = pair.getReserves();","correctPosition":0},
+  {"id":"s2","content":"(x, y) = tokenIn == token0 ? (r0, r1) : (r1, r0);","correctPosition":1},
+  {"id":"s3","content":"amountOut = _amountOut(amountIn, x, y, feeBps);","correctPosition":2},
+  {"id":"s4","content":"require(amountOut >= minOut, 'SLIPPAGE');","correctPosition":3},
+  {"id":"s5","content":"tokenIn.safeTransferFrom(msg.sender, address(pair), amountIn);","correctPosition":4},
+  {"id":"s6","content":"pair.swap(0, amountOut, to, new bytes(0)); // or (amountOut,0)","correctPosition":5}
+]}
+/>
+
+{/* keep only True/False for this lesson */}
+
+## Security notes
+
+- Never read reserves once and perform multiple swaps; read fresh per swap
+- Don’t assume `tokenIn` ordering; branch based on `token0()`
+- Consider fee on transfer tokens and adjust logic if supporting them
+
+## Wrap‑up
+
+You can execute a safe single‑pool swap with slippage and event observability. Next: price feeds and oracles (4.3) to inform safer UX and guardrails.

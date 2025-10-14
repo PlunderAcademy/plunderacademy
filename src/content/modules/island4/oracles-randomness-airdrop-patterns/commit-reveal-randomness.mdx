@@ -10,4 +10,178 @@ practicalTakeaway: "Create tamper-proof randomness generation systems for blockc
 
 # Commit-Reveal Sequences and Verifiable Randomness
 
-*Content coming in Milestone 2*
+## Where this fits
+
+Randomness drives fair mints, loot drops, raffles, and winner selection—but blockchains are deterministic. Naïve sources like `blockhash` or `block.timestamp` are manipulable. Two robust approaches in production are: commit–reveal (two-phase, censorship-resistant if designed well) and verifiable randomness (VRF) from decentralized oracles.
+
+## Core ideas
+
+- Commit–reveal: users commit to a hidden value, later reveal the preimage; the contract verifies commitment and derives a random output
+- Salting: bind commitments to `msg.sender` and a per-user salt to prevent copy/steal attacks
+- Windows: separate commit and reveal phases to block front‑running and ensure fairness
+- VRF: on-chain verifiable proof of randomness, minimizing trust and miner influence
+- Fair mapping: avoid modulo bias with rejection sampling when mapping randomness into ranges
+
+## Code in practice
+
+### 1) Minimal commit–reveal with windows and salting
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+/// @notice Two-phase commit–reveal lottery with per-user commitments.
+contract CommitRevealRng {
+  error AlreadyCommitted();
+  error NotCommitted();
+  error RevealTooEarly();
+  error RevealWindowPassed();
+  error InvalidReveal();
+
+  struct CommitInfo { uint64 commitBlock; bytes32 commitHash; }
+  mapping(address => CommitInfo) public commits;
+
+  // Configurable windows (in blocks) to tune UX/finality
+  uint64 public immutable minRevealDelay;   // e.g., 1 block
+  uint64 public immutable maxRevealDelay;   // e.g., 600 blocks (~2h on 12s blocks)
+
+  event Committed(address indexed user, bytes32 commitHash);
+  event Revealed(address indexed user, bytes32 salt, uint256 secret, uint256 rng);
+
+  constructor(uint64 _minDelay, uint64 _maxDelay) {
+    require(_minDelay > 0 && _maxDelay > _minDelay, "WINDOW");
+    minRevealDelay = _minDelay;
+    maxRevealDelay = _maxDelay;
+  }
+
+  /// @dev Commit to keccak256(abi.encodePacked(user, secret, salt))
+  function commit(bytes32 commitHash) external {
+    CommitInfo storage c = commits[msg.sender];
+    if (c.commitHash != bytes32(0)) revert AlreadyCommitted();
+    c.commitHash = commitHash;
+    c.commitBlock = uint64(block.number);
+    emit Committed(msg.sender, commitHash);
+  }
+
+  /// @dev Reveal the preimage; derive RNG by mixing with blockhash for liveness.
+  function reveal(uint256 secret, bytes32 salt) external returns (uint256 rng) {
+    CommitInfo memory c = commits[msg.sender];
+    if (c.commitHash == bytes32(0)) revert NotCommitted();
+
+    uint64 blocksSince = uint64(block.number) - c.commitBlock;
+    if (blocksSince < minRevealDelay) revert RevealTooEarly();
+    if (blocksSince > maxRevealDelay) revert RevealWindowPassed();
+
+    bytes32 expected = keccak256(abi.encodePacked(msg.sender, secret, salt));
+    if (expected != c.commitHash) revert InvalidReveal();
+
+    // Clear commitment to prevent reuse
+    delete commits[msg.sender];
+
+    // Mix in recent blockhash for entropy freshness (not relied upon alone)
+    rng = uint256(keccak256(abi.encodePacked(expected, blockhash(block.number - 1))));
+    emit Revealed(msg.sender, salt, secret, rng);
+  }
+
+  /// @dev Helper to precompute commitment off-chain
+  function preimageHash(address user, uint256 secret, bytes32 salt) external pure returns (bytes32) {
+    return keccak256(abi.encodePacked(user, secret, salt));
+  }
+}
+```
+
+Takeaway: bind commitments to the revealer and include a salt. Enforce a reveal window to avoid strategic late reveals.
+
+### 2) Mapping randomness to a fair index with rejection sampling
+
+```solidity
+// Avoid modulo bias when N does not divide 2^256 evenly
+function fairIndex(uint256 rnd, uint256 n) pure returns (uint256 idx) {
+  require(n > 0, "N");
+  unchecked {
+    uint256 zone = type(uint256).max - (type(uint256).max % n);
+    while (rnd >= zone) {
+      rnd = uint256(keccak256(abi.encodePacked(rnd))); // rehash until in zone
+    }
+    idx = rnd % n;
+  }
+}
+```
+
+Takeaway: rejection sampling removes bias when mapping large random integers into small ranges.
+
+### 3) Verifiable randomness (VRF) consumer skeleton
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+/// @notice Illustrative VRF consumer shape (interfaces simplified for brevity).
+interface IVRFCoordinator {
+  function requestRandomWords(bytes32 keyHash, uint64 subId, uint16 minConf, uint32 gasLimit, uint32 numWords) external returns (uint256 reqId);
+}
+
+abstract contract VRFConsumer {
+  function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal virtual;
+}
+
+contract VrfiExample is VRFConsumer {
+  event Requested(uint256 requestId);
+  event Fulfilled(uint256 requestId, uint256 randomness);
+
+  IVRFCoordinator public immutable coordinator;
+  bytes32 public immutable keyHash;
+  uint64 public immutable subId;
+  uint256 public lastRandomness;
+
+  constructor(IVRFCoordinator _coord, bytes32 _keyHash, uint64 _subId) {
+    coordinator = _coord; keyHash = _keyHash; subId = _subId;
+  }
+
+  function request(uint16 minConf, uint32 gasLimit) external returns (uint256 id) {
+    id = coordinator.requestRandomWords(keyHash, subId, minConf, gasLimit, 1);
+    emit Requested(id);
+  }
+
+  // Called by coordinator; perform minimal work and store randomness
+  function fulfillRandomWords(uint256 requestId, uint256[] memory words) internal override {
+    uint256 r = words[0];
+    lastRandomness = r;
+    emit Fulfilled(requestId, r);
+  }
+}
+```
+
+Takeaway: VRF gives on-chain proofs of randomness. Keep fulfillment lightweight; emit events; separate selection logic from the callback.
+
+## Practice and reflection
+
+- Decide commit/reveal windows given your app’s latency and fairness needs
+- Sketch how you’ll bind commitments: include `msg.sender`, a salt, and a campaign id
+- Identify where you need unbiased indexing and adopt rejection sampling
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"commitreveal1","text":"Using blockhash alone is a secure source of randomness","correctAnswer":false,"explanation":"Miners/validators can influence blockhash; use commit–reveal or VRF."},
+  {"id":"commitreveal2","text":"Salting commitments with msg.sender reduces commit theft","correctAnswer":true,"explanation":"Bind the preimage to the revealer to prevent copy attacks."},
+  {"id":"commitreveal3","text":"VRF provides a proof that contracts can verify on-chain","correctAnswer":true,"explanation":"Proofs attest that randomness wasn't manipulated off-chain."}
+]}/>
+
+{/* Concept Matching: randomness concepts */}
+<ConceptMatching pairs={[
+  {"conceptId":"c","definitionId":"d","concept":"commitment","definition":"Hash of preimage binding user and salt","category":"rng"},
+  {"conceptId":"s","definitionId":"sdef","concept":"salt","definition":"Random nonce preventing preimage theft","category":"rng"},
+  {"conceptId":"vrf","definitionId":"vrfdef","concept":"VRF","definition":"Randomness with an on-chain proof from an oracle","category":"rng"}
+]}
+/>
+
+## Pitfalls and tips
+
+- Don’t leak the secret preimage via events before reveal
+- Enforce reveal windows; otherwise strategic reveals can bias outcomes
+- Keep VRF fulfillment simple; avoid reentrancy and long loops in callbacks
+- Document fallback behavior if VRF is delayed (timeouts, refunds, or alternate draws)
+
+## Wrap‑up
+
+Commit–reveal is fully on-chain and simple, while VRF provides stronger assurances with oracle support. Use commit–reveal for permissionless participation and liveness guarantees; use VRF when you need publicly verifiable entropy with minimal trust.

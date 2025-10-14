@@ -10,4 +10,84 @@ practicalTakeaway: "Launch a production-ready RNG system suitable for gaming and
 
 # Random Number Generator Deployment
 
-*Content coming in Milestone 2*
+## Set the stage
+
+You’ve learned commit–reveal and VRF. Here you’ll deploy a minimal RNG system end‑to‑end: a commit–reveal contract, fair mapping to ranges, and operational guidance for production (timeouts, retries, and monitoring).
+
+## Core ideas
+
+- Commit–reveal: permissionless, no off‑chain dependency
+- Fair mapping: rejection sampling to avoid modulo bias
+- Operations: define reveal windows, timeouts, and event logs for observability
+
+## Code in practice
+
+### 1) Deployable commit–reveal RNG
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract DeployedRng {
+  error AlreadyCommitted(); error NotCommitted(); error TooEarly(); error TooLate(); error BadReveal();
+  struct C { uint64 b; bytes32 h; }
+  mapping(address => C) public c;
+  uint64 public immutable minDelay; uint64 public immutable maxDelay;
+  event Committed(address indexed u, bytes32 h); event Revealed(address indexed u, uint256 r);
+  constructor(uint64 minD, uint64 maxD) { require(minD>0 && maxD>minD, "WIN"); minDelay=minD; maxDelay=maxD; }
+  function commit(bytes32 h) external { if(c[msg.sender].h!=bytes32(0)) revert AlreadyCommitted(); c[msg.sender]=C(uint64(block.number), h); emit Committed(msg.sender,h);}  
+  function reveal(uint256 secret, bytes32 salt) external returns (uint256 r) {
+    C memory m=c[msg.sender]; if(m.h==bytes32(0)) revert NotCommitted();
+    uint64 d=uint64(block.number)-m.b; if(d<minDelay) revert TooEarly(); if(d>maxDelay) revert TooLate();
+    if(keccak256(abi.encodePacked(msg.sender,secret,salt))!=m.h) revert BadReveal(); delete c[msg.sender];
+    r=uint256(keccak256(abi.encodePacked(secret,salt,blockhash(block.number-1)))); emit Revealed(msg.sender,r);
+  }
+}
+```
+
+Takeaway: keep state small, events clear, and windows explicit.
+
+### 2) Fair selection helper
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+library Fair {
+  function index(uint256 rnd, uint256 n) internal pure returns (uint256) {
+    uint256 zone = type(uint256).max - (type(uint256).max % n);
+    while (rnd >= zone) { rnd = uint256(keccak256(abi.encodePacked(rnd))); }
+    return rnd % n;
+  }
+}
+```
+
+Takeaway: rejection sampling avoids bias for non‑power‑of‑two ranges.
+
+## Practice and reflection
+
+- Choose `minDelay`/`maxDelay` for your deployment; justify the tradeoff
+- Define your monitoring: which events and alerts indicate reveal liveness problems?
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"rng1","text":"Commit–reveal requires an off‑chain oracle","correctAnswer":false,"explanation":"It's fully on‑chain; oracles are for VRF if desired."},
+  {"id":"rng2","text":"Rejection sampling removes modulo bias","correctAnswer":true,"explanation":"It discards out‑of‑zone values before % n."}
+]}/>
+
+{/* Concept Matching: ops concepts */}
+<ConceptMatching pairs={[
+  {"conceptId":"min","definitionId":"mindef","concept":"minRevealDelay","definition":"Smallest blocks to wait before revealing","category":"ops"},
+  {"conceptId":"max","definitionId":"maxdef","concept":"maxRevealDelay","definition":"Max blocks allowed before timeout","category":"ops"},
+  {"conceptId":"obs","definitionId":"obsdef","concept":"observability","definition":"Events and alerts for reveal liveness","category":"ops"}
+]}
+/>
+
+## Ops checklist
+
+- Set reveal windows aligned with block times and user UX
+- Expose clean events; add subgraph/ETL hooks for monitoring
+- Document fallback if reveals stall (timeouts, refunds, redraws)
+
+## Wrap‑up
+
+You now have a deployable RNG primitive with fair selection. Extend with VRF integration if you need publicly verifiable entropy.

@@ -10,4 +10,147 @@ practicalTakeaway: "Optimize smart contracts to minimize gas costs while maintai
 
 # Advanced Gas Optimization Techniques
 
-*Content coming in Milestone 2*
+## Set the stage
+
+Gas costs shape UX and feasibility. You can cut costs substantially with disciplined storage layout, correct data locations, and targeted low-level optimizations—without making code unreadable. We’ll focus on safe, high-impact techniques that preserve clarity.
+
+## Core ideas
+
+- Storage packing: order smaller types to share slots; minimize SSTORE/SLOAD.
+- Data locations: prefer `calldata` for external inputs; cache storage reads to memory.
+- Immutability: use `immutable` and `constant` where values never change.
+- Custom errors: cheaper than long revert strings; surface parameters precisely.
+- Bitmaps/bit-packing: compress booleans and small counters to a single slot.
+- Unchecked math: use `unchecked` in provably safe ranges (loop counters, fees).
+- Events: keep schemas stable and minimal; index subjects used in queries.
+
+## Code in practice
+
+### 1) Storage packing before vs after
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+// Before: wastes slots due to ordering
+struct AccountBefore {
+  address owner;   // 20 bytes
+  bool active;     // 1 byte (occupies a new slot because of ordering)
+  uint64 tier;     // 8 bytes
+  uint256 balance; // 32 bytes
+}
+
+// After: packs into fewer slots by ordering small types together
+struct AccountAfter {
+  address owner;   // slot 0 (20 bytes)
+  uint64 tier;     // slot 0 (+8 bytes)
+  bool active;     // slot 0 (+1 byte)
+  uint256 balance; // slot 1 (32 bytes)
+}
+```
+
+Takeaway: group small types beneath a 32‑byte ceiling. Prefer `uint256` for arithmetic; only downsize when you actually gain packing.
+
+### 2) Data locations and caching storage
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract CacheExample {
+  uint256 public total;
+
+  error BadLen();
+
+  // Use calldata to avoid copying; cache SLOAD into memory/local variables
+  function sumAndAdd(uint256[] calldata values) external {
+    uint256 t = total; // cache SLOAD
+    uint256 len = values.length;
+    if (len == 0) revert BadLen();
+    unchecked { // safe: loop counter bounds checked by len
+      for (uint256 i = 0; i < len; i++) {
+        t += values[i];
+      }
+    }
+    total = t; // single SSTORE
+  }
+}
+```
+
+Takeaway: reading once and writing once is cheaper than many small reads/writes.
+
+### 3) Bitmap pattern for O(1) flags
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+library Bitmap {
+  function _word(uint256 index) internal pure returns (uint256 key, uint256 mask) {
+    key = index >> 8; // /256
+    mask = 1 << (index & 255);
+  }
+}
+
+contract Flags {
+  mapping(uint256 => uint256) private words;
+
+  function isSet(uint256 index) public view returns (bool) {
+    (uint256 key, uint256 mask) = Bitmap._word(index);
+    return words[key] & mask != 0;
+  }
+
+  function set(uint256 index) external {
+    (uint256 key, uint256 mask) = Bitmap._word(index);
+    words[key] |= mask;
+  }
+}
+```
+
+Takeaway: bitmaps compress 256 boolean flags into one storage slot—ideal for claims/eligibility.
+
+### 4) Custom errors vs strings
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+library Errors {
+  error InsufficientOutput(uint256 want, uint256 got);
+}
+
+contract Reverts {
+  using Errors for *;
+  function check(uint256 out, uint256 min) external pure {
+    if (out < min) revert Errors.InsufficientOutput(min, out);
+  }
+}
+```
+
+Takeaway: custom errors encode data efficiently and save gas compared to long revert strings.
+
+## Practice and reflection
+
+- Reorder one of your structs for better packing; estimate slot savings.
+- Replace two repeated SLOADs with a cached local; measure gas in tests.
+- Identify one place to use a bitmap instead of a mapping of booleans.
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"gasopt1","text":"Downsizing integers always reduces gas","correctAnswer":false,"explanation":"Downsizing can add casts and doesn't help unless it improves packing."},
+  {"id":"gasopt2","text":"calldata avoids copying external inputs","correctAnswer":true,"explanation":"Use calldata for external functions with read-only inputs."},
+  {"id":"gasopt3","text":"Custom errors are cheaper than long revert strings","correctAnswer":true,"explanation":"Errors encode selector+args instead of long UTF-8."}
+]}/>
+
+{/* Word Jumble */}
+<WordJumble word="BITMAP" hint="Compress many boolean flags into one slot" scrambled="TIBMPA" />
+
+## Pitfalls and tips
+
+- Don’t micro‑optimize at the cost of clarity; measure with gas snapshots.
+- Avoid `unchecked` unless you can prove bounds; document invariants.
+- Beware fee‑on‑transfer ERC20s when counting transfers vs amounts.
+
+## Wrap‑up
+
+Practical gas wins come from storage layout, data locations, and compact state representations. Add targeted low‑level tools only where measured improvements justify complexity.

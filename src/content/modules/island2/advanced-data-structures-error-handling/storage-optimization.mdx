@@ -1,13 +1,118 @@
 ---
-id: "advanced-data-structures-lesson-2"
-slug: "storage-optimization"
-module: "advanced-data-structures-error-handling"
-number: "2.6"
-title: "Storage vs Memory vs Calldata Optimization"
-objective: "Understand memory models and optimize gas usage through proper data location choices."
-practicalTakeaway: "Implement gas-efficient smart contracts by choosing optimal data storage locations."
+id: storage-optimization
+module: advanced-data-structures-error-handling
+number: 2.2.2
+title: Storage vs Memory vs Calldata Optimization
+objective: >-
+  Choose the right data locations, pack storage, and structure functions to minimize SLOAD/SSTORE and calldata costs in staking flows.
+slug: storage-optimization
 ---
 
-# Storage vs Memory vs Calldata Optimization
+## Big picture
 
-*Content coming in Milestone 2*
+Gas costs in staking systems come from storage writes, repeated reads, and heavy calldata. Picking the right location (`storage`, `memory`, `calldata`) and shaping your APIs accordingly makes hot paths cheap without sacrificing clarity.
+
+## Under the hood
+
+- **Storage**: Persistent on‑chain state. Expensive to write; cheaper to read than to write; refunds on clearing to zero
+- **Memory**: Ephemeral per‑call scratch space. Cheap to read/write; reset between calls
+- **Calldata**: Read‑only function arguments. Cheapest to read; zero‑copy for `external` functions
+- **Packing**: Fit small types into one 256‑bit slot to reduce SLOAD/SSTORE
+- **Function visibility**: Prefer `external` when taking large arrays/structs to read directly from calldata
+
+## Snippets and examples
+
+### 1) Favor calldata for `external` functions with large inputs
+
+Passing arrays by `calldata` avoids copying into memory; iterate without mutation to save gas.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract Batching {
+    event BatchProcessed(uint256 count, uint256 sum);
+
+    function process(uint256[] calldata amounts) external {
+        uint256 sum;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            sum += amounts[i];
+        }
+        emit BatchProcessed(amounts.length, sum);
+    }
+}
+```
+
+Takeaway: `calldata` is cheapest for read‑only iteration in `external` functions.
+
+### 2) Pack storage and minimize writes
+
+Write co‑located fields once rather than piecemeal; prefer `uint128/uint64` where ranges allow, and avoid unnecessary `SSTORE` by detecting no‑ops.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract PackedState {
+    struct Accrual { uint128 amount; uint64 last; uint64 flags; }
+    Accrual public accrual;
+
+    function setAccrual(uint128 amount, uint64 last, uint64 flags) external {
+        Accrual memory next = Accrual(amount, last, flags);
+        if (
+            next.amount != accrual.amount ||
+            next.last != accrual.last ||
+            next.flags != accrual.flags
+        ) {
+            accrual = next; // single SSTORE covering the slot
+        }
+    }
+}
+```
+
+Takeaway: pack fields and avoid redundant writes.
+
+### 3) Copy to memory only when you must mutate
+
+If you need to modify an input array, copy once to memory and mutate there; return or write back once.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract Mutator {
+    function double(uint256[] calldata inArr) external pure returns (uint256[] memory outArr) {
+        outArr = new uint256[](inArr.length);
+        for (uint256 i = 0; i < inArr.length; i++) {
+            outArr[i] = inArr[i] * 2;
+        }
+    }
+}
+```
+
+Takeaway: keep calldata read‑only and do mutations in memory.
+
+## Practice and reflection
+
+- Rewrite one hot path in your staking flow to read arguments from `calldata` and measure the gas difference
+- Identify one storage struct you can pack tighter by reducing integer widths
+
+{/* Word Jumble */}
+<WordJumble 
+  word="CALLDATA" 
+  hint="Cheapest read-only data location for external functions" 
+/>
+
+Short reflection: Where can you avoid an `SSTORE` by checking for no‑ops first?
+
+## Pitfalls and tips
+
+- Beware of `abi.encodePacked` collisions when hashing composite keys—include lengths or use full `abi.encode`
+- Don’t downsize integers below realistic bounds; prevent overflows of packed fields
+- Avoid unbounded loops over calldata in public endpoints; bound input size or batch
+- Remember storage refunds only apply when setting a slot to zero
+
+## Wrap‑up
+
+Use calldata for read‑only `external` inputs, pack storage to reduce writes, and copy to memory only when necessary. Your staking hot paths will be cheaper and more predictable.
+

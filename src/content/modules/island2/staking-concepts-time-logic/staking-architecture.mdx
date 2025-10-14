@@ -1,13 +1,81 @@
 ---
-id: "staking-concepts-lesson-1"
-slug: "staking-architecture"
-module: "staking-concepts-time-logic"
-number: "2.11"
-title: "Staking Contract Architecture and Patterns"
-objective: "Understand staking mechanisms and design scalable staking contract architectures."
-practicalTakeaway: "Design staking systems that handle multiple tokens, reward calculation, and user management."
+id: staking-architecture
+module: staking-concepts-time-logic
+number: 2.4.1
+title: Staking Contract Architecture and Patterns
+objective: >-
+  Assemble a modular staking system with clear boundaries (vault, policy, distributor) that is testable, upgrade‑aware, and integration‑friendly.
+slug: staking-architecture
 ---
 
-# Staking Contract Architecture and Patterns
+## Where this fits
 
-*Content coming in Milestone 2*
+Architecture is the difference between one‑off hacks and maintainable systems. By separating storage, reward policy, and distribution, you make each concern small, swappable, and easy to audit.
+
+## Design principles
+
+- **Core vs modules**: Core tracks positions; modules supply policy and distribution
+- **Interfaces at boundaries**: `IRewardPolicy`, `IRewardDistributor`, `IERC20` for tokens
+- **Evented surfaces**: Emit stable events for accrual and claims
+- **Upgrade awareness**: Keep storage stable; swap modules via interfaces
+
+## Snippets and examples
+
+### 1) Define clean module boundaries
+
+Keep the core small; depend on interfaces for policy and distributor.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IRewardPolicy { function compute(uint128 amt, uint64 secs) external view returns (uint128); }
+interface IRewardDistributor { function distribute(address to, uint128 amount) external; }
+
+contract StakingCore {
+    struct Position { uint128 amount; uint64 since; uint64 flags; }
+    mapping(address => Position) public positionOf;
+    IRewardPolicy public policy;
+    IRewardDistributor public distributor;
+
+    event Staked(address indexed user, uint128 amount);
+    event Unstaked(address indexed user, uint128 amount);
+
+    constructor(IRewardPolicy p, IRewardDistributor d) { policy = p; distributor = d; }
+}
+```
+
+Takeaway: core owns state; modules plug in behind interfaces.
+
+### 2) Compose flows with explicit events
+
+Stable events make off‑chain consumers reliable and audits simpler.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract EventsSketch {
+    event Accrued(address indexed user, uint128 amount, uint64 since, uint64 timestamp);
+    event Claimed(address indexed user, uint128 amount);
+}
+```
+
+Takeaway: mirror consequential state changes with `indexed` subjects.
+
+## Practice and reflection
+
+- Sketch a diagram showing `StakingCore` with `IRewardPolicy` and `IRewardDistributor`
+- List which events a subgraph would listen to for a staking dashboard
+
+{/* Concept Matching */}
+<ConceptMatching pairs={[
+  {"conceptId":"core","definitionId":"def-core","concept":"staking core","definition":"Owns positions; calls policy and distributor via interfaces","category":"arch"},
+  {"conceptId":"policy","definitionId":"def-policy","concept":"reward policy","definition":"Computes rewards from amount and time","category":"arch"},
+  {"conceptId":"dist","definitionId":"def-dist","concept":"reward distributor","definition":"Transfers rewards to users with events","category":"arch"}
+]}/>
+
+## Wrap‑up
+
+By drawing clear lines between core, policy, and distributor, you get a system that’s easier to test, swap, and scale. Next we’ll implement time‑based logic for accruals and locks.
+

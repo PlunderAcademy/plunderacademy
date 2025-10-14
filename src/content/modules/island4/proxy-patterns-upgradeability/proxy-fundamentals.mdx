@@ -10,4 +10,97 @@ practicalTakeaway: "Choose and implement the appropriate proxy pattern for diffe
 
 # Transparent vs UUPS Proxy Patterns
 
-*Content coming in Milestone 2*
+## Set the stage
+
+Proxies separate storage from logic so you can upgrade code without migrating state. Two popular patterns are Transparent (admin-managed via a separate ProxyAdmin) and UUPS (the implementation exposes `upgradeTo`). Choosing correctly depends on who upgrades, how often, and your risk tolerance.
+
+## Core ideas
+
+- Transparent: proxy delegates to implementation for users; only admin can upgrade via `ProxyAdmin`.
+- UUPS: implementation contains the upgrade function; proxy is minimal (ERC1967).
+- Admin separation: never let regular users hit admin code paths.
+- Access control: restrict upgrades tightly; emit upgrade events; use timelocks when appropriate.
+
+## Code in practice
+
+### 1) Transparent proxy flow (conceptual interfaces)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IProxyAdmin { function upgrade(address proxy, address newImpl) external; }
+interface ITransparentProxy { function implementation() external view returns (address); }
+
+contract TransparentDeploySketch {
+  event Deployed(address proxy, address impl, address admin);
+  function deploy(IProxyAdmin admin, bytes memory initData, address impl) external returns (address proxy) {
+    // In practice, use a TransparentUpgradeableProxy constructor with impl, admin, initData
+    // Here we just sketch the roles and events expected by auditors
+    emit Deployed(address(0), impl, address(admin));
+    return address(0);
+  }
+}
+```
+
+Takeaway: a separate admin owns upgrades; users never call admin-only functions.
+
+### 2) Minimal UUPS implementation shape (illustrative)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+abstract contract UUPSLike {
+  event Upgraded(address indexed impl);
+  address private immutable self = address(this);
+
+  // ERC1967 implementation slot: bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1)
+  bytes32 internal constant _IMPL_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+
+  modifier onlyProxy() {
+    require(address(this) != self, "NOT_DELEGATECALL");
+    _;
+  }
+
+  function _authorizeUpgrade(address newImpl) internal virtual;
+
+  function upgradeTo(address newImpl) external onlyProxy {
+    _authorizeUpgrade(newImpl);
+    assembly { sstore(_IMPL_SLOT, newImpl) }
+    emit Upgraded(newImpl);
+  }
+}
+
+contract MyUUPS is UUPSLike {
+  address public owner;
+  function initialize(address owner_) external { require(owner == address(0), "INIT"); owner = owner_; }
+  function _authorizeUpgrade(address n) internal override { require(msg.sender == owner, "OWNER"); require(n != address(0), "ZERO"); }
+}
+```
+
+Takeaway: the implementation guards its own upgrades; proxies stay dumb. Restrict `_authorizeUpgrade` and emit events.
+
+## Practice and reflection
+
+- Choose Transparent when upgrades are rare and managed by a service multisig
+- Choose UUPS when you want lighter proxies and self‑contained upgrade logic
+- Decide your upgrade delay policy (immediate vs timelocked) and document it
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"proxy1","text":"In Transparent proxies, regular users can call upgrade","correctAnswer":false,"explanation":"Only the admin via ProxyAdmin should upgrade."},
+  {"id":"proxy2","text":"UUPS stores the impl address in an ERC1967 slot","correctAnswer":true,"explanation":"ERC1967 defines canonical storage slots for proxies."}
+]}/>
+
+{/* True/False kept for this lesson */}
+
+## Pitfalls and tips
+
+- Never expose upgrade functions to EOAs without strong controls; prefer multisigs
+- Prevent initializer re‑runs; use initialization guards
+- Test upgrades with real storage state and layout checks
+
+## Wrap‑up
+
+Transparent and UUPS both rely on delegatecall with distinct upgrade mechanics. Pick based on your operational model and lock down upgrade authority.

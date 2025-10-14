@@ -10,4 +10,65 @@ practicalTakeaway: "Deploy NFT collections with minimal gas costs while maintain
 
 # Gas-Efficient Minting Strategies
 
-*Content coming in Milestone 2*
+## Big picture
+
+Mint cost dominates collection deployment. We’ll minimize storage writes, avoid redundant checks, and provide ergonomic batch mints while keeping event schemas marketplace‑friendly.
+
+## Design principles
+
+- Minimize SSTOREs; prefer sequential token IDs
+- Batch where possible (loop in contract or via client batching)
+- Emit one event per transfer (ERC721 requirement) but avoid extra logs
+- Avoid Enumerable if you don’t need on‑chain iteration; use off‑chain indexing instead
+
+## Snippets and examples
+
+### 1) Owner‑gated batch mint loop
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract BatchMint is ERC721, Ownable {
+    uint256 private _nextId;
+    constructor(address owner_) ERC721("Batch", "BCH") Ownable(owner_) {}
+
+    function batchMint(address to, uint256 qty) external onlyOwner {
+        require(qty > 0 && qty <= 50, "qty");
+        for (uint256 i = 0; i < qty; i++) {
+            _safeMint(to, _nextId++);
+        }
+    }
+}
+```
+
+Takeaway: simple loop keeps semantics clear; cap qty to bound gas.
+
+### 2) Client‑side batching vs contract batching
+
+- Client batching (multiple txs) improves UX with progress but costs more nonces
+- Contract batching reduces overhead per token but must guard gas limits
+
+## Practice and reflection
+
+- Decide your max batch size based on target chains and typical gas
+- List which features you can drop (e.g., Enumerable) in favor of off‑chain indexing
+
+{/* Concept Matching */}
+<ConceptMatching pairs={[
+  {"conceptId":"batch","definitionId":"def-batch","concept":"batch mint","definition":"Mint multiple tokenIds in one call","category":"mint"},
+  {"conceptId":"enum","definitionId":"def-enum","concept":"Enumerable","definition":"On‑chain iteration extension; avoid if not required","category":"ext"}
+]}/>
+
+## Pitfalls and tips
+
+- Don’t emit custom extra events for mints beyond Transfer unless analytics require it
+- Avoid storage reads/writes you can derive (e.g., avoid redundant owner checks inside loops)
+
+## Wrap‑up and next steps
+
+You can now mint efficiently with bounded loops and clean events. Next: lock down security and access for production.
+

@@ -10,4 +10,75 @@ practicalTakeaway: "Build NFT collections with delayed reveals and automated roy
 
 # Reveal Mechanics and Royalty Standards
 
-*Content coming in Milestone 2*
+## Set the stage
+
+Collectors expect a fair reveal and royalties that work across marketplaces. You’ll implement a hidden placeholder, a one‑way reveal, and ERC‑2981 for creator fees, noting that enforcement depends on marketplaces.
+
+## Core ideas
+
+- Hidden → revealed: switch base CID atomically via admin action
+- Provenance: optional hash to pre‑commit media ordering
+- Royalties: ERC‑2981 interface returns receiver and fee; marketplaces may honor it differently
+
+## Code in practice
+
+### 1) Reveal + ERC‑2981
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
+
+contract RevealRoyalties is ERC721, ERC2981, Ownable {
+    string private _base;
+    string private _hidden;
+    bool public revealed;
+
+    constructor(address owner_, string memory hiddenURI, address royaltyReceiver, uint96 feeBps)
+        ERC721("RevealRoyalties", "RR")
+        Ownable(owner_)
+    {
+        _hidden = hiddenURI;
+        _setDefaultRoyalty(royaltyReceiver, feeBps); // e.g., 500 = 5%
+    }
+
+    function _baseURI() internal view override returns (string memory) { return _base; }
+    function setBaseURI(string calldata newBase) external onlyOwner { _base = newBase; }
+    function reveal(string calldata baseCid) external onlyOwner { _base = string.concat("ipfs://", baseCid, "/"); revealed = true; }
+
+    function tokenURI(uint256 id) public view override returns (string memory) {
+        if (!revealed) return _hidden;
+        return string.concat(_base, _toString(id), ".json");
+    }
+
+    function supportsInterface(bytes4 iid) public view override(ERC721, ERC2981) returns (bool) {
+        return ERC721.supportsInterface(iid) || ERC2981.supportsInterface(iid);
+    }
+}
+```
+
+Takeaway: default royalty applies to all tokens; you can override per‑token if needed.
+
+## Practice and reflection
+
+- Define your royalty receiver and basis points; document the policy for collectors
+- If using provenance, decide how you’ll publish the hash and mapping
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"r1","text":"ERC‑2981 guarantees marketplace enforcement","correctAnswer":false,"explanation":"It’s a standard interface; enforcement is marketplace‑dependent."},
+  {"id":"r2","text":"Reveals should update baseURI in a single transaction","correctAnswer":true,"explanation":"Atomic change avoids mixed states and confusion."}
+]}/>
+
+## Pitfalls and tips
+
+- Avoid changing metadata post‑reveal unless you emit update events and explain the policy
+- Don’t hard‑code HTTP gateways; use ipfs:// URIs
+
+## Wrap‑up
+
+You now have fair reveal mechanics and standard royalties. Next: multi‑phase minting (allowlist/presale/public) with clear limits and events.
+

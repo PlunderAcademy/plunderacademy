@@ -10,4 +10,84 @@ practicalTakeaway: "Deploy a production-ready dApp with professional interface a
 
 # Complete dApp Interface Development
 
-*Content coming in Milestone 2*
+## Why this matters now
+
+This is the capstone: stitch wallet connection, reads, writes, events, and chain management into a cohesive product. You’ll design a simple interface that connects, shows balances, executes a transfer or mint, and reports status—all with clear UX.
+
+## Conceptual foundations for Web3 frontend
+
+- Composition: small components for connection, balance, actions.
+- State flow: connection state → reads → actions → receipts → events.
+- UX: loading skeletons, disabled states, clear success/failure copy.
+
+## Guided code walk‑throughs
+
+### 1) Page scaffold with gates and sections
+
+Combine patterns: connection in header, network guard, balance card, and an action panel. Keep components small and testable.
+
+```tsx
+import { HeaderConnect } from "../web3-frontend-basics/wallet-connection"; // illustrative path
+import { NetworkGuard } from "../web3-frontend-basics/network-management";   // illustrative path
+
+export default function DappPage() {
+  return (
+    <main className="container mx-auto space-y-6">
+      <header className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">My dApp</h1>
+        <HeaderConnect />
+      </header>
+      <NetworkGuard>
+        {/* BalanceCard, ActionPanel, EventFeed components here */}
+      </NetworkGuard>
+    </main>
+  );
+}
+```
+
+Takeaway: Gate the app behind a network guard and keep each concern in its own component.
+
+### 2) Minimal action panel shape
+
+Keep writes and status reporting self‑contained so you can test them independently and reuse patterns across pages.
+
+```tsx
+export function ActionPanel() {
+  // reuse TransferToken or a Mint component from earlier lessons
+  return (
+    <section className="rounded border p-4">
+      <h2 className="font-medium mb-2">Actions</h2>
+      {/* <TransferToken token={...} /> */}
+      {/* <MintNFT address={...} /> */}
+    </section>
+  );
+}
+```
+
+Takeaway: Keep action components small and dedicated; they own their status UI.
+
+## Practical exercises
+
+{/* Timeline Builder */}
+<TimelineBuilder events={[
+  {"id":"d1","text":"Connect wallet","correctPosition":0},
+  {"id":"d2","text":"Switch to supported chain if needed","correctPosition":1},
+  {"id":"d3","text":"Fetch balances and state","correctPosition":2},
+  {"id":"d4","text":"Execute write and show pending","correctPosition":3},
+  {"id":"d5","text":"Confirm receipt and update UI (events)","correctPosition":4}
+]}/>
+
+### Reflection
+
+- Which components will you isolate for reuse (e.g., `BalanceCard`, `ActionPanel`)?
+- What events will feed into your live activity list?
+
+## UX and error handling best practices
+
+- Persistent connection and network status in the header.
+- Clear disabled states and loading skeletons; never leave users guessing.
+- Single‑source error mapping utility to keep copy consistent.
+
+## Wrap‑up and next steps
+
+You have a blueprint for a cohesive dApp interface. Next: polish, test on Zilliqa testnet, and deploy to production.

@@ -10,4 +10,81 @@ practicalTakeaway: "Build dApps with reliable transaction handling and comprehen
 
 # Writing to Contracts and Transaction Management
 
-*Content coming in Milestone 2*
+## Why this matters now
+
+Reading data sets expectations; writing to contracts fulfills them. Transaction flows must be clear: prepare write, request wallet signature, show pending state, confirm success, and handle revert errors. We’ll use wagmi’s write + receipt hooks to manage the full lifecycle.
+
+## Conceptual foundations for Web3 frontend
+
+- **Definition — `useWriteContract`**: wagmi hook to call state‑changing functions. **When to use it**: Mints, transfers, staking—any write that changes storage.
+- **Definition — `useWaitForTransactionReceipt`**: Track on‑chain confirmation. **When to use it**: After getting a transaction hash to reflect pending/success/failure.
+- **Definition — Gas estimation**: Wallet/JSON‑RPC estimates cost to execute. **When to use it**: Pre‑flight checks; surface costs to users.
+
+## Guided code walk‑throughs
+
+### 1) Write, track, and report status
+
+Prepare a write, trigger the wallet, and subscribe to receipt updates. Display the hash and a success message upon confirmation; surface revert messages on failure.
+
+```tsx
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import erc20Abi from "@/lib/abis/erc20.json";
+
+export function TransferToken({ token }: { token: `0x${string}` }) {
+  const { data: hash, isPending: isSigPending, error: writeError, writeContract } = useWriteContract();
+  const { isLoading, isSuccess, isError, error } = useWaitForTransactionReceipt({ hash });
+
+  function submit(recipient: `0x${string}`, amount: bigint) {
+    writeContract({ address: token, abi: erc20Abi, functionName: "transfer", args: [recipient, amount] });
+  }
+
+  return (
+    <div>
+      <button onClick={() => submit("0x0000000000000000000000000000000000000001", 1n)}>Send 1 wei</button>
+      {isSigPending && <p>Waiting for wallet signature…</p>}
+      {hash && <p>Tx submitted: <span className="font-mono">{hash}</span></p>}
+      {isLoading && <p>Confirming on-chain…</p>}
+      {isSuccess && <p className="text-green-600">Success! 🎉</p>}
+      {writeError && <p className="text-red-600">Write error: {writeError.message}</p>}
+      {isError && error && <p className="text-red-600">Reverted: {error.message}</p>}
+    </div>
+  );
+}
+```
+
+Takeaway: Separate signature‑pending from chain confirmation; show hash early and final status when confirmed.
+
+### 2) Gas and UX hints
+
+Estimate gas pre‑flight where needed and hint at fees. Keep buttons disabled during pending states to prevent duplicates.
+
+```tsx
+// Pseudocode: show disabled button when pending
+<button disabled={isSigPending || isLoading}>Mint</button>
+```
+
+Takeaway: Pending guards and cost hints reduce user anxiety and duplicate submits.
+
+## Practical exercises
+
+{/* Drag & Drop Code Puzzle */}
+<DragDropPuzzle codeBlocks={[
+  {"id":"b1","content":"const { data: hash, writeContract } = useWriteContract();","correctPosition":0},
+  {"id":"b2","content":"writeContract({ address, abi, functionName: 'mint' });","correctPosition":1},
+  {"id":"b3","content":"const { isSuccess } = useWaitForTransactionReceipt({ hash });","correctPosition":2}
+]}/>
+
+### Reflection
+
+- What copy will you show for pending vs confirmed? Where will you display the hash?
+- Which writes need fee hints up front in your app?
+
+## UX and error handling best practices
+
+- Show signature pending separate from confirmation pending.
+- Keep users informed at each stage; include a link to a block explorer when possible.
+- Disable duplicate actions while a write is in flight.
+
+## Wrap‑up and next steps
+
+You can execute writes and reflect status cleanly. Next, you’ll add richer error handling and live event updates.

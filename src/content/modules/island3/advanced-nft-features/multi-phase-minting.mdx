@@ -10,4 +10,66 @@ practicalTakeaway: "Launch NFT collections with sophisticated minting strategies
 
 # Multi-Phase Minting Concepts
 
-*Content coming in Milestone 2*
+## Big picture
+
+Most launches run presale (allowlist) followed by public mint. You’ll model phases with per‑wallet limits, prices, and timings, and optionally add a Merkle allowlist for efficient eligibility checks.
+
+## Design principles
+
+- Separate config from logic; emit events on phase changes
+- Enforce per‑wallet caps and max supply at the contract boundary
+- Use Merkle proofs for allowlists; avoid storing large lists on‑chain
+
+## Try it in code
+
+### 1) Phase config + allowlist sketch
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+
+contract Phases {
+    enum Phase { Closed, Presale, Public }
+    Phase public phase;
+    uint256 public price;
+    uint256 public maxPerWallet;
+    bytes32 public merkleRoot;
+    mapping(address => uint256) public minted;
+
+    event PhaseChanged(Phase phase);
+
+    function setPhase(Phase p) external { phase = p; emit PhaseChanged(p); }
+    function setConfig(uint256 _price, uint256 _maxPerWallet, bytes32 _root) external { price = _price; maxPerWallet = _maxPerWallet; merkleRoot = _root; }
+
+    function _checkAllowlist(address a, bytes32[] calldata proof) internal view returns (bool) {
+        if (phase != Phase.Presale) return true; // only enforced in presale
+        return MerkleProof.verify(proof, merkleRoot, keccak256(abi.encodePacked(a)));
+    }
+}
+```
+
+Takeaway: keep phase changes explicit and indexable; proofs compress allowlists efficiently.
+
+## Practice and reflection
+
+- Define your phase timeline and event schema
+- Decide per‑wallet caps and how you’ll enforce them in tests
+
+{/* Timeline Builder */}
+<TimelineBuilder events={[
+  {"id":"p1","text":"Set presale config (price, cap, merkleRoot)","correctPosition":0},
+  {"id":"p2","text":"Open presale (allowlist)","correctPosition":1},
+  {"id":"p3","text":"Open public mint","correctPosition":2}
+]}/>
+
+## Pitfalls and tips
+
+- Don’t reveal and change phases in the same tx unless you intend to; keep actions auditable
+- Avoid per‑tx global loops; enforce limits per wallet with a small mapping
+
+## Wrap‑up
+
+You can now configure presale and public phases with caps and proofs. In the practical module, we’ll stitch these pieces into a launch‑ready collection.
+

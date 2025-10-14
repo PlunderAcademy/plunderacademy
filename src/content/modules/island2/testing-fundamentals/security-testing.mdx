@@ -1,13 +1,105 @@
 ---
-id: "testing-fundamentals-lesson-3"
-slug: "security-testing"
-module: "testing-fundamentals"
-number: "2.10"
-title: "Security-Focused Testing Basics"
-objective: "Learn to test for common vulnerabilities and implement security-focused testing strategies."
-practicalTakeaway: "Build test suites that specifically target security vulnerabilities and attack vectors."
+id: security-testing
+module: testing-fundamentals
+number: 2.3.3
+title: Security‑Focused Testing Basics
+objective: >-
+  Probe reentrancy, authorization, and interaction risks with targeted specs and negative tests so staking contracts fail safely.
+slug: security-testing
 ---
 
-# Security-Focused Testing Basics
+## Where this fits
 
-*Content coming in Milestone 2*
+Security issues hide at boundaries: external calls, value transfers, and privileged actions. By turning common bug classes into reusable tests, you make regressions obvious before they reach users.
+
+## Core ideas
+
+- **Negative testing**: Prove that invalid actions are rejected predictably
+- **Reentrancy probes**: Simulate re‑entry around value‑moving functions
+- **Authorization matrix**: Table of who can do what; exercised in tests
+- **Invariant flashes**: Quick checks that should hold after every action
+
+## Try it in code
+
+### 1) Reentrancy probe against withdrawals
+
+Use a malicious contract to re‑enter `withdraw` and assert that `nonReentrant`/CEI stops it.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IVault { function deposit() external payable; function withdraw(uint256) external; }
+
+contract Attacker {
+    IVault public immutable target;
+    bool public attack;
+
+    constructor(IVault _t) { target = _t; }
+
+    receive() external payable {
+        if (attack) {
+            attack = false;
+            target.withdraw(1);
+        }
+    }
+
+    function run() external payable {
+        target.deposit{value: msg.value}();
+        attack = true;
+        target.withdraw(msg.value);
+    }
+}
+```
+
+Takeaway: a minimal attacker harness helps validate CEI + `nonReentrant` defenses.
+
+### 2) Authorization table tests
+
+Exercise each privileged action across roles and assert the expected error or success.
+
+```ts
+// test/Auth.matrix.ts (excerpt)
+import { expect } from "chai";
+
+type Case = { role: string; can: boolean };
+const cases: Case[] = [
+  { role: "owner", can: true },
+  { role: "user", can: false }
+];
+
+for (const c of cases) {
+  it(`role=${c.role}`, async () => {
+    if (c.can) {
+      await expect(contract.connect(signers[c.role]).pause()).to.emit(contract, "Paused");
+    } else {
+      await expect(contract.connect(signers[c.role]).pause()).to.be.reverted;
+    }
+  });
+}
+```
+
+Takeaway: encode the matrix so new roles/actions are easy to add.
+
+## Practice and reflection
+
+- Write a minimal malicious contract to test a value‑moving function
+- Build an authorization matrix for two privileged actions
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"s1","text":"Negative tests are optional for production","correctAnswer":false,"explanation":"They prove failure modes are safe and predictable."},
+  {"id":"s2","text":"Reentrancy can only happen with ERC20s","correctAnswer":false,"explanation":"Any external call can be a re‑entry point."},
+  {"id":"s3","text":"Authorization tests should cover both success and failure","correctAnswer":true,"explanation":"Matrix‑style tests prevent privilege creep."}
+]}/>
+
+## Pitfalls and tips
+
+- Always assert the specific revert or error, not just “reverted”
+- Test event emissions on both success and failure paths where applicable
+- Prefer small, focused attacker harnesses over complex mocks
+
+## Wrap‑up and next steps
+
+Security testing translates common bugs into repeatable specs. With reentrancy probes, role matrices, and negative tests, your staking code becomes resilient by default.
+

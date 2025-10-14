@@ -10,4 +10,108 @@ practicalTakeaway: "Deliver audit-ready smart contracts with comprehensive secur
 
 # Security Patterns and Audit Preparation
 
-*Content coming in Milestone 2*
+## Set the stage
+
+Security is a discipline, not a checklist. Good architecture (CEI, pull payments, minimal trust) plus strong testing and documentation produce audit‑ready systems. We’ll outline patterns auditors expect and show code to make risks explicit and bounded.
+
+## Core ideas
+
+- CEI + non‑reentrancy on value‑moving flows
+- Access control: principle of least privilege; role separation; pausability
+- Input validation: bounds, zero checks, deadlines, slippage
+- Bounded failures: `try/catch`, circuit breakers, and graceful degradation
+- Observability: consistent events; off‑chain monitoring ready
+- Threat modeling: list assets, trust assumptions (oracles, signers), and failure modes
+
+## Code in practice
+
+### 1) Access control and pausability
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract Controlled is Ownable {
+  bool public paused;
+  event Paused(bool status);
+
+  constructor(address owner_) Ownable(owner_) {}
+
+  modifier notPaused() { require(!paused, "PAUSED"); _; }
+  function setPaused(bool p) external onlyOwner { paused = p; emit Paused(p); }
+}
+```
+
+Takeaway: keep emergency controls small and explicit. Emit events for state changes.
+
+### 2) CEI + bounded failures on module calls
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IModule { function run(address user, uint256 amount) external returns (bool); }
+
+contract Orchestrator {
+  event Attempt(address indexed user, uint256 amount);
+  event Success(address indexed user, uint256 amount);
+  event Failure(address indexed user, string reason);
+
+  function execute(IModule m, address user, uint256 amount) external returns (bool ok) {
+    emit Attempt(user, amount);
+    try m.run(user, amount) returns (bool r) {
+      ok = r; emit Success(user, amount);
+    } catch Error(string memory reason) {
+      emit Failure(user, reason); ok = false;
+    } catch (bytes memory) {
+      emit Failure(user, "Unknown"); ok = false;
+    }
+  }
+}
+```
+
+Takeaway: surface failures without bricking the entire flow when safe to do so.
+
+### 3) Assertions and invariants (runtime guards)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+library Invariants {
+  function supplyConserved(uint256 before_, uint256 minted, uint256 burned, uint256 after_) internal pure {
+    assert(before_ + minted >= burned); // sanity
+    assert(before_ + minted - burned == after_);
+  }
+}
+```
+
+Takeaway: assertions document invariants. Pair with fuzz tests off‑chain for deeper coverage.
+
+## Practice and reflection
+
+- List your system’s trusted roles and reduce permissions for each
+- Identify one external dependency (oracle, L2 bridge) and document failure policy
+- Add one bounded failure and one event for observability in a hot path
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"security1","text":"CEI means doing external calls before state updates","correctAnswer":false,"explanation":"Checks → Effects → Interactions protects state before calling out."},
+  {"id":"security2","text":"Try/catch can convert reverts into safe no-ops with logging","correctAnswer":true,"explanation":"Use judiciously where partial failure is acceptable."}
+]}/>
+
+{/* True/False kept for this lesson */}
+
+## Security notes
+
+- Document trust assumptions and admin powers
+- Enforce CEI and non‑reentrancy where value moves
+- Validate all inputs and deadlines; normalize decimals
+- Emit stable, indexed events for critical actions
+- Keep upgrade paths restricted and tested; document storage layout
+
+## Wrap‑up
+
+Reduce the attack surface with simple, explicit controls and strong observability. Prepare auditors with a clear threat model, invariants, and tests that reflect real risks.

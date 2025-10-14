@@ -10,4 +10,81 @@ practicalTakeaway: "Launch upgradeable smart contract systems with proven upgrad
 
 # Upgradeable Contract Deployment and Testing
 
-*Content coming in Milestone 2*
+## Set the stage
+
+Deploying upgradeable contracts safely requires the right proxy pattern, storage discipline, and tests that simulate real state across upgrades. We’ll sketch a practical deployment flow with initialization and an upgrade test plan.
+
+## Core ideas
+
+- Pick a proxy: Transparent (admin via ProxyAdmin) vs UUPS (self‑authorized)
+- Initialize once: use `initialize` instead of constructors; guard re‑init
+- Append‑only storage layout with `__gap` and layout checks in CI
+- Operational safety: restricted upgrade authority, events, and (optionally) timelocks
+
+## Code in practice
+
+### 1) Implementation with initializer guard
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract V1Impl {
+  address public owner;
+  uint256 public value;
+  bool private _inited;
+
+  event ValueSet(uint256 v);
+
+  function initialize(address owner_, uint256 v) external {
+    require(!_inited, "INIT"); _inited = true;
+    owner = owner_; value = v; emit ValueSet(v);
+  }
+
+  function setValue(uint256 v) external { require(msg.sender == owner, "OWNER"); value = v; emit ValueSet(v); }
+
+  uint256[50] private __gap; // reserve storage for future upgrades
+}
+```
+
+Takeaway: guard against re‑initialization and reserve storage space.
+
+### 2) Upgrade test outline (Transparent or UUPS)
+
+```text
+1) Deploy implementation V1
+2) Deploy proxy (Transparent or ERC1967) pointing to V1
+3) Call initialize via proxy
+4) Interact to produce realistic state
+5) Deploy V2 with appended storage and new function
+6) Upgrade proxy to V2
+7) Assert pre‑upgrade state remains; new functions work
+```
+
+Takeaway: test using the proxy, not the implementation directly; preserve state across versions.
+
+## Practice and reflection
+
+- Choose Transparent or UUPS for your project and justify with ops needs
+- Implement an initializer guard and add a `__gap` to your contract
+- Write an upgrade test that verifies state preservation and new functionality
+
+{/* Timeline Builder: upgrade deployment flow */}
+<TimelineBuilder events={[
+  {"id":"u1","text":"Deploy implementation V1"},
+  {"id":"u2","text":"Deploy proxy and point to V1"},
+  {"id":"u3","text":"Initialize via proxy"},
+  {"id":"u4","text":"Deploy implementation V2 (append storage)"},
+  {"id":"u5","text":"Upgrade proxy to V2 and verify state"}
+]}
+/>
+
+## Deployment checklist
+
+- Emit upgrade and initialize events; verify in logs after deployment
+- Restrict upgrade authority (multisig, timelock)
+- Keep implementation addresses recorded and documented
+
+## Wrap‑up
+
+With the right proxy pattern, initializer, and tests, you can ship upgradeable systems without risking storage corruption. Bake checks into CI to keep the process safe over time.

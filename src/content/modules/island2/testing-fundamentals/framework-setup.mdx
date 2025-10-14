@@ -1,13 +1,123 @@
 ---
-id: "testing-fundamentals-lesson-1"
-slug: "framework-setup"
-module: "testing-fundamentals"
-number: "2.8"
-title: "Testing Framework Setup (Hardhat with Foundry)"
-objective: "Set up comprehensive testing environments and understand testing framework architecture."
-practicalTakeaway: "Configure robust testing setups that support both unit and integration testing workflows."
+id: framework-setup
+module: testing-fundamentals
+number: 2.3.1
+title: Testing Framework Setup (Hardhat 3)
+objective: >-
+  Stand up a focused Hardhat 3 test environment that runs fast, produces useful diagnostics, and mirrors production assumptions for staking flows.
+slug: framework-setup
 ---
 
-# Testing Framework Setup (Hardhat with Foundry)
+## Set the stage
 
-*Content coming in Milestone 2*
+A clean test harness turns ideas into confidence. For staking, you’ll simulate deposits, reward accruals, and failure modes repeatedly. Hardhat 3 gives you fast local chains, rich assertions, and fixtures to keep tests deterministic.
+
+Our goal is to bootstrap a consistent layout and conventions so every new spec is quick to write and easy to review.
+
+## Core ideas
+
+- **Arrange–Act–Assert (AAA)**: Structure tests so setup, action, and expectations are obvious
+- **Fixtures**: Snapshot a deployed baseline and reuse it across tests for speed and determinism
+- **Isolated state**: Each test must be independent; avoid order coupling
+- **Deterministic randomness**: Seed any randomness; avoid wall‑clock dependencies
+- **Fast feedback**: Keep tests small and focused; integration flows get their own suites
+
+## Hands‑on
+
+### 1) Minimal Hardhat config for Solidity ^0.8.x and optimizer
+
+Keep configuration small and explicit. Enable the optimizer with a realistic runs value for your use case.
+
+```ts
+// hardhat.config.ts (excerpt)
+import { HardhatUserConfig } from "hardhat/config";
+
+const config: HardhatUserConfig = {
+  solidity: {
+    version: "0.8.24",
+    settings: { optimizer: { enabled: true, runs: 200 } }
+  }
+};
+
+export default config;
+```
+
+Takeaway: match compiler settings to production to avoid drift between tests and deploys.
+
+### 2) Fixture pattern to speed up deployments
+
+Use a fixture to deploy contracts once, snapshot, and restore quickly across tests.
+
+```ts
+// test/Token.fixture.ts (excerpt)
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { ethers } from "hardhat";
+import { expect } from "chai";
+
+async function deployTokenFixture() {
+  const [owner, user] = await ethers.getSigners();
+  const Token = await ethers.getContractFactory("ERC20Mock");
+  const token = await Token.deploy("Token", "TKN", owner.address, 1_000_000n);
+  return { token, owner, user };
+}
+
+describe("ERC20 fixture", function () {
+  it("mints initial supply", async function () {
+    const { token, owner } = await loadFixture(deployTokenFixture);
+    expect(await token.balanceOf(owner.address)).to.equal(1_000_000n);
+  });
+});
+```
+
+Takeaway: fixtures cut suite time while keeping tests deterministic.
+
+### 3) Testing events and reverts with helpful messages
+
+Assert events with indexed subjects and use custom errors for structured reverts.
+
+```ts
+// test/Vault.events.ts (excerpt)
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { ethers } from "hardhat";
+import { expect } from "chai";
+
+describe("Vault events", function () {
+  it("emits Deposited(address,uint256)", async function () {
+    const { vault, user } = await loadFixture(async () => {
+      const [owner, user] = await ethers.getSigners();
+      const Vault = await ethers.getContractFactory("VaultMock");
+      const vault = await Vault.deploy();
+      return { vault, owner, user };
+    });
+
+    await expect(vault.connect(user).deposit({ value: 1n }))
+      .to.emit(vault, "Deposited").withArgs(user.address, 1n);
+  });
+});
+```
+
+Takeaway: event assertions double as documentation for integrators.
+
+## Practice and reflection
+
+- Create a `deployFixture()` for your staking core and assert its initial invariants
+- Add one test that asserts a custom error on invalid input
+
+{/* Timeline Builder */}
+<TimelineBuilder events={[
+  {"id":"t1","text":"Configure compiler + optimizer","correctPosition":0},
+  {"id":"t2","text":"Write first fixture (deploy baseline)","correctPosition":1},
+  {"id":"t3","text":"Assert events and custom errors","correctPosition":2},
+  {"id":"t4","text":"Add CI task to run tests","correctPosition":3}
+]}/>
+
+## Pitfalls and tips
+
+- Don’t share mutable state between tests; prefer fixtures or re‑deploys
+- Avoid time‑based flakiness; use controlled timestamps where possible
+- Keep unit tests fast; move multi‑contract flows to separate suites
+
+## Wrap‑up and next steps
+
+You now have a lean Hardhat 3 setup with fixtures, event assertions, and production‑aligned compiler settings. Next, we’ll sharpen unit testing patterns to make specs readable and comprehensive.
+

@@ -10,4 +10,83 @@ practicalTakeaway: "Create dApps that work seamlessly across multiple blockchain
 
 # Network Switching and Chain Management
 
-*Content coming in Milestone 2*
+## Why this matters now
+
+Users will connect on the wrong chain. Your dApp must detect it, prompt a switch, and recover gracefully. With wagmi and RainbowKit, you can guide users to Zilliqa mainnet/testnet and keep your UI consistent and predictable.
+
+## Conceptual foundations for Web3 frontend
+
+- **Definition — `useChainId` / `useSwitchChain`**: wagmi hooks for reading current chain and triggering a network switch. **When to use them**: Detect mismatches and guide users to supported networks.
+- **Definition — Supported chains**: The allow‑list your app can operate on. **When to use it**: Limit to Zilliqa mainnet/testnet per project rules to reduce UX confusion.
+- **Anti‑pattern**: Failing silently on wrong networks; users think the app is broken instead of mis‑configured.
+
+## Guided code walk‑throughs
+
+### 1) Detecting wrong network and prompting switch
+
+Read the current chain and compare to your supported ids. Offer a button to switch; show a helpful message if the wallet cannot switch automatically.
+
+```tsx
+import { useAccount, useChainId, useSwitchChain } from "wagmi";
+import { zilliqa, zilliqaTestnet } from "viem/chains";
+
+const SUPPORTED = [zilliqa.id, zilliqaTestnet.id];
+
+export function NetworkGuard({ children }: { children: React.ReactNode }) {
+  const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const { switchChain, isPending } = useSwitchChain();
+
+  if (!isConnected) return <>{children}</>;
+  if (SUPPORTED.includes(chainId)) return <>{children}</>;
+
+  return (
+    <div className="p-4 border rounded-md">
+      <p className="mb-2">Wrong network. Please switch to Zilliqa.</p>
+      <div className="flex gap-2">
+        <button disabled={isPending} onClick={() => switchChain({ chainId: zilliqa.id })}>Zilliqa Mainnet</button>
+        <button disabled={isPending} onClick={() => switchChain({ chainId: zilliqaTestnet.id })}>Zilliqa Testnet</button>
+      </div>
+    </div>
+  );
+}
+```
+
+Takeaway: Detect mismatches early and give a one‑click path to a supported chain.
+
+### 2) Feature gating by chain
+
+Disable features not available on the current chain (e.g., no staking on testnet). Make the rule explicit and user‑visible.
+
+```tsx
+export function FeatureGate({ children }: { children: React.ReactNode }) {
+  const chainId = useChainId();
+  const allowed = chainId === zilliqa.id; // example
+  return allowed ? <>{children}</> : <p>Feature available on Zilliqa mainnet only.</p>;
+}
+```
+
+Takeaway: Gating avoids confusing errors from calling contracts on the wrong networks.
+
+## Practical exercises
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"net1","text":"Users should be allowed to use any connected chain","correctAnswer":false,"explanation":"Restrict to supported chains to avoid misbehavior."},
+  {"id":"net2","text":"Switching networks should be a guided, one‑click action","correctAnswer":true,"explanation":"Use useSwitchChain to help users recover quickly."}
+]}/>
+
+### Reflection
+
+- Which features need per‑chain gating in your app?
+- What fallback message will you show if auto‑switch fails?
+
+## UX and error handling best practices
+
+- Detect wrong network immediately and keep the message persistent.
+- Offer clear choices (mainnet/testnet) and explain consequences.
+- Log chain changes for analytics; many support tickets come from wrong‑network states.
+
+## Wrap‑up and next steps
+
+Your app now guides users to the right network. Next, you’ll write to contracts and manage transaction status.

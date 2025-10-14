@@ -10,4 +10,57 @@ practicalTakeaway: "Successfully launch an NFT collection ready for marketplace 
 
 # NFT Collection Deployment and Launch
 
-*Content coming in Milestone 2*
+## Set the stage
+
+Time to stitch the pieces together: ERC721 core, IPFS metadata + reveal, ERC‑2981 royalties, and multi‑phase minting. We’ll focus on clear initialization, admin safety, and event contracts that make launches observable.
+
+## Core ideas
+
+- Deterministic initialization: owner/roles, baseURIs, royalty config, supply caps
+- Phase switches emit events; on‑chain state mirrors public announcements
+- Minimal on‑chain complexity; push analytics off‑chain via stable events
+
+## Hands‑on
+
+### 1) Launch checklist (what to encode/tests)
+
+```md
+- Owner/admin set and documented
+- BaseURI placeholder set; reveal plan documented
+- Default royalty (ERC‑2981) set to receiver with fee bps
+- Phase = Closed; price/maxPerWallet configured
+- Pausable verified; incident runbook linked
+```
+
+Takeaway: encode assumptions as tests or scripts to prevent human error.
+
+### 2) Post‑deploy verification script (outline)
+
+```ts
+// scripts/verifyLaunch.ts (outline)
+import { expect } from "chai";
+
+export async function verify(core: any, admin: string) {
+  expect(await core.owner?.()).to.equal(admin);
+  // Expect placeholder tokenURI for token 0 (if minted in tests)
+  // Expect royalty info for a sample sale price
+}
+```
+
+Takeaway: quick assertions catch misconfigurations immediately after deploy.
+
+## Practice and reflection
+
+- Draft your public announcement events (phase changes, reveal) and confirm they’re emitted
+- List what you’ll monitor during mint: errors, gas, event counts, wallet limits
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"l1","text":"Reveals should change token IDs","correctAnswer":false,"explanation":"Keep IDs stable; only URIs change."},
+  {"id":"l2","text":"Phase switches should emit indexable events","correctAnswer":true,"explanation":"Makes launches observable by bots/dashboards."}
+]}/>
+
+## Wrap‑up
+
+Your collection is wired for a safe launch: deterministic init, reveal/royalties, and phase controls. Next, validate end‑to‑end with integration/testing.
+

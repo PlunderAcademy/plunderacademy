@@ -1,13 +1,75 @@
 ---
-id: "staking-practical-lesson-2"
-slug: "testing-integration"
-module: "staking-contract-practical"
-number: "2.14"
-title: "Comprehensive Testing and Integration"
-objective: "Implement complete testing suite for staking contracts including edge cases and security tests."
-practicalTakeaway: "Deliver fully tested staking contracts ready for mainnet deployment."
+id: testing-integration
+module: staking-contract-practical
+number: 2.5.2
+title: Comprehensive Testing and Integration
+objective: >-
+  Validate staking end‑to‑end with integration tests, reentrancy probes, and interface‑level checks; document scenarios and expected events.
+slug: testing-integration
 ---
 
-# Comprehensive Testing and Integration
+## Big picture
 
-*Content coming in Milestone 2*
+End‑to‑end tests verify modules work together under realistic conditions. By asserting interfaces, events, and failure modes, you lock down the contract’s public contract with UIs and indexers.
+
+## Under the hood
+
+- **Integration vs unit**: Cross‑module, realistic flows vs isolated functions
+- **State orchestration**: Use fixtures to compose multi‑step scenarios
+- **Event contracts**: Treat emitted events as part of the public interface
+- **Interfaces as tests**: Interact via `I*` types rather than concrete classes
+
+## Code in practice
+
+### 1) Deposit → accrue → claim
+
+Prove the happy path with time controls and event assertions.
+
+```ts
+// test/Stake.integration.ts (excerpt)
+import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { expect } from "chai";
+
+describe("Stake integration", () => {
+  it("deposit, accrue, claim", async () => {
+    const { staking, user } = await loadFixture(deployStakingFixture);
+    await staking.connect(user).deposit(1_000n);
+    await time.increase(30 * 24 * 60 * 60);
+    await expect(staking.connect(user).claim())
+      .to.emit(staking, "Claimed");
+  });
+});
+```
+
+Takeaway: assert both state and events for end‑to‑end confidence.
+
+### 2) Negative flows: early exit and reentrancy
+
+Exercise lock penalties and ensure reentrancy is blocked and observable.
+
+```ts
+// test/Stake.negatives.ts (excerpt)
+import { expect } from "chai";
+
+it("rejects early exit without penalty", async () => {
+  await expect(staking.connect(user).unstake(1_000n)).to.be.reverted;
+});
+```
+
+Takeaway: negative tests prevent regressions that could leak value.
+
+## Practice and reflection
+
+- Write an end‑to‑end test that covers deposit of Token A, role rotation, and successful claim
+- Add a negative test for an unauthorized pause attempt
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"p1","text":"Integration tests can skip event assertions","correctAnswer":false,"explanation":"Events are part of the public contract with clients."},
+  {"id":"p2","text":"Interact via interfaces in tests to mirror production","correctAnswer":true,"explanation":"Keeps tests resilient to refactors."}
+]}/>
+
+## Wrap‑up
+
+Your staking build is validated end‑to‑end with realistic flows and guarded failure cases. You’re ready to ship behind a cautious rollout checklist.
+

@@ -1,13 +1,187 @@
 ---
-id: "advanced-solidity-foundations-lesson-2"
-slug: "interface-design"
-module: "advanced-solidity-foundations"
-number: "2.2"
-title: "Interface Design and Implementation"
-objective: "Learn to design clean, extensible interfaces and implement robust contract-to-contract communication patterns."
-practicalTakeaway: "Create standardized interfaces for interoperability and implement interface-based architecture patterns."
+id: interface-design
+module: advanced-solidity-foundations
+number: 2.1.2
+title: Interface Design and Implementation
+objective: >-
+  Design minimal, versioned interfaces and code to abstractions so your staking system can integrate any ERC20 safely. Practice safe external calls with try/catch and build testable modules using dependency inversion.
+slug: interface-design
 ---
 
-# Interface Design and Implementation
+## Where this fits
 
-*Content coming in Milestone 2*
+Inheritance gives you code reuse; interfaces give you interoperability. Think of an interface like a USB‑C port: any device that follows the spec plugs in and works without the computer caring which brand it is. In Solidity, that means your staking contract can work with any conforming ERC20 or pluggable reward module without recompiling the core.
+
+For Module 1 we’re building toward a staking system that must hold tokens, emit clean events, and let external modules (like a reward distributor) slot in. Interfaces let us depend on stable APIs, test with mocks, and swap implementations later—without touching core logic.
+
+## Design principles
+
+- **Definition — Interface**: A contract type that declares function signatures, events, and custom errors with no implementation. **When to use it**: To define external APIs and enable swappable implementations (e.g., reward modules, token adapters).
+- **Definition — Abstract contract**: A contract with at least one unimplemented function (can also contain state). **When to use it**: When you need partial implementation plus a required surface; prefer interfaces when no state/implementation is needed.
+- **Definition — `external` vs `public`**: `external` functions are callable only from outside the contract and can read calldata directly; `public` can be called internally or externally. **When to use it**: Prefer `external` in interfaces for gas efficiency.
+- **Definition — Minimal surface**: The smallest set of functions/events needed for the job. **When to use it**: Always—smaller interfaces are easier to secure, mock, and version.
+- **Definition — NatSpec**: Documentation comments that explain purpose, params, and failure modes. **When to use it**: For every interface function to stabilize expectations for integrators.
+- **Definition — Dependency inversion**: High‑level modules depend on abstractions (interfaces), not concrete implementations. **When to use it**: Any time your contract interacts with external systems or swappable modules.
+
+### Versioning tips
+
+- Start with `IThing` and add a semver‑tagged extension like `IThingV2` if you must add functions later
+- Don’t break function names or argument orders between versions
+- Emit events that mirror state transitions and are stable across versions
+- Document custom errors so integrators can handle failures predictably
+
+## Hands‑on
+
+The following snippets show how to define a clear interface, consume `IERC20` safely, and guard external calls. We keep them small and focused.
+
+### 1) Define a custom interface with events and custom errors
+
+We’ll define an `IRewardDistributor` interface that a staking core can call to mint or release rewards. The interface includes a stable event schema and a custom error so callers can distinguish failure modes. NatSpec on each function documents intent and expectations.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+/// @title IRewardDistributor
+/// @notice Minimal API for modules that calculate and release staking rewards
+/// @dev Keep this surface small and version via IRewardDistributorV2 if needed
+interface IRewardDistributor {
+    /// @notice Emitted when rewards are claimed by a user
+    /// @param account The beneficiary of the rewards
+    /// @param amount The amount released to the beneficiary
+    event RewardsClaimed(address indexed account, uint256 amount);
+
+    /// @notice Error indicating there are not enough rewards available
+    error InsufficientRewards();
+
+    /// @notice Compute the pending reward for an account
+    /// @param account The beneficiary address
+    /// @return amount The claimable reward amount
+    function pending(address account) external view returns (uint256 amount);
+
+    /// @notice Release rewards to the caller
+    /// @return amount The amount released
+    function claimRewards() external returns (uint256 amount);
+}
+```
+
+Takeaway: an interface is a contract of intent—no state, no constructors—just the API your core can trust across implementations.
+
+### 2) Depend on `IERC20` to accept any token (dependency inversion)
+
+This vault holds deposits of any ERC20 specified at construction. By coding to `IERC20` and using `SafeERC20`, we accept any well‑behaved token and avoid hand‑rolled transfer logic. The staking core later can compose with this vault without caring about the specific token brand.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+contract AnyTokenVault {
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable asset;
+    mapping(address => uint256) public balanceOf;
+
+    event Deposited(address indexed account, uint256 amount);
+    event Withdrawn(address indexed account, uint256 amount);
+
+    constructor(IERC20 _asset) {
+        asset = _asset; // dependency inversion: any IERC20 works
+    }
+
+    function deposit(uint256 amount) external {
+        require(amount > 0, "ZERO_AMOUNT");
+        // CEI: checks first, then effects, then interactions
+        balanceOf[msg.sender] += amount;
+        asset.safeTransferFrom(msg.sender, address(this), amount);
+        emit Deposited(msg.sender, amount);
+    }
+
+    function withdraw(uint256 amount) external {
+        require(amount > 0 && amount <= balanceOf[msg.sender], "INVALID_AMOUNT");
+        balanceOf[msg.sender] -= amount;
+        asset.safeTransfer(msg.sender, amount);
+        emit Withdrawn(msg.sender, amount);
+    }
+}
+```
+
+Takeaway: depending on `IERC20` lets you swap tokens without touching the vault; tests can substitute a mock token seamlessly.
+
+### 3) Safe external calls with try/catch
+
+When calling untrusted contracts, prefer a narrow interface and trap failures. Here a consumer contract calls `IRewardDistributor.claimRewards()` and handles reverts gracefully. In production, you might log, cap impact, or retry later rather than bubbling fatal errors.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IRewardDistributor} from "./IRewardDistributor.sol"; // path illustrative
+
+contract RewardsConsumer {
+    event ClaimAttempt(address indexed account, uint256 requested);
+    event ClaimFailed(address indexed account, string reason);
+
+    function safeClaim(IRewardDistributor distributor) external returns (uint256 claimed) {
+        emit ClaimAttempt(msg.sender, 0);
+        try distributor.claimRewards() returns (uint256 amount) {
+            return amount;
+        } catch Error(string memory reason) {
+            emit ClaimFailed(msg.sender, reason);
+            return 0;
+        } catch (bytes memory) {
+            emit ClaimFailed(msg.sender, "Unknown error");
+            return 0;
+        }
+    }
+}
+```
+
+Takeaway: `try/catch` isolates risk and turns hard failures into recoverable outcomes for the caller and UI.
+
+## Practice and reflection
+
+Short, hands‑on prompts to cement concepts. Keep each answer to 1–3 sentences or a few lines of code.
+
+- **Surface slimming**: Rewrite `IRewardDistributor` with only the functions absolutely required for your staking MVP. What did you remove and why?
+- **Version sketch**: Propose what would go into `IRewardDistributorV2` without breaking V1 users. Name one backward‑compatible addition.
+- **Token swap thought experiment**: If your protocol later moves from Token A to Token B, list the on‑chain changes required when coding to `IERC20` vs a concrete token contract.
+- **Failure handling**: Identify a function in your protocol where `try/catch` would reduce blast radius. What is the fallback path?
+
+{/* Concept Matching: Interface vs Abstract vs Visibility vs DI */}
+<ConceptMatching pairs={[
+  {"conceptId":"interface","definitionId":"def-interface","concept":"interface","definition":"No implementation; pure API boundary for integrations","category":"contracts"},
+  {"conceptId":"abstract","definitionId":"def-abstract","concept":"abstract contract","definition":"Partial implementation; requires children to finish it","category":"contracts"},
+  {"conceptId":"external","definitionId":"def-external","concept":"external","definition":"Callable only from outside; gas‑efficient for interfaces","category":"visibility"},
+  {"conceptId":"public","definitionId":"def-public","concept":"public","definition":"Callable internally and externally; heavier ABI","category":"visibility"},
+  {"conceptId":"di","definitionId":"def-di","concept":"dependency inversion","definition":"High‑level modules depend on interfaces, not concrete classes","category":"design"}
+]}/>
+
+## Security and testing notes
+
+- **Never trust external contracts blindly**: Validate return values; assume non‑standard ERC20 behavior is possible
+- **CEI pattern**: Checks → Effects → Interactions; minimize state touched before external calls
+- **`try/catch` defensiveness**: Convert external reverts into safe no‑ops or bounded outcomes when appropriate
+- **Use `SafeERC20`**: Guard against tokens that don’t return booleans or that revert on failure
+- **Access control**: Gate privileged functions that change dependencies (e.g., setting a new distributor)
+- **Mocks/stubs in tests**: Swap implementations easily via interfaces; fuzz error paths and partial‑failure scenarios
+- **Interface versioning**: Extend with `IV2` interfaces rather than mutating function signatures
+- **Event schemas**: Keep `indexed` subjects stable; design payloads for analytics and UX
+
+### Review checklist before shipping
+
+- Minimal, documented interface surface (functions, events, errors)
+- All interface functions `external`
+- No state/constructors in interfaces
+- Dependency inversion at boundaries (e.g., `IERC20` for tokens)
+- External calls wrapped or validated; no silent failures
+- Tests cover success and failure of external calls with mocks
+
+## Wrap‑up and next steps
+
+By coding to interfaces, you unlock modularity: your staking core stays stable while modules and tokens swap behind a consistent API. You also learned to guard external calls with `try/catch`, keeping failures contained and user‑friendly.
+
+Next up, we’ll explore events and libraries. Events make your interface observable for analytics and frontends, while libraries package common logic without bloating storage.
+

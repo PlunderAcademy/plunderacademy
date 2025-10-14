@@ -10,4 +10,74 @@ practicalTakeaway: "Secure NFT collections against common attacks and implement 
 
 # NFT Security Considerations and Access Control
 
-*Content coming in Milestone 2*
+## Where this fits
+
+Before launch, lock down privileged functions (minting, reveals, URI changes) and verify safe interactions (transfers to contracts, approvals). Clear roles and negative tests prevent accidents and exploits.
+
+## Core ideas
+
+- Role strategy: simple `Ownable` vs `AccessControl` with `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, `PAUSER_ROLE`
+- Pausable mint flows as circuit breakers
+- Reentrancy: rare in pure ERC721, but relevant if your mint handles value/callbacks
+- Event contracts for admin actions: `BaseURISet`, `Revealed`, `Paused`
+
+## Try it in code
+
+### 1) Access control choice
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract RolesNFT is ERC721, AccessControl {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    constructor() ERC721("Roles", "ROLE") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+    function mint(address to, uint256 id) external onlyRole(MINTER_ROLE) { _safeMint(to, id); }
+}
+```
+
+Takeaway: split responsibilities—admins manage roles, minters mint.
+
+### 2) Pause mint
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+
+contract PausedMint is Pausable {
+    event Minted(address indexed to, uint256 id);
+    function _mintWhenNotPaused(address to, uint256 id) internal whenNotPaused {
+        emit Minted(to, id);
+    }
+}
+```
+
+Takeaway: circuit breakers give you time to respond.
+
+## Practice and reflection
+
+- Draft a role matrix (who can mint, set baseURI, reveal, pause)
+- Identify negative tests for each privileged action
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"s1","text":"It’s safer to use one role for everything","correctAnswer":false,"explanation":"Split duties to reduce blast radius."},
+  {"id":"s2","text":"Pausing mint flows can buy time during incidents","correctAnswer":true,"explanation":"Circuit breakers help contain damage."}
+]}/>
+
+## Pitfalls and tips
+
+- Emit admin events on sensitive changes (URIs, reveals, roles)
+- Test transfers to contracts that do not implement receivers; ensure they revert via safe transfers
+
+## Wrap‑up and next steps
+
+With roles, pause gates, and negative tests, your ERC721 is production‑ready. Next module: advanced features—metadata, royalties, and reveals.
+

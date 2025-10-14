@@ -1,13 +1,123 @@
 ---
-id: "advanced-solidity-foundations-lesson-4"
-slug: "contract-interactions"
-module: "advanced-solidity-foundations"
-number: "2.4"
-title: "Contract-to-Contract Interactions"
-objective: "Learn secure patterns for contract communication and understand the OpenZeppelin ecosystem."
-practicalTakeaway: "Build interconnected contract systems with proper security patterns and standardized interfaces."
+id: contract-interactions
+module: advanced-solidity-foundations
+number: 2.1.4
+title: Contract-to-Contract Interactions (Safely!)
+objective: >-
+  Call external contracts using interfaces with CEI discipline, non‑reentrancy guards, and robust error handling to keep staking flows safe.
+slug: contract-interactions
 ---
 
-# Contract-to-Contract Interactions
+## Set the stage
 
-*Content coming in Milestone 2*
+Your staking system will call out to tokens, reward modules, and routers. Every external call expands your risk surface: reentrancy, partial failures, and surprising token behavior. Safe defaults let you compose powerful flows without leaking control.
+
+## Core ideas
+
+- **Definition — CEI**: Checks → Effects → Interactions. **When to use it**: Always before external calls to limit reentrancy blast radius.
+- **Definition — Reentrancy**: An external call that re‑enters your contract before state settles. **When to use it**: Guard with `nonReentrant` on functions that transfer value or call untrusted code.
+- **Definition — Pull vs push**: Pull patterns let users claim later; push patterns send during the same tx. **When to use it**: Prefer pull for untrusted recipients.
+- **Definition — Low‑level calls**: `call`, `delegatecall`, `staticcall`. **When to use it**: Use high‑level interfaces by default; only drop to low‑level with strict checks.
+- **Definition — Error handling**: Validate returns, use `try/catch` where appropriate, and surface bounded failures to callers.
+
+## Try it in code
+
+### 1) CEI with `SafeERC20` and non‑reentrancy
+
+We accept deposits and withdraws in a guarded way. State updates happen before calling out; `ReentrancyGuard` prevents nested calls from corrupting balances.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract SafeVault is ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable asset;
+    mapping(address => uint256) public balanceOf;
+
+    event Deposited(address indexed account, uint256 amount);
+    event Withdrawn(address indexed account, uint256 amount);
+
+    constructor(IERC20 _asset) { asset = _asset; }
+
+    function deposit(uint256 amount) external nonReentrant {
+        require(amount > 0, "ZERO_AMOUNT");
+        balanceOf[msg.sender] += amount; // Effects
+        asset.safeTransferFrom(msg.sender, address(this), amount); // Interactions
+        emit Deposited(msg.sender, amount);
+    }
+
+    function withdraw(uint256 amount) external nonReentrant {
+        require(amount > 0 && amount <= balanceOf[msg.sender], "INVALID_AMOUNT");
+        balanceOf[msg.sender] -= amount;
+        asset.safeTransfer(msg.sender, amount);
+        emit Withdrawn(msg.sender, amount);
+    }
+}
+```
+
+Takeaway: CEI + `nonReentrant` is the baseline for value‑moving functions.
+
+### 2) Safe external calls with bounded failures
+
+When calling modules via interfaces, handle errors. Here we attempt a reward claim and convert reverts into a safe, observable outcome using `try/catch`.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IRewardModule { function claim(address account) external returns (uint256); }
+
+contract RewardsOrchestrator {
+    event ClaimAttempt(address indexed account);
+    event ClaimSucceeded(address indexed account, uint256 amount);
+    event ClaimFailed(address indexed account, string reason);
+
+    function claim(address account, IRewardModule mod) external returns (uint256) {
+        emit ClaimAttempt(account);
+        try mod.claim(account) returns (uint256 amount) {
+            emit ClaimSucceeded(account, amount);
+            return amount;
+        } catch Error(string memory reason) {
+            emit ClaimFailed(account, reason);
+            return 0;
+        } catch (bytes memory) {
+            emit ClaimFailed(account, "Unknown error");
+            return 0;
+        }
+    }
+}
+```
+
+Takeaway: bounded failures keep the UX predictable and the system observable.
+
+## Practice and reflection
+
+- Convert a push payout into a pull claim; list one security benefit
+- Identify one function in your staking flow that must be `nonReentrant` and why
+- Sketch an interface boundary for a future `IStakingStrategy` with one `execute(bytes calldata)` function
+
+{/* True/False (learning mode can include correctAnswer + explanation) */}
+<TrueFalse statements={[
+  {"id":"s1","text":"CEI means call external first, then update state","correctAnswer":false,"explanation":"Always Checks → Effects → Interactions."},
+  {"id":"s2","text":"Pull payments reduce blast radius when recipients are untrusted","correctAnswer":true,"explanation":"Users claim in a separate tx; less risk."},
+  {"id":"s3","text":"Use low‑level calls by default for flexibility","correctAnswer":false,"explanation":"Prefer typed interfaces and safe helpers."}
+]}/>
+
+## Security notes
+
+- Validate ERC20 returns and use `SafeERC20`
+- Prefer pull over push when sending value to unknown recipients
+- Use `ReentrancyGuard` on value‑moving entry points
+- Avoid `delegatecall` unless you fully control target code and storage layout
+- Log attempts and outcomes for off‑chain monitoring
+
+## Wrap‑up and next steps
+
+You can compose safe contract collaborations by following CEI, guarding reentrancy, and trapping failures. Next, we’ll survey the OpenZeppelin ecosystem so you can choose the right building blocks with confidence.
+

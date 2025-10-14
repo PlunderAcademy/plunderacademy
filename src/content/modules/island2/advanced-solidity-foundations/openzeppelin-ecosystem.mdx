@@ -1,0 +1,67 @@
+---
+id: openzeppelin-ecosystem
+module: advanced-solidity-foundations
+number: 2.1.5
+title: OpenZeppelin Ecosystem Deep Dive
+objective: >-
+  Choose, configure, and safely extend OpenZeppelin primitives (ERC20, Ownable, AccessControl, Pausable, ReentrancyGuard) to accelerate secure staking builds.
+slug: openzeppelin-ecosystem
+---
+
+## Where this fits
+
+OpenZeppelin gives you hardened building blocks used across the industry. Picking the right primitives—and extending them safely—lets you move faster without reinventing security. For staking, this means consistent permissions, pause controls, and value‑moving safety.
+
+## Core ideas
+
+- **ERC20 core vs extensions**: Start minimal; add only what your product needs (burnable, permit, capped). Extra features increase attack surface
+- **Ownable vs AccessControl**: Single owner for small surfaces; roles (`DEFAULT_ADMIN_ROLE`, `PAUSER_ROLE`) for multi‑team protocols
+- **Pausable**: Circuit breaker for emergencies; pair with clear runbooks
+- **ReentrancyGuard**: Guard value‑moving calls; combine with CEI
+- **Upgrade readiness (high level)**: If planning proxy upgrades later, document storage layout and event schemas now
+
+## Hands‑on patterns
+
+### 1) Choosing between Ownable and AccessControl
+
+Use `Ownable` when a single trusted admin is enough. Switch to `AccessControl` when responsibilities split across teams (ops, treasury, rewards). Document who holds which role and how rotation happens.
+
+### 2) Pausing responsibly
+
+Keep the pause surface tight (e.g., deposit/withdraw functions). Announce pauses with events carrying `indexed` subjects for monitoring.
+
+### 3) SafeERC20 by default
+
+Prefer `SafeERC20` wrappers for transfers and approvals. Avoid infinite approvals to third parties; reset allowances when not needed.
+
+### 4) Extending with small overrides
+
+Override designated hooks (e.g., ERC20 `_update`) to compose cross‑cutting rules like pause gates. Keep overrides short; call `super` unless intentionally blocking behavior.
+
+## Practice and reflection
+
+- Map your staking roles to either `Ownable` or `AccessControl` and justify the choice in one sentence
+- Identify where a pause gate belongs in your staking flow; state which event you’ll emit
+- List two reasons to prefer `SafeERC20` over raw `transfer`/`transferFrom`
+
+{/* Timeline Builder */}
+<TimelineBuilder events={[
+  {"id":"evt-1","text":"Choose primitives (ERC20 + guards)","correctPosition":0},
+  {"id":"evt-2","text":"Define roles & responsibilities","correctPosition":1},
+  {"id":"evt-3","text":"Design event schemas for monitoring","correctPosition":2},
+  {"id":"evt-4","text":"Implement small overrides & tests","correctPosition":3}
+]}/>
+
+## Security checklist
+
+- Minimal extensions only; remove dead features
+- Document role assignments and rotation plans
+- Use CEI + `nonReentrant` on value‑moving entry points
+- Prefer `SafeERC20`; validate returns
+- Emit `indexed` subjects for operational observability
+
+## Wrap‑up
+
+With the right OpenZeppelin primitives and disciplined extensions, you get robust permissions, safe value flows, and operational controls—exactly what staking protocols need before touching mainnet.
+
+

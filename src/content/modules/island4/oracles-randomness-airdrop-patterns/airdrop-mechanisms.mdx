@@ -10,4 +10,155 @@ practicalTakeaway: "Implement scalable token distribution systems that handle th
 
 # Efficient Airdrop and Distribution Mechanisms
 
-*Content coming in Milestone 2*
+## Where this fits
+
+Distributing tokens to large recipient sets must be cheap, fair, and verifiable. Naïve loops revert or run out of gas. Production systems use off‑chain tree commitments (Merkle/Sparse Merkle) with on-chain verification, plus batching where appropriate.
+
+## Core ideas
+
+- Merkle root: publish a single commitment to a list of `(account, amount)` pairs
+- Claim pattern: users prove membership via Merkle proofs and pull their tokens
+- Replay protection: track claimed leaves with a bitmap or a mapping
+- Batching: for trusted multisend scenarios, use tight loops and gas‑aware chunking
+- Auditing: emit consistent events; pin the manifest and the Merkle root to IPFS
+
+## Code in practice
+
+### 1) Merkle airdrop with bitmap replay protection
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+library Merkle {
+  function verify(bytes32[] memory proof, bytes32 root, bytes32 leaf) internal pure returns (bool ok) {
+    bytes32 computed = leaf;
+    for (uint256 i = 0; i < proof.length; i++) {
+      bytes32 p = proof[i];
+      computed = computed <= p ? keccak256(abi.encodePacked(computed, p)) : keccak256(abi.encodePacked(p, computed));
+    }
+    return computed == root;
+  }
+}
+
+contract MerkleAirdrop {
+  using SafeERC20 for IERC20;
+
+  event Claimed(uint256 indexed index, address indexed account, uint256 amount);
+
+  IERC20 public immutable token;
+  bytes32 public immutable merkleRoot;
+
+  // Bitmap to track claims: claimedWord[index / 256] bit (index % 256)
+  mapping(uint256 => uint256) private claimedWord;
+
+  constructor(IERC20 _token, bytes32 _root) {
+    token = _token; merkleRoot = _root;
+  }
+
+  function isClaimed(uint256 index) public view returns (bool) {
+    uint256 word = claimedWord[index >> 8];
+    uint256 mask = 1 << (index & 255);
+    return word & mask != 0;
+  }
+
+  function _setClaimed(uint256 index) private {
+    uint256 key = index >> 8;
+    uint256 mask = 1 << (index & 255);
+    claimedWord[key] |= mask;
+  }
+
+  /// @notice Claim with the exact leaf preimage: keccak256(abi.encodePacked(index, account, amount))
+  function claim(uint256 index, address account, uint256 amount, bytes32[] calldata proof) external {
+    require(!isClaimed(index), "CLAIMED");
+    bytes32 leaf = keccak256(abi.encodePacked(index, account, amount));
+    require(Merkle.verify(proof, merkleRoot, leaf), "BAD_PROOF");
+    _setClaimed(index);
+    token.safeTransfer(account, amount);
+    emit Claimed(index, account, amount);
+  }
+}
+```
+
+Takeaway: publish one root on-chain and let users pull with proofs; use a bitmap to minimize storage.
+
+### 2) Gas‑aware multisend batching (trusted sender)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+contract BatchSender {
+  using SafeERC20 for IERC20;
+  event Batch(uint256 count, uint256 total);
+
+  function sendMany(IERC20 token, address[] calldata to, uint256[] calldata amounts) external {
+    require(to.length == amounts.length, "LEN");
+    uint256 total;
+    for (uint256 i = 0; i < to.length; i++) {
+      total += amounts[i];
+    }
+    token.safeTransferFrom(msg.sender, address(this), total);
+    for (uint256 i = 0; i < to.length; i++) {
+      token.safeTransfer(to[i], amounts[i]);
+    }
+    emit Batch(to.length, total);
+  }
+}
+```
+
+Takeaway: for trusted ops or internal admin flows, batch with careful bounds and consistent events. Prefer Merkle claims for permissionless distributions.
+
+### 3) Off‑chain manifest and reproducibility
+
+```text
+manifest.json
+{
+  "token": "0x...",
+  "chainId": 32769,
+  "snapshotBlock": 12345678,
+  "recipients": [ { "index": 0, "account": "0xabc...", "amount": "1000000000000000000" }, ... ],
+  "merkleRoot": "0x...",
+  "ipfsCid": "bafy..."
+}
+```
+
+Takeaway: pin the recipient list and computed root to IPFS; store the CID in your announcement to enable third‑party verification.
+
+## Practice and reflection
+
+- Decide between pull claims (Merkle) and push batches (trusted) for your use case
+- Sketch your claim preimage; include an `index` to enable compact bitmaps
+- Choose where you’ll publish and pin the manifest and Merkle root (IPFS, website, audit notes)
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"airdrop1","text":"Merkle proofs let users claim without uploading the entire list on-chain","correctAnswer":true,"explanation":"The root commits to the full set; proofs verify membership cheaply."},
+  {"id":"airdrop2","text":"Batch sends are preferred for permissionless public airdrops","correctAnswer":false,"explanation":"Batching is for trusted flows; public airdrops favor Merkle claims."}
+]}/>
+
+{/* Timeline Builder: airdrop lifecycle */}
+<TimelineBuilder events={[
+  {"id":"a1","text":"Prepare recipient list and compute Merkle root"},
+  {"id":"a2","text":"Publish manifest + root (IPFS)"},
+  {"id":"a3","text":"Deploy airdrop with root and fund tokens"},
+  {"id":"a4","text":"Users submit proofs to claim"},
+  {"id":"a5","text":"Audit claims and finalize unclaimed policy"}
+]}
+/>
+
+## Security notes
+
+- Validate proof preimage and ordering; document the exact hashing schema
+- Use `SafeERC20`; beware non‑standard tokens and fee‑on‑transfer behavior
+- Consider pausing or ownership transfer after airdrop to lock configuration
+- Emit events with index/account/amount to aid indexers
+
+## Wrap‑up
+
+Merkle claims minimize on-chain costs and scale to large sets, while batching fits trusted ops. Ship with a reproducible manifest, clear events, and simple, auditable logic.

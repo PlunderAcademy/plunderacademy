@@ -10,4 +10,106 @@ practicalTakeaway: "Create NFT collections with rich, decentralized metadata tha
 
 # Metadata Standards and IPFS Integration
 
-*Content coming in Milestone 2*
+## Where this fits
+
+Metadata is the “face” of your NFT: name, image, traits, and external links. Marketplaces and wallets read your `tokenURI` and expect a predictable JSON schema. In production, you’ll host JSON + media on decentralized storage like IPFS and reveal them later without changing IDs.
+
+## Design principles
+
+- Stable `tokenURI`: same path after mint; no per‑user URLs
+- JSON schema: `name`, `description`, `image`, `attributes` (trait array)
+- Decentralized storage: pin to IPFS; avoid hard‑coding HTTP gateways
+- Reveal strategy: hidden placeholder → switch to a base CID (+ tokenId)
+- Change signaling: consider ERC‑4906 metadata update events
+
+## Snippets and examples
+
+### 1) BaseURI + reveal placeholder
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MetadataNFT is ERC721, Ownable {
+    string private _base;
+    string private _hidden;
+    bool public revealed;
+
+    event BaseURISet(string newBase);
+    event Revealed(string baseCid);
+
+    constructor(address owner_, string memory hiddenURI) ERC721("Meta", "META") Ownable(owner_) {
+        _hidden = hiddenURI; // e.g., ipfs://placeholder-cid/hidden.json
+    }
+
+    function _baseURI() internal view override returns (string memory) { return _base; }
+    function setBaseURI(string calldata newBase) external onlyOwner { _base = newBase; emit BaseURISet(newBase); }
+    function reveal(string calldata baseCid) external onlyOwner { _base = string.concat("ipfs://", baseCid, "/"); revealed = true; emit Revealed(baseCid); }
+
+    function tokenURI(uint256 id) public view override returns (string memory) {
+        if (!revealed) return _hidden;
+        return string.concat(_base, _toString(id), ".json");
+    }
+}
+```
+
+Takeaway: place hidden JSON on IPFS, then flip to a base CID + tokenId scheme on reveal.
+
+### 2) Marketplace‑friendly JSON
+
+```json
+{
+  "name": "Jungle NFT #123",
+  "description": "Explorer from the Jungle collection",
+  "image": "ipfs://bafy.../123.png",
+  "external_url": "https://example.com/jungle/123",
+  "attributes": [
+    { "trait_type": "Background", "value": "Forest" },
+    { "trait_type": "Rarity", "value": "Epic" },
+    { "trait_type": "Power", "value": 42 }
+  ]
+}
+```
+
+Takeaway: keep keys conventional and traits as an array of objects; prefer IPFS URIs for media.
+
+### 3) Signaling metadata changes (ERC‑4906)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IERC4906 {
+    event MetadataUpdate(uint256 _tokenId);
+    event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
+}
+```
+
+Takeaway: emitting these events after reveal or refresh helps indexers re‑fetch metadata.
+
+## Practice and reflection
+
+- Draft your reveal plan: hidden placeholder path + final base CID format
+- List the trait keys you’ll ship in `attributes` and which dashboards will consume them
+
+{/* Concept Matching */}
+<ConceptMatching pairs={[
+  {"conceptId":"base","definitionId":"def-base","concept":"baseURI","definition":"Common prefix for token metadata paths","category":"meta"},
+  {"conceptId":"token","definitionId":"def-token","concept":"tokenURI","definition":"Per‑token metadata URL read by marketplaces","category":"meta"},
+  {"conceptId":"cid","definitionId":"def-cid","concept":"IPFS CID","definition":"Content identifier for pinned JSON/media","category":"storage"},
+  {"conceptId":"attr","definitionId":"def-attr","concept":"attributes[]","definition":"Array of trait objects for analytics/filters","category":"meta"}
+]}/>
+
+## Pitfalls and tips
+
+- Don’t rely on a single HTTP gateway; instruct consumers to resolve IPFS natively
+- Keep `tokenURI` deterministic; avoid per‑viewer logic
+- Avoid mutable off‑chain URLs that break provenance expectations
+
+## Wrap‑up
+
+You’ve set a clean IPFS‑backed metadata path and schema. Next: reveal mechanics and royalties (ERC‑2981) for production collections.
+

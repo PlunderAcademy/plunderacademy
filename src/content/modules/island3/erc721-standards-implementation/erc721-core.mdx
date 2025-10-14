@@ -10,4 +10,104 @@ practicalTakeaway: "Build production-ready NFT contracts with proper access cont
 
 # ERC721 Core Implementation
 
-*Content coming in Milestone 2*
+## Set the stage
+
+ERC721 defines unique, non‑fungible tokens with transfers, approvals, and safe receipts. In practice, you will compose OpenZeppelin building blocks to get security defaults and predictable behavior that marketplaces expect.
+
+We will keep the core minimal: minting, safe transfers, approvals, and a clean `baseURI` for IPFS metadata.
+
+## Core ideas
+
+- Tokens are identified by `tokenId`; ownership is exclusive
+- `safeTransferFrom` protects recipients via `onERC721Received`
+- Approvals: single‑token `approve` vs global `setApprovalForAll`
+- Events (Transfer/Approval/ApprovalForAll) are part of your public contract with clients
+
+## Code in practice
+
+### Minimal ERC721 with owner‑gated mint and baseURI
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract JungleNFT is ERC721, Ownable {
+    uint256 private _nextId;
+
+    constructor(address owner_) ERC721("JungleNFT", "JNFT") Ownable(owner_) {}
+
+    function _baseURI() internal pure override returns (string memory) {
+        return "ipfs://base-cid/";
+    }
+
+    function mint(address to) external onlyOwner {
+        uint256 id = _nextId++;
+        _safeMint(to, id);
+    }
+}
+```
+
+Takeaway: use `_safeMint` and a `baseURI` to make metadata predictable for marketplaces.
+
+### Approvals: per‑token vs operator
+
+```solidity
+// Excerpts (conceptual)
+// Per‑token approval lets one address move a single token
+// Operator approval authorizes all tokens of the owner
+
+// approve(spender, tokenId)
+// setApprovalForAll(operator, true)
+```
+
+Takeaway: prefer operator approvals for marketplaces; use per‑token approvals for targeted delegation.
+
+### Receiving NFTs safely
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+
+contract NFTVault is IERC721Receiver {
+    event Received(address operator, address from, uint256 id, bytes data);
+
+    function onERC721Received(address operator, address from, uint256 id, bytes calldata data)
+        external
+        override
+        returns (bytes4)
+    {
+        emit Received(operator, from, id, data);
+        return IERC721Receiver.onERC721Received.selector;
+    }
+}
+```
+
+Takeaway: `safeTransferFrom` guarantees either success or a revert—no lost NFTs to non‑receiver contracts.
+
+## Practice and reflection
+
+- Sketch which flows in your dApp need operator approvals vs per‑token approvals
+- Decide your `baseURI` strategy: single base + tokenId JSON on IPFS, or on‑chain tokenURI for special items
+
+{/* Concept Matching */}
+<ConceptMatching pairs={[
+  {"conceptId":"safe","definitionId":"def-safe","concept":"safeTransferFrom","definition":"Checks receiver contracts implement onERC721Received","category":"erc721"},
+  {"conceptId":"approve","definitionId":"def-approve","concept":"approve","definition":"Authorize a single address to move one tokenId","category":"erc721"},
+  {"conceptId":"opall","definitionId":"def-opall","concept":"setApprovalForAll","definition":"Authorize an operator for all your tokens","category":"erc721"}
+]}/>
+
+## Pitfalls and tips
+
+- Avoid `transferFrom` to contracts unless you know they implement the receiver interface; prefer `safeTransferFrom`
+- Emit events consistently; index subjects consumers will query (owner, operator)
+- Keep metadata stable; changing URIs after reveal confuses caches and marketplaces
+
+## Wrap‑up and next steps
+
+You now have a minimal, safe ERC721 core. Next: make minting cheaper and more ergonomic while keeping event contracts intact.
+

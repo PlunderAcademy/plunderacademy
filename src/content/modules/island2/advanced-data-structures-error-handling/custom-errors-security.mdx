@@ -1,13 +1,107 @@
 ---
-id: "advanced-data-structures-lesson-3"
-slug: "custom-errors-security"
-module: "advanced-data-structures-error-handling"
-number: "2.7"
-title: "Custom Errors and Security Patterns"
-objective: "Implement efficient error handling and learn essential security patterns like reentrancy guards."
-practicalTakeaway: "Build secure contracts with comprehensive error handling and attack prevention mechanisms."
+id: custom-errors-security
+module: advanced-data-structures-error-handling
+number: 2.2.3
+title: Custom Errors and Security Patterns
+objective: >-
+  Use custom errors, require/assert correctly, and standard security patterns (CEI, non‑reentrancy, access control) to build fail‑safe staking flows.
+slug: custom-errors-security
 ---
 
-# Custom Errors and Security Patterns
+## Where this fits
 
-*Content coming in Milestone 2*
+Great data models still fail if error handling is vague or costly. Custom errors are cheaper than strings and make failure modes explicit. Combined with well‑placed guards, your staking contract becomes predictable and auditable.
+
+## Core ideas
+
+- **Custom error**: `error Name(args); revert Name(args);` saves gas vs strings and is machine‑parsable.
+- **`require` vs `revert`**: Use `require(cond, ...)` for preconditions; use `revert Error()` for structured failures.
+- **`assert`**: Only for invariants that must never be false; signals a bug if tripped.
+- **Access control**: Gate privileged actions via `Ownable`/`AccessControl`.
+- **Defensive posture**: Assume external calls can fail; design bounded, observable failure paths.
+
+## Try it in code
+
+### 1) Replace string reverts with custom errors
+
+Structured errors make failures cheaper and easier to handle in clients.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+error ZeroAmount();
+error InsufficientBalance(uint256 requested, uint256 available);
+
+contract ErrorfulVault {
+    mapping(address => uint256) public balanceOf;
+
+    function deposit() external payable {
+        if (msg.value == 0) revert ZeroAmount();
+        balanceOf[msg.sender] += msg.value;
+    }
+
+    function withdraw(uint256 amount) external {
+        uint256 bal = balanceOf[msg.sender];
+        if (amount == 0) revert ZeroAmount();
+        if (amount > bal) revert InsufficientBalance(amount, bal);
+        balanceOf[msg.sender] = bal - amount;
+        (bool ok, ) = msg.sender.call{value: amount}("");
+        require(ok, "ETH_TRANSFER_FAIL");
+    }
+}
+```
+
+Takeaway: custom errors reduce gas and clarify failure semantics; preserve explicit checks for external transfer success.
+
+### 2) Pair access control with clear error surfaces
+
+Use `Ownable` or `AccessControl` for privileged actions. Emit events when roles change; document runbooks for rotations.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+error NotOwner();
+
+contract Guarded is Ownable {
+    event ParamUpdated(uint256 oldVal, uint256 newVal);
+    uint256 public param;
+
+    constructor(address owner_) Ownable(owner_) {}
+
+    function setParam(uint256 v) external {
+        if (msg.sender != owner()) revert NotOwner();
+        emit ParamUpdated(param, v);
+        param = v;
+    }
+}
+```
+
+Takeaway: centralized authority + explicit errors = predictable operations.
+
+## Practice and reflection
+
+- Convert three string `require` messages in your codebase to custom errors
+- Draft a short table mapping each privileged action to the role that can perform it
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"e1","text":"Custom errors cost more gas than string reverts","correctAnswer":false,"explanation":"They are cheaper and ABI‑friendly."},
+  {"id":"e2","text":"Use assert for user input validation","correctAnswer":false,"explanation":"Assert is for invariants, not user input."},
+  {"id":"e3","text":"Access control events help operations and audits","correctAnswer":true,"explanation":"Changes become traceable for off‑chain monitors."}
+]}/>
+
+## Pitfalls and tips
+
+- Combine CEI and non‑reentrancy with explicit error handling
+- Avoid catching and discarding errors silently; log intent where helpful
+- Prefer `SafeERC20` and explicit return checks for token ops
+- Document failure semantics for integrators (NatSpec)
+
+## Wrap‑up
+
+Explicit, cheap errors and well‑placed guards turn surprising edge cases into controlled outcomes. Your staking flows become easier to integrate, monitor, and audit.
+

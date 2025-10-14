@@ -1,13 +1,79 @@
 ---
-id: "staking-practical-lesson-1"
-slug: "deployment-setup"
-module: "staking-contract-practical"
-number: "2.13"
-title: "Staking Contract Deployment and Setup"
-objective: "Deploy a complete staking contract with proper initialization and configuration."
-practicalTakeaway: "Launch a production-ready staking contract with comprehensive testing and documentation."
+id: deployment-setup
+module: staking-contract-practical
+number: 2.5.1
+title: Staking Contract Deployment and Setup
+objective: >-
+  Wire together core, policy, and distributor; initialize roles and pause controls; and document assumptions for safe rollout.
+slug: deployment-setup
 ---
 
-# Staking Contract Deployment and Setup
+## Set the stage
 
-*Content coming in Milestone 2*
+You’ve designed the modules; now you’ll assemble them with explicit initialization and observability. Clear deploy steps and events reduce production surprises and speed incident response.
+
+## Core ideas
+
+- **Deterministic init**: Set immutables/constructor params; emit events for critical addresses
+- **Role assignment**: Assign owner/roles with rotation plan
+- **Pause controls**: Verify circuit breakers and runbooks
+- **Config registry**: Centralize tunables (e.g., APR) behind access control
+
+## Hands‑on
+
+### 1) Initialization sequence sketch
+
+List dependencies and set them explicitly; emit events for traceability.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IRewardPolicy { }
+interface IRewardDistributor { }
+
+contract StakingDeployer {
+    event Deployed(address core, address policy, address distributor);
+    function deploy(address policy, address distributor) external returns (address core) {
+        // Pseudocode; replace with your actual constructors
+        address stakingCore = address(0xC0RE);
+        emit Deployed(stakingCore, policy, distributor);
+        return stakingCore;
+    }
+}
+```
+
+Takeaway: be explicit about addresses and surface them via events for monitoring.
+
+### 2) Post‑deploy checks
+
+Verify roles, pause state, and invariants immediately after deployment.
+
+```ts
+// scripts/postDeployChecks.ts (excerpt)
+import { expect } from "chai";
+
+async function check(core: any, policy: any, distributor: any, owner: string) {
+  expect(await core.owner()).to.equal(owner);
+  expect(await core.paused()).to.equal(false);
+}
+```
+
+Takeaway: encode the checklist to prevent human error.
+
+## Practice and reflection
+
+- Draft a checklist of addresses, roles, and events to verify post‑deploy
+- Identify one tunable you’ll gate with access control and log with an event
+
+{/* Concept Matching */}
+<ConceptMatching pairs={[
+  {"conceptId":"init","definitionId":"def-init","concept":"deterministic init","definition":"Constructor/immutable parameters and events for traceability","category":"practical"},
+  {"conceptId":"roles","definitionId":"def-roles","concept":"role assignment","definition":"Define owners and rotation plan","category":"practical"},
+  {"conceptId":"pause","definitionId":"def-pause","concept":"pause controls","definition":"Enable circuit breakers and verify runbooks","category":"practical"}
+]}/>
+
+## Wrap‑up
+
+Deployment is about explicit configuration and traceability. With clear roles, pause controls, and events, you set yourself up for safe operations and fast incident response.
+

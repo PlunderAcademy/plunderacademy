@@ -10,4 +10,92 @@ practicalTakeaway: "Design token economic models and implement basic liquidity m
 
 # Token Economics and Liquidity Concepts
 
-*Content coming in Milestone 2*
+## Set the stage
+
+Before building swaps, you need a clear mental model of how liquidity, pricing, and slippage work. This lesson connects token supply dynamics (mint/burn, emissions), pool mechanics (constant product), and user safety (minimum out, fees) so your later swap code has the right guardrails.
+
+## Core ideas
+
+- Liquidity pools: two‑asset reserves enable permissionless trades; price moves with reserve ratios
+- Constant product (x·y=k): price impact grows with trade size; more liquidity reduces slippage
+- Fees: a small fee on each trade increases reserves; LPs capture value over time
+- Slippage protection: users set a minimum output to avoid bad prices during MEV/volatility
+- Events: pricing and liquidity changes must be observable for analytics and UIs
+
+## Code in practice
+
+### 1) Constant product quote helper (no state)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+library ConstantProduct {
+    function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut, uint256 feeBps)
+        internal
+        pure
+        returns (uint256 amountOut)
+    {
+        // feeBps in parts per 10_000 (e.g., 30 = 0.30%)
+        uint256 amountInWithFee = amountIn * (10_000 - feeBps);
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = reserveIn * 10_000 + amountInWithFee;
+        return numerator / denominator;
+    }
+}
+```
+
+Takeaway: a pure helper clarifies price/impact math and keeps swap functions readable.
+
+### 2) Liquidity add/remove events for observability
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract LiquidityEvents {
+    event LiquidityAdded(address indexed provider, uint256 amountA, uint256 amountB, uint256 lpMinted);
+    event LiquidityRemoved(address indexed provider, uint256 amountA, uint256 amountB, uint256 lpBurned);
+}
+```
+
+Takeaway: index the provider address; UIs and subgraphs depend on stable event schemas.
+
+### 3) Safety knobs users expect (minOut)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+library Slippage {
+    error InsufficientOutput(uint256 want, uint256 got);
+    function checkMinOut(uint256 amountOut, uint256 minOut) internal pure {
+        if (amountOut < minOut) revert InsufficientOutput(minOut, amountOut);
+    }
+}
+```
+
+Takeaway: never execute a trade that returns less than the caller’s `minOut` threshold.
+
+## Practice and reflection
+
+- For a pool with 100 A and 100 B and a 0.3% fee, what is `getAmountOut(10, 100, 100)`? How does `minOut` change your UI?
+- Name two analytics you would derive from events to monitor pool health
+
+{/* Concept Matching */}
+<ConceptMatching pairs={[
+  {"conceptId":"cpmm","definitionId":"def-cpmm","concept":"constant product","definition":"x·y=k pricing; impact grows with trade size","category":"pricing"},
+  {"conceptId":"minout","definitionId":"def-minout","concept":"minOut","definition":"Caller’s minimum acceptable output to cap slippage","category":"safety"},
+  {"conceptId":"fee","definitionId":"def-fee","concept":"fee (bps)","definition":"Per‑trade fee accruing to liquidity providers","category":"incentives"}
+]}/>
+
+## Pitfalls and tips
+
+- Do not compute quotes off stale reserves; update after each trade
+- Avoid unbounded loops for accounting; keep operations O(1)
+- Expose fee bps clearly; don’t hide price impact from users
+
+## Wrap‑up and next steps
+
+You can explain price impact, fees, and safety thresholds. Next, we’ll implement a simple, interface‑based swap with CEI and SafeERC20.
+

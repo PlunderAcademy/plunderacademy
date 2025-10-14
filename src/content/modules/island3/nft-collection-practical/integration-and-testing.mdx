@@ -1,0 +1,73 @@
+---
+id: integration-and-testing
+module: nft-collection-practical
+number: 3.8
+title: Integration and Testing
+objective: >-
+  Validate the full NFT flow: mint phases, safe transfers, reveal, and royalties—with events and negative tests for real‑world robustness.
+slug: integration-and-testing
+---
+
+## Where this fits
+
+This is the last mile: end‑to‑end tests that exercise launch realities. You’ll assert event contracts, failure modes, and marketplace‑facing behaviors (safe transfers, royalties). Keep specs fast, readable, and deterministic.
+
+## Design principles
+
+- Use fixtures; avoid order coupling between tests
+- Assert events and reverts explicitly; treat them as public contracts
+- Prefer interface interactions; avoid brittle concrete type imports where possible
+
+## Code in practice
+
+### 1) End‑to‑end: presale → public → reveal
+
+```ts
+// test/Collection.integration.ts (excerpt)
+import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { expect } from "chai";
+
+describe("Collection", () => {
+  it("presale then public then reveal", async () => {
+    const { collection, admin, user } = await loadFixture(deployCollectionFixture);
+    await expect(collection.setPhase(1)).to.emit(collection, "PhaseChanged");
+    await collection.connect(user).mintPresale(1, [], { value: 0n });
+    await expect(collection.setPhase(2)).to.emit(collection, "PhaseChanged");
+    await collection.connect(user).mintPublic(1, { value: 0n });
+    await expect(collection.reveal("bafy..."))
+      .to.emit(collection, "Revealed");
+  });
+});
+```
+
+Takeaway: exercise happy path end‑to‑end with event assertions.
+
+### 2) Royalties smoke test
+
+```ts
+// test/Royalties.spec.ts (excerpt)
+it("returns default royalty info", async () => {
+  const salePrice = 1_000_000n;
+  const [receiver, amount] = await collection.royaltyInfo(0, salePrice);
+  expect(amount).to.be.greaterThan(0n);
+  expect(receiver).to.properAddress; // custom chai matcher in your setup
+});
+```
+
+Takeaway: assert the interface returns expected shapes; marketplace enforcement varies.
+
+## Practice and reflection
+
+- Add a negative test: unauthorized URI change or out‑of‑phase mint
+- Validate `safeTransferFrom` to a contract without the receiver interface reverts
+
+{/* Practice and reflection */}
+<PracticeNote>
+Focus on readability: fixtures, helpers, and table‑driven tests beat monolithic specs.
+</PracticeNote>
+
+## Wrap‑up
+
+Your collection is launch‑ready: tested phases, safe transfers, reveal, and royalties. Ship with a clear incident plan and monitoring for phase/reveal events.
+
+

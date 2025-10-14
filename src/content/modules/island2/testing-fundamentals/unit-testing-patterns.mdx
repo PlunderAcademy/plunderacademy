@@ -1,13 +1,91 @@
 ---
-id: "testing-fundamentals-lesson-2"
-slug: "unit-testing-patterns"
-module: "testing-fundamentals"
-number: "2.9"
-title: "Unit Testing Patterns and Best Practices"
-objective: "Master unit testing methodologies and implement test-driven development for smart contracts."
-practicalTakeaway: "Write comprehensive test suites that ensure contract reliability and catch edge cases."
+id: unit-testing-patterns
+module: testing-fundamentals
+number: 2.3.2
+title: Unit Testing Patterns and Best Practices
+objective: >-
+  Write small, focused specs with clear AAA structure, precise assertions for events/reverts, and table‑driven edge cases for staking logic.
+slug: unit-testing-patterns
 ---
 
-# Unit Testing Patterns and Best Practices
+## Big picture
 
-*Content coming in Milestone 2*
+Readable tests accelerate reviews and catch regressions early. Staking modules have branching rules (tiers, times, balances); table‑driven tests and helpers keep coverage high without copy‑paste.
+
+## Design principles
+
+- **AAA**: Separate Arrange/Act/Assert so intent is obvious
+- **Table‑driven tests**: Loop over scenarios to cover edge cases succinctly
+- **Custom matchers**: Reuse assertions for events and errors
+- **Deterministic time**: Control timestamps to avoid flakiness
+- **Mocks/stubs**: Replace external dependencies with fakes via interfaces
+
+## Code in practice
+
+### 1) Table‑driven tests for reward math
+
+Drive a set of cases through the same function to validate boundaries.
+
+```ts
+// test/RewardMath.spec.ts (excerpt)
+import { expect } from "chai";
+
+function previewReward(amount: bigint, secondsStaked: bigint, aprBps: bigint) {
+  const YEAR = 365n * 24n * 60n * 60n;
+  return (amount * aprBps * secondsStaked) / YEAR / 10_000n;
+}
+
+describe("previewReward", () => {
+  const cases = [
+    { amount: 0n, secs: 0n, apr: 1000n, want: 0n },
+    { amount: 1_000n, secs: 31_536_000n, apr: 1000n, want: 100n },
+    { amount: 1_000_000n, secs: 1n, apr: 500n, want: 0n }
+  ];
+
+  for (const c of cases) {
+    it(`amount=${c.amount} secs=${c.secs} apr=${c.apr}`, () => {
+      expect(previewReward(c.amount, c.secs, c.apr)).to.equal(c.want);
+    });
+  }
+});
+```
+
+Takeaway: tables compress many assertions into a compact, readable loop.
+
+### 2) Custom helpers for events and errors
+
+Extract common assertions so tests read like prose.
+
+```ts
+// test/helpers/assert.ts (excerpt)
+import { expect } from "chai";
+
+export async function expectDeposit(tx: any, contract: any, user: string, amt: bigint) {
+  await expect(tx).to.emit(contract, "Deposited").withArgs(user, amt);
+}
+```
+
+Takeaway: helpers reduce boilerplate and improve signal in specs.
+
+## Practice and reflection
+
+- Convert a verbose series of assertions into a table‑driven loop
+- Extract one assertion helper for a frequently‑emitted event
+
+{/* Concept Matching */}
+<ConceptMatching pairs={[
+  {"conceptId":"aaa","definitionId":"def-aaa","concept":"AAA","definition":"Arrange–Act–Assert structure for readable tests","category":"testing"},
+  {"conceptId":"tdt","definitionId":"def-tdt","concept":"table‑driven tests","definition":"Loop scenarios to cover boundaries succinctly","category":"testing"},
+  {"conceptId":"mock","definitionId":"def-mock","concept":"mock/stub","definition":"Replace external dependency to isolate the unit","category":"testing"}
+]}/>
+
+## Pitfalls and tips
+
+- Don’t assert too much in one test; split into clear behaviors
+- Name tests by behavior, not implementation detail
+- Avoid global mutable state in helpers
+
+## Wrap‑up and next steps
+
+You can now write compact, expressive unit tests that scale with feature complexity. Next, we’ll focus on security‑oriented tests that target real‑world failure modes.
+

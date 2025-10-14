@@ -1,13 +1,133 @@
 ---
-id: "advanced-data-structures-lesson-1"
-slug: "complex-mappings-structs"
-module: "advanced-data-structures-error-handling"
-number: "2.5"
-title: "Complex Mappings, Structs, and Arrays"
-objective: "Master advanced data structures and learn optimal storage patterns for complex data relationships."
-practicalTakeaway: "Design efficient data structures that minimize gas costs while maintaining functionality."
+id: complex-mappings-structs
+module: advanced-data-structures-error-handling
+number: 2.2.1
+title: Complex Mappings, Structs, and Arrays
+objective: >-
+  Design efficient, iterable-friendly data models for staking using nested mappings, packed structs, and safe array patterns to reduce gas and avoid footguns.
+slug: complex-mappings-structs
 ---
 
-# Complex Mappings, Structs, and Arrays
+## Set the stage
 
-*Content coming in Milestone 2*
+Your staking system’s correctness and cost are dominated by data modeling. The right mapping and struct shapes make accruals, claims, and admin operations cheap and clear. Bad shapes lead to unbounded loops, brittle upgrades, and surprising storage bills.
+
+We’ll build mental models for nested mappings, struct packing, and arrays so the staking core stays fast, auditable, and evolution‑ready.
+
+## Mental model
+
+- **Mapping**: Key→value lookup with default‑zero semantics. Not iterable on‑chain. **Use it** for sparse sets and fast membership checks
+- **Nested mapping**: `mapping(A => mapping(B => V))` for composite keys. **Use it** when both keys are naturally separate (e.g., `user => poolId => Position`)
+- **Struct**: Group related fields; pack small types to share a 32‑byte slot. **Use it** to co‑locate values updated together
+- **Array**: Ordered collection. **Use it** when iteration bounds are enforced or the array remains small; avoid unbounded loops on user‑provided data
+- **Composite key hash**: `bytes32 key = keccak256(abi.encodePacked(...))` to flatten multiple keys. **Use it** when nested mappings become awkward
+- **Event over storage**: Prefer emitting historical facts instead of storing them when not needed for on‑chain logic
+
+## Hands‑on
+
+### 1) Packed position struct in a nested mapping
+
+We record a user’s position per pool. Packing `uint128 + uint64 + uint64` fits in a single 256‑bit slot, reducing SLOAD/SSTORE costs. The fields are updated together, so they belong together.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract Positions {
+    struct Position { // 128 + 64 + 64 = 256 bits
+        uint128 amount;        // token amount
+        uint64 lastAccruedAt;  // timestamp
+        uint64 flags;          // bit flags (e.g., bonus tiers)
+    }
+
+    mapping(address => mapping(uint256 => Position)) public positionOf; // user => poolId => Position
+
+    event PositionUpdated(address indexed user, uint256 indexed poolId, uint128 amount, uint64 lastAccruedAt, uint64 flags);
+
+    function setPosition(uint256 poolId, uint128 amount, uint64 flags) external {
+        Position storage p = positionOf[msg.sender][poolId];
+        p.amount = amount;
+        p.lastAccruedAt = uint64(block.timestamp);
+        p.flags = flags;
+        emit PositionUpdated(msg.sender, poolId, amount, p.lastAccruedAt, flags);
+    }
+}
+```
+
+Takeaway: pack fields that change together; nested mapping mirrors the natural key structure.
+
+### 2) Arrays for indices, with gap‑tolerant removal
+
+Arrays are great for small, bounded lists (e.g., a user’s active pool IDs). For O(1) removals, swap‑and‑pop avoids linear shifts, at the cost of changing order.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract Indexes {
+    mapping(address => uint256[]) public poolsByUser; // small, bounded list
+
+    function add(address user, uint256 poolId) external {
+        poolsByUser[user].push(poolId);
+    }
+
+    function removeAt(address user, uint256 idx) external {
+        uint256[] storage a = poolsByUser[user];
+        require(idx < a.length, "OOB");
+        a[idx] = a[a.length - 1];
+        a.pop();
+    }
+}
+```
+
+Takeaway: prefer swap‑and‑pop for deletions when order is not significant.
+
+### 3) Composite keys to flatten lookups
+
+When key pairs get unwieldy, flatten them into a single `bytes32` key. This keeps the API compact and lets you store by a deterministic hash.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract FlatKeys {
+    struct Info { uint128 amount; uint128 acc; }
+    mapping(bytes32 => Info) public infoByKey;
+
+    function key(address user, uint256 poolId) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(user, poolId));
+    }
+
+    function set(address user, uint256 poolId, uint128 amount, uint128 acc) external {
+        infoByKey[key(user, poolId)] = Info({amount: amount, acc: acc});
+    }
+}
+```
+
+Takeaway: composite keys simplify storage shapes and ABI surface when nested maps become noisy.
+
+## Practice and reflection
+
+- Sketch a struct for rewards that packs two 64‑bit timestamps and one 128‑bit accumulator
+- Decide whether `user => poolId` should be a nested mapping or a flat key; defend your choice
+
+{/* Concept Matching */}
+<ConceptMatching pairs={[
+  {"conceptId":"map","definitionId":"def-map","concept":"mapping","definition":"Sparse key→value lookup; default‑zero; not iterable","category":"data"},
+  {"conceptId":"pack","definitionId":"def-pack","concept":"struct packing","definition":"Combine small types to fill a 256‑bit slot","category":"gas"},
+  {"conceptId":"array","definitionId":"def-array","concept":"array","definition":"Ordered list; avoid unbounded loops","category":"data"},
+  {"conceptId":"flat","definitionId":"def-flat","concept":"composite key hash","definition":"Flatten multiple keys into bytes32","category":"design"}
+]}/>
+
+## Pitfalls and tips
+
+- Never iterate mappings on‑chain; keep indices small and bounded
+- Avoid unbounded loops over arrays in public functions; enforce caps or break into batches
+- Be careful with storage references (`T storage s = arr[i]`); writes affect the original
+- Don’t store derived data you can compute or reconstruct from events
+- Zero values are indistinguishable from non‑existent keys; add explicit flags if needed
+
+## Wrap‑up
+
+Shape data to match access patterns: nested mappings for sparse lookups, packed structs for co‑updates, arrays only when bounded, and composite keys to simplify APIs. Your staking module gets cheaper, clearer, and safer.
+

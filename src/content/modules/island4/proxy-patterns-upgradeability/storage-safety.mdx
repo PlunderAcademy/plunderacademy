@@ -10,4 +10,97 @@ practicalTakeaway: "Design upgradeable contracts that maintain data integrity ac
 
 # Storage Collision Prevention and Upgrade Safety
 
-*Content coming in Milestone 2*
+## Set the stage
+
+Upgradeable proxies share storage across implementations. A careless layout change can brick state or lose funds. Follow ERC1967 slot conventions, reserve gaps, and test upgrades with real storage to keep data safe across versions.
+
+## Core ideas
+
+- ERC1967: canonical slots for implementation, admin, and beacon
+- Storage layout: never reorder or remove existing variables; only append
+- Gaps: reserve fixed-size arrays to allow future variables without collisions
+- Initializers: one‑time `initialize` instead of constructors for proxies
+- Layout checks: compare compiler layouts between versions in CI
+
+## Code in practice
+
+### 1) Using storage gaps and append‑only layout
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract V1 {
+  uint256 public a;
+  address public owner;
+  uint96 public feeBps;
+  uint160 private __gap0; // padding example if needed (illustrative)
+  uint256[50] private __gap; // reserved for future vars
+
+  function initialize(address owner_, uint96 fee_) external {
+    require(owner == address(0), "INIT");
+    owner = owner_; feeBps = fee_;
+  }
+}
+
+// V2 appends new variables after existing ones; never reorder V1 fields
+contract V2 is V1 {
+  address public treasury;
+  function setTreasury(address t) external { require(msg.sender == owner, "OWNER"); treasury = t; }
+}
+```
+
+Takeaway: append only. Keep a `__gap` to absorb future fields without shifting positions.
+
+### 2) ERC1967 slots for implementation/admin
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+library ERC1967Slots {
+  // bytes32(uint256(keccak256('eip1967.proxy.implementation')) - 1)
+  bytes32 internal constant _IMPL_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+  // bytes32(uint256(keccak256('eip1967.proxy.admin')) - 1)
+  bytes32 internal constant _ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
+}
+```
+
+Takeaway: use the canonical slots; avoid custom storage for critical proxy metadata.
+
+### 3) Upgrade test shape (pseudocode)
+
+```text
+1) deploy proxy+V1, initialize with real values
+2) write state (simulate real usage)
+3) upgrade to V2
+4) assert V1 state is unchanged; new vars are defaulted; new functions work
+```
+
+Takeaway: tests must preserve old state across upgrades. Add CI layout diff checks.
+
+## Practice and reflection
+
+- Add a `__gap` to one upgradeable contract; plan two future variables
+- Sketch a CI step that fails when layout diff detects reordering/removal
+- Decide on an initialization guard to prevent re‑init attacks
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"storage1","text":"You can freely reorder state variables in upgrades","correctAnswer":false,"explanation":"Reordering changes storage slots and corrupts state."},
+  {"id":"storage2","text":"ERC1967 defines fixed storage slots for proxy metadata","correctAnswer":true,"explanation":"Using canonical slots avoids collisions."}
+]}/>
+
+{/* Drag & Drop Puzzle: safe upgrade checklist order */}
+<DragDropPuzzle codeBlocks={[
+  {"id":"u1","content":"Deploy V1 and initialize via proxy","correctPosition":0},
+  {"id":"u2","content":"Populate state through normal usage","correctPosition":1},
+  {"id":"u3","content":"Deploy V2 with appended storage","correctPosition":2},
+  {"id":"u4","content":"Run storage layout diff checks in CI","correctPosition":3},
+  {"id":"u5","content":"Upgrade proxy and verify state invariants","correctPosition":4}
+]}
+/>
+
+## Wrap‑up
+
+Protect storage by following append‑only layouts, reserving gaps, and testing upgrades against real state. Use ERC1967 slots and initialization guards to avoid common foot‑guns.

@@ -10,4 +10,115 @@ practicalTakeaway: "Integrate external data sources securely using decentralized
 
 # Oracle Problem and Chainlink Integration
 
-*Content coming in Milestone 2*
+## Set the stage
+
+On-chain apps often need off-chain facts (prices, rates). The oracle problem asks: “who do we trust to tell the truth?” Production systems use decentralized oracle networks (e.g., Chainlink) plus local sanity checks to minimize trust and detect stale data.
+
+## Core ideas
+
+- Trust minimization: prefer decentralized feeds over single signers
+- Freshness: reject stale rounds; cap max age with a threshold
+- Decimals: normalize feed decimals before arithmetic
+- Fallback: define a failure mode (pause, cached, or multiple sources)
+
+## Code in practice
+
+### 1) Reading a price feed with staleness and decimal handling
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface AggregatorV3Interface {
+  function decimals() external view returns (uint8);
+  function latestRoundData() external view returns (
+    uint80 roundId,
+    int256 answer,
+    uint256 startedAt,
+    uint256 updatedAt,
+    uint80 answeredInRound
+  );
+}
+
+library PriceFeedLib {
+  error StalePrice(uint256 updatedAt, uint256 nowTs);
+  error InvalidAnswer();
+
+  function latestPrice18(AggregatorV3Interface feed, uint256 maxAge)
+    internal view returns (uint256 price)
+  {
+    (
+      ,
+      int256 answer,
+      ,
+      uint256 updatedAt,
+      uint80 answeredInRound
+    ) = feed.latestRoundData();
+    if (answer <= 0 || answeredInRound == 0) revert InvalidAnswer();
+    if (block.timestamp - updatedAt > maxAge) revert StalePrice(updatedAt, block.timestamp);
+    uint8 d = feed.decimals();
+    // normalize to 1e18
+    if (d <= 18) return uint256(answer) * (10 ** (18 - d));
+    return uint256(answer) / (10 ** (d - 18));
+  }
+}
+```
+
+Takeaway: treat answers as untrusted until you check positivity, round integrity, and staleness; always normalize decimals.
+
+### 2) Using the library in your contract
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {PriceFeedLib, AggregatorV3Interface} from "./PriceFeedLib.sol"; // illustrative path
+
+contract Priced {
+  using PriceFeedLib for AggregatorV3Interface;
+  AggregatorV3Interface public immutable feed;
+  uint256 public immutable maxAge;
+
+  constructor(AggregatorV3Interface _feed, uint256 _maxAge) {
+    feed = _feed;
+    maxAge = _maxAge; // e.g., 1 hour
+  }
+
+  function price18() external view returns (uint256) {
+    return feed.latestPrice18(maxAge);
+  }
+}
+```
+
+Takeaway: keep feed address configurable; expose a simple normalized getter for downstream math.
+
+## Practice and reflection
+
+- Set a `maxAge` for your use case; what’s acceptable staleness for swaps vs. displays?
+- If the feed is down, do you pause, cache, or fall back? Document the policy.
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"oracle1","text":"Feed answers can be used without checks","correctAnswer":false,"explanation":"Always validate positivity and freshness."},
+  {"id":"oracle2","text":"Decimals normalization prevents silent math bugs","correctAnswer":true,"explanation":"Normalize to a common scale before arithmetic."}
+]}/>
+
+{/* Timeline Builder: steps to consume a price feed safely */}
+<TimelineBuilder events={[
+  {"id":"t1","text":"Read latestRoundData() and decimals()"},
+  {"id":"t2","text":"Validate answer > 0 and round integrity"},
+  {"id":"t3","text":"Check staleness against maxAge"},
+  {"id":"t4","text":"Normalize to 1e18 scale"},
+  {"id":"t5","text":"Return value or revert with custom error"}
+]}
+/>
+
+## Pitfalls and tips
+
+- Never assume a specific decimal count; read it
+- Don’t ignore `updatedAt`; stale data can be worse than no data
+- Log feed switches with events for observability
+
+## Wrap‑up
+
+You can safely read a decentralized price feed with staleness checks and normalized decimals. Next: randomness via commit–reveal and VRF.

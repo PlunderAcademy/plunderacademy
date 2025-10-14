@@ -1,13 +1,90 @@
 ---
-id: "staking-concepts-lesson-2"
-slug: "time-based-logic"
-module: "staking-concepts-time-logic"
-number: "2.12"
-title: "Time-Based Logic and Reward Calculations"
-objective: "Master time-based contract logic and implement sophisticated reward calculation algorithms."
-practicalTakeaway: "Build time-aware contracts with lock periods, vesting schedules, and dynamic rewards."
+id: time-based-logic
+module: staking-concepts-time-logic
+number: 2.4.2
+title: Time‑Based Logic and Reward Calculations
+objective: >-
+  Implement safe time math for accruals, locks, and vesting; avoid flakiness with controlled timestamps and clear boundaries.
+slug: time-based-logic
 ---
 
-# Time-Based Logic and Reward Calculations
+## Set the stage
 
-*Content coming in Milestone 2*
+Staking accrues value over time, but time in Solidity is just numbers—easy to get subtly wrong. You need safe arithmetic, predictable accrual windows, and lock semantics that won’t trap users or leak rewards.
+
+## Mental model
+
+- **Block timestamp**: `block.timestamp` is miner‑controlled within bounds; design with tolerances
+- **Accrual window**: Compute deltas from a stored `since` value; clamp to prevent over‑accrual
+- **Lock/vesting**: Represent lock start/end explicitly; keep arithmetic monotonic
+- **Time controls in tests**: Use helpers to advance time deterministically
+
+## Code in practice
+
+### 1) Safe accrual computation with clamping
+
+Clamp the accrual interval to avoid pathological values and cast carefully.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+library TimeMath {
+    uint256 internal constant YEAR = 365 days;
+    function accrue(uint128 amount, uint64 since, uint64 nowTs, uint128 aprBps) internal pure returns (uint128) {
+        uint256 dt = nowTs > since ? uint256(nowTs - since) : 0;
+        uint256 reward = (uint256(amount) * aprBps * dt) / YEAR / 10_000;
+        return reward > type(uint128).max ? type(uint128).max : uint128(reward);
+    }
+}
+```
+
+Takeaway: clamp deltas and cast consciously to avoid overflow surprises.
+
+### 2) Lock periods and early‑exit penalties
+
+Encode lock windows and enforce early‑exit rules with explicit events.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract Locks {
+    struct Lock { uint64 start; uint64 end; uint16 penaltyBps; }
+    mapping(address => Lock) public lockOf;
+    event Locked(address indexed user, uint64 start, uint64 end, uint16 penaltyBps);
+    event Unlocked(address indexed user, bool penalized);
+
+    function setLock(uint64 start, uint64 end, uint16 penaltyBps) external {
+        require(end > start, "bad window");
+        lockOf[msg.sender] = Lock(start, end, penaltyBps);
+        emit Locked(msg.sender, start, end, penaltyBps);
+    }
+}
+```
+
+Takeaway: keep lock math explicit and state changes observable.
+
+## Practice and reflection
+
+- Write a helper that advances time in tests and validates accrual math
+- Sketch a vesting schedule struct and explain how you’d clamp the claimable amount
+
+{/* Drag & Drop Code Puzzle */}
+<DragDropPuzzle codeBlocks={[
+  {"id":"b1","content":"pragma solidity ^0.8.24;","correctPosition":0},
+  {"id":"b2","content":"library TimeMath {","correctPosition":1},
+  {"id":"b3","content":"    uint256 internal constant YEAR = 365 days;","correctPosition":2},
+  {"id":"b4","content":"}","correctPosition":3}
+]}/>
+
+## Pitfalls and tips
+
+- Don’t tie logic to real time in tests; control it explicitly
+- Avoid fractional rounding biases; document rounding direction for rewards
+- Emit events when locks change so UIs stay in sync
+
+## Wrap‑up
+
+With careful time math and explicit lock semantics, accruals stay fair and predictable. You’re ready to assemble the final staking build next.
+
