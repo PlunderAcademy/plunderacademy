@@ -14,6 +14,16 @@ import {
 import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from "@/lib/mdx";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
 import MDXContent from "@/components/mdx-content";
+import { InteractiveElement } from "@/components/interactive-elements";
+
+// Import island4 module components
+import { Island4Module1Image } from "@/components/island4/island4-module1-image";
+import { Island4Module2Image } from "@/components/island4/island4-module2-image";
+import { Island4Module3Image } from "@/components/island4/island4-module3-image";
+import { Island4Module4Image } from "@/components/island4/island4-module4-image";
+import { Island4Module5Image } from "@/components/island4/island4-module5-image";
+import { Island4Module6Image } from "@/components/island4/island4-module6-image";
+import { Island4Story } from "@/components/island4/story";
 
 interface CastleModulePageProps {
   params: Promise<{
@@ -38,6 +48,16 @@ const MODULE_TITLES = {
   'proxy-patterns-upgradeability': 'Proxy Patterns & Upgradeability',
   'gas-optimization-security-patterns': 'Gas Optimization & Security Patterns',
   'upgradable-contract-practical': 'Upgradable Contract Practical'
+};
+
+// Component mappings for each module
+const MODULE_IMAGE_COMPONENTS = {
+  'defi-fundamentals-simple-swaps': Island4Module1Image,
+  'oracles-randomness-airdrop-patterns': Island4Module2Image,
+  'random-number-generator-practical': Island4Module3Image,
+  'proxy-patterns-upgradeability': Island4Module4Image,
+  'gas-optimization-security-patterns': Island4Module5Image,
+  'upgradable-contract-practical': Island4Module6Image
 };
 
 export async function generateStaticParams() {
@@ -88,6 +108,9 @@ export default async function CastleModulePage({ params }: CastleModulePageProps
 
   const moduleIndex = CASTLE_MODULES.indexOf(resolvedParams.module);
 
+  // Get the appropriate components for this module
+  const ImageComponent = MODULE_IMAGE_COMPONENTS[resolvedParams.module as keyof typeof MODULE_IMAGE_COMPONENTS];
+
   return (
     <WalletAuthGuard 
       title="Wallet Required for Module Access"
@@ -133,39 +156,28 @@ export default async function CastleModulePage({ params }: CastleModulePageProps
 
         {/* Animated Image Section */}
         <div>
-          <Card className="p-8 text-center">
-            <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg p-12 border-2 border-dashed border-yellow-300 dark:border-yellow-700">
-              <div className="text-6xl opacity-60 mb-4">🏰</div>
-              <p className="text-lg text-yellow-700 dark:text-yellow-300 font-semibold">Gilded Bastion Adventure Scene</p>
-              <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
-                Animated adventure scene for Module {moduleIndex + 1} coming in Milestone 2
-              </p>
-            </div>
-          </Card>
+          {ImageComponent ? <ImageComponent /> : (
+            <Card className="p-8 text-center">
+              <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg p-12 border-2 border-dashed border-yellow-300 dark:border-yellow-700">
+                <p className="text-lg text-yellow-700 dark:text-yellow-300">IMAGE TBA</p>
+                <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+                  Animated adventure scene for Module {moduleIndex + 1}
+                </p>
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* Mission Story Section */}
         <div>
           {missionData ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl text-yellow-800 dark:text-yellow-200">
-                  {missionData.title}
-                </CardTitle>
-                <p className="text-yellow-600 dark:text-yellow-400">{missionData.subtitle}</p>
-              </CardHeader>
-              <CardContent>
-                <div className="prose dark:prose-invert max-w-none">
-                  <MDXContent content={missionData.content} />
-                </div>
-              </CardContent>
-            </Card>
+            <Island4Story missionData={missionData} />
           ) : (
             <Card className="p-8 text-center">
               <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg p-12 border-2 border-dashed border-yellow-300 dark:border-yellow-700">
-                <p className="text-lg text-yellow-700 dark:text-yellow-300 font-semibold">Mission Story TBA</p>
+                <p className="text-lg text-yellow-700 dark:text-yellow-300 font-semibold">MISSION TEXT TBA</p>
                 <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
-                  Gilded Bastion adventure story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+                  Typewriter story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
                 </p>
               </div>
             </Card>
@@ -193,7 +205,7 @@ export default async function CastleModulePage({ params }: CastleModulePageProps
                       <span className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
                         {index + 1}
                       </span>
-                      {lesson.title.replace(/^\d+\.\d+\s*/, '')}
+                      <span className="text-foreground">{lesson.title.replace(/^\d+\.\d+\s*/, '')}</span>
                     </span>
                   </TabsTrigger>
                 ))}
@@ -238,26 +250,29 @@ export default async function CastleModulePage({ params }: CastleModulePageProps
         </Card>
 
         {/* Interactive Element Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="size-5" />
-              Interactive Element
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center p-8">
-            <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg p-12 border-2 border-dashed border-yellow-300 dark:border-yellow-700 space-y-4">
-              <div className="text-4xl opacity-60">🎯</div>
-              <p className="text-lg text-yellow-700 dark:text-yellow-300 font-semibold">Interactive Content Coming Soon</p>
-              <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
-              </p>
-              <Button disabled className="mt-4">
-                Complete Interactive Element
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {quizData ? (
+          <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="size-5" />
+                Interactive Element
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center p-8">
+              <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg p-12 border-2 border-dashed border-yellow-300 dark:border-yellow-700 space-y-4">
+                <p className="text-lg text-yellow-700 dark:text-yellow-300">Interactive Content TBA</p>
+                <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                  Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+                </p>
+                <Button disabled className="mt-4">
+                  Complete Interactive Element
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Separator />
 

@@ -123,7 +123,7 @@ export function CastleModuleProgressList({
           const cardClasses = cn(
             "group rounded-2xl border p-5 transition-all duration-200",
             isCompleted && "border-yellow-500/40 bg-yellow-500/10 hover:border-yellow-500/70 hover:bg-yellow-500/15",
-            isCurrent && "border-amber-500/60 bg-amber-500/10 shadow-lg hover:border-amber-500/80",
+            isCurrent && "border-yellow-500/60 bg-yellow-500/10 shadow-lg hover:border-yellow-500/80",
             isLocked && "border-muted/20 bg-muted/10 text-muted-foreground",
             isLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:shadow-lg"
           );
@@ -135,14 +135,14 @@ export function CastleModuleProgressList({
                   className={cn(
                     "flex size-11 shrink-0 items-center justify-center rounded-full border",
                     isCompleted && "border-yellow-500/50 bg-yellow-500/15",
-                    isCurrent && "border-amber-500/50 bg-amber-500/15",
+                    isCurrent && "border-yellow-500/50 bg-yellow-500/15",
                     isLocked && "border-muted/30 bg-muted/20"
                   )}
                 >
                   {isCompleted ? (
                     <CheckCircle2 className="size-5 text-yellow-600 dark:text-yellow-400" aria-hidden="true" />
                   ) : isCurrent ? (
-                    <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                    <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">
                       {index + 1}
                     </span>
                   ) : (
@@ -160,7 +160,7 @@ export function CastleModuleProgressList({
                         </span>
                       )}
                       {isCurrent && (
-                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-600 dark:text-amber-300">
+                        <span className="rounded-full bg-yellow-500/20 px-2 py-0.5 text-yellow-600 dark:text-yellow-300">
                           Available
                         </span>
                       )}
@@ -174,7 +174,7 @@ export function CastleModuleProgressList({
                       className={cn(
                         "text-lg font-semibold leading-tight transition-colors",
                         isCompleted && "text-yellow-700 dark:text-yellow-300",
-                        isCurrent && "text-amber-700 dark:text-amber-300",
+                        isCurrent && "text-yellow-700 dark:text-yellow-300",
                         isLocked && "text-muted-foreground"
                       )}
                     >
@@ -195,7 +195,7 @@ export function CastleModuleProgressList({
                           "transition-colors",
                           isCompleted
                             ? "text-yellow-600 dark:text-yellow-400"
-                            : "text-amber-600 dark:text-amber-400 group-hover:underline"
+                            : "text-yellow-600 dark:text-yellow-400 group-hover:underline"
                         )}>
                           {isCompleted ? "Review module" : "Start exploring →"}
                         </span>

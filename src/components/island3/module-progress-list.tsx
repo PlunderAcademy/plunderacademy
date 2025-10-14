@@ -123,7 +123,7 @@ export function DesertModuleProgressList({
           const cardClasses = cn(
             "group rounded-2xl border p-5 transition-all duration-200",
             isCompleted && "border-orange-500/40 bg-orange-500/10 hover:border-orange-500/70 hover:bg-orange-500/15",
-            isCurrent && "border-amber-500/60 bg-amber-500/10 shadow-lg hover:border-amber-500/80",
+            isCurrent && "border-orange-500/60 bg-orange-500/10 shadow-lg hover:border-orange-500/80",
             isLocked && "border-muted/20 bg-muted/10 text-muted-foreground",
             isLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:shadow-lg"
           );
@@ -135,14 +135,14 @@ export function DesertModuleProgressList({
                   className={cn(
                     "flex size-11 shrink-0 items-center justify-center rounded-full border",
                     isCompleted && "border-orange-500/50 bg-orange-500/15",
-                    isCurrent && "border-amber-500/50 bg-amber-500/15",
+                    isCurrent && "border-orange-500/50 bg-orange-500/15",
                     isLocked && "border-muted/30 bg-muted/20"
                   )}
                 >
                   {isCompleted ? (
                     <CheckCircle2 className="size-5 text-orange-600 dark:text-orange-400" aria-hidden="true" />
                   ) : isCurrent ? (
-                    <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                    <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
                       {index + 1}
                     </span>
                   ) : (
@@ -160,7 +160,7 @@ export function DesertModuleProgressList({
                         </span>
                       )}
                       {isCurrent && (
-                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-600 dark:text-amber-300">
+                        <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-orange-600 dark:text-orange-300">
                           Available
                         </span>
                       )}
@@ -174,7 +174,7 @@ export function DesertModuleProgressList({
                       className={cn(
                         "text-lg font-semibold leading-tight transition-colors",
                         isCompleted && "text-orange-700 dark:text-orange-300",
-                        isCurrent && "text-amber-700 dark:text-amber-300",
+                        isCurrent && "text-orange-700 dark:text-orange-300",
                         isLocked && "text-muted-foreground"
                       )}
                     >
@@ -195,7 +195,7 @@ export function DesertModuleProgressList({
                           "transition-colors",
                           isCompleted
                             ? "text-orange-600 dark:text-orange-400"
-                            : "text-amber-600 dark:text-amber-400 group-hover:underline"
+                            : "text-orange-600 dark:text-orange-400 group-hover:underline"
                         )}>
                           {isCompleted ? "Review module" : "Start exploring →"}
                         </span>

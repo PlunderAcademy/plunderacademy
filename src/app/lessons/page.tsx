@@ -87,136 +87,110 @@ export default async function LessonsPage() {
           {/* Island Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
             {islands.map((island, index) => (
-              <Card key={island.slug} className={`group relative overflow-hidden border-2 transition-all duration-300 ${island.status === 'available' ? 'hover:scale-[1.02] hover:shadow-2xl' : 'opacity-60'} bg-white dark:bg-slate-900`}>
+              <Card key={island.slug} className={`group relative overflow-hidden border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl bg-white dark:bg-slate-900`}>
                 {/* Island Header */}
-                <div className={`relative h-48 overflow-hidden ${island.status === 'available' ? '' : 'bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900'}`}>
-                  {island.status === 'available' && island.slug === 'jungle' && (
-                    <Image
-                      src="/islands/island1/island1-map.webp"
-                      alt={island.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
-                  )}
+                <div className={`relative h-48 overflow-hidden`}>
+                  <Image
+                    src={`/islands/island${index + 1}/island${index + 1}-map.webp`}
+                    alt={island.title}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
                   
                   {/* Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
                   
                   {/* Island Number Badge */}
                   <div className="absolute top-4 left-4 flex items-center gap-2">
-                    <div className={`w-10 h-10 rounded-full ${island.status === 'available' ? 'bg-white/90' : 'bg-white/60'} backdrop-blur-sm border-2 ${island.status === 'available' ? 'border-white/50' : 'border-white/30'} flex items-center justify-center shadow-xl`}>
-                      <span className={`text-lg font-bold ${island.status === 'available' ? 'text-slate-800' : 'text-slate-600'}`}>{index + 1}</span>
+                    <div className={`w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm border-2 border-white/50 flex items-center justify-center shadow-xl`}>
+                      <span className={`text-lg font-bold text-slate-800`}>{index + 1}</span>
                     </div>
-                    {island.status === 'available' ? (
+                    {index === 0 && (
                       <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg animate-pulse">
                         <Flag className="size-3 mr-1" />
                         Start Here
                       </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-white/60 text-slate-600 border-slate-400">
-                        Coming Soon
-                      </Badge>
                     )}
                   </div>
                   
-                  {/* Difficulty & Stats for available islands */}
-                  {island.status === 'available' && (
-                    <div className="absolute top-4 right-4">
-                      <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-white/50">
-                        <div className="text-xs font-medium text-slate-600 text-center">Beginner</div>
-                        <div className="text-sm font-bold text-slate-800 text-center">{island.modules.length} modules</div>
+                  {/* Difficulty & Stats */}
+                  <div className="absolute top-4 right-4">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-white/50">
+                      <div className="text-xs font-medium text-slate-600 text-center">
+                        {index === 0 ? 'Beginner' : index === 1 ? 'Intermediate' : index === 2 ? 'Advanced' : index === 3 ? 'Expert' : 'Master'}
                       </div>
+                      <div className="text-sm font-bold text-slate-800 text-center">{island.modules.length} modules</div>
                     </div>
-                  )}
+                  </div>
                   
                   {/* Floating Icon */}
                   <div className="absolute bottom-4 left-4">
-                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br from-${island.color}-500/20 to-${island.color}-600/20 border-${island.color}-500/30 border-2 border-white/50 flex items-center justify-center shadow-xl backdrop-blur-sm`}>
-                      {island.slug === 'jungle' ? (
-                        <TreePine className="size-6 text-white drop-shadow-sm" />
-                      ) : (
-                        <span className="text-2xl">{island.icon}</span>
-                      )}
+                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br from-white/20 to-white/10 border-2 border-white/50 flex items-center justify-center shadow-xl backdrop-blur-sm`}>
+                      <span className="text-2xl">{island.icon}</span>
                     </div>
                   </div>
                   
                   {/* Adventure Time */}
-                  {island.status === 'available' && (
-                    <div className="absolute bottom-4 right-4">
-                      <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1 text-white text-xs font-medium">
-                        ~{island.estimatedHours} adventure
-                      </div>
+                  <div className="absolute bottom-4 right-4">
+                    <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1 text-white text-xs font-medium">
+                      ~{island.estimatedHours} adventure
                     </div>
-                  )}
-                  
-                  {/* Coming Soon Icon for inactive islands */}
-                  {island.status === 'coming-soon' && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-6xl opacity-60">{island.icon}</span>
-                    </div>
-                  )}
+                  </div>
                 </div>
                 
                 {/* Card Content */}
                 <div className="p-6 space-y-4">
                   {/* Island Title & Description */}
                   <div className="space-y-2">
-                    <h3 className={`text-xl font-bold leading-tight ${island.status === 'available' ? 'group-hover:text-primary transition-colors' : 'text-muted-foreground'}`}>
-                      {island.status === 'available' ? island.title : island.name}
+                    <h3 className={`text-xl font-bold leading-tight group-hover:text-primary transition-colors`}>
+                      {island.title}
                     </h3>
                     <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
                       {island.description}
                     </p>
                   </div>
                   
-                  {/* Progress & Quick Stats for available islands */}
-                  {island.status === 'available' && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                          <Trophy className="size-4 text-amber-500" />
-                          <span>{island.modules.reduce((acc, module) => acc + module.lessons.length, 0)}+ lessons</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Ship className="size-4 text-blue-500" />
-                          <span>Ready to sail</span>
-                        </div>
+                  {/* Progress & Quick Stats */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <Trophy className="size-4 text-amber-500" />
+                        <span>{island.modules.reduce((acc, module) => acc + module.lessons.length, 0)}+ lessons</span>
                       </div>
-                      
-                      {/* Animated Progress Bar */}
-                      <div className="space-y-2">
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                          <div className={`bg-gradient-to-r from-${island.color}-400 to-${island.color}-500 h-2 rounded-full w-0 group-hover:w-full transition-all duration-1000 delay-300`} />
-                        </div>
-                        <div className="text-xs text-muted-foreground">Ready to begin your journey</div>
+                      <div className="flex items-center gap-1.5">
+                        <Ship className="size-4 text-blue-500" />
+                        <span>Ready to sail</span>
                       </div>
                     </div>
-                  )}
+                    
+                    {/* Animated Progress Bar */}
+                    <div className="space-y-2">
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                        <div className={`bg-gradient-to-r from-${island.color}-400 to-${island.color}-500 h-2 rounded-full w-0 group-hover:w-full transition-all duration-1000 delay-300`} />
+                      </div>
+                      <div className="text-xs text-muted-foreground">Ready to begin your journey</div>
+                    </div>
+                  </div>
                   
                   {/* Explore Button */}
                   <Button 
                     asChild 
-                    className={`w-full ${island.status === 'available' 
-                      ? 'bg-gradient-to-r from-primary via-primary to-primary/80 hover:from-primary/90 hover:via-primary hover:to-primary text-white shadow-lg group-hover:shadow-xl' 
-                      : 'bg-gradient-to-r from-slate-400 to-slate-500 text-white opacity-75'
-                    } transition-all duration-300 text-base font-semibold`}
+                    className={`w-full bg-gradient-to-r from-primary via-primary to-primary/80 hover:from-primary/90 hover:via-primary hover:to-primary text-white shadow-lg group-hover:shadow-xl transition-all duration-300 text-base font-semibold`}
                     size="lg"
                   >
                     <Link href={`/lessons/island${index + 1}`}>
                       <Compass className="mr-2 size-4" />
-                      {island.status === 'available' ? 'Explore Location' : 'Preview Location'}
+                      Explore Location
                       <ChevronRight className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
                     </Link>
                   </Button>
                 </div>
                 
                 {/* Hover Glow */}
-                {island.status === 'available' && (
-                  <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                    <div className={`absolute inset-0 rounded-xl bg-gradient-to-br from-${island.color}-500/20 to-${island.color}-600/20 opacity-10`} />
-                  </div>
-                )}
+                <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                  <div className={`absolute inset-0 rounded-xl bg-gradient-to-br from-${island.color}-500/20 to-${island.color}-600/20 opacity-10`} />
+                </div>
               </Card>
             ))}
           </div>

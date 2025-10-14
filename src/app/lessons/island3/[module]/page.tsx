@@ -14,6 +14,13 @@ import {
 import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from "@/lib/mdx";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
 import MDXContent from "@/components/mdx-content";
+import { InteractiveElement } from "@/components/interactive-elements";
+
+// Import island3 module components
+import { Island3Module1Image } from "@/components/island3/island3-module1-image";
+import { Island3Module2Image } from "@/components/island3/island3-module2-image";
+import { Island3Module3Image } from "@/components/island3/island3-module3-image";
+import { Island3Story } from "@/components/island3/story";
 
 interface DesertModulePageProps {
   params: Promise<{
@@ -32,6 +39,13 @@ const MODULE_TITLES = {
   'erc721-standards-implementation': 'ERC721 Standards & Implementation',
   'advanced-nft-features': 'Advanced NFT Features',
   'nft-collection-practical': 'NFT Collection Practical'
+};
+
+// Component mappings for each module
+const MODULE_IMAGE_COMPONENTS = {
+  'erc721-standards-implementation': Island3Module1Image,
+  'advanced-nft-features': Island3Module2Image,
+  'nft-collection-practical': Island3Module3Image
 };
 
 export async function generateStaticParams() {
@@ -82,6 +96,9 @@ export default async function DesertModulePage({ params }: DesertModulePageProps
 
   const moduleIndex = DESERT_MODULES.indexOf(resolvedParams.module);
 
+  // Get the appropriate components for this module
+  const ImageComponent = MODULE_IMAGE_COMPONENTS[resolvedParams.module as keyof typeof MODULE_IMAGE_COMPONENTS];
+
   return (
     <WalletAuthGuard 
       title="Wallet Required for Module Access"
@@ -127,39 +144,28 @@ export default async function DesertModulePage({ params }: DesertModulePageProps
 
         {/* Animated Image Section */}
         <div>
-          <Card className="p-8 text-center">
-            <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-12 border-2 border-dashed border-orange-300 dark:border-orange-700">
-              <div className="text-6xl opacity-60 mb-4">🏜️</div>
-              <p className="text-lg text-orange-700 dark:text-orange-300 font-semibold">Desert Bluff Adventure Scene</p>
-              <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
-                Animated adventure scene for Module {moduleIndex + 1} coming in Milestone 2
-              </p>
-            </div>
-          </Card>
+          {ImageComponent ? <ImageComponent /> : (
+            <Card className="p-8 text-center">
+              <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-12 border-2 border-dashed border-orange-300 dark:border-orange-700">
+                <p className="text-lg text-orange-700 dark:text-orange-300">IMAGE TBA</p>
+                <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
+                  Animated adventure scene for Module {moduleIndex + 1}
+                </p>
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* Mission Story Section */}
         <div>
           {missionData ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl text-orange-800 dark:text-orange-200">
-                  {missionData.title}
-                </CardTitle>
-                <p className="text-orange-600 dark:text-orange-400">{missionData.subtitle}</p>
-              </CardHeader>
-              <CardContent>
-                <div className="prose dark:prose-invert max-w-none">
-                  <MDXContent content={missionData.content} />
-                </div>
-              </CardContent>
-            </Card>
+            <Island3Story missionData={missionData} />
           ) : (
             <Card className="p-8 text-center">
               <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-12 border-2 border-dashed border-orange-300 dark:border-orange-700">
-                <p className="text-lg text-orange-700 dark:text-orange-300 font-semibold">Mission Story TBA</p>
+                <p className="text-lg text-orange-700 dark:text-orange-300 font-semibold">MISSION TEXT TBA</p>
                 <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
-                  Desert Bluff adventure story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+                  Typewriter story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
                 </p>
               </div>
             </Card>
@@ -187,7 +193,7 @@ export default async function DesertModulePage({ params }: DesertModulePageProps
                       <span className="bg-orange-500/20 text-orange-700 dark:text-orange-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
                         {index + 1}
                       </span>
-                      {lesson.title.replace(/^\d+\.\d+\s*/, '')}
+                      <span className="text-foreground">{lesson.title.replace(/^\d+\.\d+\s*/, '')}</span>
                     </span>
                   </TabsTrigger>
                 ))}
@@ -232,26 +238,29 @@ export default async function DesertModulePage({ params }: DesertModulePageProps
         </Card>
 
         {/* Interactive Element Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="size-5" />
-              Interactive Element
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center p-8">
-            <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-12 border-2 border-dashed border-orange-300 dark:border-orange-700 space-y-4">
-              <div className="text-4xl opacity-60">🎯</div>
-              <p className="text-lg text-orange-700 dark:text-orange-300 font-semibold">Interactive Content Coming Soon</p>
-              <p className="text-sm text-orange-600 dark:text-orange-400">
-                Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
-              </p>
-              <Button disabled className="mt-4">
-                Complete Interactive Element
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {quizData ? (
+          <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="size-5" />
+                Interactive Element
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center p-8">
+              <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-12 border-2 border-dashed border-orange-300 dark:border-orange-700 space-y-4">
+                <p className="text-lg text-orange-700 dark:text-orange-300">Interactive Content TBA</p>
+                <p className="text-sm text-orange-600 dark:text-orange-400">
+                  Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+                </p>
+                <Button disabled className="mt-4">
+                  Complete Interactive Element
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Separator />
 

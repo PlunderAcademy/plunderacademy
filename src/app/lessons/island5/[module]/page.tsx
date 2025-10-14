@@ -14,6 +14,14 @@ import {
 import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from "@/lib/mdx";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
 import MDXContent from "@/components/mdx-content";
+import { InteractiveElement } from "@/components/interactive-elements";
+
+// Import island5 module components
+import { Island5Module1Image } from "@/components/island5/island5-module1-image";
+import { Island5Module2Image } from "@/components/island5/island5-module2-image";
+import { Island5Module3Image } from "@/components/island5/island5-module3-image";
+import { Island5Module4Image } from "@/components/island5/island5-module4-image";
+import { Island5Story } from "@/components/island5/story";
 
 interface NeonModulePageProps {
   params: Promise<{
@@ -32,6 +40,13 @@ const MODULE_TITLES = {
   'web3-frontend-basics': 'Web3 Frontend Basics',
   'contract-interactions-error-handling': 'Contract Interactions & Error Handling',
   'dapp-interface-practical': 'dApp Interface Practical'
+};
+
+// Component mappings for each module
+const MODULE_IMAGE_COMPONENTS = {
+  'web3-frontend-basics': Island5Module1Image,
+  'contract-interactions-error-handling': Island5Module2Image,
+  'dapp-interface-practical': Island5Module3Image
 };
 
 export async function generateStaticParams() {
@@ -82,6 +97,9 @@ export default async function NeonModulePage({ params }: NeonModulePageProps) {
 
   const moduleIndex = NEON_MODULES.indexOf(resolvedParams.module);
 
+  // Get the appropriate components for this module
+  const ImageComponent = MODULE_IMAGE_COMPONENTS[resolvedParams.module as keyof typeof MODULE_IMAGE_COMPONENTS];
+
   return (
     <WalletAuthGuard 
       title="Wallet Required for Module Access"
@@ -127,39 +145,28 @@ export default async function NeonModulePage({ params }: NeonModulePageProps) {
 
         {/* Animated Image Section */}
         <div>
-          <Card className="p-8 text-center">
-            <div className="bg-cyan-50 dark:bg-cyan-950/30 rounded-lg p-12 border-2 border-dashed border-cyan-300 dark:border-cyan-700">
-              <div className="text-6xl opacity-60 mb-4">🌃</div>
-              <p className="text-lg text-cyan-700 dark:text-cyan-300 font-semibold">Neon Haven Adventure Scene</p>
-              <p className="text-sm text-cyan-600 dark:text-cyan-400 mt-2">
-                Animated adventure scene for Module {moduleIndex + 1} coming in Milestone 2
-              </p>
-            </div>
-          </Card>
+          {ImageComponent ? <ImageComponent /> : (
+            <Card className="p-8 text-center">
+              <div className="bg-cyan-50 dark:bg-cyan-950/30 rounded-lg p-12 border-2 border-dashed border-cyan-300 dark:border-cyan-700">
+                <p className="text-lg text-cyan-700 dark:text-cyan-300">IMAGE TBA</p>
+                <p className="text-sm text-cyan-600 dark:text-cyan-400 mt-2">
+                  Animated adventure scene for Module {moduleIndex + 1}
+                </p>
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* Mission Story Section */}
         <div>
           {missionData ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl text-cyan-800 dark:text-cyan-200">
-                  {missionData.title}
-                </CardTitle>
-                <p className="text-cyan-600 dark:text-cyan-400">{missionData.subtitle}</p>
-              </CardHeader>
-              <CardContent>
-                <div className="prose dark:prose-invert max-w-none">
-                  <MDXContent content={missionData.content} />
-                </div>
-              </CardContent>
-            </Card>
+            <Island5Story missionData={missionData} />
           ) : (
             <Card className="p-8 text-center">
               <div className="bg-cyan-50 dark:bg-cyan-950/30 rounded-lg p-12 border-2 border-dashed border-cyan-300 dark:border-cyan-700">
-                <p className="text-lg text-cyan-700 dark:text-cyan-300 font-semibold">Mission Story TBA</p>
+                <p className="text-lg text-cyan-700 dark:text-cyan-300 font-semibold">MISSION TEXT TBA</p>
                 <p className="text-sm text-cyan-600 dark:text-cyan-400 mt-2">
-                  Neon Haven adventure story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+                  Typewriter story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
                 </p>
               </div>
             </Card>
@@ -187,7 +194,7 @@ export default async function NeonModulePage({ params }: NeonModulePageProps) {
                       <span className="bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
                         {index + 1}
                       </span>
-                      {lesson.title.replace(/^\d+\.\d+\s*/, '')}
+                      <span className="text-foreground">{lesson.title.replace(/^\d+\.\d+\s*/, '')}</span>
                     </span>
                   </TabsTrigger>
                 ))}
@@ -232,26 +239,29 @@ export default async function NeonModulePage({ params }: NeonModulePageProps) {
         </Card>
 
         {/* Interactive Element Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="size-5" />
-              Interactive Element
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center p-8">
-            <div className="bg-cyan-50 dark:bg-cyan-950/30 rounded-lg p-12 border-2 border-dashed border-cyan-300 dark:border-cyan-700 space-y-4">
-              <div className="text-4xl opacity-60">🎯</div>
-              <p className="text-lg text-cyan-700 dark:text-cyan-300 font-semibold">Interactive Content Coming Soon</p>
-              <p className="text-sm text-cyan-600 dark:text-cyan-400">
-                Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
-              </p>
-              <Button disabled className="mt-4">
-                Complete Interactive Element
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {quizData ? (
+          <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="size-5" />
+                Interactive Element
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center p-8">
+              <div className="bg-cyan-50 dark:bg-cyan-950/30 rounded-lg p-12 border-2 border-dashed border-cyan-300 dark:border-cyan-700 space-y-4">
+                <p className="text-lg text-cyan-700 dark:text-cyan-300">Interactive Content TBA</p>
+                <p className="text-sm text-cyan-600 dark:text-cyan-400">
+                  Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+                </p>
+                <Button disabled className="mt-4">
+                  Complete Interactive Element
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Separator />
 

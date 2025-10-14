@@ -82,7 +82,6 @@ export function MapZoom({ islands }: MapZoomProps) {
 
     const isCompleted = completedIslands.has(index);
     const isCurrent = index === currentIsland;
-    const isAvailable = island.status === 'available';
 
     if (isCompleted) {
       return (
@@ -96,14 +95,6 @@ export function MapZoom({ islands }: MapZoomProps) {
       return (
         <div className="absolute -top-3 -right-3 bg-amber-500 text-white rounded-full px-2 py-1 text-xs font-bold shadow-lg border-2 border-white animate-pulse">
           Current
-        </div>
-      );
-    }
-
-    if (!isAvailable) {
-      return (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-slate-600/90 text-white rounded-lg px-3 py-1.5 text-xs font-bold shadow-lg">
-          Coming Soon
         </div>
       );
     }
@@ -151,7 +142,7 @@ export function MapZoom({ islands }: MapZoomProps) {
                 left: `${left}%`,
                 width: `${width}%`,
               }}
-              aria-label={`${island.name} - ${island.status === 'available' ? 'Available' : 'Coming Soon'}`}
+              aria-label={`${island.name} - Available`}
             >
               {/* Hover overlay */}
               <div 
@@ -172,25 +163,17 @@ export function MapZoom({ islands }: MapZoomProps) {
                       </div>
                       <div className="flex-1">
                         <h3 className="font-bold text-sm leading-tight text-foreground">{island.name}</h3>
-                        {island.status === 'available' && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{island.estimatedHours}</p>
-                        )}
+                        <p className="text-xs text-muted-foreground mt-0.5">{island.estimatedHours}</p>
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed mb-2">
                       {island.description}
                     </p>
-                    {island.status === 'available' ? (
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-amber-500/20 rounded-full px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
-                          {completedIslands.has(index) ? '✓ Completed' : index === currentIsland && isConnected ? '→ Continue' : '▶ Start'}
-                        </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-amber-500/20 rounded-full px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                        {completedIslands.has(index) ? '✓ Completed' : index === currentIsland && isConnected ? '→ Continue' : '▶ Start'}
                       </div>
-                    ) : (
-                      <div className="text-xs text-center font-medium text-slate-500 dark:text-slate-400">
-                        Coming Soon
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               )}

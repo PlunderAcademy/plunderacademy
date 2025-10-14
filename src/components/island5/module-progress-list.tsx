@@ -123,7 +123,7 @@ export function NeonModuleProgressList({
           const cardClasses = cn(
             "group rounded-2xl border p-5 transition-all duration-200",
             isCompleted && "border-cyan-500/40 bg-cyan-500/10 hover:border-cyan-500/70 hover:bg-cyan-500/15",
-            isCurrent && "border-blue-500/60 bg-blue-500/10 shadow-lg hover:border-blue-500/80",
+            isCurrent && "border-cyan-500/60 bg-cyan-500/10 shadow-lg hover:border-cyan-500/80",
             isLocked && "border-muted/20 bg-muted/10 text-muted-foreground",
             isLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:shadow-lg"
           );
@@ -135,14 +135,14 @@ export function NeonModuleProgressList({
                   className={cn(
                     "flex size-11 shrink-0 items-center justify-center rounded-full border",
                     isCompleted && "border-cyan-500/50 bg-cyan-500/15",
-                    isCurrent && "border-blue-500/50 bg-blue-500/15",
+                    isCurrent && "border-cyan-500/50 bg-cyan-500/15",
                     isLocked && "border-muted/30 bg-muted/20"
                   )}
                 >
                   {isCompleted ? (
                     <CheckCircle2 className="size-5 text-cyan-600 dark:text-cyan-400" aria-hidden="true" />
                   ) : isCurrent ? (
-                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                    <span className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">
                       {index + 1}
                     </span>
                   ) : (
@@ -160,7 +160,7 @@ export function NeonModuleProgressList({
                         </span>
                       )}
                       {isCurrent && (
-                        <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-blue-600 dark:text-blue-300">
+                        <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-cyan-600 dark:text-cyan-300">
                           Available
                         </span>
                       )}
@@ -174,7 +174,7 @@ export function NeonModuleProgressList({
                       className={cn(
                         "text-lg font-semibold leading-tight transition-colors",
                         isCompleted && "text-cyan-700 dark:text-cyan-300",
-                        isCurrent && "text-blue-700 dark:text-blue-300",
+                        isCurrent && "text-cyan-700 dark:text-cyan-300",
                         isLocked && "text-muted-foreground"
                       )}
                     >
@@ -195,7 +195,7 @@ export function NeonModuleProgressList({
                           "transition-colors",
                           isCompleted
                             ? "text-cyan-600 dark:text-cyan-400"
-                            : "text-blue-600 dark:text-blue-400 group-hover:underline"
+                            : "text-cyan-600 dark:text-cyan-400 group-hover:underline"
                         )}>
                           {isCompleted ? "Review module" : "Start exploring →"}
                         </span>

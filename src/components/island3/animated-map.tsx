@@ -1,7 +1,15 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useAccount } from "wagmi";
 import { ModuleMeta } from "@/lib/mdx";
+import { Badge } from "@/components/ui/badge";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { CheckCircle2, BookOpen, Lock } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAchievements } from "@/hooks/use-achievements";
 
 // Desert Bluff module slugs in order
 export const DESERT_MODULES = [
@@ -10,12 +18,78 @@ export const DESERT_MODULES = [
   'nft-collection-practical'
 ];
 
-// Simple vertical path for now - adjust coordinates later
+// Path points positioned at specific map locations
+// progress: exact percentage of path line to draw to reach this location
 const pathPoints = [
-  { x: 50, y: 75, label: "Location 1", progress: 0 },
-  { x: 50, y: 50, label: "Location 2", progress: 50 },
-  { x: 50, y: 25, label: "Location 3", progress: 100 },
+  { x: 70, y: 66, label: "Oasis (Bottom Right)", progress: 0 },      // 1: Oasis in bottom right
+  { x: 25, y: 45, label: "Castle (Left Center)", progress: 50 },     // 2: Castle to the left
+  { x: 73, y: 28, label: "Pyramid (Top Right)", progress: 100 },     // 3: Pyramid top right
 ];
+
+// Create curved path string for SVG (same as Island 1)
+const createPathString = (points: typeof pathPoints) => {
+  if (points.length === 0) return '';
+  
+  let path = `M ${points[0].x} ${points[0].y}`;
+  
+  for (let i = 1; i < points.length; i++) {
+    const current = points[i];
+    const previous = points[i - 1];
+    
+    // Calculate control points for smooth curves
+    const midX = (previous.x + current.x) / 2;
+    const midY = (previous.y + current.y) / 2;
+    
+    // Add some curve offset for more natural path
+    const offsetX = (current.y - previous.y) * 0.2;
+    const offsetY = (previous.x - current.x) * 0.2;
+    
+    // Use quadratic curve with calculated control point
+    path += ` Q ${midX + offsetX} ${midY + offsetY} ${current.x} ${current.y}`;
+  }
+  
+  return path;
+};
+
+type MarkerState = "completed" | "next" | "available" | "locked";
+
+const getMarkerVisual = (state: MarkerState) => {
+  switch (state) {
+    case "completed":
+      return {
+        fill: "#f97316",
+        stroke: "#9a3412",
+        text: "#f8fafc",
+        halo: "rgba(249, 115, 22, 0.35)",
+        shadow: "0 0 12px rgba(249, 115, 22, 0.55)",
+      };
+    case "next":
+      return {
+        fill: "#fb923c",
+        stroke: "#c2410c",
+        text: "#fff7ed",
+        halo: "rgba(251, 146, 60, 0.4)",
+        shadow: "0 0 14px rgba(251, 146, 60, 0.6)",
+      };
+    case "available":
+      return {
+        fill: "#ea580c",
+        stroke: "#7c2d12",
+        text: "#eff6ff",
+        halo: "rgba(234, 88, 12, 0.35)",
+        shadow: "0 0 10px rgba(234, 88, 12, 0.45)",
+      };
+    case "locked":
+    default:
+      return {
+        fill: "#9ca3af",
+        stroke: "#4b5563",
+        text: "#e5e7eb",
+        halo: "rgba(156, 163, 175, 0.2)",
+        shadow: "0 0 6px rgba(107, 114, 128, 0.3)",
+      };
+  }
+};
 
 interface DesertAnimatedMapProps {
   mode?: "preview" | "real";
@@ -24,15 +98,78 @@ interface DesertAnimatedMapProps {
 }
 
 export function DesertAnimatedMap({ mode = "real", modules, highlightedModuleSlug = null }: DesertAnimatedMapProps) {
+  const router = useRouter();
+  const { address, isConnected } = useAccount();
+  const { walletAchievements } = useAchievements();
+  const [progress, setProgress] = useState(0);
+  
+  const getLocationStatus = (index: number): MarkerState => {
+    if (!isConnected) {
+      return "locked";
+    }
+
+    const isCompleted = walletAchievements.some(
+      wa => wa.tokenId === index + 11 && wa.isClaimed // Desert Bluff uses IDs 11-13
+    );
+
+    if (isCompleted) return "completed";
+
+    if (index === 0) return "next";
+    
+    const prevCompleted = walletAchievements.some(
+      wa => wa.tokenId === index + 10 && wa.isClaimed
+    );
+
+    return prevCompleted ? "next" : "locked";
+  };
+
+  const isModuleAvailable = (index: number): boolean => {
+    if (!isConnected) return false;
+    const status = getLocationStatus(index);
+    return status === "next" || status === "completed" || status === "available";
+  };
+
+  // Update progress line based on completed modules
+  useEffect(() => {
+    if (!isConnected || mode !== "real") {
+      setProgress(0);
+      return;
+    }
+
+    let maxCompletedIndex = -1;
+    walletAchievements.forEach(achievement => {
+      if (achievement.isClaimed && achievement.tokenId >= 11 && achievement.tokenId <= 13) {
+        const moduleIndex = achievement.tokenId - 11; // Convert tokenId to module index
+        maxCompletedIndex = Math.max(maxCompletedIndex, moduleIndex);
+      }
+    });
+
+    if (maxCompletedIndex >= 0) {
+      const nextModuleIndex = maxCompletedIndex + 1;
+      if (nextModuleIndex < pathPoints.length) {
+        setProgress(pathPoints[nextModuleIndex].progress);
+      } else {
+        setProgress(100);
+      }
+    } else {
+      setProgress(0);
+    }
+  }, [isConnected, mode, walletAchievements]);
+
+  // Helper function to get module background image
+  const getModuleImage = (moduleIndex: number) => {
+    return `/islands/island3/island3-module${moduleIndex + 1}-image.webp`;
+  };
+
+  const pathString = createPathString(pathPoints);
+
   return (
     <div className="w-full space-y-6">
-      {/* Map Container */}
       <div className="relative mx-auto w-full overflow-hidden rounded-xl">
         <div
           className="relative mx-auto w-full"
           style={{ aspectRatio: "800 / 1328", maxHeight: "80vh" }}
         >
-          {/* Map Image */}
           <Image
             src="/islands/island3/island3-map.webp"
             alt="Desert Bluff Map"
@@ -41,54 +178,251 @@ export function DesertAnimatedMap({ mode = "real", modules, highlightedModuleSlu
             priority
           />
           
-          {/* SVG Overlay for path and markers - to be implemented */}
           <svg
-            className="absolute inset-0 w-full h-full"
+            className="absolute inset-0 w-full h-full pointer-events-none"
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
           >
-            {/* Simple vertical path */}
-            <line
-              x1="50"
-              y1="75"
-              x2="50"
-              y2="25"
-              stroke="#f97316"
+            <defs>
+              <style>
+                {`
+                  @keyframes dash-flow {
+                    from {
+                      stroke-dashoffset: 6;
+                    }
+                    to {
+                      stroke-dashoffset: 0;
+                    }
+                  }
+                  
+                  .animated-path-desert {
+                    stroke: #f97316;
+                    stroke-width: 1.2;
+                    stroke-dasharray: 3 3;
+                    stroke-linecap: round;
+                    fill: none;
+                    animation: dash-flow 1s linear infinite;
+                  }
+                `}
+              </style>
+              <mask id="progress-mask-desert">
+                <rect width="100" height="100" fill="black" />
+                <path
+                  d={pathString}
+                  stroke="white"
+                  strokeWidth="3"
+                  fill="none"
+                  pathLength="100"
+                  strokeDasharray={`${progress} ${100 - progress}`}
+                  strokeDashoffset="0"
+                />
+              </mask>
+            </defs>
+            
+            <path
+              d={pathString}
+              stroke="#f9731620"
               strokeWidth="0.5"
-              strokeDasharray="2 2"
-              opacity="0.3"
+              strokeDasharray="1 1"
+              fill="none"
             />
             
-            {/* Location markers - placeholders for now */}
-            {pathPoints.map((point, index) => (
-              <g key={index}>
-                <circle
-                  cx={point.x}
-                  cy={point.y}
-                  r="2"
-                  fill="#f97316"
-                  stroke="#9a3412"
-                  strokeWidth="0.5"
-                />
-                <text
-                  x={point.x}
-                  y={point.y}
-                  className="select-none text-center font-bold"
-                  textAnchor="middle"
-                  fontSize="2"
-                  dominantBaseline="central"
-                  fill="white"
-                >
-                  {index + 1}
-                </text>
-              </g>
-            ))}
+            <path
+              d={pathString}
+              className="animated-path-desert"
+              mask="url(#progress-mask-desert)"
+            />
+            
+            {pathPoints.map((point, index) => {
+              const locationStatus = getLocationStatus(index);
+              const visual = getMarkerVisual(locationStatus);
+              const moduleSlug = DESERT_MODULES[index] ?? modules[index]?.slug ?? "";
+              const isHighlighted = moduleSlug === highlightedModuleSlug;
+
+              return (
+                <g key={index}>
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r={isHighlighted ? "3.5" : "3"}
+                    fill={visual.halo}
+                    className="transition-all duration-300"
+                    style={{
+                      filter: isHighlighted ? `drop-shadow(${visual.shadow}) brightness(1.3)` : `drop-shadow(${visual.shadow})`,
+                      opacity: isHighlighted ? 1 : 0.6
+                    }}
+                  />
+                  
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r={isHighlighted ? "2.2" : "2"}
+                    fill={visual.fill}
+                    stroke={visual.stroke}
+                    strokeWidth={isHighlighted ? "0.6" : "0.5"}
+                    className="transition-all duration-300"
+                    style={{
+                      filter: isHighlighted ? 'brightness(1.2)' : 'none'
+                    }}
+                  />
+                  
+                  <text
+                    x={point.x}
+                    y={point.y}
+                    className="select-none text-center font-bold pointer-events-none"
+                    textAnchor="middle"
+                    fontSize={isHighlighted ? "2.2" : "2"}
+                    dominantBaseline="central"
+                    fill={visual.text}
+                  >
+                    {locationStatus === "completed" ? "✓" : index + 1}
+                  </text>
+                </g>
+              );
+            })}
           </svg>
+          
+          {pathPoints.map((point, index) => {
+            const locationStatus = getLocationStatus(index);
+            const isCompleted = locationStatus === "completed";
+            const isAvailable = isModuleAvailable(index);
+            const moduleSlug = DESERT_MODULES[index] ?? modules[index]?.slug ?? "";
+            const moduleData = modules.find(m => m.slug === moduleSlug);
+            
+            return (
+              <HoverCard key={`hover-${index}`}>
+                <HoverCardTrigger asChild>
+                  <div 
+                    className={cn(
+                      "absolute",
+                      isAvailable && isConnected ? "cursor-pointer" : "cursor-not-allowed"
+                    )}
+                    style={{
+                      left: `${point.x}%`,
+                      top: `${point.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      width: '20px',
+                      height: '20px',
+                      zIndex: 10
+                    }}
+                    onClick={() => {
+                      if (isAvailable && isConnected && moduleSlug) {
+                        router.push(`/lessons/island3/${moduleSlug}`);
+                      }
+                    }}
+                  />
+                </HoverCardTrigger>
+                <HoverCardContent className="w-96">
+                  {isCompleted && mode === "real" ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge className="bg-orange-500/20 text-orange-700 dark:text-orange-300">
+                          <BookOpen className="mr-1 size-3" />
+                          <span className="capitalize">NFT Mastery</span>
+                        </Badge>
+                        <CheckCircle2 className="size-5 text-orange-500" />
+                      </div>
+                      
+                      <div className="flex justify-center">
+                        <div className="relative w-80 h-80 rounded-lg overflow-hidden bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-950 dark:to-orange-900 flex items-center justify-center border-2 border-orange-300 dark:border-orange-700">
+                          <div className="text-center space-y-2">
+                            <div className="text-6xl">🏜️</div>
+                            <p className="text-lg font-semibold text-orange-700 dark:text-orange-300">
+                              Achievement NFT
+                            </p>
+                            <p className="text-sm text-orange-600 dark:text-orange-400">
+                              Coming Soon
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="text-center space-y-1">
+                        <h4 className="font-semibold text-lg">{moduleData?.title || "Module Completed"}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {moduleData?.description || "Achievement unlocked!"}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className={cn("bg-muted", !isAvailable && "opacity-50")}>
+                          <BookOpen className="size-4 mr-1" />
+                          Module {index + 1}
+                        </Badge>
+                        <div className="text-sm text-muted-foreground">
+                          {!isConnected 
+                            ? "Connect wallet to start" 
+                            : isAvailable 
+                            ? "Click to start" 
+                            : "Complete previous modules first"
+                          }
+                        </div>
+                      </div>
+                      
+                      <div className="relative rounded-lg overflow-hidden">
+                        <div className="relative w-full h-64">
+                          <Image
+                            src={getModuleImage(index)}
+                            alt={`Module ${index + 1} Preview`}
+                            fill
+                            className="object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              if (target.src.includes('.webp')) {
+                                target.src = target.src.replace('.webp', '.png');
+                              }
+                            }}
+                          />
+                          
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+                          
+                          <div className="absolute inset-0 flex flex-col justify-between p-6 text-white">
+                            <div className="flex justify-between items-start">
+                              <div className="bg-white/20 backdrop-blur-sm rounded-full w-12 h-12 flex items-center justify-center">
+                                <span className="text-xl font-bold">{index + 1}</span>
+                              </div>
+                              <div className={cn(
+                                "px-2 py-1 rounded text-xs font-medium",
+                                isAvailable ? "bg-orange-500/80" : "bg-red-500/80"
+                              )}>
+                                {!isConnected 
+                                  ? "Connect Wallet" 
+                                  : isAvailable 
+                                  ? "Available" 
+                                  : "Locked"
+                                }
+                              </div>
+                            </div>
+                            
+                            <div className="text-center space-y-2">
+                              <h4 className="font-semibold text-lg">
+                                {moduleData?.title || 'Loading...'}
+                              </h4>
+                              <p className="text-sm text-gray-200 opacity-90">
+                                {moduleData?.description || 'Module description loading...'}
+                              </p>
+                              
+                              {moduleData && (
+                                <div className="flex items-center justify-center gap-4 text-sm mt-2">
+                                  <span className="bg-white/20 backdrop-blur-sm rounded px-2 py-1">
+                                    📚 {moduleData.lessons.length} lessons
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </HoverCardContent>
+              </HoverCard>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
-
-// Keep old export name for backwards compatibility
-export const IceAnimatedMap = DesertAnimatedMap;
