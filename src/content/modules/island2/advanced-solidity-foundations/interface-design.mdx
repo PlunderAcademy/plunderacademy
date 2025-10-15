@@ -8,35 +8,117 @@ objective: >-
 slug: interface-design
 ---
 
-## Where this fits
+## Set the stage
 
-Inheritance gives you code reuse; interfaces give you interoperability. Think of an interface like a USB‑C port: any device that follows the spec plugs in and works without the computer caring which brand it is. In Solidity, that means your staking contract can work with any conforming ERC20 or pluggable reward module without recompiling the core.
+Inheritance gives you code reuse within your own contracts; interfaces give you interoperability with the world. Think of an interface like a USB-C port: any device that follows the spec plugs in and works without the computer caring which brand it is. In Solidity, that means your staking contract can accept any conforming ERC20 token, integrate with any compliant reward distributor, and swap oracle providers—all without recompiling or redeploying your core logic.
 
-For Module 1 we’re building toward a staking system that must hold tokens, emit clean events, and let external modules (like a reward distributor) slot in. Interfaces let us depend on stable APIs, test with mocks, and swap implementations later—without touching core logic.
+For the staking arc we're building toward in Module 5, you'll need to hold tokens (any token), emit rewards (from pluggable modules), and maybe consult external price feeds. Interfaces let you define these boundaries once, test with mocks, and upgrade implementations independently. This lesson shows you how to design minimal, versioned interfaces that stay stable across upgrades and how to safely call them with `try/catch` and dependency inversion.
 
-## Design principles
+## Conceptual foundations
 
-- **Definition — Interface**: A contract type that declares function signatures, events, and custom errors with no implementation. **When to use it**: To define external APIs and enable swappable implementations (e.g., reward modules, token adapters).
-- **Definition — Abstract contract**: A contract with at least one unimplemented function (can also contain state). **When to use it**: When you need partial implementation plus a required surface; prefer interfaces when no state/implementation is needed.
-- **Definition — `external` vs `public`**: `external` functions are callable only from outside the contract and can read calldata directly; `public` can be called internally or externally. **When to use it**: Prefer `external` in interfaces for gas efficiency.
-- **Definition — Minimal surface**: The smallest set of functions/events needed for the job. **When to use it**: Always—smaller interfaces are easier to secure, mock, and version.
-- **Definition — NatSpec**: Documentation comments that explain purpose, params, and failure modes. **When to use it**: For every interface function to stabilize expectations for integrators.
-- **Definition — Dependency inversion**: High‑level modules depend on abstractions (interfaces), not concrete implementations. **When to use it**: Any time your contract interacts with external systems or swappable modules.
+### Interfaces vs abstract contracts vs concrete contracts
 
-### Versioning tips
+| Type | State? | Implementation? | When to use |
+|------|--------|----------------|-------------|
+| **Interface** | No | No (only signatures, events, errors) | Define external APIs; maximum flexibility; swap implementations freely |
+| **Abstract contract** | Yes (optional) | Partial (some functions implemented, some not) | Share common logic and state; force children to complete specific functions |
+| **Concrete contract** | Yes | Full | Deploy as-is; no open extension points |
 
-- Start with `IThing` and add a semver‑tagged extension like `IThingV2` if you must add functions later
-- Don’t break function names or argument orders between versions
-- Emit events that mirror state transitions and are stable across versions
-- Document custom errors so integrators can handle failures predictably
+For staking:
+- Use **interfaces** for tokens (`IERC20`), reward modules (`IRewardDistributor`), oracles (`IPriceFeed`)
+- Use **abstract contracts** for shared staking logic (e.g., `BaseStaking` with hooks like `_beforeStake`)
+- Use **concrete contracts** for final deployments (e.g., `FixedAPRStaking`, `TieredRewardStaking`)
 
-## Hands‑on
+### Mental model: contracts vs interfaces
 
-The following snippets show how to define a clear interface, consume `IERC20` safely, and guard external calls. We keep them small and focused.
+Imagine a contract as a ship with a crew (internal implementation) and a set of portholes (public functions). An **interface** is a map of those portholes—where they are, what shape they have, what you can pass through them—but no details about the crew inside. When you code to an interface, you're saying: "I don't care how this ship works internally; I only care that it has a `transfer` porthole that accepts `(address, uint256)` and returns `bool`."
 
-### 1) Define a custom interface with events and custom errors
+This decoupling is powerful:
+- Your staking contract can work with *any* token that implements `IERC20`, from USDC to a governance token you haven't heard of yet
+- You can test your contract with a mock token that always succeeds or always reverts, without deploying the real token
+- You can upgrade the reward logic (swap `LinearRewardDistributor` for `TieredRewardDistributor`) without touching the staking core
 
-We’ll define an `IRewardDistributor` interface that a staking core can call to mint or release rewards. The interface includes a stable event schema and a custom error so callers can distinguish failure modes. NatSpec on each function documents intent and expectations.
+### Dependency inversion: high-level depends on abstraction
+
+**Dependency inversion** (a SOLID principle) says: high-level modules should depend on abstractions, not concrete implementations. In Solidity:
+- ✅ `contract StakingVault { IERC20 public token; }` (depends on interface)
+- ❌ `contract StakingVault { MyToken public token; }` (depends on concrete contract)
+
+Why? If you depend on `MyToken`, you can *only* use `MyToken`. If you depend on `IERC20`, you can use any token. Dependency inversion makes your contract **open for extension, closed for modification**—you add new tokens or modules by deploying new implementations, not by rewriting the core.
+
+### External vs public: gas and intent
+
+- **`external`**: Callable only from outside the contract; arguments live in calldata (cheaper). Use in interfaces to signal "this is for external callers."
+- **`public`**: Callable from outside *and* inside; arguments may be copied to memory (more gas). Use in contracts when you need internal calls.
+
+**Default for interfaces**: Always `external`. It's cheaper and communicates intent clearly.
+
+### Minimal surface: the smaller, the safer
+
+Every function you add to an interface is a promise you must keep forever (or version carefully). Small interfaces are:
+- Easier to audit (fewer attack surfaces)
+- Easier to mock (less boilerplate in tests)
+- Easier to version (fewer breaking changes)
+
+**Heuristic**: If you can't justify a function in one sentence, don't add it. For `IRewardDistributor`, you need `pending(address) → uint256` (view rewards) and `claimRewards() → uint256` (claim them). That's it. Don't add `claimFor(address)`, `batchClaim(address[])`, `setRewardRate(uint256)` unless you have a specific use case and security plan.
+
+### Versioning strategies
+
+Interfaces are contracts too; once deployed and depended upon, they're hard to change. Versioning strategies:
+- **Additive versioning**: `IThing` → `IThingV2 is IThing` (new functions added; old code still works)
+- **Breaking versioning**: `IThing` → `IThingV2` (separate interface; old code must update)
+- **Deprecation**: Mark old functions with `@deprecated` in NatSpec; add new ones; eventually remove
+
+For staking, start with `IRewardDistributor`. If you need to add a batch claim function later, create `IRewardDistributorV2 is IRewardDistributor { function batchClaim(address[] calldata accounts) external; }`. Old consumers still work; new consumers can cast to `V2` if available.
+
+<svg viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      {`.box { fill: var(--background); stroke: var(--border); stroke-width: 2; rx: 6; }
+        .interface { fill: var(--primary); fill-opacity: 0.1; stroke: var(--primary); stroke-width: 2; }
+        .impl { fill: var(--muted); fill-opacity: 0.1; stroke: var(--muted); stroke-width: 2; }
+        .label { fill: var(--foreground); font-size: 12px; font-family: ui-monospace, monospace; }
+        .arrow { stroke: var(--foreground); stroke-width: 2; fill: none; marker-end: url(#arr); }`}
+    </style>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" style={{fill: 'var(--foreground)'}} />
+    </marker>
+  </defs>
+  {/* Staking Core */}
+  <rect className="box" x="220" y="20" width="160" height="60" />
+  <text className="label" x="300" y="50" textAnchor="middle">Staking Core</text>
+  <text className="label" x="300" y="68" textAnchor="middle" style={{fontSize: '10px', fill: 'var(--muted-foreground)'}}>depends on:</text>
+  {/* Interfaces */}
+  <rect className="interface" x="50" y="130" width="140" height="50" />
+  <text className="label" x="120" y="160" textAnchor="middle">IERC20</text>
+  <path className="arrow" d="M 270 80 L 140 130" />
+  <rect className="interface" x="230" y="130" width="140" height="50" />
+  <text className="label" x="300" y="160" textAnchor="middle">IRewardDistributor</text>
+  <path className="arrow" d="M 300 80 L 300 130" />
+  <rect className="interface" x="410" y="130" width="140" height="50" />
+  <text className="label" x="480" y="160" textAnchor="middle">IPriceFeed</text>
+  <path className="arrow" d="M 330 80 L 460 130" />
+  {/* Implementations */}
+  <rect className="impl" x="50" y="210" width="140" height="50" />
+  <text className="label" x="120" y="240" textAnchor="middle">USDC / WETH / ...</text>
+  <path className="arrow" d="M 120 210 L 120 180" />
+  <rect className="impl" x="230" y="210" width="140" height="50" />
+  <text className="label" x="300" y="240" textAnchor="middle">LinearRewards</text>
+  <path className="arrow" d="M 300 210 L 300 180" />
+  <rect className="impl" x="410" y="210" width="140" height="50" />
+  <text className="label" x="480" y="240" textAnchor="middle">ChainlinkOracle</text>
+  <path className="arrow" d="M 480 210 L 480 180" />
+</svg>
+
+**Key insight**: The staking core never imports concrete token contracts, reward modules, or oracles. It only depends on interfaces. Implementations can be swapped, upgraded, or mocked without touching the core.
+
+## Guided code walk-throughs
+
+The following examples show how to design robust interfaces and integrate them safely into your staking system.
+
+### 1) Minimal interface with NatSpec and custom errors
+
+We define an `IRewardDistributor` interface that your staking core can call to compute and claim rewards. Notice the complete NatSpec documentation, minimal function surface (two functions only), and custom error for failure signaling.
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -44,32 +126,33 @@ pragma solidity ^0.8.24;
 
 /// @title IRewardDistributor
 /// @notice Minimal API for modules that calculate and release staking rewards
-/// @dev Keep this surface small and version via IRewardDistributorV2 if needed
+/// @dev Keep this surface small; extend via IRewardDistributorV2 if needed
 interface IRewardDistributor {
-    /// @notice Emitted when rewards are claimed by a user
-    /// @param account The beneficiary of the rewards
-    /// @param amount The amount released to the beneficiary
+    /// @notice Emitted when rewards are successfully claimed
+    /// @param account The beneficiary who claimed
+    /// @param amount The reward amount released
     event RewardsClaimed(address indexed account, uint256 amount);
 
-    /// @notice Error indicating there are not enough rewards available
+    /// @notice Error thrown when insufficient rewards are available
     error InsufficientRewards();
 
-    /// @notice Compute the pending reward for an account
-    /// @param account The beneficiary address
-    /// @return amount The claimable reward amount
+    /// @notice Compute the pending unclaimed reward for an account
+    /// @param account The staker's address
+    /// @return amount The claimable reward in wei
     function pending(address account) external view returns (uint256 amount);
 
-    /// @notice Release rewards to the caller
-    /// @return amount The amount released
+    /// @notice Claim all pending rewards for the caller
+    /// @return amount The amount transferred to the caller
+    /// @dev Reverts with InsufficientRewards if the pool is empty
     function claimRewards() external returns (uint256 amount);
 }
 ```
 
-Takeaway: an interface is a contract of intent—no state, no constructors—just the API your core can trust across implementations.
+**Takeaway**: An interface is a promise—no state, no constructors, no implementation. Just signatures, events, and errors. Your staking core can depend on this contract without caring whether rewards come from a fixed pool, a minting schedule, or an external treasury.
 
-### 2) Depend on `IERC20` to accept any token (dependency inversion)
+### 2) Dependency inversion: accept any token via `IERC20`
 
-This vault holds deposits of any ERC20 specified at construction. By coding to `IERC20` and using `SafeERC20`, we accept any well‑behaved token and avoid hand‑rolled transfer logic. The staking core later can compose with this vault without caring about the specific token brand.
+This vault accepts deposits of *any* ERC20 token specified at construction. By depending on `IERC20` (an interface) instead of a concrete token contract, we unlock flexibility: tests can inject mocks, users can stake any token, and future integrations require zero changes to the vault.
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -78,79 +161,85 @@ pragma solidity ^0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract AnyTokenVault {
+contract FlexibleStakingVault {
     using SafeERC20 for IERC20;
 
-    IERC20 public immutable asset;
+    IERC20 public immutable stakingToken;
     mapping(address => uint256) public balanceOf;
 
     event Deposited(address indexed account, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
 
-    constructor(IERC20 _asset) {
-        asset = _asset; // dependency inversion: any IERC20 works
+    /// @param _token Any ERC20-compliant token (dependency inversion)
+    constructor(IERC20 _token) {
+        stakingToken = _token;
     }
 
     function deposit(uint256 amount) external {
         require(amount > 0, "ZERO_AMOUNT");
-        // CEI: checks first, then effects, then interactions
-        balanceOf[msg.sender] += amount;
-        asset.safeTransferFrom(msg.sender, address(this), amount);
+        balanceOf[msg.sender] += amount; // Effects
+        stakingToken.safeTransferFrom(msg.sender, address(this), amount); // Interactions
         emit Deposited(msg.sender, amount);
     }
 
     function withdraw(uint256 amount) external {
         require(amount > 0 && amount <= balanceOf[msg.sender], "INVALID_AMOUNT");
-        balanceOf[msg.sender] -= amount;
-        asset.safeTransfer(msg.sender, amount);
+        balanceOf[msg.sender] -= amount; // Effects
+        stakingToken.safeTransfer(msg.sender, amount); // Interactions
         emit Withdrawn(msg.sender, amount);
     }
 }
 ```
 
-Takeaway: depending on `IERC20` lets you swap tokens without touching the vault; tests can substitute a mock token seamlessly.
+**Takeaway**: Depend on interfaces, not implementations. This vault works with USDC, WETH, or a governance token you haven't deployed yet. In tests, pass a mock token that reverts on transfer to verify error handling.
 
-### 3) Safe external calls with try/catch
+### 3) Testing with mocks: isolate dependencies
 
-When calling untrusted contracts, prefer a narrow interface and trap failures. Here a consumer contract calls `IRewardDistributor.claimRewards()` and handles reverts gracefully. In production, you might log, cap impact, or retry later rather than bubbling fatal errors.
+Interfaces make testing trivial. Here's a minimal mock `IRewardDistributor` for unit tests. You control exactly what it returns, without deploying complex reward logic.
 
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IRewardDistributor} from "./IRewardDistributor.sol"; // path illustrative
+contract MockRewardDistributor {
+    uint256 public mockPending;
+    bool public shouldFail;
 
-contract RewardsConsumer {
-    event ClaimAttempt(address indexed account, uint256 requested);
-    event ClaimFailed(address indexed account, string reason);
+    event RewardsClaimed(address indexed account, uint256 amount);
+    error InsufficientRewards();
 
-    function safeClaim(IRewardDistributor distributor) external returns (uint256 claimed) {
-        emit ClaimAttempt(msg.sender, 0);
-        try distributor.claimRewards() returns (uint256 amount) {
-            return amount;
-        } catch Error(string memory reason) {
-            emit ClaimFailed(msg.sender, reason);
-            return 0;
-        } catch (bytes memory) {
-            emit ClaimFailed(msg.sender, "Unknown error");
-            return 0;
-        }
+    function setPending(uint256 amount) external { mockPending = amount; }
+    function setShouldFail(bool _fail) external { shouldFail = _fail; }
+
+    function pending(address) external view returns (uint256) {
+        return mockPending;
+    }
+
+    function claimRewards() external returns (uint256) {
+        if (shouldFail) revert InsufficientRewards();
+        emit RewardsClaimed(msg.sender, mockPending);
+        return mockPending;
     }
 }
 ```
 
-Takeaway: `try/catch` isolates risk and turns hard failures into recoverable outcomes for the caller and UI.
+**Test strategy**:
+1. **Happy path**: Set `mockPending = 1000`, call `claimRewards()`, assert success
+2. **Failure path**: Set `shouldFail = true`, call `claimRewards()`, assert revert
+3. **Zero rewards**: Set `mockPending = 0`, call `claimRewards()`, assert zero return
+
+**Takeaway**: Mocks eliminate external dependencies. You test your staking logic in isolation, fast and deterministically. In production, swap the mock for the real `LinearRewardDistributor`.
 
 ## Practice and reflection
 
-Short, hands‑on prompts to cement concepts. Keep each answer to 1–3 sentences or a few lines of code.
+Apply these patterns to your staking design:
 
-- **Surface slimming**: Rewrite `IRewardDistributor` with only the functions absolutely required for your staking MVP. What did you remove and why?
-- **Version sketch**: Propose what would go into `IRewardDistributorV2` without breaking V1 users. Name one backward‑compatible addition.
-- **Token swap thought experiment**: If your protocol later moves from Token A to Token B, list the on‑chain changes required when coding to `IERC20` vs a concrete token contract.
-- **Failure handling**: Identify a function in your protocol where `try/catch` would reduce blast radius. What is the fallback path?
+- **Surface audit**: Review `IRewardDistributor`. If you could only keep *one* function (either `pending` or `claimRewards`), which would you choose and why? Write two sentences defending your choice.
+- **Versioning exercise**: Propose `IRewardDistributorV2` that adds a `batchClaim(address[] calldata accounts)` function. Write the new interface (inheriting from V1) and explain in one sentence why this is backward-compatible.
+- **Token swap scenario**: Your protocol currently uses Token A. A governance vote decides to switch to Token B. List every on-chain change required if your vault depends on `IERC20` vs. a concrete `TokenA` contract. Which is simpler?
+- **Mock design**: Sketch a mock `IERC20` contract that always reverts on `transferFrom`. How would you use this in a test to verify your vault's error handling?
 
-{/* Concept Matching: Interface vs Abstract vs Visibility vs DI */}
+{/* Concept Matching */}
 <ConceptMatching pairs={[
   {"conceptId":"interface","definitionId":"def-interface","concept":"interface","definition":"No implementation; pure API boundary for integrations","category":"contracts"},
   {"conceptId":"abstract","definitionId":"def-abstract","concept":"abstract contract","definition":"Partial implementation; requires children to finish it","category":"contracts"},
@@ -159,29 +248,56 @@ Short, hands‑on prompts to cement concepts. Keep each answer to 1–3 sentence
   {"conceptId":"di","definitionId":"def-di","concept":"dependency inversion","definition":"High‑level modules depend on interfaces, not concrete classes","category":"design"}
 ]}/>
 
-## Security and testing notes
+Short reflection: If you had to explain dependency inversion to a non-technical stakeholder, what analogy would you use? Write two sentences.
 
-- **Never trust external contracts blindly**: Validate return values; assume non‑standard ERC20 behavior is possible
-- **CEI pattern**: Checks → Effects → Interactions; minimize state touched before external calls
-- **`try/catch` defensiveness**: Convert external reverts into safe no‑ops or bounded outcomes when appropriate
-- **Use `SafeERC20`**: Guard against tokens that don’t return booleans or that revert on failure
-- **Access control**: Gate privileged functions that change dependencies (e.g., setting a new distributor)
-- **Mocks/stubs in tests**: Swap implementations easily via interfaces; fuzz error paths and partial‑failure scenarios
-- **Interface versioning**: Extend with `IV2` interfaces rather than mutating function signatures
-- **Event schemas**: Keep `indexed` subjects stable; design payloads for analytics and UX
+## Security and pitfalls
 
-### Review checklist before shipping
+Interfaces are low-risk by design (no state, no logic), but misuse at integration points introduces vulnerabilities.
 
-- Minimal, documented interface surface (functions, events, errors)
-- All interface functions `external`
-- No state/constructors in interfaces
-- Dependency inversion at boundaries (e.g., `IERC20` for tokens)
-- External calls wrapped or validated; no silent failures
-- Tests cover success and failure of external calls with mocks
+### Interface design pitfalls
 
-## Wrap‑up and next steps
+- **Over-promising**: Adding functions you might not need forces implementations to provide them (or revert). Keep surfaces minimal; extend with `V2` if needed.
+- **Under-documenting**: Missing NatSpec means integrators guess behavior. Document preconditions, failure modes, and event semantics.
+- **Breaking changes**: Renaming functions or reordering parameters breaks all consumers. Version interfaces instead (`IThingV2`).
+- **No custom errors**: Generic reverts (`require(false)`) are hard to handle. Define `error InsufficientFunds()` etc. so callers can `try/catch` specific failures.
 
-By coding to interfaces, you unlock modularity: your staking core stays stable while modules and tokens swap behind a consistent API. You also learned to guard external calls with `try/catch`, keeping failures contained and user‑friendly.
+### Integration pitfalls
 
-Next up, we’ll explore events and libraries. Events make your interface observable for analytics and frontends, while libraries package common logic without bloating storage.
+- **Trusting returns blindly**: Even well-designed interfaces can lie (malicious implementations). Always validate critical returns (e.g., balance checks after transfers).
+- **No SafeERC20**: Raw `IERC20.transfer` doesn't revert on failure with non-standard tokens (e.g., USDT). Use `SafeERC20.safeTransfer`.
+- **Silent failures**: If calling an interface that might revert, wrap in `try/catch` and emit events. Don't let external failures corrupt your state silently.
+- **Skipping mocks in tests**: If you only test with real implementations, you miss edge cases (reverts, zero returns, reentrancy). Always write mock-based unit tests.
+
+### Versioning pitfalls
+
+- **Breaking inheritance**: If `IThingV2` changes signatures from `IThing`, old code breaks. Always make `V2` inherit `V1` and *add* functions.
+- **No migration path**: Document how consumers detect which version a contract implements. Common pattern: expose `function version() external pure returns (string memory)`.
+
+### Access control at boundaries
+
+- **Who can set interfaces?**: If your staking contract has `setRewardDistributor(IRewardDistributor newDist)`, gate it with `onlyOwner` or a role. Otherwise anyone can point your contract at a malicious module.
+- **Validate addresses**: When accepting an interface address in a setter, consider checking `newDist.supportsInterface(type(IRewardDistributor).interfaceId)` (EIP-165) or calling a view function to verify it's not a random address.
+
+## Security checklist
+
+Before shipping interface integrations:
+
+- [ ] **Minimal function surface**: Only functions you actually need; no speculative additions
+- [ ] **Complete NatSpec**: Every function, parameter, return value, and error documented
+- [ ] **Custom errors defined**: Specific `error` types for each failure mode
+- [ ] **All functions `external`**: Interfaces should never have `public` (wastes gas, unclear intent)
+- [ ] **No state or constructors**: Interfaces are pure API contracts
+- [ ] **Events with `indexed` subjects**: Critical for off-chain filtering
+- [ ] **Versioning plan**: If you must add functions later, you'll use `IV2 is IV1` pattern
+- [ ] **Dependency inversion**: High-level contracts depend on interfaces, not concrete contracts
+- [ ] **SafeERC20 for tokens**: All `IERC20` calls use `safeTransfer` and `safeTransferFrom`
+- [ ] **Try/catch on risky calls**: External interface calls that can fail are wrapped
+- [ ] **Mock-based tests**: Unit tests use mocks to isolate logic; integration tests use real implementations
+- [ ] **Access control on setters**: Functions that change interface dependencies are gated (`onlyOwner`, `onlyRole`)
+
+## Wrap-up and next steps
+
+You've learned how to design minimal, versioned interfaces that keep your staking system open for extension and closed for modification. You saw how dependency inversion (depending on `IERC20` instead of concrete tokens) unlocks flexibility and testability, and how mocks let you verify behavior in isolation. You also practiced `try/catch` for safe external calls and explored versioning strategies (`IV2 is IV1`) that keep old code working.
+
+Next, you'll dive into events and libraries. Events make your interface observable for dashboards and analytics; libraries centralize reusable logic (APR calculations, fee math) without inflating storage. Combined with interfaces, they'll form the foundation of a modular, auditable staking system.
 

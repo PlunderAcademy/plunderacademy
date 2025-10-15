@@ -246,40 +246,80 @@ Try these bite-size tasks to strengthen your intuition. Keep each change small a
 
 Short reflection: Where would you inject a pause gate in staking—at token transfer, at deposit/withdraw functions, or both? Defend your answer in two sentences.
 
-## Security notes
+## Security and pitfalls
 
 Security is about removing surprises. Inheritance can hide them unless you make intent explicit.
 
-- **Checks-Effects-Interactions (CEI)**: Validate first, adjust internal state second, interact with external contracts last. This reduces reentrancy blast radius.
-- **ReentrancyGuard**: Guard any function that moves tokens or calls untrusted code. Prefer pull payments (claim pattern) so external calls happen in isolated transactions.
-- **Access control**: Use `Ownable` or `AccessControl` for privileged actions like pausing, updating policy, or emergency drains. Keep the surface tight and review role names.
-- **Explicit override lists**: Always list every parent in `override(Parent1, Parent2)` when required. This is your audit breadcrumb.
-- **Constructor and init ordering**: Base constructors run in linearized order, not in the order you call them. Keep constructors small; prefer immutables and explicit initialization.
-- **Shadowing**: Avoid redeclaring variables with the same names as parents. It confuses readers and can lead to unintended reads/writes. Use distinct, descriptive names.
-- **Ambiguous hooks**: In OpenZeppelin v5, prefer overriding the designated hook (e.g., `_update` for ERC20). Don’t sprinkle custom `require` checks across multiple surfaces unless you can prove they compose.
-- **Events are for observers**: Emit events with `indexed` fields for client indexing, but never gate safety logic on event emission.
-- **Approvals and token safety**: If interacting with ERC20s, prefer `SafeERC20` and avoid infinite approvals to third parties. Reset allowances when not needed.
-- **Upgradability boundaries**: If you plan to upgrade policies, keep the boundary abstract and the storage layout stable. Never assume a child can read parent private storage.
+### Inheritance-specific vulnerabilities
 
-### Review checklist before shipping
+- **Shadowing state variables**: If a child redeclares a variable with the same name as a parent, Solidity creates a *separate* storage slot. Both variables exist; reads/writes go to the child's version. This is almost always a bug. **Solution**: Use unique, descriptive names across the hierarchy.
+- **Constructor ordering surprises**: Base constructors run in linearized order (left-to-right in the inheritance list), not in the order you invoke them. If `Base` expects `Child` to set a value first, that won't happen. **Solution**: Keep constructors minimal; use immutables set at child level and passed to parents.
+- **Incorrect `super` usage**: Forgetting `super` breaks the chain; parent logic doesn't run. Calling `Parent.foo()` instead of `super.foo()` skips intermediate layers. **Solution**: Always use `super` unless you intentionally block the chain; document why.
+- **Explicit override ambiguity**: If two parents define `foo()`, and you forget `override(Parent1, Parent2)`, compilation fails. But if you list them in the wrong order or omit one, the code compiles but behaves unexpectedly. **Solution**: List all parents in the same order as your inheritance declaration.
 
-- **Have you minimized the virtual surface?** Only expose hooks you will actually override.
-- **Is every override explicit?** If two parents mention the function, list them all.
-- **Are `super` calls correct?** Ensure each layer runs exactly once and in the intended order.
-- **Are cross-cutting rules centralized?** Pause checks and access control should sit in one predictable place.
-- **Are events `indexed` appropriately?** Clients will thank you when building dashboards.
-- **Have you written tests for the override chain?** Unit test each layer and an integration test that asserts end-to-end order.
+### CEI and reentrancy in inheritance
+
+- **CEI applies to the entire call chain**: If `Child.foo()` calls `super.foo()`, which calls `Parent.foo()`, which calls external code, *all* state updates must happen before that external call. **Solution**: Finalize state in the leaf (child) before calling `super`.
+- **`ReentrancyGuard` at the top**: Place `nonReentrant` on the entry function (child). Parent functions inherit the lock; you don't need `nonReentrant` on every override. **Solution**: Guard the public entry point; internal helpers don't need guards.
+- **Pull over push in inheritance**: If a parent calls `token.transfer(user, amount)` (push), and a child adds batch logic, reentrancy risk multiplies. **Solution**: Prefer pull patterns (users claim in separate txs).
+
+### Access control pitfalls
+
+- **Multiple `Ownable` parents**: If two parents both inherit `Ownable`, diamond inheritance causes ambiguity. **Solution**: Inherit `Ownable` only once, at the top of your hierarchy.
+- **Role collision**: If you use `AccessControl` with custom roles, ensure role names don't collide across parents. **Solution**: Prefix roles with module names (`STAKING_PAUSER_ROLE`, `REWARDS_MANAGER_ROLE`).
+- **Modifier ordering**: If you stack modifiers (`onlyOwner whenNotPaused nonReentrant`), they run outer-to-inner. Auth fails before pause checks. **Solution**: Order modifiers intentionally; test all paths.
+
+### Upgradability and storage layout
+
+- **Storage slots are append-only**: If you add a new state variable to a parent in an upgrade, and a child already uses that slot, corruption occurs. **Solution**: Reserve gap slots (`uint256[50] private __gap;`) in base contracts if planning upgrades.
+- **Initialization vs constructor**: Proxied contracts can't use constructors (they run on the implementation, not the proxy). **Solution**: Use `initialize()` with `initializer` modifier from OpenZeppelin's `Initializable`.
+- **Abstract boundaries**: If your staking policy is abstract, document storage layout and init order so future implementations don't break. **Solution**: Write explicit NatSpec for storage and initialization sequences.
+
+### Event and error handling
+
+- **Events in overrides**: If both parent and child emit events, clients see duplicates. **Solution**: Decide which layer owns event emission; document in NatSpec.
+- **Custom errors in inheritance**: If parent defines `error Unauthorized()` and child defines the same, they collide. **Solution**: Use unique error names or define once in a shared base.
+
+### Testing inheritance chains
+
+- **Unit test each layer**: Test parent alone (mock child behavior), test child alone (mock parent behavior). **Solution**: Use mocks and abstract stubs.
+- **Integration test the chain**: Deploy the full hierarchy and assert the exact sequence of `super` calls. **Solution**: Emit events at each layer and verify order.
+- **Fuzz override paths**: If multiple parents override the same function, fuzz inputs to ensure all paths compose correctly. **Solution**: Use Foundry or Echidna fuzzing.
+
+## Security checklist
+
+Before shipping contracts with inheritance:
+
+- [ ] **Minimal `virtual` surface**: Only functions you'll actually override are `virtual`
+- [ ] **Explicit override lists**: Every override specifies all parents: `override(Parent1, Parent2)`
+- [ ] **Correct `super` calls**: Each override calls `super` unless intentionally blocking; test the chain
+- [ ] **No shadowed variables**: State variable names are unique across the hierarchy
+- [ ] **Constructors minimal**: Base constructors don't depend on child state; immutables preferred
+- [ ] **CEI discipline**: All state updates happen before external calls, even across `super` boundaries
+- [ ] **ReentrancyGuard on entries**: Public entry points have `nonReentrant`; internal helpers don't
+- [ ] **Single `Ownable`/`AccessControl`**: Inherited only once at the top of the hierarchy
+- [ ] **Role names unique**: Custom roles prefixed to avoid collisions (`MODULE_ROLE`)
+- [ ] **Events owned by one layer**: No duplicate emissions across parent/child
+- [ ] **Storage layout documented**: If upgradable, storage slots and gaps documented
+- [ ] **Initialization tested**: If using proxies, `initialize()` tested with correct modifier
+- [ ] **Test coverage**: Unit tests per layer + integration test for full chain
+- [ ] **Linearization verified**: You can trace `super` resolution manually and match test results
 
 ## Wrap‑up and next steps
 
-You learned how `virtual`/`override` create a clear chain of responsibility, how explicit overrides document intent in multiple inheritance, and how abstract contracts decouple the “what” from the “how.” You also practiced layering OpenZeppelin extensions with small, focused overrides like pause gates.
+You've mastered Solidity's inheritance mechanics: `virtual` and `override` create clear extension points; explicit override lists (`override(Parent1, Parent2)`) document intent in multiple inheritance; `super` composes layers predictably via C3 linearization; and abstract contracts decouple interfaces from implementations.
 
-Next, we’ll deepen your grasp of data and errors. We’ll model staking-specific state, establish careful error handling, and prepare testable surfaces that make your reward policy and pause gates easy to verify.
+For staking specifically, you saw how to:
+- Build pluggable reward policies (`abstract contract RewardPolicy`) that swap without touching the core
+- Layer OpenZeppelin primitives (`Ownable`, `Pausable`, `ERC20`) with focused overrides like `_update` hooks
+- Minimize the `virtual` surface to reduce attack vectors and maintenance burden
 
-## Assets (proposed)
+These patterns are the foundation of Module 5's practical staking contract. In the next lessons, you'll:
+- **Interface Design (Lesson 2)**: Define stable APIs for external modules (tokens, reward distributors) using interfaces
+- **Events & Libraries (Lesson 3)**: Make your staking observable with events and extract math into reusable libraries
+- **Contract Interactions (Lesson 4)**: Call external contracts safely with CEI, `ReentrancyGuard`, and `try/catch`
+- **OpenZeppelin Ecosystem (Lesson 5)**: Choose and configure the right primitives for production staking
 
-- `/public/islands/island2/inheritance-patterns-diamond.svg`: Simple diamond diagram showing `Base`, `Left`, `Right`, `Diamond` with arrows indicating linearization order. **Alt**: “Diamond inheritance linearization order”.
-- `/public/islands/island2/inheritance-patterns-policy.svg`: Block diagram of `StakingCore` depending on an abstract `RewardPolicy`, with swap-in `LinearAPRPolicy`. **Alt**: “Abstract policy plugged into staking core”.
-- `/public/islands/island2/inheritance-patterns-pause.svg`: Sequence sketch of transfer attempt while paused, showing guard fail at `_update`. **Alt**: “Pause gate blocking token movement”.
+By Module 5, you'll assemble all these pieces into a staking contract that's modular, testable, and secure—ready for Zilliqa mainnet.
 
 

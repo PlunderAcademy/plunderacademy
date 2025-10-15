@@ -14,6 +14,19 @@ practicalTakeaway: "Deploy a production-ready dApp with professional interface a
 
 This is the capstone: stitch wallet connection, reads, writes, events, and chain management into a cohesive product. You’ll design a simple interface that connects, shows balances, executes a transfer or mint, and reports status—all with clear UX.
 
+> Starter Template & Tracks
+>
+> - Baseline scaffold: `https://github.com/Plunderswap/sample-next-js` (Next.js + wagmi + RainbowKit). Use it as the starting point.
+> - Practical tracks (choose one to wire first):
+>   - ERC20 (recommended first): show balance, approve (if needed), transfer.
+>   - Staking: approve + stake/unstake (later).
+>   - NFT minting: mint + token URI view (later).
+>
+> Env & ABIs
+>
+> - Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` and per‑track addresses: `NEXT_PUBLIC_ERC20_ADDRESS` (or staking/NFT addresses).
+> - Store ABIs under `src/lib/abi/` and export typed helpers.
+
 ## Conceptual foundations for Web3 frontend
 
 - Composition: small components for connection, balance, actions.

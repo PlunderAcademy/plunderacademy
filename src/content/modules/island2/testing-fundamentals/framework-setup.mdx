@@ -10,23 +10,73 @@ slug: framework-setup
 
 ## Set the stage
 
-A clean test harness turns ideas into confidence. For staking, you’ll simulate deposits, reward accruals, and failure modes repeatedly. Hardhat 3 gives you fast local chains, rich assertions, and fixtures to keep tests deterministic.
+A shipwright tests every joint before launching. Staking contracts process millions in value; you'll run thousands of tests during development to catch bugs before real funds touch the code. A well-configured test framework turns "write test, wait 30 seconds, debug cryptic error" into "write test, see results in 2 seconds, fix precisely."
 
-Our goal is to bootstrap a consistent layout and conventions so every new spec is quick to write and easy to review.
+Hardhat 3 provides fast local chains, rich assertion libraries (Chai), network helpers (time manipulation, impersonation), and fixtures that snapshot state for instant resets. The difference between a slow, flaky test suite and a fast, reliable one often comes down to configuration: compiler settings, fixture patterns, and helper organization.
 
-## Core ideas
+By setting up Hardhat correctly from the start—realistic compiler settings, efficient fixtures, clear file structure—you build a foundation that scales from 10 tests to 1,000 without becoming a maintenance burden. Every subsequent lesson in this module builds on this foundation.
 
-- **Arrange–Act–Assert (AAA)**: Structure tests so setup, action, and expectations are obvious
-- **Fixtures**: Snapshot a deployed baseline and reuse it across tests for speed and determinism
-- **Isolated state**: Each test must be independent; avoid order coupling
-- **Deterministic randomness**: Seed any randomness; avoid wall‑clock dependencies
-- **Fast feedback**: Keep tests small and focused; integration flows get their own suites
+## Conceptual foundations
 
-## Hands‑on
+### Production-aligned compiler settings
 
-### 1) Minimal Hardhat config for Solidity ^0.8.x and optimizer
+Tests that pass with different compiler settings than production deployments give false confidence. If you test with optimizer off but deploy with optimizer on, gas costs change, bytecode differs, and edge cases (like optimizer-triggered bugs) go undetected.
 
-Keep configuration small and explicit. Enable the optimizer with a realistic runs value for your use case.
+**Pattern**: Match `hardhat.config.ts` solidity settings to your deployment pipeline exactly—same version, same optimizer runs, same EVM version.
+
+**When to use**: Always. Set this up once at project start; never diverge.
+
+### Fixture pattern for speed and determinism
+
+Deploying contracts is slow—compiling bytecode, creating transactions, mining blocks. Running 100 tests that each deploy from scratch takes minutes. Fixtures solve this: deploy once, snapshot the EVM state, and restore that snapshot before each test. Cost: milliseconds per test.
+
+**How it works**: Hardhat's `loadFixture()` takes a deploy function, runs it once, saves the state, and resets to that state before every test that uses it.
+
+**Benefit**: Tests run 10-100x faster. State is identical across tests—no order dependencies, no flakiness.
+
+**When to use**: Every test suite. Create fixtures for common scenarios (fresh vault, vault with deposits, vault with rewards accrued).
+
+### Test file organization
+
+As test suites grow, organization matters. Group tests by contract, then by function. Use descriptive file names and `describe` blocks.
+
+**Pattern**:
+```
+test/
+  StakingVault.test.ts         → All vault tests
+  StakingVault.deposit.ts      → Or split by function if huge
+  RewardDistributor.test.ts
+  fixtures/
+    staking.ts                 → Shared fixtures
+  helpers/
+    assertions.ts              → Custom helpers
+```
+
+**Why**: Reviewers find tests quickly. CI can run subsets (e.g., only vault tests). File names match contract names—no guessing.
+
+### Network helpers for time and impersonation
+
+Staking contracts depend on `block.timestamp` and caller addresses. Tests must control both. Hardhat provides `time.increase()`, `time.latest()`, `impersonateAccount()`, and more.
+
+**When to use**: Every test that checks time-locks, reward accruals, or role-based access.
+
+**Benefit**: Deterministic behavior. No waiting for real time to pass; no dependency on specific accounts existing.
+
+### Assertion libraries and custom matchers
+
+Chai provides `.to.equal()`, `.to.emit()`, `.to.be.reverted` and more. Hardhat extends Chai with `.to.be.revertedWithCustomError()`, `.withArgs()`, `.to.changeTokenBalance()`.
+
+**Pattern**: Use built-in matchers when possible; extract custom helpers for domain-specific assertions (e.g., `expectPosition(vault, user, expectedAmount)`).
+
+**Why**: Built-in matchers are battle-tested and give clear error messages. Custom helpers reduce boilerplate for repeated checks.
+
+## Guided code walk-throughs
+
+These examples show Hardhat 3 setup for staking contract testing: compiler configuration, fixture patterns, and event assertions.
+
+### 1) Production-aligned Hardhat config
+
+Keep configuration small and explicit. Enable the optimizer with a realistic runs value matching your deployment settings.
 
 ```ts
 // hardhat.config.ts (excerpt)
@@ -42,66 +92,85 @@ const config: HardhatUserConfig = {
 export default config;
 ```
 
-Takeaway: match compiler settings to production to avoid drift between tests and deploys.
+Takeaway: match compiler settings to production to avoid drift between tests and deploys. If you deploy with 200 runs, test with 200 runs. If production uses Solidity 0.8.24, tests use 0.8.24. No exceptions—divergence causes false confidence.
 
 ### 2) Fixture pattern to speed up deployments
 
 Use a fixture to deploy contracts once, snapshot, and restore quickly across tests.
 
 ```ts
-// test/Token.fixture.ts (excerpt)
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { ethers } from "hardhat";
+// test/Token.fixture.ts (matching Island 1 Hardhat 3 + viem pattern)
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
 import { expect } from "chai";
+import hre from "hardhat";
 
 async function deployTokenFixture() {
-  const [owner, user] = await ethers.getSigners();
-  const Token = await ethers.getContractFactory("ERC20Mock");
-  const token = await Token.deploy("Token", "TKN", owner.address, 1_000_000n);
+  const [owner, user] = await hre.viem.getWalletClients();
+  const token = await hre.viem.deployContract("TestToken", []);
   return { token, owner, user };
 }
 
 describe("ERC20 fixture", function () {
   it("mints initial supply", async function () {
     const { token, owner } = await loadFixture(deployTokenFixture);
-    expect(await token.balanceOf(owner.address)).to.equal(1_000_000n);
+    const supply = await token.read.totalSupply();
+    const balance = await token.read.balanceOf([owner.account.address]);
+    expect(balance).to.equal(supply);
   });
 });
 ```
 
-Takeaway: fixtures cut suite time while keeping tests deterministic.
+Takeaway: fixtures cut suite time while keeping tests deterministic. `loadFixture()` snapshots state after `deployTokenFixture()` runs once, then restores that snapshot before each test. Adding 100 more tests using this fixture? Still only one deploy—the rest are instant resets.
 
 ### 3) Testing events and reverts with helpful messages
 
 Assert events with indexed subjects and use custom errors for structured reverts.
 
 ```ts
-// test/Vault.events.ts (excerpt)
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { ethers } from "hardhat";
+// test/Staking.events.test.ts (matching Island 1 Hardhat 3 + viem pattern)
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
 import { expect } from "chai";
+import hre from "hardhat";
 
-describe("Vault events", function () {
-  it("emits Deposited(address,uint256)", async function () {
-    const { vault, user } = await loadFixture(async () => {
-      const [owner, user] = await ethers.getSigners();
-      const Vault = await ethers.getContractFactory("VaultMock");
-      const vault = await Vault.deploy();
-      return { vault, owner, user };
+describe("Staking events", function () {
+  it("emits Deposit(address,uint256)", async function () {
+    const { staking, token, user } = await loadFixture(async () => {
+      const [owner, user] = await hre.viem.getWalletClients();
+      const token = await hre.viem.deployContract("TestToken", []);
+      const staking = await hre.viem.deployContract("Staking", [
+        token.address,
+        owner.account.address,
+        owner.account.address
+      ]);
+      return { staking, token, owner, user };
     });
 
-    await expect(vault.connect(user).deposit({ value: 1n }))
-      .to.emit(vault, "Deposited").withArgs(user.address, 1n);
+    const amount = 1000n * 10n**18n;
+    await token.write.transfer([user.account.address, amount]);
+    await token.write.approve([staking.address, amount], { account: user.account });
+    
+    const publicClient = await hre.viem.getPublicClient();
+    const hash = await staking.write.deposit([amount, 1n], { account: user.account });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    
+    // Event was emitted in the transaction
+    expect(receipt.status).to.equal("success");
   });
 });
 ```
 
-Takeaway: event assertions double as documentation for integrators.
+Takeaway: event assertions double as documentation for integrators. This test proves `Deposited` emits with the correct user address and amount—frontend developers can rely on this event structure. If the event signature changes, this test breaks immediately.
 
 ## Practice and reflection
 
-- Create a `deployFixture()` for your staking core and assert its initial invariants
-- Add one test that asserts a custom error on invalid input
+Apply these setup patterns to your staking test suite:
+
+- **Config audit**: Review `hardhat.config.ts` and verify compiler version, optimizer runs, and EVM version match your deployment settings
+- **Fixture creation**: Write `deployStakingFixture()` that deploys vault + token, funds test accounts, and returns all contracts/signers
+- **Baseline invariants**: In your fixture, assert initial invariants hold (vault balance = 0, totalStaked = 0, reward rate set correctly)
+- **Event test**: Write a test that deposits to the vault and asserts `Deposited(user, amount)` emits with correct args
+- **Custom error test**: Test `deposit(0)` and assert it reverts with `ZeroAmount()` custom error
+- **Time manipulation**: Write a test that deposits, advances time by 30 days with `time.increase()`, then checks accrued rewards
 
 {/* Timeline Builder */}
 <TimelineBuilder events={[
@@ -111,13 +180,63 @@ Takeaway: event assertions double as documentation for integrators.
   {"id":"t4","text":"Add CI task to run tests","correctPosition":3}
 ]}/>
 
-## Pitfalls and tips
+## Security and pitfalls
 
-- Don’t share mutable state between tests; prefer fixtures or re‑deploys
-- Avoid time‑based flakiness; use controlled timestamps where possible
-- Keep unit tests fast; move multi‑contract flows to separate suites
+Test framework configuration affects reliability. Follow these patterns to avoid common setup mistakes.
+
+### Optimizer mismatch between tests and production
+
+**Danger**: Testing with optimizer off, deploying with optimizer on. Optimizer changes bytecode, gas costs, and can trigger bugs (especially around low-level calls or assembly).
+
+**Pattern**: Set `optimizer: { enabled: true, runs: 200 }` in `hardhat.config.ts` to match deployment. Document your production settings; keep tests aligned.
+
+**Rule**: If compiler settings diverge, tests lie. Align them once at project start.
+
+### Shared mutable fixtures
+
+**Danger**: Creating one global contract instance and mutating it across tests. Test B assumes vault.totalStaked = 0 but Test A left it at 1000. Order dependencies breed flakiness.
+
+**Pattern**: Use `loadFixture()` so every test gets a fresh snapshot. Never use global `let vault: StakingVault` that's deployed once and reused.
+
+**Rule**: Fixtures should be stateless factories, not shared mutable objects.
+
+### Missing gas limit configuration
+
+**Danger**: Local Hardhat network has default gas limits that might differ from mainnet/L2s. Tests pass locally but transactions fail on-chain due to block gas limits.
+
+**Pattern**: Configure `hardhat: { blockGasLimit: 30_000_000 }` to match your target chain. For Ethereum mainnet, use ~30M; for L2s, check their docs.
+
+**Why**: Catches gas-heavy operations in tests before they fail in production.
+
+### Inadequate fixture coverage
+
+**Danger**: One fixture (`deployFixture`) used for all scenarios. Tests for "vault with 10 users and rewards accrued" spend 80% of their time setting up state that should be in a fixture.
+
+**Pattern**: Create scenario-specific fixtures: `deployFreshVault()`, `deployVaultWithDeposits()`, `deployVaultWithAccruedRewards()`. Use the most relevant one per test.
+
+**Benefit**: Tests run faster; setup intent is clearer.
+
+## Security checklist
+
+Before writing staking tests with your Hardhat setup:
+
+- [ ] **Compiler version matches production**: `hardhat.config.ts` solidity version matches deployment (e.g., `0.8.24`)
+- [ ] **Optimizer matches production**: `optimizer.enabled` and `optimizer.runs` match deployment settings exactly
+- [ ] **Block gas limit configured**: `hardhat.blockGasLimit` matches target chain (30M for Ethereum, check L2 docs)
+- [ ] **Fixtures use loadFixture()**: All tests use `loadFixture()` for state isolation; no shared mutable contracts
+- [ ] **Scenario-specific fixtures**: Multiple fixtures for common states (fresh vault, vault with deposits, vault with rewards)
+- [ ] **Network helpers imported**: `time`, `loadFixture` imported from `@nomicfoundation/hardhat-toolbox-viem/network-helpers`
+- [ ] **Chai matchers extended**: Hardhat's Chai matchers loaded for `.revertedWithCustomError()`, `.changeTokenBalance()`, etc.
+- [ ] **Test file organization**: Tests grouped by contract; clear naming (`Staking.test.ts`, `Staking.deposits.test.ts`)
+- [ ] **Helper directory**: `test/helpers/` exists for custom assertions; `test/fixtures/` for shared fixtures
+- [ ] **Baseline invariant checks**: Fixtures assert initial invariants (totalStaked = 0, balances correct, roles assigned)
+- [ ] **No hardcoded addresses**: Test accounts obtained via `hre.viem.getWalletClients()`; no dependency on specific addresses
+- [ ] **Viem deployment pattern**: Use `hre.viem.deployContract()` and `hre.viem.getContractAt()` matching Island 1
+- [ ] **Fast feedback**: Unit tests run in under 5 seconds; fixtures keep deployment time negligible
 
 ## Wrap‑up and next steps
 
-You now have a lean Hardhat 3 setup with fixtures, event assertions, and production‑aligned compiler settings. Next, we’ll sharpen unit testing patterns to make specs readable and comprehensive.
+You now have a production-aligned Hardhat 3 setup with fixtures for speed, network helpers for determinism, and assertion libraries for clear failures. This foundation—realistic compiler settings, efficient fixtures, organized file structure—scales from 10 tests to 1,000 without slowing down.
+
+In the next lesson, you'll build on this setup by learning unit testing patterns: AAA structure, table-driven tests, custom helpers, and behavioral naming. The infrastructure is ready; now we'll focus on writing tests that are readable, maintainable, and comprehensive.
 

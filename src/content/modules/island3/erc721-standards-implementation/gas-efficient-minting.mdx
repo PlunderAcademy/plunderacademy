@@ -10,20 +10,92 @@ practicalTakeaway: "Deploy NFT collections with minimal gas costs while maintain
 
 # Gas-Efficient Minting Strategies
 
-## Big picture
+## Set the stage
 
-Mint cost dominates collection deployment. We’ll minimize storage writes, avoid redundant checks, and provide ergonomic batch mints while keeping event schemas marketplace‑friendly.
+Picture launching a 10,000-piece NFT collection where each mint costs $50 in gas during peak hours. That's $500,000 in deployment overhead before a single sale—enough to sink a project before it starts. Gas optimization isn't just about saving pennies; it's about making NFT collections economically viable for creators and accessible for collectors. Every SSTORE you eliminate, every loop you streamline, every redundant check you remove translates directly to lower costs and faster transactions.
 
-## Design principles
+In traditional Web2 systems, you'd batch-insert database records without thinking twice. In EVM land, every storage write costs gas, every iteration burns compute, and every emitted event adds overhead. The difference between a naive mint (200k gas) and an optimized one (80k gas) compounds across thousands of tokens. Worse, hitting block gas limits during public mints creates failed transactions, frustrated users, and opportunities for frontrunners to snipe cheap mints.
 
-- Minimize SSTOREs; prefer sequential token IDs
-- Batch where possible (loop in contract or via client batching)
-- Emit one event per transfer (ERC721 requirement) but avoid extra logs
-- Avoid Enumerable if you don’t need on‑chain iteration; use off‑chain indexing instead
+By the end of this lesson, you'll know how to structure batch minting loops that stay under gas limits, when to trade off Enumerable extensions for off-chain indexing, and how to measure gas costs in your tests so optimizations are provable, not guesswork. These patterns will carry directly into Module 3's practical collection deployment, where you'll mint a full collection on Zilliqa testnet with predictable, minimal costs.
 
-## Snippets and examples
+## Conceptual foundations
 
-### 1) Owner‑gated batch mint loop
+### Storage writes dominate mint costs
+
+Every `_mint()` call writes ownership to storage (`_owners[tokenId] = to`), increments the recipient's balance (`_balances[to]++`), and emits a `Transfer` event. On mainnet, a single SSTORE from zero to non-zero costs 20,000 gas; updating an existing slot costs 5,000 gas. For a 10k collection, those writes alone consume 200M+ gas if done individually—over $10k at modest gas prices.
+
+**When to care**: Any collection over ~100 tokens. **How to optimize**: Use sequential token IDs (no gaps, easier for indexers), batch mints into loops (amortize call overhead), and avoid writing unnecessary metadata on-chain (store on IPFS, emit URIs in events or `baseURI` logic).
+
+**Mental model**: Think of storage like cargo hold space on a ship. Every crate (storage slot) you load costs fuel. Pack efficiently: combine small values into structs, use sequential IDs so indexers don't need enumerable tracking, and offload heavy data (images, attributes) to IPFS.
+
+### Batch minting: contract loops vs client batching
+
+**Contract batching**: Loop inside a single `mintBatch(address to, uint256 quantity)` function. Amortizes transaction overhead (21k base gas) across all tokens. Pros: fewer user transactions, simpler UX. Cons: must guard against block gas limits (~30M on mainnet); one failure reverts the whole batch.
+
+**Client batching**: User submits multiple individual `mint()` transactions. Pros: each tx is independent (partial success possible), easier gas estimation per mint. Cons: more nonces consumed, higher total overhead (21k × N), clunkier UX (user waits for N confirmations).
+
+**When to prefer contract batching**: Public mints where users expect instant results, whitelist phases with known quantities (e.g., "mint 5 at once"). **When to prefer client batching**: Large airdrop campaigns where you control the minting (send from admin wallet over time), or when users might exceed block gas limits with large batches.
+
+### Sequential IDs vs randomized assignment
+
+**Sequential** (`_nextId++`): Predictable, gas-efficient (no extra randomness logic), indexer-friendly (tokenId 0…N-1 maps cleanly to metadata array). Downside: no built-in rarity reveal; users know exactly which token they're getting unless you add a separate reveal mechanism.
+
+**Randomized** (shuffle array, VRF, commit-reveal): Fairer for rarity but adds gas (random number generation, additional storage for shuffle indices). Common pattern: mint sequentially, then reveal randomized metadata later via `setBaseURI` or on-chain shuffle.
+
+**Recommendation for beginners**: Start with sequential IDs + placeholder metadata. Add reveal mechanics in Module 2 (Advanced NFT Features) to get randomness without upfront gas costs.
+
+### Enumerable extension trade-offs
+
+OpenZeppelin's `ERC721Enumerable` adds `tokenOfOwnerByIndex`, `tokenByIndex`, and `totalSupply`, enabling on-chain iteration over all tokens or a user's tokens. **Cost**: ~20-30k extra gas per mint (updates `_allTokens` and `_ownedTokens` arrays). **Benefit**: On-chain queries for "all tokens owned by Alice" without off-chain indexing.
+
+**When to use Enumerable**: Small collections (&lt;1k tokens) where on-chain queries are critical (e.g., on-chain game logic that needs `tokensOfOwner`). **When to skip**: Large collections (5k+) where indexers (The Graph, Alchemy NFT API) provide the same data off-chain for free. Modern marketplaces use subgraphs; they don't rely on Enumerable.
+
+**Anti-pattern**: Adding Enumerable "just in case" without a concrete on-chain use case. You pay 30% more gas for a feature most users will never call.
+
+### Gas measurement in tests
+
+Guessing gas costs is a recipe for surprises at deploy time. Hardhat and Foundry both support gas reporting: `npx hardhat test --gas-reporter` shows per-function costs; Foundry's `forge test --gas-report` gives detailed breakdowns. Measure before and after optimizations to prove gains.
+
+**Practical workflow**: Write a test that mints 100 tokens in a batch. Note the total gas. Refactor (remove Enumerable, pack struct fields, switch to `_mint` instead of `_safeMint` where safe). Re-run the test. If gas dropped 20%, you've validated the optimization. Include gas assertions in CI to catch regressions: `expect(receipt.gasUsed).to.be.lt(100_000);`.
+
+### ERC721A and alternatives
+
+**ERC721A** (Azuki's implementation) optimizes batch mints by updating `_balances` and `_owners` only for the first token in a batch, then lazily computing ownership on reads. Result: batch mint of N tokens costs roughly the same as minting 1 token. Huge gas savings for large batches.
+
+**Trade-offs**: More complex code (lazy ownership lookup), harder to audit, and transfers become slightly more expensive (must walk back to find the real owner). **When to consider**: Collections with heavy mint phases (10k+ PFP projects) where upfront mint gas is the bottleneck. **When to skip**: If your collection is &lt;1k tokens or you're just learning—stick with OpenZeppelin's battle-tested defaults first.
+
+We won't use ERC721A in this module (too advanced for Island 3, Module 1), but know it exists for production-scale collections.
+
+### Supply caps and overflow protection
+
+Every collection needs a maximum supply to create scarcity and prevent infinite minting. Implementing `MAX_SUPPLY` correctly protects against admin errors (accidentally minting 1M tokens) and ensures promises to collectors are honored ("only 10k will ever exist").
+
+**Pattern**: Check `_nextId + quantity <= MAX_SUPPLY` before minting. Use `<=` not `<` to make the boundary inclusive (if MAX_SUPPLY is 10k, the last valid tokenId is 9999 when starting from 0). Always revert with a clear error if the cap would be exceeded.
+
+**Why it matters**: Without supply caps, admins can dilute rarity by minting more tokens later, destroying trust and value. With caps enforced on-chain, the promise is immutable—even the contract owner can't break it.
+
+**Solidity 0.8+ note**: Checked arithmetic prevents overflow by default. But explicit supply checks are still needed for business logic (enforcing the advertised cap). Don't confuse overflow protection (automatic) with supply cap enforcement (manual).
+
+### Public mint price and payment handling
+
+Most NFT collections charge a mint price in ETH or native token. Handling payments correctly prevents loss of funds and ensures fair pricing across mint phases.
+
+**Key decisions**:
+- **Payable mint**: `function mint(uint256 qty) external payable { require(msg.value == MINT_PRICE * qty, "WRONG_PAYMENT"); ... }`
+- **Refund excess**: Some implementations refund overpayment: `if (msg.value > cost) { payable(msg.sender).transfer(msg.value - cost); }`. Safer: require exact payment to avoid reentrancy risks.
+- **Withdrawal pattern**: Use a pull-based `withdraw()` for the owner to claim proceeds: `function withdraw() external onlyOwner { payable(owner()).transfer(address(this).balance); }`. Avoids push-based transfer risks.
+
+**Gas tip**: Multiplication (`MINT_PRICE * qty`) is safe in 0.8+, but always validate `qty` first to prevent griefing (someone tries to mint `type(uint256).max` tokens and causes an overflow revert that wastes their gas but also yours in testing).
+
+For Module 3's deployment, you'll add multi-phase pricing (whitelist = 0.05 ETH, public = 0.08 ETH) and test payment edge cases (underpayment, overpayment, zero payment).
+
+## Guided code walk-throughs
+
+These examples show gas-efficient minting patterns for NFT collections.
+
+### 1) Owner-gated batch mint loop
+
+This simple batch minter caps quantity per call to prevent block gas limit issues. The loop uses `_safeMint` to protect recipients and increments a sequential counter. For large-scale airdrops, the owner can call this multiple times targeting different addresses.
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -32,12 +104,27 @@ pragma solidity ^0.8.24;
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract BatchMint is ERC721, Ownable {
+contract JungleNFT is ERC721, Ownable {
     uint256 private _nextId;
-    constructor(address owner_) ERC721("Batch", "BCH") Ownable(owner_) {}
+    uint256 public constant MAX_BATCH = 50; // Guard against gas limits
+    uint256 public constant MAX_SUPPLY = 10_000;
 
+    error ExceedsMaxBatch();
+    error ExceedsMaxSupply();
+    error InvalidQuantity();
+
+    constructor(address owner_) ERC721("JungleNFT", "JNFT") Ownable(owner_) {}
+
+    function _baseURI() internal pure override returns (string memory) {
+        return "ipfs://QmPlaceholder/";
+    }
+
+    /// @notice Batch mint to single address; owner only
     function batchMint(address to, uint256 qty) external onlyOwner {
-        require(qty > 0 && qty <= 50, "qty");
+        if (qty == 0) revert InvalidQuantity();
+        if (qty > MAX_BATCH) revert ExceedsMaxBatch();
+        if (_nextId + qty > MAX_SUPPLY) revert ExceedsMaxSupply();
+        
         for (uint256 i = 0; i < qty; i++) {
             _safeMint(to, _nextId++);
         }
@@ -45,30 +132,184 @@ contract BatchMint is ERC721, Ownable {
 }
 ```
 
-Takeaway: simple loop keeps semantics clear; cap qty to bound gas.
+**Takeaway**: Simple loop keeps semantics clear; cap qty to bound gas. Custom errors save ~10-20 gas per revert vs require strings. This pattern works for whitelist mints, team allocations, and controlled public sales. For Module 3's practical deployment, you'll extend this with multi-phase logic and Merkle proofs.
 
-### 2) Client‑side batching vs contract batching
+### 2) Comparing `_mint` vs `_safeMint` gas costs
 
-- Client batching (multiple txs) improves UX with progress but costs more nonces
-- Contract batching reduces overhead per token but must guard gas limits
+`_safeMint` calls `onERC721Received` on the recipient if it's a contract; `_mint` skips the check. For EOAs (user wallets), the extra check wastes ~5k gas. For contracts that don't implement the receiver interface, `_safeMint` prevents lost NFTs. Choose based on your trust model.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
+contract MintComparison is ERC721 {
+    uint256 private _nextId;
+
+    constructor() ERC721("Compare", "CMP") {}
+
+    /// @notice Unsafe mint: ~50k gas for EOA
+    /// @dev Use only when recipient is known EOA or trusted contract
+    function unsafeMint(address to) external {
+        _mint(to, _nextId++);
+    }
+
+    /// @notice Safe mint: ~55k gas for EOA, reverts if contract can't receive
+    /// @dev Prefer for unknown recipients (public mints)
+    function safeMint(address to) external {
+        _safeMint(to, _nextId++);
+    }
+}
+```
+
+**Takeaway**: For public mints where recipients are unknown, use `_safeMint` to prevent user error (sending to a contract that can't handle NFTs). For admin-controlled mints to known EOAs, `_mint` saves gas. Measure the difference in your tests: expect ~5-10% savings by dropping the safety check, but only do so when the recipient is guaranteed safe.
+
+### 3) Avoiding Enumerable when off-chain indexing suffices
+
+This snippet shows two variants: with and without `ERC721Enumerable`. Enumerable adds ~25k gas per mint for bookkeeping. Modern collections skip it and rely on subgraphs or Alchemy's NFT API to answer "which tokens does Alice own?"
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+
+// Lightweight: ~50k gas per mint
+contract LightweightNFT is ERC721 {
+    uint256 private _nextId;
+    constructor() ERC721("Light", "LITE") {}
+    function mint(address to) external { _safeMint(to, _nextId++); }
+}
+
+// Enumerable: ~75k gas per mint
+contract EnumerableNFT is ERC721Enumerable {
+    uint256 private _nextId;
+    constructor() ERC721("Heavy", "HEVY") {}
+    function mint(address to) external { _safeMint(to, _nextId++); }
+}
+```
+
+**Takeaway**: For a 10k collection, skipping Enumerable saves ~250M gas total (~$10k+ at peak prices). Use Enumerable only if you need on-chain iteration (rare). Otherwise, emit `Transfer` events (ERC721 does this automatically) and let The Graph or Alchemy build the token ownership index off-chain for free. In Module 3, you'll deploy the lightweight variant and verify that marketplaces still display your collection correctly without Enumerable.
 
 ## Practice and reflection
 
-- Decide your max batch size based on target chains and typical gas
-- List which features you can drop (e.g., Enumerable) in favor of off‑chain indexing
+Apply gas optimization principles to your NFT collection design:
+
+- **Batch size calculation**: Given a 30M gas block limit and ~75k gas per mint (with Enumerable), calculate the maximum safe batch size. Now recalculate assuming you drop Enumerable (~50k gas per mint). How many more NFTs can you mint per transaction? Show your work: `30M / 75k = ?` vs `30M / 50k = ?`.
+- **Sequential vs random trade-offs**: Sketch a two-phase strategy: mint with sequential IDs during launch, then reveal randomized metadata 24 hours later. List one benefit for users (fairness) and one benefit for the contract (gas savings). Then add one potential downside (user must wait for reveal).
+- **Gas measurement workflow**: Write pseudocode for a Hardhat test that mints 100 tokens and asserts total gas is below 6M. Hint: use `receipt.gasUsed` and `expect(...).to.be.lt(...)`. Include setup (deploy contract), execution (batch mint), and assertion steps.
+- **Enumerable decision matrix**: Create a two-column table: "Use Enumerable" vs "Skip Enumerable." List two scenarios for each column (e.g., "on-chain game that needs `tokenOfOwner`" vs "PFP collection with subgraph indexing"). For each scenario, estimate the gas penalty or savings.
+- **Safe vs unsafe mint**: For your collection, will you use `_safeMint` or `_mint`? Write two sentences defending your choice based on your target audience (public mint vs controlled airdrop). Consider the trade-off: 5k extra gas per mint vs preventing user errors.
+- **Supply cap enforcement**: Review your batch mint function. Does it check `_nextId + qty <= MAX_SUPPLY` before minting? If not, add the check and write a test case that tries to mint beyond the cap (should revert). If yes, verify your boundary condition: does `qty = 1` work when `_nextId = MAX_SUPPLY - 1`?
+- **Payment validation**: If your collection charges a mint price, write a require statement that validates `msg.value` matches `MINT_PRICE * qty`. Then sketch a test case for each scenario: exact payment (should succeed), underpayment (should revert), overpayment (should revert or refund, depending on your policy).
 
 {/* Concept Matching */}
 <ConceptMatching pairs={[
-  {"conceptId":"batch","definitionId":"def-batch","concept":"batch mint","definition":"Mint multiple tokenIds in one call","category":"mint"},
-  {"conceptId":"enum","definitionId":"def-enum","concept":"Enumerable","definition":"On‑chain iteration extension; avoid if not required","category":"ext"}
+  {"conceptId":"batch","definitionId":"def-batch","concept":"batch mint","definition":"Mint multiple tokenIds in one call to amortize tx overhead","category":"mint"},
+  {"conceptId":"enum","definitionId":"def-enum","concept":"Enumerable","definition":"On‑chain iteration extension; adds 25k gas per mint","category":"ext"},
+  {"conceptId":"seq","definitionId":"def-seq","concept":"sequential IDs","definition":"Increment _nextId for each mint; gas-efficient and indexer-friendly","category":"strategy"},
+  {"conceptId":"safe","definitionId":"def-safe","concept":"_safeMint","definition":"Checks recipient can receive NFTs; 5k extra gas vs _mint","category":"safety"}
 ]}/>
 
-## Pitfalls and tips
+Short reflection: If your 10k collection launches during a gas spike (200 gwei), would you pause minting and wait for lower gas, or proceed? Write two sentences considering user frustration vs economics.
 
-- Don’t emit custom extra events for mints beyond Transfer unless analytics require it
-- Avoid storage reads/writes you can derive (e.g., avoid redundant owner checks inside loops)
+## Security and pitfalls
 
-## Wrap‑up and next steps
+Gas optimization must never compromise security or user experience. Follow these patterns:
 
-You can now mint efficiently with bounded loops and clean events. Next: lock down security and access for production.
+### Batch size caps prevent denial of service
+
+**Danger**: Unbounded loops let attackers (or careless admins) exceed block gas limits, causing reverts that waste user funds and clog the network. An attacker could call `batchMint(address, type(uint256).max)` and lock up the contract.
+
+**Mitigation**: Always cap batch sizes. For mainnet, 50-100 tokens per batch is safe (2.5-5M gas). For L2s with higher gas limits, you can go higher, but test thoroughly. Emit a `BatchMinted` event with the actual quantity for off-chain monitoring.
+
+**Rule**: Never trust user-provided quantities without upper bounds. Use constants (`MAX_BATCH`) and test edge cases (qty = 0, qty = MAX_BATCH, qty = MAX_BATCH + 1).
+
+### Sequential ID predictability and front-running
+
+**Danger**: If minting is first-come-first-served and token IDs are sequential, bots can front-run transactions to snipe low IDs (often perceived as rarer). This creates unfair launches and angry users.
+
+**Mitigation**: Use a placeholder reveal strategy: mint with sequential IDs but point all tokens to the same placeholder metadata. After mint phase ends, reveal final metadata via `setBaseURI` or on-chain shuffle. This decouples mint order from rarity.
+
+**Alternative**: Use a commit-reveal scheme (commit hash in one tx, reveal random seed later) or Chainlink VRF for provable randomness. But these add complexity and gas—only necessary for high-stakes collections.
+
+**Rule**: For fair launches, separate minting (sequential, cheap) from reveal (randomized, deferred). Test that bots can't predict metadata before reveal.
+
+### Enumerable gas bombs on large collections
+
+**Danger**: If you accidentally include Enumerable in a 10k collection, you've added 250M extra gas. During public mint, users hit gas limit errors, transactions fail, and you lose trust.
+
+**Mitigation**: Before mainnet deploy, run a gas report: `npx hardhat test --gas-reporter`. Verify per-mint costs match your expectations. If you see unexpected spikes, check for Enumerable or other extensions.
+
+**Rule**: Only add Enumerable if you have a concrete on-chain use case that requires it (e.g., `tokenOfOwnerByIndex` for an on-chain raffle). Otherwise, rely on off-chain indexing (The Graph, Alchemy) and save 30% gas.
+
+### Unchecked loop increments (advanced optimization)
+
+**Danger**: `for (uint256 i = 0; i < qty; i++)` checks for overflow on every iteration (post-0.8.0 Solidity). For a batch of 50, that's 50 redundant checks burning ~100 gas each.
+
+**Opportunity**: Use `unchecked { i++; }` inside the loop since `i` can't overflow (qty is capped). Saves ~5k gas per batch.
+
+**Trade-off**: Requires careful reasoning (you must prove `i` can't overflow). For beginners, the safety of default checked math is worth 5k gas. For production collections minting thousands of tokens, the savings add up.
+
+**Rule**: Start with safe defaults (checked math). Once you're confident in your bounds, profile with `--gas-reporter` and add `unchecked` blocks selectively. Always comment why it's safe.
+
+### Off-chain metadata and baseURI immutability
+
+**Concern**: If your `_baseURI()` returns a centralized server URL (`https://myapi.com/metadata/`) instead of IPFS, the project owner can change metadata after mint—rugs, trait manipulation, or complete collection replacement. Users lose trust and value.
+
+**Best practice**: Use IPFS for immutable metadata: `ipfs://QmHashOfMetadataFolder/`. Pin metadata to multiple providers (Pinata, NFT.Storage) to ensure permanence. Emit a `BaseURISet` event when setting baseURI so users can verify it's immutable.
+
+**Hybrid approach**: Start with placeholder on IPFS (`ipfs://QmPlaceholder/`), then reveal by setting final baseURI to another IPFS hash (`ipfs://QmFinalMetadata/`). Both are immutable; the transition is transparent via events.
+
+**Gas note**: Storing baseURI on-chain vs returning it as a constant affects gas. Returning a string literal in `_baseURI()` (shown in examples) is cheapest. Storing in a state variable and allowing owner updates adds flexibility but costs more gas and requires trust.
+
+**Rule**: For trustless collections, use IPFS URIs and make baseURI immutable (or only updatable once for reveal). For centralized projects, document your metadata policy clearly so users know the risks.
+
+### Avoiding reentrancy in payable mints
+
+**Scenario**: Your mint function is `payable` and accepts ETH. If you call external code (e.g., `_safeMint` triggers `onERC721Received` on a malicious contract), that contract could re-enter your mint function before state is finalized.
+
+**CEI application**: Update state (`_nextId++`, balances) before calling `_safeMint`. Use OpenZeppelin's `ReentrancyGuard` on payable mint functions as a second layer of defense.
+
+**Payment validation order**: Check payment first (`require(msg.value == MINT_PRICE * qty)`), then update state, then mint. If you refund excess payment, do it after minting (not before) and consider using a pull-based withdrawal pattern instead of pushing refunds.
+
+**Rule**: Any function that accepts ETH and calls external code needs CEI discipline and `nonReentrant` modifier. Test with a malicious receiver contract that tries to re-enter during `onERC721Received`.
+
+## Security checklist
+
+Before launching your optimized minting contract:
+
+- [ ] **Batch size capped**: `MAX_BATCH` constant guards all batch mint functions; tested at boundary (MAX_BATCH + 1 reverts)
+- [ ] **Supply limits enforced**: `MAX_SUPPLY` checked before minting; test that minting beyond cap reverts with correct error
+- [ ] **Boundary conditions tested**: Test `_nextId + qty == MAX_SUPPLY` (should succeed) and `_nextId + qty == MAX_SUPPLY + 1` (should revert)
+- [ ] **Custom errors used**: Reverts use custom errors (e.g., `ExceedsMaxBatch()`, `ExceedsMaxSupply()`) instead of require strings for 10-20 gas savings per revert
+- [ ] **Gas measured**: Hardhat gas reporter run on mint functions; per-mint cost documented and within budget; compared to baseline (initial implementation)
+- [ ] **Enumerable justified**: If using Enumerable, document the on-chain use case; if not, confirm it's removed from imports and tests
+- [ ] **Safe vs unsafe mint chosen**: Decision documented (safe for public, unsafe for controlled); recipient validation tested with EOA and contract addresses
+- [ ] **Sequential ID rationale**: If using sequential IDs, confirm reveal strategy is in place to prevent rarity sniping and front-running
+- [ ] **Unchecked math validated**: If using `unchecked` blocks, comment explains why overflow is impossible; tested at boundaries (i = qty - 1, qty, qty + 1)
+- [ ] **Event emissions standard**: Only `Transfer` events emitted by `_mint`/`_safeMint`; no redundant custom mint events unless needed for specific analytics
+- [ ] **Block gas limit tested**: Batch mints tested near block gas limit (simulate with Hardhat gas settings); confirmed they don't exceed ~15M for safety margin
+- [ ] **Payment validation**: If payable, `msg.value` checked against `MINT_PRICE * qty`; test exact payment, underpayment, overpayment scenarios
+- [ ] **Reentrancy protection**: Payable mint functions have `nonReentrant` modifier; tested with malicious receiver that tries to re-enter
+- [ ] **BaseURI immutability**: If using IPFS, confirm baseURI points to immutable hash; if mutable, document update policy and emit events
+- [ ] **Withdrawal pattern**: If collecting ETH, owner withdrawal uses pull pattern (`withdraw()` function); tested that only owner can withdraw
+
+## Wrap-up and next steps
+
+You've learned how to minimize minting costs through batch loops, sequential IDs, and skipping unnecessary extensions like Enumerable. You've seen how to measure gas in tests, choose between `_safeMint` and `_mint`, and guard against gas limit attacks with bounded batch sizes. You understand the trade-offs between contract batching and client batching, and when to use reveal strategies to decouple mint order from rarity. These optimizations compound: for a 10k collection, the difference between naive and optimized minting can be $10k+ in gas savings.
+
+The key takeaways for gas-efficient minting:
+
+1. **Measure everything**: Use `--gas-reporter` to validate optimizations with real numbers, not guesses.
+2. **Batch smartly**: Cap batch sizes to prevent DoS; test at block gas limits; emit events for monitoring.
+3. **Skip Enumerable**: Unless you have a concrete on-chain use case, rely on off-chain indexing and save 30% gas.
+4. **Immutable metadata**: Use IPFS for trust; centralized URIs require documented policies and user trust.
+5. **Protect against reentrancy**: Any payable mint function needs CEI discipline and `nonReentrant`.
+
+Combined with the ERC721 core patterns from Lesson 1, you now have the foundation for production-grade NFT contracts. Next, in Lesson 3, you'll lock down access control and security patterns (roles, pausability, supply caps) to ensure your optimized contract is also safe and auditable. You'll see how to structure multi-role access (minters, pausers, admins) and when to use circuit breakers to halt minting during incidents.
+
+Together, these three lessons prepare you for Module 3's practical deployment, where you'll launch a full multi-phase NFT collection with IPFS metadata, EIP-2981 royalties, and Merkle-proof whitelist verification on Zilliqa testnet. The gas optimizations you've learned here will directly reduce the cost of that deployment, making your collection economically viable and accessible to collectors.
 

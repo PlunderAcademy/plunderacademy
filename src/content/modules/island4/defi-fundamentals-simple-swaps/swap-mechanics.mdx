@@ -2,7 +2,7 @@
 id: "defi-fundamentals-lesson-2"
 slug: "swap-mechanics"
 module: "defi-fundamentals-simple-swaps"
-number: "4.2"
+number: 4.2
 title: "Simple Swap Mechanics and Security"
 objective: "Implement basic token swap functionality with proper slippage protection and security measures."
 practicalTakeaway: "Build secure swap contracts that handle price impact and prevent common DeFi attacks."
@@ -12,17 +12,73 @@ practicalTakeaway: "Build secure swap contracts that handle price impact and pre
 
 ## Set the stage
 
-Swaps move value between tokens using pool reserves. Implementation details vary, but safe patterns don’t: use interfaces, enforce CEI, check `minOut`, and emit stable events. You’ll see a minimal single‑pool swap with slippage protection.
+On a busy harbor, boats exchange cargo quickly and safely by following a strict order: check documents, update the manifest, then hand cargo over the rail. AMMs do the same for tokens. Each swap reads the latest reserves, computes a quote, updates balances, and emits an event—always in a predictable order. This discipline prevents reentrancy, ensures accurate pricing, and creates a reliable audit trail for analytics and incident response.
 
-## Core ideas
+When swaps ignore discipline, traders run aground: stale quotes misprice outputs, missing `minOut` drains value during volatility, and sloppy token handling causes reentrancy or transfer failures. A swap that reads reserves once and reuses them across multiple operations exposes users to sandwiching attacks. Omitting `SafeERC20` wrappers can silently fail on non‑standard tokens. Skipping event emission breaks volume tracking and anomaly detection. This lesson refactors a minimal swap into a production‑ready pattern using interfaces, CEI, `SafeERC20`, slippage protection, deadlines, and stable events.
 
-- Interact via interfaces (no hard dependencies)
-- CEI: Checks → Effects → Interactions; guard reentrancy on value‑moving flows
-- Slippage: caller supplies `minOut` (and optionally a deadline)
-- Safe transfers: use SafeERC20; don’t assume return booleans
-- Events: index subjects (trader, tokens) for analytics
+By the end, you will implement a single‑pool swap in a lightweight `SwapRouter` that you can extend to routing, fee accounting, and observability. You'll understand why interfaces decouple your router from pool internals, how CEI prevents reentrancy, and why every swap must emit a structured event. This lesson bridges directly to price feeds (4.3) and randomness/airdrop patterns later in Island 4, where external data and commit‑reveal sequencing strengthen your UX and safety rails.
 
-## Code in practice
+## Conceptual foundations
+
+### Interfaces over concrete contracts
+
+Use narrowly scoped interfaces to decouple your router from pool internals. Depend only on the methods you actually call: `token0()`, `getReserves()`, and `swap(...)`. This keeps your router portable across pools that share the same surface, whether they're Uniswap v2 clones, custom implementations, or future upgrades.
+
+Key benefits:
+- **Lower coupling**: Your router doesn't depend on pool implementation details, making audits and upgrades easier
+- **Safer mocking in tests**: You can create minimal test doubles that implement only the interface, not the full pool logic
+- **Clearer invariants**: Only what you call matters; unused methods can't introduce hidden dependencies or security risks
+
+Define interfaces at the top of your router contract or in a separate file. Keep them minimal—if you only need `getReserves()` and `swap()`, don't include liquidity management methods. This clarity helps auditors verify that your router can't accidentally call dangerous pool functions.
+
+### CEI discipline (Checks → Effects → Interactions)
+
+Maintain a strict sequence per transaction:
+1. **Checks**: Read reserves, compute `amountOut`, validate `minOut`, check optional `deadline`
+2. **Effects**: Update local accounting (balances, state variables)
+3. **Interactions**: Move tokens and call external contracts
+
+This order minimizes reentrancy and race conditions, and it makes negative‑path reasoning straightforward. If an external call fails or reenters, your state is already consistent—you've validated inputs and updated balances before touching external code.
+
+CEI is particularly critical for swaps because you're calling both token contracts (via `transferFrom` and `transfer`) and pool contracts (via `swap`). If you update state after these calls, a malicious token or pool can reenter your router mid‑transaction and exploit inconsistent state. By completing all state updates first, you ensure that reentrancy sees a fully consistent view.
+
+Many developers treat CEI as optional or overly cautious, but it's a non‑negotiable discipline for value‑moving functions. Even with a reentrancy guard, CEI makes your code easier to audit and reason about. Auditors can verify correctness by checking that all external calls happen after all state changes.
+
+### Quotes vs execution
+
+Quotes answer "given reserves and a fee, what would I receive?" Execution performs the real swap. The distinction matters because quotes are view functions (no state changes, no gas cost beyond the call) while execution is a state‑changing transaction that moves tokens and updates reserves.
+
+Always generate quotes from fresh reserves and do not reuse reserve reads across multiple swaps in the same tx unless you control atomicity. Reserves change after every swap, so a quote computed before the first swap is invalid for the second. For constant product pools, the standard formula adjusts for a per‑trade fee and divides by the new invariant: `amountOut = (amountIn * (10000 - feeBps) * reserveOut) / (reserveIn * 10000 + amountIn * (10000 - feeBps))`.
+
+UIs should call quote functions to show users expected outputs before they sign. Backend systems can use quotes to simulate multi‑hop routes or compare prices across venues. Keep quote logic identical to execution logic (same formula, same fee handling) to avoid surprises when users submit transactions.
+
+### Slippage protection and deadlines
+
+Users must provide a `minOut` that caps price impact and protects against MEV. Without `minOut`, a trader's transaction can be sandwiched: an attacker front‑runs with a large buy (pushing price up), the victim's swap executes at the inflated price, then the attacker back‑runs with a sell (profiting from the price difference). `minOut` reverts the transaction if the actual output falls below the threshold, preventing this exploitation.
+
+Deadlines bound how long a transaction can sit in the mempool. If a swap sits pending for 10 minutes during high volatility, the quoted price may be stale by the time it executes. A deadline parameter (typically a Unix timestamp) causes the transaction to revert if `block.timestamp > deadline`, protecting users from executing at outdated prices.
+
+Both are simple, high‑leverage user safeguards that cost almost nothing to implement (one comparison each) but dramatically improve UX and safety. Always require `minOut` and consider making `deadline` mandatory for production routers.
+
+### Safe token handling
+
+Use `SafeERC20` to avoid silent failures and weird return values. The ERC‑20 standard says `transfer` and `transferFrom` should return `bool`, but many tokens (especially older ones) return nothing or revert in non‑standard ways. Some tokens return `false` on failure instead of reverting. OpenZeppelin's `SafeERC20` library wraps these calls and ensures consistent behavior: revert on failure, succeed silently on success.
+
+Do not assume tokens return `true` on transfers. Always use `safeTransfer`, `safeTransferFrom`, and `safeApprove` from the `SafeERC20` library. This protects your router from integration failures with non‑compliant tokens and reduces the surface area for silent bugs.
+
+Keep the router stateless when possible and guard value‑moving functions with `nonReentrant`. A stateless router doesn't hold balances or track positions—it just orchestrates token movements between users and pools. This minimizes attack surface and simplifies audits. If you must track state (e.g., for fee accounting), use `ReentrancyGuard` from OpenZeppelin to prevent reentrant calls during token transfers.
+
+### Events and observability
+
+Emit one stable `Swapped` event per execution with indexed trader and token addresses. Downstream analytics (subgraphs, data pipelines) depend on consistent schemas to compute volume, fees, and price impact. Every swap should produce exactly one event with all relevant data: who traded, what tokens, how much input, how much output, and any fees paid.
+
+Index the most important fields (trader, tokenIn, tokenOut) so that off‑chain systems can efficiently query swaps by user or token pair. Include numeric fields (amountIn, amountOut, feePaid) as non‑indexed data—they're too large to index efficiently but essential for analytics.
+
+Keep event schemas stable across contract versions. If you must change an event, consider versioning it (e.g., `SwappedV2`) or emitting both old and new formats during a transition period. Breaking event schemas forces downstream teams to rewrite queries, rebuild indexes, and backfill historical data—a costly and error‑prone process that erodes trust in your protocol.
+
+## Guided code walk‑throughs
+
+These examples show the minimal mechanics for a single‑pool swap with strong safety defaults.
 
 ### 1) Single‑pool swap with `minOut` and events
 
@@ -56,7 +112,7 @@ contract SimpleSwapRouter is ReentrancyGuard {
 }
 ```
 
-Takeaway: compute quotes from fresh reserves, enforce `minOut`, CEI, and emit a single `Swapped` event.
+Takeaway: compute quotes from fresh reserves, enforce `minOut`, follow CEI, and emit a single `Swapped` event.
 
 ### 2) Optional deadline guard
 
@@ -67,30 +123,205 @@ require(block.timestamp <= deadline, "EXPIRED");
 
 Takeaway: deadlines cap latency risk in volatile markets and during MEV.
 
+### 3) Quote preview helper (view‑only)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+interface IPair { function token0() external view returns (address); function getReserves() external view returns (uint112,uint112,uint32); }
+function previewAmountOut(IPair pair, address tokenIn, uint256 amountIn, uint256 feeBps) view returns (uint256) {
+  (uint112 r0, uint112 r1,) = pair.getReserves();
+  (uint256 x, uint256 y) = tokenIn == pair.token0() ? (uint256(r0), uint256(r1)) : (uint256(r1), uint256(r0));
+  uint256 dxFee = amountIn * (10_000 - feeBps);
+  return (dxFee * y) / (x * 10_000 + dxFee);
+}
+```
+
+Takeaway: a small, deterministic preview improves UX and lets frontends show realistic outputs before execution.
+
 ## Practice and reflection
 
-- Identify where CEI is applied in the `swapExact` flow
-- Decide a reasonable default fee bps for your pool and why
+Apply swap mechanics to your router design:
 
-{/* Drag & Drop Puzzle: order swap steps */}
-<DragDropPuzzle codeBlocks={[
-  {"id":"s1","content":"(r0, r1,) = pair.getReserves();","correctPosition":0},
-  {"id":"s2","content":"(x, y) = tokenIn == token0 ? (r0, r1) : (r1, r0);","correctPosition":1},
-  {"id":"s3","content":"amountOut = _amountOut(amountIn, x, y, feeBps);","correctPosition":2},
-  {"id":"s4","content":"require(amountOut >= minOut, 'SLIPPAGE');","correctPosition":3},
-  {"id":"s5","content":"tokenIn.safeTransferFrom(msg.sender, address(pair), amountIn);","correctPosition":4},
-  {"id":"s6","content":"pair.swap(0, amountOut, to, new bytes(0)); // or (amountOut,0)","correctPosition":5}
-]}
-/>
+- **Map CEI order**: Identify the CEI order in `swapExact`. What is a "check"? What is an "effect"? What is an "interaction"? Why does this order matter for security?
+- **Choose fee parameters**: Select a default `feeBps` for your pool and justify it in terms of LP revenue vs user price impact. How would you adjust this for stablecoin pairs vs volatile pairs?
+- **Analyze reserve reuse**: Explain why reading reserves once for multiple swaps in the same transaction can be dangerous. What attack vectors does this enable?
+- **Design analytics**: List two analytics you'd compute from the `Swapped` event for monitoring. What indexed fields would you need for efficient queries?
+- **Extend to multi-hop**: Describe how you'd extend this router to support a two‑hop route (e.g., A → B → C). How would you handle slippage protection across multiple swaps?
+- **Handle edge cases**: What should your router do if `getReserves()` returns zero for one or both reserves? Should you revert, return zero, or handle it differently?
 
-{/* keep only True/False for this lesson */}
+{/* Timeline Builder: order the swap steps correctly */}
+<TimelineBuilder events={[
+  {"id":"evt-1","text":"Read reserves from pair (r0, r1)","correctPosition":0},
+  {"id":"evt-2","text":"Orient reserves based on tokenIn/token0","correctPosition":1},
+  {"id":"evt-3","text":"Compute amountOut with feeBps","correctPosition":2},
+  {"id":"evt-4","text":"Check amountOut >= minOut (and deadline)","correctPosition":3},
+  {"id":"evt-5","text":"Transfer tokenIn to pair (SafeERC20)","correctPosition":4},
+  {"id":"evt-6","text":"Call pair.swap(...) to send tokenOut","correctPosition":5},
+  {"id":"evt-7","text":"Emit Swapped(trader, tokenIn, tokenOut, amountIn, amountOut)","correctPosition":6}
+]}/>
 
-## Security notes
+Short reflection: Given volatile markets, when would you set a tighter deadline vs a looser one?
 
-- Never read reserves once and perform multiple swaps; read fresh per swap
-- Don’t assume `tokenIn` ordering; branch based on `token0()`
-- Consider fee on transfer tokens and adjust logic if supporting them
+## Security and pitfalls
+
+Swaps touch value and external contracts. Every swap moves tokens, calls external code, and affects user funds. Follow these patterns to avoid common pitfalls.
+
+### Missing slippage protection
+
+**Danger**: Executing without caller‑provided `minOut` exposes traders to sandwiching and volatile swings. An attacker can front‑run the swap with a large trade that moves the price unfavorably, then back‑run to profit from the price difference. Without `minOut`, the victim's swap executes at the manipulated price with no recourse.
+
+**Bad**:
+```solidity
+function swap(IPair pair, uint256 amountIn) external {
+    (uint112 r0, uint112 r1,) = pair.getReserves();
+    uint256 amountOut = _amountOut(amountIn, r0, r1, 30);
+    // NO SLIPPAGE CHECK - accepts any output
+    tokenIn.safeTransferFrom(msg.sender, address(pair), amountIn);
+    pair.swap(0, amountOut, msg.sender, "");
+}
+```
+
+**Good**:
+```solidity
+function swap(IPair pair, uint256 amountIn, uint256 minOut) external {
+    (uint112 r0, uint112 r1,) = pair.getReserves();
+    uint256 amountOut = _amountOut(amountIn, r0, r1, 30);
+    require(amountOut >= minOut, "SLIPPAGE"); // Enforces minimum output
+    tokenIn.safeTransferFrom(msg.sender, address(pair), amountIn);
+    pair.swap(0, amountOut, msg.sender, "");
+}
+```
+
+**Rule**: Force users to opt into slippage risk explicitly via `minOut`. Never execute a swap without this check.
+
+### Stale reserves and multi‑swap reuse
+
+**Danger**: Reading reserves once and reusing them for multiple swaps increases price error and can be adversarially exploited. Reserves change after every swap, so a cached read becomes stale immediately. Using stale reserves produces incorrect `amountOut` calculations, leading to unfavorable execution or failed transactions.
+
+**Bad**:
+```solidity
+function batchSwap(uint256[] memory amounts) external {
+    (uint112 r0, uint112 r1,) = pair.getReserves(); // Read once
+    for (uint i = 0; i < amounts.length; i++) {
+        uint256 out = _amountOut(amounts[i], r0, r1, 30); // WRONG: r0, r1 are stale after first swap
+        // execute swap
+    }
+}
+```
+
+**Good**:
+```solidity
+function batchSwap(uint256[] memory amounts) external {
+    for (uint i = 0; i < amounts.length; i++) {
+        (uint112 r0, uint112 r1,) = pair.getReserves(); // Fresh read per swap
+        uint256 out = _amountOut(amounts[i], r0, r1, 30);
+        // execute swap
+    }
+}
+```
+
+**Rule**: Treat reserves as point‑in‑time data; don't cache across actions unless you control atomicity and slippage. Read fresh reserves per swap execution.
+
+### Token ordering assumptions
+
+**Danger**: Assuming `tokenIn` is always `token0()` flips math and pays the wrong asset. Pairs store reserves in a fixed order (token0, token1), but your swap might go either direction. If you always treat `r0` as the input reserve, you'll compute the wrong output when swapping token1 for token0.
+
+**Bad**:
+```solidity
+function swap(IPair pair, uint256 amountIn) external {
+    (uint112 r0, uint112 r1,) = pair.getReserves();
+    uint256 out = _amountOut(amountIn, r0, r1, 30); // WRONG: assumes tokenIn is token0
+    // execute swap
+}
+```
+
+**Good**:
+```solidity
+function swap(IPair pair, IERC20 tokenIn, uint256 amountIn) external {
+    (uint112 r0, uint112 r1,) = pair.getReserves();
+    (uint256 x, uint256 y) = tokenIn == IERC20(pair.token0())
+        ? (uint256(r0), uint256(r1))
+        : (uint256(r1), uint256(r0)); // Orient reserves based on tokenIn
+    uint256 out = _amountOut(amountIn, x, y, 30);
+    // execute swap
+}
+```
+
+**Rule**: Derive orientation at runtime; never hardcode token order. Always check `tokenIn == token0()` to determine which reserve is input and which is output.
+
+### Unsafe token transfers
+
+**Danger**: Raw ERC‑20 calls can silently fail or return non‑standard booleans. The ERC‑20 standard says `transfer` and `transferFrom` should return `bool`, but many tokens (USDT, BNB, others) return nothing or revert in unexpected ways. Some tokens return `false` on failure instead of reverting. If you call these tokens directly and don't check the return value, your swap might think it succeeded when it actually failed.
+
+**Bad**:
+```solidity
+function swap(IERC20 tokenIn, uint256 amountIn) external {
+    tokenIn.transferFrom(msg.sender, address(pair), amountIn); // WRONG: ignores return value
+    // If transferFrom returns false, swap continues anyway
+}
+```
+
+**Good**:
+```solidity
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+function swap(IERC20 tokenIn, uint256 amountIn) external {
+    using SafeERC20 for IERC20;
+    tokenIn.safeTransferFrom(msg.sender, address(pair), amountIn); // Reverts on failure
+}
+```
+
+**Rule**: Always prefer `SafeERC20`; do not assume token conformity. Use `safeTransfer`, `safeTransferFrom`, and `safeApprove` for all token operations.
+
+### Reentrancy exposure on value‑moving paths
+
+**Danger**: External calls during swaps can reenter routers with inconsistent state. When you call `token.transferFrom` or `pair.swap`, control passes to external code that might call back into your router before the original transaction completes. If your state is inconsistent at that moment (e.g., balances updated but tokens not yet transferred), the reentrant call can exploit the gap.
+
+**Bad**:
+```solidity
+function swap(uint256 amountIn) external {
+    uint256 out = _computeOut(amountIn);
+    balances[msg.sender] += out; // State update
+    tokenIn.transferFrom(msg.sender, address(pair), amountIn); // External call - can reenter!
+    // If tokenIn reenters here, balances[msg.sender] is already incremented
+}
+```
+
+**Good**:
+```solidity
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract SwapRouter is ReentrancyGuard {
+    function swap(uint256 amountIn) external nonReentrant {
+        uint256 out = _computeOut(amountIn);
+        balances[msg.sender] += out; // State update
+        tokenIn.safeTransferFrom(msg.sender, address(pair), amountIn); // External call - protected
+    }
+}
+```
+
+**Rule**: Protect value‑moving functions; combine CEI with a reentrancy guard. Use `nonReentrant` from OpenZeppelin on all swap entry points.
+
+## Security checklist
+
+Before shipping swap mechanics:
+
+- [ ] **Require slippage**: Every swap enforces `amountOut >= minOut`.
+- [ ] **Deadline guard**: Optional `deadline` check closes mempool exposure.
+- [ ] **Fresh reserves**: Read reserves per swap; no reuse across executions.
+- [ ] **Token orientation**: Derive `(x, y)` based on `tokenIn == token0()`.
+- [ ] **SafeERC20 only**: No raw ERC‑20 calls; handle non‑standard tokens.
+- [ ] **CEI discipline**: Keep Checks → Effects → Interactions ordering.
+- [ ] **Reentrancy guard**: Mark value‑moving entry points `nonReentrant`.
+- [ ] **Stable events**: Emit one `Swapped` event with indexed subjects.
+- [ ] **Fee parameter bounds**: Validate `feeBps` is within expected range.
+- [ ] **Tests for negative paths**: Slippage, deadline, wrong token ordering, and zero amounts all revert with clear reasons.
 
 ## Wrap‑up
 
-You can execute a safe single‑pool swap with slippage and event observability. Next: price feeds and oracles (4.3) to inform safer UX and guardrails.
+You can execute a safe single‑pool swap with slippage protection, deadlines, `SafeERC20`, and event observability—all wrapped in CEI discipline. You understand why interfaces decouple your router from pool internals, how to orient reserves based on token order, and why every swap must enforce `minOut` and emit a structured event. These patterns form the foundation of production DeFi routers, whether you're building a simple swap interface or a complex aggregator with multi‑hop routing.
+
+The discipline you've learned—CEI, fresh reserve reads, safe token handling, reentrancy guards—applies far beyond swaps. Lending protocols follow CEI when processing borrows and liquidations. Yield aggregators use the same slippage controls when rebalancing capital. Staking systems emit similar events for deposits and withdrawals. Master these primitives and you'll build safer, more maintainable DeFi infrastructure across any use case.
+
+Next (4.3), we'll integrate price oracles to inform quoting and UX guardrails, adding staleness checks and circuit breakers to handle external data safely. Later in Island 4, commit‑reveal randomness will follow the same sequencing discipline (commit → reveal windows), and airdrops will use Merkle proofs with replay protection. When deploying to a production network such as Zilliqa EVM, keep the same interfaces and safety checks, and test negative paths with realistic liquidity and fee settings. Your router should behave identically across any EVM‑compatible chain.

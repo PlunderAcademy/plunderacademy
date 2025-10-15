@@ -1,0 +1,474 @@
+---
+id: intro-to-staking-contracts
+module: staking-contract-practical
+number: 2.5.1
+title: Introduction to Staking Contracts
+objective: >-
+  Understand staking mechanics, plan your staking token strategy, and prepare to build a production-ready staking contract with duration tiers and reward calculations.
+slug: intro-to-staking-contracts
+---
+
+## What Is Token Staking?
+
+### The Core Concept
+
+**Real-world analogy:** Think of staking like a Certificate of Deposit (CD) at a bank. You lock money for 6 months, 1 year, or 2 years, and earn interest based on how long you commit. The bank pays higher rates for longer commitments because they can plan around having your funds available.
+
+**In crypto, staking works similarly:**
+- Users **lock tokens** for a fixed period (30, 60, or 120 days)
+- They **earn rewards** proportional to:
+  - Amount staked
+  - Duration of the lock
+  - APY (Annual Percentage Yield) for that duration tier
+- **Early withdrawal** incurs a penalty
+- **Normal withdrawal** (after lock period) returns principal + rewards
+
+### Why Build a Staking Contract?
+
+**Common use cases:**
+- **Community engagement:** Reward long-term holders
+- **Liquidity locking:** Reduce circulating supply during launches
+- **Governance alignment:** Longer stakers = more committed voters
+- **Yield generation:** Provide passive income to token holders
+- **Protocol TVL:** Total Value Locked attracts attention and trust
+
+**Real examples:**
+- **Ethereum 2.0:** Stake ETH to secure the network, earn ~4-7% APY
+- **Curve (veCRV):** Lock CRV for up to 4 years, earn trading fees + governance power
+- **Synthetix:** Stake SNX to mint synths, earn protocol fees
+- **PancakeSwap Syrup Pools:** Stake CAKE, earn partner tokens
+
+## The Staking Contract We'll Build
+
+### Key Features
+
+**Your production-ready staking contract will include:**
+
+✅ **Multiple duration tiers:**
+- 30-day lock → 10% APY
+- 60-day lock → 15% APY  
+- 120-day lock → 27% APY
+
+✅ **Multiple deposits per user:**
+- Alice can stake 1000 tokens for 30 days on Jan 1st
+- Then stake another 500 tokens for 60 days on Jan 15th
+- Each deposit tracked independently with its own timeline
+
+✅ **Fair reward calculations:**
+- Rewards accrue per-second based on elapsed time
+- Capped at the lock duration (no extra rewards for waiting longer)
+- Uses safe integer math to avoid precision loss
+
+✅ **Early withdrawal penalties:**
+- Withdraw before lock ends → 5% penalty, no rewards
+- Withdraw after lock ends → 2% fee, full rewards paid
+
+✅ **Global reward controls:**
+- Owner can start/stop reward accrual
+- Owner can adjust APY rates for new deposits
+- Existing deposits keep their original rates
+
+✅ **Battle-tested security:**
+- OpenZeppelin SafeERC20 (handles non-standard tokens)
+- ReentrancyGuard (prevents attack vectors)
+- Ownable (admin controls)
+- SafeMath (overflow protection, though Solidity 0.8+ has built-in checks)
+
+### Contract Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────┐
+│              Staking Contract                        │
+├─────────────────────────────────────────────────────┤
+│  State Variables:                                    │
+│  - stakingToken (ERC20)                             │
+│  - rewardToken (same as stakingToken)               │
+│  - apy1, apy2, apy3 (rate tiers)                    │
+│  - exitPenaltyPerc (early withdrawal penalty)       │
+│  - withdrawFee (normal withdrawal fee)              │
+│  - totalStaked (contract-wide tracking)             │
+│                                                      │
+│  User Data:                                          │
+│  - mapping(address => UserInfo)                     │
+│    ├─ amount (total staked)                         │
+│    └─ depositItems[] (array of deposits)            │
+│         ├─ apy                                       │
+│         ├─ duration                                  │
+│         ├─ amount                                    │
+│         └─ timestamp                                 │
+│                                                      │
+│  Core Functions:                                     │
+│  - deposit(amount, option) → stake with tier        │
+│  - withdraw(index) → claim one deposit               │
+│  - getStakedItemReward(user, index) → preview       │
+│  - startReward() → begin accrual (owner only)       │
+│  - stopReward() → pause accrual (owner only)        │
+│  - updateApy() → adjust rates (owner only)          │
+└─────────────────────────────────────────────────────┘
+```
+
+## Understanding the Data Structures
+
+### DepositItem: Individual Stake Records
+
+```solidity
+struct DepositItem {
+    uint256 apy;        // 10, 15, or 27 (representing percentage)
+    uint256 duration;   // 30 days, 60 days, or 120 days
+    uint256 amount;     // Tokens in this specific deposit
+    uint256 timestamp;  // When this deposit was made
+}
+```
+
+**Why track each deposit separately?**
+- Different deposits can have different lock periods
+- APY rates might change over time; old deposits keep their rate
+- Users can withdraw individual deposits when they mature
+- Simplifies reward calculation (one deposit at a time)
+
+**Example user journey:**
+```javascript
+// Day 0: Alice deposits 1000 tokens for 30 days
+depositItems[0] = {
+  apy: 10,
+  duration: 30 days,
+  amount: 1000,
+  timestamp: 1704067200  // Jan 1, 2024
+}
+
+// Day 10: Alice deposits another 500 tokens for 60 days
+depositItems[1] = {
+  apy: 15,
+  duration: 60 days,
+  amount: 500,
+  timestamp: 1704931200  // Jan 11, 2024
+}
+
+// Day 35: Alice's first deposit matured (30 days passed)
+// She can withdraw index 0 with full rewards
+// Her second deposit still has 25 days remaining
+```
+
+### UserInfo: Per-User Aggregation
+
+```solidity
+struct UserInfo {
+    uint256 amount;             // Total across all active deposits
+    DepositItem[] depositItems; // Array of individual stakes
+}
+
+mapping(address => UserInfo) private userInfo;
+```
+
+**Why both `amount` and `depositItems`?**
+- `amount` = quick lookup of total staked (useful for UI dashboards)
+- `depositItems` = detailed breakdown for reward calculations
+- When a user withdraws, both are updated (amount decreases, item removed from array)
+
+## Planning Your Staking Token
+
+### Choosing Your Staking Token
+
+**You have several options for what token users will stake:**
+
+#### Option 1: Use an Existing Token
+**Best for:** Established projects with existing token holders
+
+```solidity
+// In constructor, reference an existing deployed token
+constructor(address tokenAddr, address feeAddr) {
+    stakingToken = IERC20(tokenAddr);
+    rewardToken = stakingToken;  // Same token for staking and rewards
+    // ...
+}
+```
+
+**Deployment:**
+```bash
+# Deploy staking contract pointing to existing token
+npx hardhat run scripts/deploy-staking.ts --network zilliqaTestnet
+# Provide existing token address: 0xYourTokenAddress
+```
+
+#### Option 2: Deploy a New Token First
+**Best for:** New projects or learning (what we'll demonstrate)
+
+**Steps:**
+1. Deploy an ERC20 token (from Module 1.5 - Island 1)
+2. Deploy the staking contract pointing to that token
+3. Transfer reward tokens to the staking contract
+4. Users can now stake
+
+**Example workflow:**
+```bash
+# Step 1: Deploy your ERC20 token
+npm run deploy:token
+
+# Step 2: Deploy staking contract with that token address
+npm run deploy:staking
+
+# Step 3: Transfer reward tokens to staking contract
+npm run fund:staking
+```
+
+#### Option 3: Use the Same Token for Different Networks
+**Best for:** Multi-chain projects
+
+You can deploy the same staking contract on:
+- Zilliqa Testnet (for learning and testing)
+- Zilliqa Mainnet (for production)
+- Other EVM chains (Ethereum, Polygon, BSC, etc.)
+
+### Token Economics Considerations
+
+**Before deploying, plan your tokenomics:**
+
+#### Reward Pool Size
+**How many tokens will you allocate for staking rewards?**
+
+Example calculation:
+- Total supply: 1,000,000 tokens
+- Reward pool: 100,000 tokens (10%)
+- Target TVL: 500,000 tokens staked
+- Average APY: 15%
+- Annual rewards needed: 500,000 × 0.15 = 75,000 tokens ✅ (fits in pool)
+
+#### Sustainability
+**How long should rewards last?**
+
+```
+Reward Pool: 100,000 tokens
+Annual payout at max TVL: 75,000 tokens
+Duration: 100,000 / 75,000 = 1.33 years
+```
+
+**Options to extend:**
+- Gradually decrease APY rates
+- Add more tokens to reward pool
+- Implement reward halving (like Bitcoin)
+- Use protocol fees to replenish rewards
+
+#### Claimant Address for Achievements
+
+**Important for this training module:**
+
+Your staking contract will include a `claimant` address for achievement verification:
+
+```solidity
+address public claimant;  // Set in constructor
+
+constructor(address tokenAddr, address feeAddr, address _claimant) {
+    stakingToken = IERC20(tokenAddr);
+    rewardToken = stakingToken;
+    feeAddress = feeAddr;
+    claimant = _claimant;  // Your training portal wallet
+    // ...
+}
+```
+
+**This lets us verify:**
+- You successfully deployed the contract
+- You understand constructor parameters
+- You can claim achievement credit for completing the module
+
+## Staking Contract Comparison
+
+### Simple vs Advanced Patterns
+
+**Our contract (unified/simple):**
+```solidity
+contract Staking is Ownable, ReentrancyGuard {
+    IERC20 public stakingToken;
+    mapping(address => UserInfo) private userInfo;
+    
+    function deposit(uint256 amount, uint256 option) public { }
+    function withdraw(uint256 index) public { }
+    function _calculateReward(address user, uint256 index) internal { }
+}
+```
+
+**Modular pattern (advanced - from Module 2.4.1):**
+```solidity
+contract StakingVault { /* storage only */ }
+contract RewardPolicy { /* calculations only */ }
+contract RewardDistributor { /* transfers only */ }
+```
+
+**When to use each:**
+
+| Factor | Unified (Our Contract) | Modular (Advanced) |
+|--------|----------------------|-------------------|
+| **Learning** | ✅ Perfect for understanding flow | ⚠️ Requires understanding 3+ contracts |
+| **Team size** | ✅ 1-3 developers | ✅ 5+ developers |
+| **Audit cost** | ✅ Lower (one contract) | ⚠️ Higher (multiple contracts + interactions) |
+| **Flexibility** | ⚠️ Changes require redeployment | ✅ Swap policy without migrating storage |
+| **Gas costs** | ✅ Lower (fewer external calls) | ⚠️ Higher (cross-contract calls) |
+| **Production ready** | ✅ Yes (many protocols use this) | ✅ Yes (larger protocols prefer this) |
+
+**Bottom line:** Both patterns are production-ready. Start unified, refactor to modular if you need swappable logic.
+
+## What You'll Build in This Module
+
+### Module Roadmap
+
+**2.5.1 (This Lesson):** Introduction and Planning
+- ✅ Understand staking mechanics
+- ✅ Review contract features and architecture
+- ✅ Plan your staking token strategy
+
+**2.5.2:** Understanding the Staking Contract Code
+- Deep dive into `DepositItem` and `UserInfo` structures
+- Reward calculation logic (`_calculateReward`)
+- Deposit flow with duration tiers
+- Withdrawal flow with penalties and fees
+- Interactive code exploration
+
+**2.5.3:** Deployment with Hardhat 3
+- Project setup (brief reference to Module 2.3)
+- Writing deployment scripts with claimant integration
+- Local testing with Hardhat node
+- Zilliqa testnet deployment
+- Achievement verification and claiming
+
+**2.5.4:** Testing & Verification
+- Comprehensive test suite using Hardhat
+- Time manipulation with `time.increase()`
+- Edge cases: early withdrawal, multiple deposits, reward caps
+- Block explorer verification
+- Security best practices
+
+## Prerequisites Check
+
+**Before proceeding, ensure you have:**
+
+✅ **Completed Island 1 (Modules 1.1-1.5)**
+- Understanding of ERC20 tokens
+- Hardhat 3 development environment set up
+- Experience deploying to Zilliqa testnet
+- Wallet connected to training portal
+
+✅ **Completed Island 2 (Modules 2.1-2.4)**
+- OpenZeppelin ecosystem knowledge
+- Struct and mapping patterns
+- Hardhat testing fundamentals
+- Time-based logic understanding
+
+✅ **Development environment ready:**
+- Node.js installed
+- Hardhat 3 configured
+- MetaMask with Zilliqa testnet
+- Testnet ZIL for gas fees
+
+✅ **Optional but helpful:**
+- An existing ERC20 token deployed (from Module 1.5)
+- Or willingness to deploy a new one for staking
+
+## Practice and Reflection
+
+Before diving into code, solidify your understanding:
+
+**Design exercise:** Sketch out a staking program for your own project:
+- What token will users stake?
+- What duration tiers will you offer? (30/60/90 days? 1/3/6/12 months?)
+- What APY will each tier earn?
+- Will you charge withdrawal fees? Early exit penalties?
+- How many tokens will you allocate to the reward pool?
+- How long should the rewards last?
+
+**Calculation exercise:** Given these parameters:
+- User stakes: 1,000 tokens
+- Duration: 60 days
+- APY: 15%
+- Early withdrawal penalty: 5%
+- Normal withdrawal fee: 2%
+
+Calculate:
+1. Total rewards if they wait the full 60 days
+2. Amount received if they withdraw after 30 days (early)
+3. Amount received if they withdraw after 80 days (late, but capped at 60)
+
+{/* Multiple Choice */}
+<MultipleChoice question="If a user deposits 1000 tokens for 30 days at 10% APY, and withdraws after 15 days with a 5% early exit penalty, what do they receive?" options={[
+  "1000 tokens (full principal, no penalty)",
+  "950 tokens (5% penalty applied, no rewards)",
+  "1000 + (partial rewards for 15 days)",
+  "500 tokens (half because they withdrew at halfway point)"
+]} correctAnswer={1} explanation="Early withdrawal means: (1) 5% penalty is applied to principal (1000 * 0.95 = 950), and (2) NO rewards are paid. They get 950 tokens back." />
+
+## Security Considerations Preview
+
+**Before we write any code, understand these security principles:**
+
+### Reentrancy Protection
+
+**The danger:** A malicious token could call back into your contract during transfer:
+
+```solidity
+// BAD: No protection
+function withdraw(uint256 index) public {
+    uint256 amount = user.depositItems[index].amount;
+    stakingToken.transfer(msg.sender, amount);  // ← Malicious token calls withdraw() again!
+    user.amount -= amount;  // ← Never reached on first call
+}
+
+// GOOD: ReentrancyGuard
+function withdraw(uint256 index) public nonReentrant {
+    // Can't be called again until this execution completes
+}
+```
+
+### SafeERC20 for Non-Standard Tokens
+
+**The issue:** Not all ERC20 tokens return `bool` from `transfer()`:
+
+```solidity
+// BAD: Assumes all tokens return bool
+bool success = stakingToken.transfer(msg.sender, amount);
+
+// GOOD: SafeERC20 handles edge cases
+using SafeERC20 for IERC20;
+stakingToken.safeTransfer(msg.sender, amount);  // Reverts on failure
+```
+
+### Integer Math Precision
+
+**The trap:** Division before multiplication loses precision:
+
+```solidity
+// BAD: Loses precision
+uint256 reward = (amount / 365 days) * elapsed * apy / 100;
+
+// GOOD: Multiply first, divide last
+uint256 reward = (amount * elapsed * apy) / 100 / 365 days;
+```
+
+We'll explore all of these in detail in the next lesson!
+
+## Interactive Practice
+
+Put the staking flow steps in the correct order:
+
+<TimelineBuilder events={[
+  {"id":"step1","text":"User approves staking contract to spend tokens","correctPosition":0},
+  {"id":"step2","text":"User calls deposit(amount, option) with duration tier","correctPosition":1},
+  {"id":"step3","text":"Contract creates DepositItem with APY, duration, timestamp","correctPosition":2},
+  {"id":"step4","text":"Time passes, rewards accrue based on elapsed time","correctPosition":3},
+  {"id":"step5","text":"User calls withdraw(index) for specific deposit","correctPosition":4},
+  {"id":"step6","text":"Contract calculates rewards, applies fee/penalty","correctPosition":5},
+  {"id":"step7","text":"Contract transfers principal + rewards to user","correctPosition":6}
+]}/>
+
+## Wrap-Up
+
+You now understand:
+- ✅ What staking contracts do and why they're valuable
+- ✅ The architecture of our unified staking contract
+- ✅ How `DepositItem` and `UserInfo` structures work
+- ✅ Duration tiers, APY rates, and penalty systems
+- ✅ Token economics and reward pool planning
+- ✅ Key security considerations (reentrancy, SafeERC20, math precision)
+
+**Next up:** In Module 2.5.2, we'll do a deep dive into the actual Solidity code, walking through every function and understanding exactly how deposits, withdrawals, and reward calculations work. Get ready to read real production code!
+
+Ready to see the contract in action? Let's go! 🚀
+

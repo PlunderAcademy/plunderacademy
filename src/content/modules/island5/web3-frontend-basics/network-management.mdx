@@ -14,6 +14,8 @@ practicalTakeaway: "Create dApps that work seamlessly across multiple blockchain
 
 Users will connect on the wrong chain. Your dApp must detect it, prompt a switch, and recover gracefully. With wagmi and RainbowKit, you can guide users to Zilliqa mainnet/testnet and keep your UI consistent and predictable.
 
+> Starter Template: Use `https://github.com/Plunderswap/sample-next-js` as the baseline. Ensure supported chains are limited to Zilliqa mainnet/testnet (per `src/lib/wagmi.ts`) and keep a visible wrong‑network guard.
+
 ## Conceptual foundations for Web3 frontend
 
 - **Definition — `useChainId` / `useSwitchChain`**: wagmi hooks for reading current chain and triggering a network switch. **When to use them**: Detect mismatches and guide users to supported networks.

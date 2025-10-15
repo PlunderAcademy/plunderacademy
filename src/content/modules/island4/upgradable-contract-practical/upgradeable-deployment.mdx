@@ -2,7 +2,7 @@
 id: "upgradeable-practical-lesson-1"
 slug: "upgradeable-deployment"
 module: "upgradable-contract-practical"
-number: "4.11"
+number: 4.11
 title: "Upgradeable Contract Deployment and Testing"
 objective: "Deploy production-ready upgradeable contracts with comprehensive testing and migration strategies."
 practicalTakeaway: "Launch upgradeable smart contract systems with proven upgrade mechanisms and safety procedures."
@@ -12,79 +12,423 @@ practicalTakeaway: "Launch upgradeable smart contract systems with proven upgrad
 
 ## Set the stage
 
-Deploying upgradeable contracts safely requires the right proxy pattern, storage discipline, and tests that simulate real state across upgrades. We’ll sketch a practical deployment flow with initialization and an upgrade test plan.
+You've built a ship that can be repaired and improved at sea without unloading cargo or stranding passengers. Upgradeable contracts let you fix bugs, optimize gas, or add features post‑launch—but only if you deploy them correctly from day one. A rushed proxy deployment with constructor logic instead of an initializer, or an accidental storage collision in version 2, can permanently lock user funds or corrupt state. The stakes are high: upgradeable contracts manage billions in DeFi and need bulletproof deployment procedures.
 
-## Core ideas
+The danger is silent mutation. A naive team deploys a proxy, calls the implementation's constructor (which runs in isolation, not in proxy context), and wonders why their admin role vanished. Or they upgrade to version 2, add a new state variable in the wrong position, and overwrite user balances. These mistakes are invisible until users withdraw incorrect amounts or the contract bricks itself. Traditional immutable contracts fail fast at deploy time; upgradeable contracts fail slowly over upgrade cycles if you skip initialization guards or storage layout verification.
 
-- Pick a proxy: Transparent (admin via ProxyAdmin) vs UUPS (self‑authorized)
-- Initialize once: use `initialize` instead of constructors; guard re‑init
-- Append‑only storage layout with `__gap` and layout checks in CI
-- Operational safety: restricted upgrade authority, events, and (optionally) timelocks
+This lesson assembles a production deployment runbook for UUPS and Transparent proxies. You'll learn to initialize state correctly (never via constructors), reserve storage gaps to prevent collisions, restrict upgrade authority to multisigs or timelocks, and write comprehensive upgrade tests that simulate real state transitions. By the end, you'll have the operational discipline to ship upgradeable DeFi protocols, NFT systems, or governance contracts on Zilliqa EVM—and the testing infrastructure to verify every upgrade preserves user data and contract invariants.
 
-## Code in practice
+## Conceptual foundations
 
-### 1) Implementation with initializer guard
+### Proxy pattern selection: Transparent vs UUPS
+
+Choosing your proxy architecture is the first fork in the road. Transparent proxies delegate upgrade authority to an external `ProxyAdmin` contract, keeping upgrade logic separate from business logic. This pattern is simpler operationally: the admin account can upgrade without touching the implementation contract, and there's no risk of accidentally removing upgrade functions during an implementation update.
+
+UUPS (Universal Upgradeable Proxy Standard) embeds upgrade authorization in the implementation itself. The implementation inherits from `UUPSUpgradeable` and defines `_authorizeUpgrade`, which checks roles or ownership. This pattern saves gas on every delegatecall (no admin-check overhead in the proxy), but introduces a new failure mode: if you deploy a version 2 that forgets to inherit `UUPSUpgradeable` or removes `_authorizeUpgrade`, the contract becomes permanently frozen.
+
+Choose Transparent if you prioritize operational simplicity and can tolerate slightly higher gas costs per call. Choose UUPS if your system is gas-sensitive (high transaction volume) and your team has the discipline to enforce upgrade function inheritance in every implementation version. For mission-critical DeFi systems managing large TVL, Transparent proxies reduce the blast radius of human error during upgrades.
+
+### Initialization vs constructors
+
+Constructors run in the implementation's context, not the proxy's context. If your implementation contract sets `owner = msg.sender` in a constructor, that owner is recorded in the implementation's storage, not the proxy's storage. When users interact via the proxy, they see uninitialized state (address(0) or zero values), leading to unauthorized access or broken logic.
+
+The solution is to replace constructors with `initialize` functions that run once via the proxy after deployment. OpenZeppelin's `Initializable` base contract provides `initializer` modifier that sets an `_initialized` flag to prevent double-initialization. Your deployment script must call `proxy.initialize(...)` immediately after deploying the proxy, treating initialization as an atomic step in the deployment sequence.
+
+Never call implementation functions directly; always route through the proxy. This discipline prevents confusion about where state lives and ensures your tests exercise the same code paths users will hit in production. Document this requirement in your deployment runbook and enforce it with script validation.
+
+### Storage layout discipline and gaps
+
+Storage collisions are silent killers. If version 1 declares `uint256 a; address b;` in slots 0 and 1, and version 2 adds `bool flag;` *before* `a`, the new layout shifts everything: `flag` occupies slot 0, overwriting `a`. User data corrupts invisibly, and the contract continues to function—just with wrong values.
+
+The append-only rule prevents this: new state variables must always come *after* existing ones, never before or interleaved. OpenZeppelin upgradeable contracts reserve empty storage slots via `uint256[50] private __gap;` arrays. When you add a new variable in version 2, you shrink the gap by the number of slots consumed. For example, adding `uint256 newVar;` reduces `__gap` to `uint256[49] private __gap;`. This keeps the total storage shape stable across versions.
+
+Automate layout verification in CI with Hardhat or Foundry plugins that compare storage layouts between versions. These tools parse your contracts and diff the slot assignments, failing the build if they detect reordering or collisions. Manual review is error-prone; bake the check into your pull request workflow so no upgrade ships without passing layout validation.
+
+### Upgrade authority and access control
+
+Unrestricted upgrade functions let any attacker replace your implementation with malicious code. In Transparent proxies, the `ProxyAdmin` contract owns upgrade rights; ensure the admin is a multisig or DAO governance contract, never an EOA. In UUPS, `_authorizeUpgrade` must check `onlyOwner` or a role-based permission, and that owner must be a multisig.
+
+Timelocks add a transparency layer: proposed upgrades enter a delay period (e.g., 48 hours), during which users can audit the new implementation and withdraw funds if they distrust the change. Compound and other blue-chip protocols use timelocks to give users exit options and reduce trust assumptions. For early-stage projects, a 2-of-3 multisig may suffice; as TVL grows, graduate to on-chain governance with timelocks.
+
+Log every upgrade with events: `event Upgraded(address indexed implementation, address indexed initiator, uint256 timestamp);`. Index by implementation address so off-chain monitors can track version history and alert on unexpected upgrades. Treat upgrades as high-stakes operations that require the same scrutiny as initial deployment.
+
+### Testing upgrades with realistic state
+
+Most upgrade tests are too shallow: they deploy version 1, immediately upgrade to version 2, and verify the new function exists. Real upgrades happen after months of production use, with complex state (user balances, accrued rewards, historical data). Your tests must simulate aged state to catch migration bugs.
+
+Structure upgrade tests in three acts: **Act 1:** deploy version 1 via proxy and initialize; **Act 2:** execute representative transactions to build realistic state (deposits, staking, rewards, admin actions); **Act 3:** upgrade to version 2 and assert that old state remains intact while new functions work. For example, if version 1 is a staking vault with 100 users and 1 million tokens staked, your upgrade test should create those 100 positions, then verify version 2 preserves every balance and position timestamp.
+
+Include negative tests: attempt double initialization, call `initialize` on version 2 post-upgrade (should revert), try to upgrade with an unauthorized account, deploy version 2 with a storage collision and verify your layout checks catch it. Test the full lifecycle on a testnet fork with production data before mainnet deployment. If an upgrade requires a migration function (e.g., converting old struct formats), test that migration exhaustively with boundary cases.
+
+## Guided code walk-throughs
+
+These examples show upgradeable deployment patterns for DeFi protocols and infrastructure contracts.
+
+### Example 1: UUPS implementation with OpenZeppelin initializer
+
+A staking vault implementation that uses OpenZeppelin's `Initializable` and `UUPSUpgradeable` patterns for gas-efficient upgrades with proper initialization guards.
 
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract V1Impl {
-  address public owner;
-  uint256 public value;
-  bool private _inited;
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-  event ValueSet(uint256 v);
+contract StakingVaultV1 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+    uint256 public totalStaked;
+    mapping(address => uint256) public stakedBalance;
 
-  function initialize(address owner_, uint256 v) external {
-    require(!_inited, "INIT"); _inited = true;
-    owner = owner_; value = v; emit ValueSet(v);
-  }
+    event Staked(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
 
-  function setValue(uint256 v) external { require(msg.sender == owner, "OWNER"); value = v; emit ValueSet(v); }
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers(); // prevent impl initialization
+    }
 
-  uint256[50] private __gap; // reserve storage for future upgrades
+    function initialize(address initialOwner) external initializer {
+        __Ownable_init(initialOwner);
+        __UUPSUpgradeable_init();
+        totalStaked = 0;
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    function stake(uint256 amount) external {
+        stakedBalance[msg.sender] += amount;
+        totalStaked += amount;
+        emit Staked(msg.sender, amount);
+    }
+
+    uint256[48] private __gap; // 50 - 2 used slots
 }
 ```
 
-Takeaway: guard against re‑initialization and reserve storage space.
+**Takeaway**: Use `initializer` modifier from OpenZeppelin to guard against double-initialization, `_disableInitializers` in the constructor to prevent implementation exploitation, and reserve `__gap` slots for future state variables. The `_authorizeUpgrade` function restricts upgrades to the owner, who should be a multisig or governance contract.
 
-### 2) Upgrade test outline (Transparent or UUPS)
+### Example 2: Version 2 implementation with appended storage
 
-```text
-1) Deploy implementation V1
-2) Deploy proxy (Transparent or ERC1967) pointing to V1
-3) Call initialize via proxy
-4) Interact to produce realistic state
-5) Deploy V2 with appended storage and new function
-6) Upgrade proxy to V2
-7) Assert pre‑upgrade state remains; new functions work
+When upgrading, add new state variables only at the end and shrink the `__gap` accordingly to maintain total storage shape.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+contract StakingVaultV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+    // V1 storage (DO NOT REORDER)
+    uint256 public totalStaked;
+    mapping(address => uint256) public stakedBalance;
+
+    // V2 additions (append only)
+    uint256 public rewardRate;
+    mapping(address => uint256) public lastClaimTimestamp;
+
+    event Staked(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+    event RewardRateUpdated(uint256 newRate);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    function setRewardRate(uint256 rate) external onlyOwner {
+        rewardRate = rate;
+        emit RewardRateUpdated(rate);
+    }
+
+    function claimRewards() external {
+        lastClaimTimestamp[msg.sender] = block.timestamp;
+        // reward calculation logic...
+    }
+
+    uint256[46] private __gap; // 50 - 4 used slots (reduced from 48)
+}
 ```
 
-Takeaway: test using the proxy, not the implementation directly; preserve state across versions.
+**Takeaway**: Version 2 preserves version 1 storage layout exactly, appends new state variables, and reduces `__gap` by the number of new slots consumed. Never reorder, delete, or change the type of existing variables, or you risk overwriting user data.
+
+### Example 3: Foundry upgrade test with state preservation
+
+A comprehensive test that deploys version 1, builds realistic state, upgrades to version 2, and verifies data integrity across the upgrade boundary.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {StakingVaultV1} from "../src/StakingVaultV1.sol";
+import {StakingVaultV2} from "../src/StakingVaultV2.sol";
+
+contract UpgradeTest is Test {
+    address owner = address(0x1);
+    address user1 = address(0x2);
+    ERC1967Proxy proxy;
+    StakingVaultV1 vaultV1;
+    StakingVaultV2 vaultV2;
+
+    function testUpgradePreservesState() public {
+        // Deploy V1 and initialize via proxy
+        vaultV1 = new StakingVaultV1();
+        proxy = new ERC1967Proxy(address(vaultV1), "");
+        StakingVaultV1(address(proxy)).initialize(owner);
+
+        // Build realistic V1 state
+        vm.prank(user1);
+        StakingVaultV1(address(proxy)).stake(1000e18);
+        assertEq(StakingVaultV1(address(proxy)).stakedBalance(user1), 1000e18);
+
+        // Deploy V2 and upgrade
+        vaultV2 = new StakingVaultV2();
+        vm.prank(owner);
+        StakingVaultV1(address(proxy)).upgradeToAndCall(address(vaultV2), "");
+
+        // Verify V1 state preserved in V2
+        assertEq(StakingVaultV2(address(proxy)).stakedBalance(user1), 1000e18);
+        assertEq(StakingVaultV2(address(proxy)).totalStaked(), 1000e18);
+
+        // Verify V2 new functionality
+        vm.prank(owner);
+        StakingVaultV2(address(proxy)).setRewardRate(100);
+        assertEq(StakingVaultV2(address(proxy)).rewardRate(), 100);
+    }
+}
+```
+
+**Takeaway**: Test through the proxy interface, not the implementation directly. Build realistic pre-upgrade state, perform the upgrade, and assert both old and new data remain consistent. This pattern catches storage collisions and initialization bugs before production.
 
 ## Practice and reflection
 
-- Choose Transparent or UUPS for your project and justify with ops needs
-- Implement an initializer guard and add a `__gap` to your contract
-- Write an upgrade test that verifies state preservation and new functionality
+Apply upgradeable contract patterns to your production deployment workflow:
 
-{/* Timeline Builder: upgrade deployment flow */}
+- **Proxy pattern selection**: Choose Transparent or UUPS for a DeFi protocol managing 10M USD in TVL. Document your decision based on operational complexity, gas costs per transaction, and the risk tolerance of your team's upgrade discipline.
+
+- **Initializer implementation**: Refactor an existing immutable contract with a constructor that sets owner and critical parameters. Convert it to an upgradeable implementation with proper `initialize` function, `_disableInitializers` in the constructor, and a `__gap` array.
+
+- **Version 2 upgrade design**: Design a version 2 upgrade that adds a new feature (e.g., reward multipliers, emergency pause, fee collector). Specify the exact storage additions, calculate the new `__gap` size, and document which version 1 state variables must remain untouched.
+
+- **Comprehensive upgrade test**: Write a Foundry or Hardhat test that deploys version 1 via proxy, executes over 50 transactions to build realistic state (multiple users, various balances, timestamps), upgrades to version 2, and asserts all version 1 state remains intact while new version 2 functions work correctly.
+
+- **Authorization and timelock design**: Plan the upgrade authority structure for your protocol. Specify the multisig configuration (e.g., 3-of-5 with hardware wallets), timelock delay (24-72 hours), and emergency upgrade procedures for critical bugs that require immediate fixes.
+
+- **CI storage layout verification**: Set up automated storage layout checks in your CI pipeline using Hardhat's `hardhat-upgrades` plugin or Foundry's `forge inspect` commands. Configure the pipeline to fail any PR that introduces storage collisions or reordering.
+
+{/* Timeline Builder: upgrade deployment flow (single interactive element) */}
 <TimelineBuilder events={[
-  {"id":"u1","text":"Deploy implementation V1"},
-  {"id":"u2","text":"Deploy proxy and point to V1"},
-  {"id":"u3","text":"Initialize via proxy"},
-  {"id":"u4","text":"Deploy implementation V2 (append storage)"},
-  {"id":"u5","text":"Upgrade proxy to V2 and verify state"}
+  {"id":"u1","text":"Deploy implementation version 1","correctPosition":0},
+  {"id":"u2","text":"Deploy proxy and point to version 1","correctPosition":1},
+  {"id":"u3","text":"Initialize via proxy","correctPosition":2},
+  {"id":"u4","text":"Deploy implementation version 2 (append storage)","correctPosition":3},
+  {"id":"u5","text":"Upgrade proxy to version 2 and verify state","correctPosition":4}
 ]}
 />
 
-## Deployment checklist
+**Short reflection**: What happens if you skip the `_disableInitializers()` call in your implementation contract's constructor? Could an attacker gain control by calling `initialize` directly on the implementation?
 
-- Emit upgrade and initialize events; verify in logs after deployment
-- Restrict upgrade authority (multisig, timelock)
-- Keep implementation addresses recorded and documented
+## Security and pitfalls
 
-## Wrap‑up
+Upgradeable contracts introduce unique attack surfaces that don't exist in immutable deployments. Follow these patterns to minimize risk.
 
-With the right proxy pattern, initializer, and tests, you can ship upgradeable systems without risking storage corruption. Bake checks into CI to keep the process safe over time.
+### Unprotected initialize functions
+
+**Danger**: If your `initialize` function lacks reentrancy protection or can be called multiple times, attackers can reset critical state like ownership or bypass access controls. Unlike constructors that run once atomically, initializers are regular external functions vulnerable to standard attack vectors.
+
+**Bad**:
+```solidity
+contract VaultV1 {
+    address public owner;
+    
+    function initialize(address _owner) external {
+        owner = _owner; // No guard, can be called repeatedly
+    }
+}
+```
+
+**Good**:
+```solidity
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+contract VaultV1 is Initializable {
+    address public owner;
+    
+    function initialize(address _owner) external initializer {
+        owner = _owner; // initializer modifier prevents re-initialization
+    }
+    
+    constructor() {
+        _disableInitializers(); // prevent impl exploitation
+    }
+}
+```
+
+**Rule**: Always use OpenZeppelin's `Initializable` base and `initializer` modifier. Call `_disableInitializers()` in the implementation's constructor to prevent direct initialization attacks on the implementation contract. Test double-initialization attempts in your test suite.
+
+### Storage layout collisions on upgrade
+
+**Danger**: Reordering state variables between versions causes silent data corruption. If version 1 has `uint256 balance; address token;` in slots 0-1, and version 2 reorders to `address token; uint256 balance;`, the proxy's slot 0 (which held a uint256) is now interpreted as an address. User balances vanish or get misinterpreted as addresses, breaking all logic.
+
+**Bad**:
+```solidity
+// V1
+contract VaultV1 {
+    uint256 public totalStaked;
+    address public stakingToken;
+}
+
+// V2 (BROKEN: reordered storage)
+contract VaultV2 {
+    address public stakingToken; // NOW SLOT 0 (was slot 1)
+    uint256 public totalStaked;  // NOW SLOT 1 (was slot 0)
+    uint256 public rewardRate;   // NEW SLOT 2
+}
+```
+
+**Good**:
+```solidity
+// V1
+contract VaultV1 {
+    uint256 public totalStaked;
+    address public stakingToken;
+    uint256[48] private __gap;
+}
+
+// V2 (CORRECT: append only)
+contract VaultV2 {
+    uint256 public totalStaked;     // SLOT 0 (unchanged)
+    address public stakingToken;    // SLOT 1 (unchanged)
+    uint256 public rewardRate;      // SLOT 2 (new)
+    uint256[47] private __gap;      // reduced by 1
+}
+```
+
+**Rule**: Never reorder, delete, or change types of existing state variables. Always append new variables at the end and reduce `__gap` accordingly. Automate layout verification with Hardhat or Foundry plugins in CI. Document storage layout explicitly in comments.
+
+### Constructor logic in upgradeable contracts
+
+**Danger**: Code in a constructor runs in the implementation's context during deployment, not in the proxy's context. If you set `owner = msg.sender` in a constructor, that owner is recorded in the implementation's storage (which is never used), while the proxy's storage remains uninitialized (owner = address(0)). This creates a permanent backdoor where access controls fail.
+
+**Bad**:
+```solidity
+contract VaultV1 is UUPSUpgradeable, OwnableUpgradeable {
+    constructor(address _owner) {
+        __Ownable_init(_owner); // WRONG: runs in impl context
+    }
+}
+```
+
+**Good**:
+```solidity
+contract VaultV1 is UUPSUpgradeable, OwnableUpgradeable {
+    constructor() {
+        _disableInitializers(); // prevent impl init
+    }
+    
+    function initialize(address _owner) external initializer {
+        __Ownable_init(_owner); // CORRECT: runs in proxy context
+        __UUPSUpgradeable_init();
+    }
+}
+```
+
+**Rule**: Keep constructors minimal—only call `_disableInitializers()`. Move all state initialization to an `initialize` function that's called via the proxy after deployment. Test that the implementation contract cannot be initialized directly.
+
+### Unrestricted upgrade authorization
+
+**Danger**: If `_authorizeUpgrade` (UUPS) or `ProxyAdmin` ownership (Transparent) is controlled by an EOA or weak multisig, attackers can steal private keys and upgrade to a malicious implementation that drains all user funds. A single compromised key in a 1-of-1 or 2-of-3 multisig bypasses all protocol security.
+
+**Bad**:
+```solidity
+contract VaultV1 is UUPSUpgradeable, Ownable {
+    constructor(address _owner) Ownable(_owner) {} // EOA owner
+    
+    function _authorizeUpgrade(address) internal override onlyOwner {}
+}
+```
+
+**Good**:
+```solidity
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+
+contract VaultV1 is UUPSUpgradeable, OwnableUpgradeable {
+    function initialize(address timelock) external initializer {
+        __Ownable_init(timelock); // Timelock is owner
+        __UUPSUpgradeable_init();
+    }
+    
+    function _authorizeUpgrade(address) internal override onlyOwner {
+        // only timelock can upgrade (48h delay)
+    }
+}
+```
+
+**Rule**: Use a multisig (minimum 3-of-5 with geographically distributed signers) or a timelock-controlled DAO for upgrade authority. For protocols managing over 10M USD, require both: a multisig proposes upgrades to a timelock, giving users 24-72 hours to audit and exit before execution. Never deploy with EOA ownership.
+
+### Forgetting UUPS upgrade functions in version 2
+
+**Danger**: If version 2 implementation forgets to inherit `UUPSUpgradeable` or accidentally removes `_authorizeUpgrade`, the proxy permanently loses upgrade capability. The contract becomes frozen at version 2—you can't fix bugs, add features, or migrate to version 3. This is a one-way door with no recovery.
+
+**Bad**:
+```solidity
+// V1 (upgradeable)
+contract VaultV1 is UUPSUpgradeable {
+    function _authorizeUpgrade(address) internal override onlyOwner {}
+}
+
+// V2 (BROKEN: forgot UUPS inheritance)
+contract VaultV2 {
+    // no UUPSUpgradeable, no _authorizeUpgrade
+    // proxy is now FROZEN at V2
+}
+```
+
+**Good**:
+```solidity
+// V1
+contract VaultV1 is UUPSUpgradeable, OwnableUpgradeable {
+    function _authorizeUpgrade(address) internal override onlyOwner {}
+}
+
+// V2 (maintains upgrade capability)
+contract VaultV2 is UUPSUpgradeable, OwnableUpgradeable {
+    function _authorizeUpgrade(address) internal override onlyOwner {}
+    // all other upgrades can continue
+}
+```
+
+**Rule**: Every UUPS implementation version must inherit `UUPSUpgradeable` and implement `_authorizeUpgrade`. Add a CI check that verifies `_authorizeUpgrade` exists in every implementation. For Transparent proxies, this danger doesn't exist since upgrade logic lives in the separate ProxyAdmin contract.
+
+## Security checklist
+
+Before deploying upgradeable contracts to production:
+
+- [ ] **Initializer protection**: Every implementation uses `Initializable` base with `initializer` modifier and calls `_disableInitializers()` in constructor
+- [ ] **Proxy pattern verified**: Transparent or UUPS choice documented with operational justification; ProxyAdmin or UUPS roles assigned to multisig/timelock
+- [ ] **Storage layout validated**: CI pipeline runs Hardhat or Foundry layout verification on every PR; version 2 and later implementations append storage only and adjust `__gap`
+- [ ] **Upgrade authority restricted**: Owner/admin is a multisig (minimum 3-of-5) or timelock-controlled DAO; never an EOA
+- [ ] **UUPS inheritance maintained**: For UUPS proxies, every implementation version inherits `UUPSUpgradeable` and implements `_authorizeUpgrade`
+- [ ] **Constructor discipline**: Implementation constructors contain only `_disableInitializers()`; all state initialization happens in `initialize` function
+- [ ] **Upgrade events emitted**: Log `Upgraded(implementation, initiator, timestamp)` and `Initialized(version)` events for off-chain monitoring
+- [ ] **Comprehensive upgrade tests**: Test suite deploys version 1, builds realistic state (over 50 transactions), upgrades to version 2, and verifies state preservation plus new functionality
+- [ ] **Negative path testing**: Tests verify double-initialization reverts, unauthorized upgrade attempts fail, and storage collisions are caught by CI
+- [ ] **Implementation addresses recorded**: Maintain a registry of all deployed implementation addresses with version tags and deployment timestamps
+- [ ] **Initialization atomicity**: Deployment script calls `initialize` immediately after proxy deployment as a single atomic transaction sequence
+- [ ] **Testnet rehearsal**: Full upgrade sequence executed on testnet fork with production data clone before mainnet deployment
+- [ ] **Emergency procedures documented**: Runbook covers upgrade rollback procedures, timelock bypass for critical bugs, and communication plan for users
+- [ ] **Access control verified**: All privileged functions (`initialize`, `_authorizeUpgrade`, admin actions) restrict access correctly and emit events
+
+## Wrap-up and next steps
+
+You've learned the complete lifecycle of upgradeable contract deployment: choosing Transparent vs UUPS based on operational needs, implementing proper initializers with `_disableInitializers` guards, maintaining append-only storage discipline with `__gap` arrays, restricting upgrade authority to multisigs or timelocks, and writing comprehensive tests that simulate realistic state across upgrade boundaries. These patterns prevent the silent failures that plague naive upgradeable deployments—constructor logic in the wrong context, storage collisions from reordering variables, and unrestricted upgrade functions that create single points of failure.
+
+The discipline extends beyond initial deployment. Every upgrade is a production deployment with the same risk profile as the original launch. Automate storage layout verification in CI so no pull request ships with collisions, maintain a registry of implementation addresses for audit trails, and rehearse every upgrade on a testnet fork with cloned production data. For high-stakes protocols managing significant TVL, timelocks give users transparency and exit windows, while multisig authorization distributes trust across geographically distributed signers with hardware wallet protection.
+
+This completes Island 4's practical modules on DeFi patterns, oracles, randomness, and upgradeability. You now have the operational foundation to deploy production-ready infrastructure on Zilliqa EVM: use Transparent proxies for operational simplicity or UUPS for gas optimization, enforce strict initialization guards, and automate layout checks in your deployment pipeline. Next, Island 5 brings these backend patterns to the frontend—building full-stack dapps with wagmi, RainbowKit, and robust transaction orchestration that maps contract errors to user-friendly messages and handles wallet connection flows gracefully. The smart contract work is solid; now make it accessible to users.

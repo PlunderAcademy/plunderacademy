@@ -8,22 +8,61 @@ objective: >-
 slug: security-testing
 ---
 
-## Where this fits
+## Set the stage
 
-Security issues hide at boundaries: external calls, value transfers, and privileged actions. By turning common bug classes into reusable tests, you make regressions obvious before they reach users.
+A cargo ship with loose latches won't survive the first storm. Staking contracts hold user funds; one reentrancy bug or access control flaw can drain the vault. Security testing finds these weak latches before attackers do.
 
-## Core ideas
+Traditional unit tests verify happy paths: deposits work, withdrawals succeed, rewards accrue. Security tests verify *failure modes*: Can an attacker re-enter withdraw? Can a non-owner pause the vault? Do reverts leak state? These negative tests prove your contract fails safely when attacked.
 
-- **Negative testing**: Prove that invalid actions are rejected predictably
-- **Reentrancy probes**: Simulate re‑entry around value‑moving functions
-- **Authorization matrix**: Table of who can do what; exercised in tests
-- **Invariant flashes**: Quick checks that should hold after every action
+By treating security bugs as a checklist—reentrancy, authorization, CEI violations, invariant breaks—you turn common exploits into repeatable specs. When a test prevents a known attack pattern, that defense stays enforced through every code change.
 
-## Try it in code
+## Conceptual foundations
+
+### Negative testing philosophy
+
+Security tests prove that bad inputs and malicious actions fail predictably. If `withdraw(0)` should revert, write a test that *expects* the revert. If non-owners can't call `pause()`, write a test where a user tries and fails.
+
+**When to use**: Every privileged function, every value-moving operation, every state transition that has preconditions.
+
+**Why it matters**: Positive tests prove what works; negative tests prove what's *prevented*. Both are required for confidence.
+
+### Reentrancy probes
+
+Reentrancy happens when an external call (ETH transfer, token transfer, external contract call) hands control to untrusted code, which re-enters your contract before the first call completes. The classic defense: CEI (Checks-Effects-Interactions) + `nonReentrant`.
+
+**How to test**: Deploy a malicious contract that re-enters your function via `receive()` or `fallback()`. Assert that the second call reverts.
+
+**Pattern**: Minimal attacker harness with a toggle (`bool attack`) to control re-entry timing.
+
+### Authorization matrix testing
+
+Access control bugs are common: a missing `onlyOwner`, a typo in role checks, or privilege escalation through indirect calls. Matrix testing enumerates all roles × all actions and verifies each combination.
+
+**When to use**: Any function with `onlyOwner`, `onlyRole`, or custom access checks.
+
+**Structure**: Table of `{ role, action, shouldSucceed }` → loop and assert.
+
+**Benefit**: Adding a new role or action? Update the table; tests auto-generate.
+
+### Invariant checking
+
+Invariants are properties that must *always* hold: total staked balance ≤ vault balance, sum of all positions = total supply, reward rate ≤ max configured rate. Security tests can snapshot invariants before/after actions and assert they remain true.
+
+**When to use**: After state-changing operations (deposit, withdraw, claim rewards).
+
+**Pattern**: Helper function `assertInvariants(vault)` that checks all critical properties; call it at the end of every test.
+
+**Why it matters**: Invariant breaks signal logic errors that might not trigger explicit reverts but still corrupt state.
+
+## Guided code walk-throughs
+
+These examples show how to test security boundaries in staking systems: reentrancy attacks, authorization failures, and invariant preservation.
 
 ### 1) Reentrancy probe against withdrawals
 
 Use a malicious contract to re‑enter `withdraw` and assert that `nonReentrant`/CEI stops it.
+
+Staking vaults transfer ETH or tokens during withdrawals. If `withdraw` updates state *after* the transfer (bad CEI), an attacker can re-enter and withdraw multiple times before the balance decrements.
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -52,54 +91,208 @@ contract Attacker {
 }
 ```
 
-Takeaway: a minimal attacker harness helps validate CEI + `nonReentrant` defenses.
+Takeaway: a minimal attacker harness helps validate CEI + `nonReentrant` defenses. Deploy this in a test, attempt the attack, and assert it reverts with the expected error (e.g., `ReentrancyGuard: reentrant call`).
 
-### 2) Authorization table tests
+### 2) Authorization matrix tests (Staking contract admin functions)
 
-Exercise each privileged action across roles and assert the expected error or success.
+**Test all admin functions from Module 2.5's Staking contract** with Hardhat 3 + viem:
+
+The Staking contract has owner-only functions: `startReward()`, `updateApy()`, `updateExitPenalty()`. Matrix tests verify every role/action combination.
 
 ```ts
-// test/Auth.matrix.ts (excerpt)
+// test/Staking.auth.test.ts (matching Island 1 pattern)
 import { expect } from "chai";
+import hre from "hardhat";
 
-type Case = { role: string; can: boolean };
-const cases: Case[] = [
-  { role: "owner", can: true },
-  { role: "user", can: false }
-];
+describe("Staking - Authorization", () => {
+  async function deployStakingFixture() {
+    const [owner, user1] = await hre.viem.getWalletClients();
+    const token = await hre.viem.deployContract("TestToken", []);
+    const staking = await hre.viem.deployContract("Staking", [
+      token.address,
+      owner.account.address,
+      owner.account.address
+    ]);
+    return { staking, token, owner, user1 };
+  }
 
-for (const c of cases) {
-  it(`role=${c.role}`, async () => {
-    if (c.can) {
-      await expect(contract.connect(signers[c.role]).pause()).to.emit(contract, "Paused");
-    } else {
-      await expect(contract.connect(signers[c.role]).pause()).to.be.reverted;
+  const adminFunctions = [
+    {
+      name: "startReward",
+      call: (staking: any, account: any) => staking.write.startReward({ account })
+    },
+    {
+      name: "updateApy",
+      call: (staking: any, account: any) => 
+        staking.write.updateApy([12n, 18n, 30n], { account })
+    },
+    {
+      name: "updateExitPenalty",
+      call: (staking: any, account: any) => 
+        staking.write.updateExitPenalty([10n], { account })
     }
-  });
-}
+  ];
+
+  for (const fn of adminFunctions) {
+    it(`${fn.name}: owner can call`, async () => {
+      const { staking, owner } = await loadFixture(deployStakingFixture);
+      // Should not revert
+      await fn.call(staking, owner.account);
+    });
+
+    it(`${fn.name}: non-owner cannot call`, async () => {
+      const { staking, user1 } = await loadFixture(deployStakingFixture);
+      // Should revert with Ownable error
+      await expect(fn.call(staking, user1.account)).to.be.rejected;
+    });
+  }
+});
 ```
 
-Takeaway: encode the matrix so new roles/actions are easy to add.
+**Takeaway**: Matrix tests cover all admin functions systematically. This matches the **Hardhat 3 + viem pattern** from Island 1 and tests the **exact Staking contract** from Module 2.5.
+
+### 3) Invariant checks after state changes
+
+Verify that critical properties hold after deposits, withdrawals, and reward claims.
+
+```ts
+// test/StakingVault.invariants.ts (excerpt)
+import { expect } from "chai";
+
+async function assertInvariants(vault: any, token: any) {
+  const totalStaked = await vault.totalStaked();
+  const vaultBalance = await token.balanceOf(vault.target);
+  
+  // Invariant: vault must hold at least totalStaked
+  expect(vaultBalance).to.be.gte(totalStaked);
+  
+  // Invariant: sum of all user balances = totalStaked
+  const users = await vault.getAllUsers(); // hypothetical getter
+  let sum = 0n;
+  for (const user of users) {
+    sum += await vault.balanceOf(user);
+  }
+  expect(sum).to.equal(totalStaked);
+}
+
+describe("StakingVault - invariants", () => {
+  it("maintains invariants after deposit", async () => {
+    const { vault, token, user } = await loadFixture(deployFixture);
+    await token.connect(user).approve(vault.target, 1000n);
+    await vault.connect(user).deposit(1000n);
+    await assertInvariants(vault, token);
+  });
+  
+  it("maintains invariants after withdrawal", async () => {
+    const { vault, token, user } = await loadFixture(deployFixture);
+    await token.connect(user).approve(vault.target, 1000n);
+    await vault.connect(user).deposit(1000n);
+    await vault.connect(user).withdraw(500n);
+    await assertInvariants(vault, token);
+  });
+});
+```
+
+Takeaway: invariant helper functions catch state corruption that doesn't trigger explicit reverts. Call them at the end of every state-changing test.
 
 ## Practice and reflection
 
-- Write a minimal malicious contract to test a value‑moving function
-- Build an authorization matrix for two privileged actions
+Apply security testing to your staking vault:
+
+- **Reentrancy test**: Deploy an attacker contract that tries to re-enter `withdraw` during an ETH transfer; assert it reverts
+- **Authorization matrix**: Create a table with `owner`, `admin`, `user` roles × `pause`, `setRewardRate`, `emergencyWithdraw` actions; loop and verify success/failure
+- **Negative inputs**: Test `deposit(0)`, `withdraw(MAX_UINT256)`, `claim()` when no rewards accrued—all should revert predictably
+- **Invariant suite**: Write `assertInvariants()` and call it after every deposit, withdraw, and claim in your test suite
+- **Custom error assertions**: Verify that reverts emit specific custom errors (e.g., `InsufficientBalance` not generic `require` failures)
+- **Event coverage**: Ensure security-critical events (e.g., `EmergencyWithdraw`, `Paused`) emit in both success and edge cases
 
 {/* True/False */}
 <TrueFalse statements={[
   {"id":"s1","text":"Negative tests are optional for production","correctAnswer":false,"explanation":"They prove failure modes are safe and predictable."},
-  {"id":"s2","text":"Reentrancy can only happen with ERC20s","correctAnswer":false,"explanation":"Any external call can be a re‑entry point."},
-  {"id":"s3","text":"Authorization tests should cover both success and failure","correctAnswer":true,"explanation":"Matrix‑style tests prevent privilege creep."}
+  {"id":"s2","text":"Reentrancy can only happen with ERC20s","correctAnswer":false,"explanation":"Any external call (ETH, ERC20, external contract) can be a re-entry point."},
+  {"id":"s3","text":"Authorization tests should cover both success and failure","correctAnswer":true,"explanation":"Matrix-style tests prevent privilege creep and catch missing access checks."},
+  {"id":"s4","text":"Invariant checks are only needed in integration tests","correctAnswer":false,"explanation":"Invariants should hold after every state change; check them in unit tests too."}
 ]}/>
 
-## Pitfalls and tips
+Short reflection: Which attack vector (reentrancy, authorization, invariant break) is most likely in your current staking design? Why?
 
-- Always assert the specific revert or error, not just “reverted”
-- Test event emissions on both success and failure paths where applicable
-- Prefer small, focused attacker harnesses over complex mocks
+## Security and pitfalls
+
+Security tests themselves can have flaws. Follow these patterns to ensure your security specs actually catch vulnerabilities.
+
+### Vague revert assertions
+
+**Danger**: Asserting `.to.be.reverted` without checking the specific error lets wrong reverts pass. Maybe it reverted due to a gas issue, not your access check.
+
+**Bad**:
+```ts
+await expect(vault.connect(user).pause()).to.be.reverted; // Why did it revert?
+```
+
+**Good**:
+```ts
+await expect(vault.connect(user).pause())
+  .to.be.revertedWithCustomError(vault, "OwnableUnauthorizedAccount")
+  .withArgs(user.address);
+```
+
+**Rule**: Always assert the specific error or revert reason. Chai/Hardhat supports `.revertedWith(string)`, `.revertedWithCustomError(contract, name)`, and `.revertedWithPanic(code)`.
+
+### Incomplete authorization coverage
+
+**Danger**: Testing only owner/user roles misses middle-tier roles (admin, operator, guardian). Adding a new role later might bypass checks if the matrix isn't comprehensive.
+
+**Pattern**: Enumerate *all* roles × *all* privileged actions in your matrix. If you add `OPERATOR_ROLE`, expand the table immediately.
+
+**Example**:
+```ts
+const roles = ["owner", "admin", "operator", "user"];
+const actions = ["pause", "setRewardRate", "emergencyWithdraw"];
+// Generate roles.length × actions.length tests
+```
+
+### Attacker harness complexity
+
+**Danger**: Overly complex attacker contracts obscure the attack vector. If your malicious contract is 100 lines, reviewers can't tell what's being tested.
+
+**Good practice**: Keep attacker contracts minimal—one attack vector per harness. If testing reentrancy + front-running, use two separate attacker contracts.
+
+### Missing invariant baseline
+
+**Danger**: Checking invariants after an action without establishing a baseline. Did the invariant break, or was it already broken?
+
+**Pattern**: Assert invariants in the fixture itself (clean state), then after every action. If the fixture fails, your baseline is corrupt.
+
+```ts
+async function deployFixture() {
+  // ... deploy
+  await assertInvariants(vault, token); // Baseline check
+  return { vault, token, ... };
+}
+```
+
+## Security checklist
+
+Before deploying staking contracts with security tests:
+
+- [ ] **Reentrancy coverage**: Every value-moving function (deposit, withdraw, claim) has a reentrancy test with attacker harness
+- [ ] **CEI verification**: Tests confirm state updates happen *before* external calls; violating CEI should fail reentrancy tests
+- [ ] **Authorization matrix**: All privileged functions tested across all roles; matrix includes success and failure cases
+- [ ] **Specific error assertions**: No generic `.to.be.reverted`; all tests assert custom errors or revert reasons
+- [ ] **Negative input tests**: Zero amounts, overflow values, unauthorized callers, expired deadlines all covered
+- [ ] **Invariant helpers**: `assertInvariants()` function exists and is called after every state change in tests
+- [ ] **Invariant baseline**: Fixture itself asserts invariants hold in clean state; tests catch corruption
+- [ ] **Attacker harnesses minimal**: One attack vector per contract; code is readable and obvious
+- [ ] **Event coverage on reverts**: Security events (Paused, EmergencyWithdraw) tested in both success and failure paths
+- [ ] **Access control completeness**: Every role × every action combination tested; new roles trigger matrix expansion
+- [ ] **Time-based edge cases**: Tests cover expired time-locks, reward period boundaries, early/late withdrawals
+- [ ] **Integration with unit patterns**: Security tests use same fixtures, helpers, AAA structure as unit tests
 
 ## Wrap‑up and next steps
 
-Security testing translates common bugs into repeatable specs. With reentrancy probes, role matrices, and negative tests, your staking code becomes resilient by default.
+Security testing translates common exploit patterns into repeatable specs. With reentrancy probes, authorization matrices, negative input tests, and invariant checks, your staking vault becomes resilient by default—attacks fail predictably, unauthorized actions revert cleanly, and state corruption is caught immediately.
+
+In the previous lesson, you learned unit testing patterns for readability and coverage. Here, you've focused on *adversarial* testing: proving that your contract fails safely when attacked. These negative tests complement positive specs—together, they give you confidence that the contract works correctly *and* resists malicious use.
+
+Earlier in this module, you set up Hardhat fixtures and wrote structured unit tests. Now you know how to probe security boundaries. Next, we'll return to the beginning: test-driven development (TDD), where you write security tests *before* the implementation exists, using test failures to guide your design toward secure patterns from the start.
 

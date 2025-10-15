@@ -1,0 +1,412 @@
+---
+id: revert-patterns
+module: advanced-data-structures-error-handling
+number: 2.2.4
+title: Revert Patterns and Error Recovery
+objective: >-
+  Design fail-fast guard clauses, idempotent operations, and soft-fail flows with pull patterns to build staking systems that recover gracefully from errors.
+slug: revert-patterns
+---
+
+## Set the stage
+
+Your staking vault is like a fortress with multiple checkpoints. Every deposit, withdrawal, and claim must pass through a gauntlet of checks before touching state: Is the amount valid? Is the user authorized? Is the contract paused? If any check fails, you want to **fail fast**—revert immediately with a clear error, before wasting gas or corrupting state. But some operations shouldn't fail: if one user's reward claim hits an external oracle that's down, should the whole batch revert? No—you want a **soft fail** where that user can retry later, while others proceed.
+
+This lesson is about designing robust error flows: guard clauses that reject bad inputs at the gate, idempotent operations that tolerate retries, and pull patterns that isolate failures. The wrong approach—deeply nested `if` blocks, state mutations before checks, or push-based batch operations that fail atomically—leads to stuck contracts, drained gas, and angry users. The right approach makes every failure predictable, every retry safe, and every recovery path obvious.
+
+By the end of this lesson you'll write guard clauses that read like English, design operations that can be called twice without breaking, and choose between fail-fast and soft-fail based on business logic. In Module 5's staking contract, every function will start with guards, every claim will be pull-based, and every batch operation will isolate user failures. Your contract will be antifragile: it gets stronger under stress, not weaker.
+
+## Conceptual foundations
+
+### Guard clauses: fail-fast at the gate
+
+A **guard clause** is an early check that reverts if preconditions aren't met. It inverts the "happy path nested in `if`" anti-pattern:
+
+**Bad (nested happy path)**:
+```solidity
+function withdraw(uint256 amount) external {
+    if (amount > 0) {
+        if (balanceOf[msg.sender] >= amount) {
+            if (!paused) {
+                // ... 50 lines of logic ...
+            } else {
+                revert("Paused");
+            }
+        } else {
+            revert("Insufficient balance");
+        }
+    } else {
+        revert("Zero amount");
+    }
+}
+```
+
+**Good (guard clauses)**:
+```solidity
+function withdraw(uint256 amount) external {
+    if (amount == 0) revert ZeroAmount();
+    if (balanceOf[msg.sender] < amount) revert InsufficientBalance(amount, balanceOf[msg.sender]);
+    if (paused) revert ContractPaused();
+    // ... 50 lines of happy-path logic, un-nested ...
+}
+```
+
+**Benefits**:
+- Fail fast: revert before wasting gas on computation
+- Readable: guards read like a checklist at the top
+- Maintainable: adding a new check is one line at the top, not nested surgery
+
+**When to use**: Every function that touches state or transfers value. Check inputs, authorization, contract state, and external dependencies **before** any mutations.
+
+### Idempotent operations: safe to call twice
+
+An **idempotent** operation produces the same result when called multiple times with the same arguments. For staking, this is critical: if a user's claim transaction times out and they retry, it shouldn't double-claim.
+
+**Non-idempotent (dangerous)**:
+```solidity
+function claimRewards() external {
+    uint256 reward = calculateReward(msg.sender);
+    pendingRewards[msg.sender] += reward; // First call: +100. Second call: +100 again!
+    token.transfer(msg.sender, pendingRewards[msg.sender]);
+}
+```
+
+**Idempotent (safe)**:
+```solidity
+function claimRewards() external {
+    uint256 reward = calculateReward(msg.sender);
+    pendingRewards[msg.sender] = 0; // Reset first; idempotent if called twice
+    token.transfer(msg.sender, reward);
+}
+```
+
+**Pattern**: Reset state before effects, or check for no-op conditions. If `pendingRewards[user] == 0`, calling `claimRewards()` again does nothing (no transfer).
+
+**When to use**: Any function users might retry (claims, withdrawals). Any function called by external systems (oracles, keepers).
+
+### Soft-fail vs hard-fail: when to revert
+
+**Hard fail**: Transaction reverts; entire call tree unwinds. Use when failure is unacceptable (e.g., user depositing a broken token).
+
+**Soft fail**: Function catches the error, logs it, and continues. Use when one failure shouldn't block others (e.g., batch reward distribution where one user's claim can fail).
+
+**Example**:
+```solidity
+// Hard fail: user tries to deposit; token.transferFrom reverts → whole tx reverts
+function deposit(uint256 amount) external {
+    stakingToken.safeTransferFrom(msg.sender, address(this), amount); // Must succeed
+    balanceOf[msg.sender] += amount;
+}
+
+// Soft fail: admin distributes rewards; one user's transfer fails → log and continue
+function batchDistribute(address[] calldata users, uint256[] calldata amounts) external {
+    for (uint256 i = 0; i < users.length; i++) {
+        try rewardToken.transfer(users[i], amounts[i]) {
+            emit RewardSent(users[i], amounts[i]);
+        } catch {
+            emit RewardFailed(users[i], amounts[i]); // Log failure; don't revert
+        }
+    }
+}
+```
+
+**Decision tree**:
+- **Hard fail**: Core invariants (balance updates, token transfers in deposit/withdraw)
+- **Soft fail**: Peripheral operations (external oracle calls, batch operations, non-critical rewards)
+
+### Pull patterns: users initiate, contract doesn't push
+
+**Pull pattern**: Users call a function to claim/withdraw what they're owed. Contract tracks balances; users pull when ready.
+
+**Push pattern**: Contract sends value to users automatically (e.g., in a loop). Risky: if one recipient reverts, the whole batch fails.
+
+**Pull (safe)**:
+```solidity
+mapping(address => uint256) public pendingRewards;
+
+function claimRewards() external {
+    uint256 reward = pendingRewards[msg.sender];
+    pendingRewards[msg.sender] = 0;
+    rewardToken.transfer(msg.sender, reward);
+}
+```
+
+**Push (risky)**:
+```solidity
+function distributeToAll(address[] calldata users) external {
+    for (uint256 i = 0; i < users.length; i++) {
+        uint256 reward = calculateReward(users[i]);
+        rewardToken.transfer(users[i], reward); // If one user reverts, all fail
+    }
+}
+```
+
+**When to pull**: Rewards, withdrawals, any value transfer to untrusted recipients.
+
+**When to push**: Transfers to your own contracts (where you control the recipient).
+
+### Compensating actions: undo on failure
+
+If an operation partially succeeds then fails, you need a **compensating action** to restore consistency. In Solidity, this is rare (reverts are atomic), but it matters when:
+- You call external contracts with `try/catch` and must undo local state
+- You emit events before reverting (events survive reverts, so be careful)
+
+**Example**:
+```solidity
+function attemptClaim() external {
+    uint256 reward = pendingRewards[msg.sender];
+    pendingRewards[msg.sender] = 0; // Effect
+
+    try rewardToken.transfer(msg.sender, reward) {
+        emit Claimed(msg.sender, reward);
+    } catch {
+        pendingRewards[msg.sender] = reward; // Compensate: restore state
+        emit ClaimFailed(msg.sender, reward);
+    }
+}
+```
+
+**Rule**: If you catch an external failure and don't revert, restore any state you mutated before the call.
+
+## Guided code walk-throughs
+
+These examples show guard clauses, idempotent claims, pull patterns, and soft-fail batch operations in staking systems.
+
+### 1) Guard clauses for staking deposit
+
+This deposit function uses guard clauses to validate inputs, authorization, and contract state before touching storage. Every failure mode is explicit and fails fast.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+error ZeroAmount();
+error ContractPaused();
+error PoolDoesNotExist(uint256 poolId);
+
+contract StakingVaultWithGuards {
+    using SafeERC20 for IERC20;
+
+    IERC20 public stakingToken;
+    bool public paused;
+    mapping(uint256 => bool) public poolExists;
+    mapping(address => mapping(uint256 => uint256)) public balanceOf;
+
+    event Deposited(address indexed user, uint256 indexed poolId, uint256 amount);
+
+    function deposit(uint256 poolId, uint256 amount) external {
+        // Guard clauses: fail fast
+        if (amount == 0) revert ZeroAmount();
+        if (paused) revert ContractPaused();
+        if (!poolExists[poolId]) revert PoolDoesNotExist(poolId);
+
+        // Happy path: guards passed, proceed
+        balanceOf[msg.sender][poolId] += amount;
+        stakingToken.safeTransferFrom(msg.sender, address(this), amount);
+        emit Deposited(msg.sender, poolId, amount);
+    }
+}
+```
+
+**Takeaway**: Guards at the top make failures explicit and cheap. For staking, check amount, pause state, pool validity, and user eligibility before any `SSTORE` or token transfer.
+
+### 2) Idempotent reward claims
+
+This claim function is idempotent: calling it twice in a row with no new rewards accrued is a no-op. The state reset (`pendingRewards[user] = 0`) happens before the transfer, so retries are safe.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+error NoRewardsToClaim();
+
+contract IdempotentClaimer {
+    using SafeERC20 for IERC20;
+
+    IERC20 public rewardToken;
+    mapping(address => uint256) public pendingRewards;
+
+    event RewardsClaimed(address indexed user, uint256 amount);
+
+    /// @notice Claim pending rewards (idempotent)
+    function claimRewards() external {
+        uint256 reward = pendingRewards[msg.sender];
+        if (reward == 0) revert NoRewardsToClaim(); // Guard: no-op if nothing to claim
+
+        // Reset state first → idempotent
+        pendingRewards[msg.sender] = 0;
+
+        // Transfer after state update (CEI)
+        rewardToken.safeTransfer(msg.sender, reward);
+        emit RewardsClaimed(msg.sender, reward);
+    }
+}
+```
+
+**Takeaway**: Reset pending state before effects. If the transaction times out and the user retries, the second call sees `pendingRewards[user] == 0` and reverts with `NoRewardsToClaim` instead of double-claiming.
+
+### 3) Soft-fail batch operations with try/catch
+
+This batch reward distribution uses soft-fail: if one user's transfer fails (e.g., they blacklisted themselves), log the failure and continue. Other users still get paid.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract SoftFailBatch {
+    IERC20 public rewardToken;
+
+    event RewardDistributed(address indexed user, uint256 amount);
+    event RewardFailed(address indexed user, uint256 amount, string reason);
+
+    /// @notice Distribute rewards to multiple users; soft-fail on individual errors
+    function batchDistribute(address[] calldata users, uint256[] calldata amounts) external {
+        require(users.length == amounts.length, "Length mismatch");
+        require(users.length <= 100, "Batch too large"); // Bound iteration
+
+        for (uint256 i = 0; i < users.length; i++) {
+            try rewardToken.transfer(users[i], amounts[i]) returns (bool success) {
+                if (success) {
+                    emit RewardDistributed(users[i], amounts[i]);
+                } else {
+                    emit RewardFailed(users[i], amounts[i], "Transfer returned false");
+                }
+            } catch Error(string memory reason) {
+                emit RewardFailed(users[i], amounts[i], reason);
+            } catch {
+                emit RewardFailed(users[i], amounts[i], "Unknown error");
+            }
+        }
+    }
+}
+```
+
+**Takeaway**: Use `try/catch` for soft-fail semantics. One user's failure doesn't kill the batch. Off-chain systems monitor `RewardFailed` events and retry or escalate.
+
+## Practice and reflection
+
+Apply these patterns to your staking design:
+
+- **Guard clause audit**: List five preconditions for your staking `withdraw` function (e.g., amount > 0, balance sufficient, not paused, cooldown elapsed, user authorized). Write guard clauses for each. Order them by cost (cheapest checks first).
+- **Idempotency check**: Your staking contract has a `claimRewards` function. Walk through what happens if a user calls it twice in a row. Is the second call a no-op, or does it claim again? If it claims again, refactor to make it idempotent.
+- **Pull vs push decision**: You need to distribute rewards to 1,000 users weekly. Compare: (a) admin calls `distributeToAll(users[])` (push); (b) users call `claimRewards()` individually (pull). List two benefits and one drawback of each.
+- **Soft-fail design**: Imagine your staking contract calls an external oracle to fetch reward rates. The oracle can be offline. Should you use `try/catch` (soft-fail) or let it revert (hard-fail)? Write two sentences defending your choice.
+- **Guard ordering**: You have three guards: `amount > 0` (cheap), `balanceOf[user] >= amount` (one SLOAD), `oracle.isValid()` (external call). What order should they run in, and why?
+
+{/* Timeline Builder */}
+<TimelineBuilder events={[
+  {"id":"evt-1","text":"Check amount > 0 (guard)","correctPosition":0},
+  {"id":"evt-2","text":"Check balance sufficient (guard)","correctPosition":1},
+  {"id":"evt-3","text":"Update balanceOf (effect)","correctPosition":2},
+  {"id":"evt-4","text":"Transfer tokens (interaction)","correctPosition":3}
+]}/>
+
+Short reflection: Your staking contract has a withdraw function. A user calls it with insufficient balance. Should the revert message say "Insufficient balance" or just revert silently? Write one sentence explaining the trade-off (hint: gas cost vs debuggability).
+
+## Security and pitfalls
+
+Revert patterns affect safety, gas costs, and user experience. Follow these rules:
+
+### Guard clause ordering: cheapest first
+
+**Principle**: Order guards from cheapest to most expensive. Fail fast on cheap checks to save gas when rejecting invalid inputs.
+
+**Example ordering** (cheapest → most expensive):
+1. Check constants/literals (`amount > 0`)
+2. Check `msg.sender` or function arguments
+3. Check storage (`balanceOf[user]`, `paused`)
+4. Check nested storage or complex state
+5. External calls (`oracle.getPrice()`)
+
+**Why**: If `amount == 0`, you revert immediately (50 gas). Don't waste 2,100 gas on an `SLOAD` or 2,500 gas on an external call first.
+
+### Idempotency footguns: events and reentrancy
+
+**Danger**: Events emitted before state updates break idempotency perception. If you emit `Claimed(user, amount)` then revert, the event survives in logs, confusing off-chain systems.
+
+**Rule**: Emit events **after** state mutations. If using `try/catch`, emit success/failure events in the respective branches.
+
+**Reentrancy**: Even if you reset state, a reentrant call can see stale state if you don't follow CEI. Combine idempotency with `nonReentrant` for defense in depth.
+
+### Pull pattern trade-offs
+
+**Benefits**:
+- Isolated failures (one user's revert doesn't affect others)
+- Gas control (users pay their own gas)
+- No batch size limits
+
+**Drawbacks**:
+- Users must initiate (extra transaction)
+- UX friction (users forget to claim)
+- Gas cost pushed to users (not always desirable)
+
+**Mitigation**: Emit `RewardAccrued` events so frontends can prompt users to claim. Offer batch claim for users with positions in multiple pools.
+
+### Soft-fail risks: silent failures
+
+**Danger**: If you catch errors and emit events but don't surface them to users, failures go unnoticed.
+
+**Mitigation**:
+- Return failure count or status from batch functions
+- Emit indexed events for off-chain monitors
+- Provide view functions to check pending failures
+
+**Example**:
+```solidity
+function batchDistribute(...) external returns (uint256 successCount, uint256 failCount) {
+    for (...) {
+        try ... {
+            successCount++;
+        } catch {
+            failCount++;
+            emit RewardFailed(...);
+        }
+    }
+}
+```
+
+### Compensating action pitfalls
+
+**Danger**: Forgetting to restore state after catching an error. Your contract is now inconsistent.
+
+**Example** (bad):
+```solidity
+pendingRewards[user] = 0;
+try token.transfer(user, reward) {
+    // success
+} catch {
+    // Forgot to restore pendingRewards[user]!
+}
+```
+
+**Rule**: If you catch and don't revert, restore any state mutated before the try block.
+
+## Security checklist
+
+Before shipping revert patterns:
+
+- [ ] **Guard clauses at top**: All functions with preconditions check them before state mutations
+- [ ] **Guards ordered by cost**: Cheapest checks (constants, args) before expensive (SLOAD, external calls)
+- [ ] **Idempotent claims**: Calling `claimRewards()` twice in a row is a no-op (no double-claim)
+- [ ] **Pull for untrusted recipients**: Rewards and withdrawals use pull pattern, not push
+- [ ] **Bounded batch operations**: All loops over user arrays enforce max size (≤100) or use pull
+- [ ] **Soft-fail emits events**: `try/catch` blocks emit failure events with indexed subjects for monitoring
+- [ ] **Hard-fail for core invariants**: Deposit/withdraw token transfers must succeed; no soft-fail
+- [ ] **Events after state updates**: Success events emitted after mutations, not before (CEI)
+- [ ] **Compensating actions present**: If catching errors, state restored to consistent point
+- [ ] **Try/catch returns status**: Batch functions return success/fail counts or status arrays
+
+## Wrap-up and next steps
+
+You've learned how to design robust error flows: guard clauses for fail-fast validation, idempotent operations that tolerate retries, pull patterns that isolate failures, and soft-fail semantics for batch operations. You saw when to revert hard (core invariants) and when to catch and continue (peripheral operations), and how to order guards to save gas.
+
+Combined with data structures (Lesson 1), storage optimizations (Lesson 2), and custom errors (Lesson 3), you now have a complete toolkit for building resilient staking contracts. Next, in Lesson 5 (Security Patterns: CEI and Access Guards), you'll learn defense-in-depth strategies: CEI discipline, reentrancy guards, role-based access control, and pausable emergency stops. By Module 5 you'll assemble all these patterns into a production-ready staking contract where every failure is graceful, every retry is safe, and every edge case is handled.
+

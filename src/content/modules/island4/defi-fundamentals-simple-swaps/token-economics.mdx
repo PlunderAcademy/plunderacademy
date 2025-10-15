@@ -2,7 +2,7 @@
 id: "defi-fundamentals-lesson-1"
 slug: "token-economics"
 module: "defi-fundamentals-simple-swaps"
-number: "4.1"
+number: 4.1
 title: "Token Economics and Liquidity Concepts"
 objective: "Understand DeFi fundamentals, liquidity mechanisms, and token economic principles."
 practicalTakeaway: "Design token economic models and implement basic liquidity management systems."
@@ -12,17 +12,65 @@ practicalTakeaway: "Design token economic models and implement basic liquidity m
 
 ## Set the stage
 
-Before building swaps, you need a clear mental model of how liquidity, pricing, and slippage work. This lesson connects token supply dynamics (mint/burn, emissions), pool mechanics (constant product), and user safety (minimum out, fees) so your later swap code has the right guardrails.
+Imagine a market square where two goods trade by bartering baskets. The exchange rate shifts with each trade: the scarcer a basket becomes, the more of the other basket you must offer. Constant‑product AMMs formalize this intuition with reserves and an invariant, while fees lightly tilt outcomes in favor of liquidity providers. Every swap adjusts the balance between two pools, creating price impact that grows non‑linearly with trade size.
 
-## Core ideas
+If you design swaps without understanding liquidity depth and price impact, you risk building UIs that mislead users and contracts that execute poor trades. A thin pool can turn a modest trade into a devastating slippage event. Missing slippage controls expose traders to MEV sandwiching. Inconsistent event schemas break analytics pipelines that monitor volume, fees, and anomalies. This lesson builds the mental model for constant‑product pricing, fee accrual, slippage control, and observability so that your later routers (4.2) and oracle‑informed quotes (4.3) behave predictably.
 
-- Liquidity pools: two‑asset reserves enable permissionless trades; price moves with reserve ratios
-- Constant product (x·y=k): price impact grows with trade size; more liquidity reduces slippage
-- Fees: a small fee on each trade increases reserves; LPs capture value over time
-- Slippage protection: users set a minimum output to avoid bad prices during MEV/volatility
-- Events: pricing and liquidity changes must be observable for analytics and UIs
+By the end, you will compute realistic quotes, reason about fee parameters in basis points, choose sensible `minOut` defaults, and instrument events to power analytics. These primitives underpin every DeFi protocol: swaps, lending, liquidations, and yield aggregators all depend on accurate pricing and robust liquidity mechanics. Master these concepts and you'll build safer, more transparent financial infrastructure.
 
-## Code in practice
+## Conceptual foundations
+
+### Constant product pricing (x·y = k)
+
+The constant product formula is the heart of automated market makers. Two reserves, `x` and `y`, multiply to a near‑constant `k`. Trading in `x` pushes its reserve up and `y` down until the new product matches `k` net of fees. This invariant ensures that the pool never runs out of either asset—prices simply adjust to reflect scarcity.
+
+Price impact scales non‑linearly with trade size. A 1% trade against reserves might cause 0.1% slippage, but a 10% trade can cause 5% or more. Deeper liquidity reduces slippage for the same notional, which is why protocols incentivize large pools and why traders split large orders across multiple venues or time windows.
+
+The formula itself is elegant: given reserves `(x, y)` and an input `dx`, the output `dy` satisfies `(x + dx)(y - dy) = k`. Solving for `dy` yields the swap math you'll implement in code. Fees complicate this slightly by reducing the effective input before applying the formula, which we'll cover next.
+
+### Fees as LP incentives
+
+Each trade deducts a small fee (e.g., 30 bps) from the input before computing output. These fees accumulate as extra reserves, increasing LP share value over time without minting new LP tokens. If a pool starts with 100 units of each asset and earns 10 units in fees, LPs who hold 1% of the supply now own 1% of 110 units—a passive yield from trading activity.
+
+Set fee bps to balance trader costs against LP rewards and protocol sustainability. Too high and traders route elsewhere; too low and LPs earn insufficient returns to justify capital lockup and impermanent loss risk. Common ranges are 5 bps (stablecoin pairs), 30 bps (standard pairs), and 100 bps (exotic or volatile pairs).
+
+Fees also serve as a protocol revenue mechanism when a portion is redirected to a treasury or governance token holders. Document fee splits clearly and emit events when parameters change so that LPs and traders can react to new economics.
+
+### Slippage and user control
+
+Slippage reflects the difference between the quoted and executed price due to price impact and market movement. Two forces drive slippage: the constant product curve (deterministic) and external price shifts between quote time and execution (stochastic). The `minOut` parameter lets users cap acceptable slippage by specifying the minimum tokens they'll accept.
+
+UIs should derive `minOut` from a user‑selected tolerance (e.g., 0.5% for stablecoins, 1–2% for volatile pairs). Compute the expected output, subtract the tolerance percentage, and pass that as `minOut`. If the actual output falls below this threshold, the transaction reverts, protecting the user from unfavorable execution.
+
+Advanced UIs show real‑time price impact estimates and warn when slippage exceeds safe thresholds. During high volatility or thin liquidity, consider suggesting smaller trade sizes or alternative routes. Never execute a swap without user‑provided slippage bounds—this is a non‑negotiable safety rail.
+
+### Liquidity depth and capital efficiency
+
+Higher reserves produce gentler price curves. A pool with 1M USD in reserves handles a 10k USD trade with minimal slippage, while a 50k USD pool might see 10%+ price impact on the same trade. Thin pools amplify slippage even for small trades, making them unattractive to traders and vulnerable to manipulation.
+
+Encourage deep liquidity via incentives or pool design. Protocols often distribute governance tokens or trading fee rebates to LPs who provide capital. Concentrated liquidity designs (like Uniswap v3) let LPs allocate capital to narrow price ranges, improving capital efficiency at the cost of increased impermanent loss risk and active management.
+
+Communicate depth in the UI with price impact warnings, reserve displays, and historical volume charts. Show traders the expected slippage before they sign, and flag pools with insufficient liquidity for their trade size. Transparency builds trust and reduces support burden from surprised users.
+
+### Observability via events
+
+Stable, indexed events underpin analytics: volume, fees, price impact, LP returns, and outlier detection. Every swap, liquidity add, and liquidity remove should emit a structured event with indexed addresses (trader, pool, tokens) and numeric fields (amounts, fees). Downstream systems—subgraphs, data warehouses, alerting pipelines—depend on these events to reconstruct state and detect anomalies.
+
+Keep event schemas consistent across releases to avoid breaking dashboards and indexers. If you must change an event, version it or emit both old and new formats during a transition period. Document event structures in your repository and include example queries for common analytics tasks.
+
+Events also serve as an audit trail. When a user reports unexpected slippage or missing funds, your support team can trace the exact on‑chain execution via event logs. Emit enough detail to diagnose issues without exposing sensitive data or bloating gas costs.
+
+### Basis points and units
+
+Express fees in basis points (parts per 10_000) to avoid floating‑point precision issues and make fee math explicit. 30 bps = 0.30% = 30/10_000. This representation works cleanly in Solidity's integer arithmetic and maps directly to user expectations when displaying percentages.
+
+Normalize token decimals in UIs and data pipelines to avoid unit confusion when comparing prices across assets. USDC has 6 decimals, WETH has 18, and custom tokens vary. Always fetch `decimals()` from the token contract and scale values for display. In analytics, convert all amounts to a common base (e.g., USD or a reference token) before aggregating volume or computing ratios.
+
+Mismatched units cause silent bugs: a price feed might return 8‑decimal USD values while your contract expects 18‑decimal inputs. Document unit assumptions in comments and validate inputs at boundaries. When in doubt, include explicit decimal conversions and test with tokens of varying precision.
+
+## Guided code walk‑throughs
+
+Keep examples short and focused; off‑chain systems can reuse the same math for previews.
 
 ### 1) Constant product quote helper (no state)
 
@@ -79,23 +127,150 @@ Takeaway: never execute a trade that returns less than the caller’s `minOut` t
 
 ## Practice and reflection
 
-- For a pool with 100 A and 100 B and a 0.3% fee, what is `getAmountOut(10, 100, 100)`? How does `minOut` change your UI?
-- Name two analytics you would derive from events to monitor pool health
+Apply token economics to your swap design:
 
-{/* Concept Matching */}
+- **Compute price impact**: Calculate `getAmountOut(10, 100, 100)` given a 30 bps fee. Explain the direction of price impact and how it would change if reserves were 1000/1000 instead.
+- **Choose slippage defaults**: Select a default slippage tolerance for the UI and justify it under normal vs volatile conditions. How would you adjust this for stablecoin pairs vs exotic tokens?
+- **Design event schemas**: Name two analytics you would derive from events to monitor pool health. What indexed fields would you need for efficient queries?
+- **Model fee economics**: Explain how fee bps changes propagate to LP returns over time. If a pool earns 1000 USD per day in fees at 30 bps, what happens if you lower fees to 5 bps to attract more volume?
+- **Handle decimal mismatches**: You're integrating a 6‑decimal USDC pool with an 18‑decimal WETH pool. Describe your normalization strategy for displaying prices and computing quotes.
+- **Detect thin liquidity**: Define a threshold for "thin liquidity" that should trigger a warning in your UI. Consider both absolute reserve size and trade‑to‑reserve ratio.
+
+{/* Concept Matching (economics vocabulary) */}
 <ConceptMatching pairs={[
   {"conceptId":"cpmm","definitionId":"def-cpmm","concept":"constant product","definition":"x·y=k pricing; impact grows with trade size","category":"pricing"},
   {"conceptId":"minout","definitionId":"def-minout","concept":"minOut","definition":"Caller’s minimum acceptable output to cap slippage","category":"safety"},
   {"conceptId":"fee","definitionId":"def-fee","concept":"fee (bps)","definition":"Per‑trade fee accruing to liquidity providers","category":"incentives"}
 ]}/>
 
-## Pitfalls and tips
+Short reflection: In a thin pool, why might a smaller absolute trade still cause significant slippage?
 
-- Do not compute quotes off stale reserves; update after each trade
-- Avoid unbounded loops for accounting; keep operations O(1)
-- Expose fee bps clearly; don’t hide price impact from users
+## Security and pitfalls
+
+Even economic primitives have sharp edges. Token economics affect every swap, liquidity operation, and price query. Follow these patterns to avoid silent failures and user harm.
+
+### Stale or incorrect reserves
+
+**Danger**: Using cached or stale reserves for quotes produces incorrect price impact calculations and exposes traders to unfavorable execution. If reserves change between quote time and execution (due to other swaps in the same block or mempool reordering), your calculated `amountOut` becomes invalid. Attackers can exploit this by sandwiching your transaction with their own swaps.
+
+**Bad**:
+```solidity
+// Cache reserves once, reuse for multiple swaps
+(uint112 r0, uint112 r1,) = pair.getReserves();
+uint256 out1 = getAmountOut(amount1, r0, r1, fee);
+uint256 out2 = getAmountOut(amount2, r0, r1, fee); // WRONG: r0, r1 changed after first swap
+```
+
+**Good**:
+```solidity
+// Read fresh reserves per swap
+function swapExact(...) external {
+    (uint112 r0, uint112 r1,) = pair.getReserves(); // Fresh read
+    uint256 amountOut = getAmountOut(amountIn, r0, r1, fee);
+    // execute swap
+}
+```
+
+**Rule**: Use fresh reserves for quotes; never assume they remain valid across transactions or multiple swaps. Cross‑validate reserves after large trades when composing routes.
+
+### Hidden units and decimal mismatches
+
+**Danger**: Token decimals vary widely (USDC has 6, WETH has 18, custom tokens can have any value). Failing to normalize decimals when computing prices or displaying amounts leads to off‑by‑orders‑of‑magnitude errors. A user might think they're swapping 1 USDC for 1 WETH when the contract is actually processing 1e12 times that amount due to decimal confusion.
+
+**Bad**:
+```solidity
+// Assume all tokens have 18 decimals
+uint256 price = (reserveA * 1e18) / reserveB; // WRONG if reserveB uses 6 decimals
+```
+
+**Good**:
+```solidity
+// Fetch decimals and normalize
+uint8 decimalsA = IERC20Metadata(tokenA).decimals();
+uint8 decimalsB = IERC20Metadata(tokenB).decimals();
+uint256 price = (reserveA * 10**decimalsB) / reserveB; // Normalized to decimalsB units
+```
+
+**Rule**: Normalize decimals in UIs and alerts. Display prices and fee rates consistently to avoid user confusion and faulty monitoring. Always fetch `decimals()` and scale values appropriately.
+
+### Misconfigured fee parameters
+
+**Danger**: Outlier fee bps can make pools uncompetitive or harm traders. A 500 bps (5%) fee might be acceptable for exotic pairs but would drive all traders away from a stablecoin pool. Conversely, a 1 bps fee might fail to compensate LPs for impermanent loss risk, leading to liquidity withdrawal and pool death.
+
+**Bad**:
+```solidity
+// Hardcoded fee with no bounds
+uint256 public feeBps = 10000; // 100% fee, pool is unusable
+```
+
+**Good**:
+```solidity
+// Bounded fee with validation
+uint256 public feeBps = 30; // 0.30% default
+uint256 public constant MAX_FEE_BPS = 1000; // 10% ceiling
+
+function setFeeBps(uint256 newFee) external onlyOwner {
+    require(newFee <= MAX_FEE_BPS, "Fee too high");
+    feeBps = newFee;
+    emit FeeUpdated(newFee);
+}
+```
+
+**Rule**: Bound and surface fee settings explicitly in both contracts and UIs. Document acceptable ranges and emit events when parameters change so LPs and traders can react.
+
+### Unobservable state changes
+
+**Danger**: Missing or unstable events cripple analytics and incident response. If your swap function doesn't emit an event, off‑chain systems can't track volume, compute fees, or detect anomalies. Changing event schemas between versions breaks existing dashboards and subgraphs, forcing downstream teams to rewrite queries and rebuild indexes.
+
+**Bad**:
+```solidity
+function swap(...) external {
+    // perform swap logic
+    // NO EVENT EMITTED
+}
+```
+
+**Good**:
+```solidity
+event Swapped(
+    address indexed trader,
+    address indexed tokenIn,
+    address indexed tokenOut,
+    uint256 amountIn,
+    uint256 amountOut,
+    uint256 feePaid
+);
+
+function swap(...) external {
+    // perform swap logic
+    emit Swapped(msg.sender, tokenIn, tokenOut, amountIn, amountOut, fee);
+}
+```
+
+**Rule**: Emit consistent events for liquidity and swaps. Index key addresses, include all relevant amounts, and version events if you must change schemas. Document event structures for downstream consumers.
+
+## Security checklist
+
+Before shipping token economics content/UI:
+
+- [ ] **Basis points**: Represent fees in bps; document acceptable ranges (e.g., 5–1000 bps).
+- [ ] **Fresh data**: Use current reserves for quotes; avoid caching across swaps or transactions.
+- [ ] **Decimal hygiene**: Normalize token decimals in UI and analytics; fetch `decimals()` per token.
+- [ ] **Slippage control**: Provide `minOut` controls and sensible defaults (0.5% stables, 1–2% volatile).
+- [ ] **Stable events**: Emit and index liquidity/swap events with consistent schemas; version if changing.
+- [ ] **Parameter bounds**: Validate fee inputs (max ceiling, min floor); emit events on changes.
+- [ ] **Negative‑path tests**: Verify extreme fees, zero liquidity, tiny trades, and decimal edge cases.
+- [ ] **Observability**: Track volume, fees, and price impact in dashboards; set up anomaly alerts.
+- [ ] **Price impact warnings**: Display real‑time slippage estimates; flag trades exceeding safe thresholds.
+- [ ] **Reserve validation**: Check reserves are non‑zero before computing quotes; handle edge cases gracefully.
+- [ ] **Fee distribution**: Document fee splits (LP vs protocol); test accrual math with realistic scenarios.
+- [ ] **Multi‑token support**: Test with tokens of varying decimals (6, 8, 18); validate all conversions.
 
 ## Wrap‑up and next steps
 
-You can explain price impact, fees, and safety thresholds. Next, we’ll implement a simple, interface‑based swap with CEI and SafeERC20.
+You can now explain price impact, fees, liquidity depth, and slippage—and compute realistic quotes using the constant product formula. You understand how fees accrue to LPs, how to express parameters in basis points, and why decimal normalization matters. These fundamentals apply to every AMM design, from simple constant‑product pools to concentrated liquidity and stable‑swap curves.
+
+The patterns you've learned—fresh reserve reads, slippage controls, bounded parameters, and stable event schemas—extend beyond swaps. Lending protocols compute interest rates from utilization curves, liquidation engines rely on accurate price feeds, and yield aggregators route capital across multiple pools. Master these primitives and you'll build safer, more transparent DeFi infrastructure.
+
+Next, we'll implement an interface‑based swap router with CEI discipline and `SafeERC20` (4.2), then layer in oracle‑informed guardrails (4.3) so users see up‑to‑date pricing and tighter safety. Later in Island 4, you'll apply similar sequencing discipline to commit‑reveal randomness and Merkle‑based airdrops. When deploying to production networks like Zilliqa EVM, these same economics and safety patterns ensure your contracts behave predictably across any EVM‑compatible chain.
 

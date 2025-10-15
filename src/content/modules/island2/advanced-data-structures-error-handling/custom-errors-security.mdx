@@ -8,23 +8,161 @@ objective: >-
 slug: custom-errors-security
 ---
 
-## Where this fits
+## Set the stage
 
-Great data models still fail if error handling is vague or costly. Custom errors are cheaper than strings and make failure modes explicit. Combined with well‑placed guards, your staking contract becomes predictable and auditable.
+Picture your staking vault as a ship navigating uncertain waters. Users deposit treasure (tokens), claim rewards, and sometimes try to withdraw more than they own or interact when the system is paused. Every failure needs a clear signal—not a vague "something went wrong," but a precise flag: "Insufficient balance: you tried to withdraw 1000, you have 500."
 
-## Core ideas
+Old contracts used string reverts: `require(amount > 0, "Zero amount not allowed")`. Those strings cost gas to store and emit, and they're not machine-parsable. Custom errors—introduced in Solidity 0.8.4—are structured, cheap, and explicit. They turn failures into typed events your frontend can catch, decode, and show to users. For a staking system where users claim rewards, admins update parameters, and contracts interact with external tokens, precise error handling is the difference between "transaction failed" and "insufficient allowance—approve 100 more tokens."
 
-- **Custom error**: `error Name(args); revert Name(args);` saves gas vs strings and is machine‑parsable.
-- **`require` vs `revert`**: Use `require(cond, ...)` for preconditions; use `revert Error()` for structured failures.
-- **`assert`**: Only for invariants that must never be false; signals a bug if tripped.
-- **Access control**: Gate privileged actions via `Ownable`/`AccessControl`.
-- **Defensive posture**: Assume external calls can fail; design bounded, observable failure paths.
+By the end of this lesson you'll convert string reverts to custom errors, understand when to use `require` vs `assert`, and design error surfaces that make your staking flows auditable and user-friendly. In Module 5 you'll build a full staking contract; every revert will be a custom error, every failure mode documented, and every admin action guarded with clear, gas-efficient checks.
 
-## Try it in code
+## Conceptual foundations
+
+### Custom errors: syntax and benefits
+
+A **custom error** is a named, typed failure declared outside functions and reverted with arguments:
+
+```solidity
+error InsufficientBalance(uint256 requested, uint256 available);
+
+function withdraw(uint256 amount) external {
+    if (amount > balanceOf[msg.sender]) {
+        revert InsufficientBalance(amount, balanceOf[msg.sender]);
+    }
+    // ...
+}
+```
+
+**Benefits over strings**:
+- **Gas savings**: No string storage in bytecode; errors are 4-byte selectors + ABI-encoded args
+- **Type safety**: Arguments are typed (`uint256`, `address`); compiler enforces correctness
+- **Machine-parsable**: Frontends decode error args and show precise messages
+- **Documentation**: Error declarations serve as a contract's failure API
+
+**When to use**: Any predictable failure (invalid input, insufficient balance, unauthorized caller, paused state).
+
+### `require` vs `revert` vs `assert`: choosing the right primitive
+
+- **`require(condition, "message")`**: Legacy pattern; gas-costly string. Use `if (!condition) revert CustomError()` instead
+- **`revert CustomError(args)`**: Modern pattern; explicit and cheap. Preferred for all user-facing failures
+- **`assert(condition)`**: Signals invariant violations (bugs). Use only for conditions that should *never* be false (e.g., `assert(totalSupply >= balanceOf[user])`). If an `assert` trips, it means your contract has a logic bug, not a user input error
+
+**Mental model**: 
+- **Revert (custom error)**: Expected failures (user tried something invalid)
+- **Assert**: Unexpected failures (contract logic is broken)
+
+**Example**:
+```solidity
+// Good: revert for user input
+if (amount == 0) revert ZeroAmount();
+
+// Good: assert for invariant
+assert(totalStaked >= positionOf[user].amount);
+```
+
+### Error propagation: how failures travel
+
+When a function calls another contract and that contract reverts, the revert **bubbles up** unless caught by `try/catch`. Custom errors propagate their selector and args, so the caller can decode them.
+
+**Scenario**: Your staking contract calls `rewardToken.transfer(user, amount)`. If the token is paused, it reverts with `error Paused()`. Your contract can:
+1. Let it bubble (user sees `Paused()`)
+2. Catch it and emit a different error (e.g., `error RewardClaimFailed(address user, bytes reason)`)
+
+**Pattern for staking**: If an external call failure shouldn't kill the transaction, wrap it in `try/catch` and emit a failure event. If it should kill the transaction (e.g., depositing a broken token), let it bubble.
+
+### Client-side error handling
+
+Modern frontends (ethers.js, viem) decode custom errors automatically:
+
+```typescript
+// Frontend catches custom error
+try {
+  await stakingContract.withdraw(amount);
+} catch (err) {
+  if (err.errorName === "InsufficientBalance") {
+    const { requested, available } = err.errorArgs;
+    showError(`You tried to withdraw ${requested}, but only have ${available}`);
+  }
+}
+```
+
+This is **much better** than parsing string reverts with regex. Design your error surface with frontend consumers in mind: include the data they need to show helpful messages.
+
+### Gas cost comparison
+
+**String revert**:
+```solidity
+require(amount > 0, "Amount must be greater than zero"); // ~24 bytes in bytecode
+```
+
+**Custom error**:
+```solidity
+error ZeroAmount(); // 4-byte selector
+if (amount == 0) revert ZeroAmount();
+```
+
+**Savings**: ~50-100 gas per revert, depending on string length. Over hundreds of transactions, this adds up. More importantly, custom errors make your contract's failure surface **explicit and typed**, which improves auditability and integration.
+
+<svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      {`.box { fill: var(--background); stroke: var(--border); stroke-width: 2; rx: 6; }
+        .old { fill: var(--destructive); fill-opacity: 0.1; stroke: var(--destructive); stroke-width: 2; }
+        .new { fill: var(--primary); fill-opacity: 0.1; stroke: var(--primary); stroke-width: 2; }
+        .label { fill: var(--foreground); font-size: 13px; font-family: ui-monospace, monospace; }
+        .small { fill: var(--foreground); font-size: 11px; font-family: ui-monospace, monospace; }
+        .code { fill: var(--foreground); font-size: 10px; font-family: ui-monospace, monospace; }
+        .arrow { stroke: var(--foreground); stroke-width: 2; fill: none; marker-end: url(#arr); }`}
+    </style>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" style={{fill: 'var(--foreground)'}} />
+    </marker>
+  </defs>
+  {/* String Revert (Old Way) */}
+  <text className="label" x="10" y="25" style={{fontWeight: 'bold', fill: 'var(--destructive)'}}>String Revert (Old Way)</text>
+  <rect className="old" x="10" y="35" width="330" height="260" />
+  
+  <text className="small" x="20" y="60">Contract code:</text>
+  <text className="code" x="20" y="80">require(amount &gt; 0,</text>
+  <text className="code" x="20" y="95">  "Amount must be positive");</text>
+  <text className="small" x="20" y="120" style={{fill: 'var(--destructive)'}}>❌ String stored in bytecode (~24 bytes)</text>
+  
+  <path className="arrow" d="M 170 130 L 170 150" />
+  
+  <text className="small" x="20" y="170">Transaction fails:</text>
+  <text className="code" x="20" y="190" style={{fill: 'var(--muted-foreground)'}}>Error: "Amount must be positive"</text>
+  <text className="small" x="20" y="215" style={{fill: 'var(--destructive)'}}>❌ Not machine-parsable</text>
+  <text className="small" x="20" y="235" style={{fill: 'var(--destructive)'}}>❌ Frontend must parse string</text>
+  <text className="small" x="20" y="255" style={{fill: 'var(--destructive)'}}>❌ No typed arguments</text>
+  <text className="small" x="20" y="275" style={{fill: 'var(--destructive)'}}>❌ Higher gas cost</text>
+  
+  {/* Custom Error (New Way) */}
+  <text className="label" x="360" y="25" style={{fontWeight: 'bold', fill: 'var(--primary)'}}>Custom Error (New Way)</text>
+  <rect className="new" x="360" y="35" width="330" height="260" />
+  
+  <text className="small" x="370" y="60">Contract code:</text>
+  <text className="code" x="370" y="80">error ZeroAmount();</text>
+  <text className="code" x="370" y="95">if (amount == 0)</text>
+  <text className="code" x="370" y="110">  revert ZeroAmount();</text>
+  <text className="small" x="370" y="135" style={{fill: 'var(--primary)'}}>✓ 4-byte selector only</text>
+  
+  <path className="arrow" d="M 520 145 L 520 165" />
+  
+  <text className="small" x="370" y="185">Transaction fails:</text>
+  <text className="code" x="370" y="205" style={{fill: 'var(--muted-foreground)'}}>ZeroAmount()</text>
+  <text className="small" x="370" y="230" style={{fill: 'var(--primary)'}}>✓ ABI-decodable</text>
+  <text className="small" x="370" y="250" style={{fill: 'var(--primary)'}}>✓ Frontend catches by name</text>
+  <text className="small" x="370" y="270" style={{fill: 'var(--primary)'}}>✓ Can include typed args</text>
+  <text className="small" x="370" y="290" style={{fill: 'var(--primary)'}}>✓ 50-100 gas cheaper</text>
+</svg>
+
+## Guided code walk-throughs
+
+These examples show how to replace strings with custom errors, enforce access control with clear failures, and propagate errors across contract boundaries in a staking system.
 
 ### 1) Replace string reverts with custom errors
 
-Structured errors make failures cheaper and easier to handle in clients.
+Structured errors make failures cheaper and easier to handle in clients. This vault converts all string `require` statements to custom errors.
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -52,11 +190,11 @@ contract ErrorfulVault {
 }
 ```
 
-Takeaway: custom errors reduce gas and clarify failure semantics; preserve explicit checks for external transfer success.
+**Takeaway**: Custom errors reduce gas, clarify failure semantics, and enable frontends to show precise messages. For staking, every deposit, withdraw, and claim should fail with typed errors, never strings.
 
 ### 2) Pair access control with clear error surfaces
 
-Use `Ownable` or `AccessControl` for privileged actions. Emit events when roles change; document runbooks for rotations.
+Use `Ownable` or `AccessControl` for privileged actions. Custom errors make authorization failures explicit. Emit events when roles change; document runbooks for rotations.
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -80,28 +218,175 @@ contract Guarded is Ownable {
 }
 ```
 
-Takeaway: centralized authority + explicit errors = predictable operations.
+**Takeaway**: Pair access control primitives with custom errors; frontends can show "You are not the owner" instead of "Transaction reverted." For staking, admin functions (update reward rate, pause deposits) should all use typed errors.
+
+### 3) Error propagation in staking reward claims
+
+When calling external reward modules, wrap risky calls in `try/catch` and surface failures as structured errors. This keeps one module's failure from bricking the whole system.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IRewardModule {
+    function distributeReward(address user) external returns (uint256);
+}
+
+error RewardClaimFailed(address user, string reason);
+error RewardModulePaused();
+
+contract StakingRewardClaimer {
+    IRewardModule public rewardModule;
+
+    event RewardClaimed(address indexed user, uint256 amount);
+    event ClaimFailureLogged(address indexed user, string reason);
+
+    constructor(IRewardModule _module) { rewardModule = _module; }
+
+    /// @notice Pull-based claim with error propagation
+    function claimRewards() external returns (uint256) {
+        try rewardModule.distributeReward(msg.sender) returns (uint256 amount) {
+            emit RewardClaimed(msg.sender, amount);
+            return amount;
+        } catch Error(string memory reason) {
+            // Caught a revert with a string reason
+            emit ClaimFailureLogged(msg.sender, reason);
+            revert RewardClaimFailed(msg.sender, reason);
+        } catch (bytes memory) {
+            // Caught a custom error or other low-level failure
+            emit ClaimFailureLogged(msg.sender, "Module unavailable");
+            revert RewardModulePaused();
+        }
+    }
+}
+```
+
+**Takeaway**: Use `try/catch` to trap external failures and re-emit them as your contract's custom errors. This gives you control over the failure surface: clients see `RewardClaimFailed` with context, not a raw error from a module they don't know.
 
 ## Practice and reflection
 
-- Convert three string `require` messages in your codebase to custom errors
-- Draft a short table mapping each privileged action to the role that can perform it
+Apply custom errors to your staking design:
+
+- **Error audit**: List three functions in your staking contract (e.g., `deposit`, `withdraw`, `updateRewardRate`). For each, identify 2-3 failure modes (zero amount, insufficient balance, unauthorized caller) and define a custom error for each.
+- **Frontend impact**: Sketch a short code snippet (TypeScript or pseudocode) showing how a frontend would catch `InsufficientBalance(requested, available)` and display a user-friendly message. Why is this better than catching a string revert?
+- **Assert vs revert**: Your staking contract tracks `totalStaked` and individual `balanceOf[user]`. Write one `assert` statement that checks an invariant and one `revert` statement (with custom error) that checks user input. Explain why each uses the primitive it does.
+- **Error propagation**: Imagine your staking contract calls an external oracle to fetch reward rates. The oracle can fail. Should you let the error bubble, or catch and re-emit? Write two sentences defending your choice.
 
 {/* True/False */}
 <TrueFalse statements={[
   {"id":"e1","text":"Custom errors cost more gas than string reverts","correctAnswer":false,"explanation":"They are cheaper and ABI‑friendly."},
   {"id":"e2","text":"Use assert for user input validation","correctAnswer":false,"explanation":"Assert is for invariants, not user input."},
-  {"id":"e3","text":"Access control events help operations and audits","correctAnswer":true,"explanation":"Changes become traceable for off‑chain monitors."}
+  {"id":"e3","text":"Access control events help operations and audits","correctAnswer":true,"explanation":"Changes become traceable for off‑chain monitors."},
+  {"id":"e4","text":"Custom errors can include arguments like uint256 and address","correctAnswer":true,"explanation":"Error arguments are ABI-encoded and decoded by clients."}
 ]}/>
 
-## Pitfalls and tips
+Short reflection: If your staking contract has 10 different failure modes (zero amount, paused, insufficient balance, not owner, etc.), should you define 10 custom errors or use one generic error with a string parameter? Write one sentence defending your choice.
 
-- Combine CEI and non‑reentrancy with explicit error handling
-- Avoid catching and discarding errors silently; log intent where helpful
-- Prefer `SafeERC20` and explicit return checks for token ops
-- Document failure semantics for integrators (NatSpec)
+## Security and pitfalls
 
-## Wrap‑up
+Custom errors are powerful, but misuse can leak information, hide bugs, or confuse integrators. Follow these patterns:
 
-Explicit, cheap errors and well‑placed guards turn surprising edge cases into controlled outcomes. Your staking flows become easier to integrate, monitor, and audit.
+### Assert misuse: when invariants become user errors
+
+**Danger**: Using `assert` for user input validation. If an `assert` fails, it consumes all remaining gas and signals a bug. Never assert on user-provided data.
+
+**Bad**:
+```solidity
+function withdraw(uint256 amount) external {
+    assert(amount > 0); // WRONG: user input, not invariant
+    // ...
+}
+```
+
+**Good**:
+```solidity
+error ZeroAmount();
+function withdraw(uint256 amount) external {
+    if (amount == 0) revert ZeroAmount(); // Correct: user error
+    // ...
+    assert(totalStaked >= amount); // Correct: invariant check
+}
+```
+
+**Rule**: Use `assert` only for conditions your code guarantees (e.g., `totalSupply == sum(balances)`). Use `revert` for user input, authorization, and preconditions.
+
+### Error information leakage
+
+**Danger**: Including sensitive data in error arguments (e.g., private balances, internal indices). Errors are public; anyone can see them on-chain or in failed transactions.
+
+**Bad**:
+```solidity
+error InternalStateMismatch(uint256 secretBalance, uint256 hiddenIndex);
+```
+
+**Good**:
+```solidity
+error OperationFailed(); // Generic for internal issues
+// Or include only non-sensitive context:
+error ClaimFailed(address user);
+```
+
+**Rule**: Include helpful context (amounts, addresses, timestamps) but never leak sensitive internals. Design error args as if they'll be shown in a public block explorer.
+
+### Access control error patterns
+
+Pair access control with explicit errors. Don't reuse generic errors across unrelated failures.
+
+**Bad**:
+```solidity
+error Unauthorized(); // Used for both owner checks and pause checks
+```
+
+**Good**:
+```solidity
+error NotOwner();
+error NotAdmin();
+error ContractPaused();
+```
+
+**Rule**: Each failure mode gets its own error. This makes logs and frontends clearer: "You are not the owner" vs "Contract is paused" vs "You lack admin role."
+
+### Testing error conditions
+
+**Strategy**: For every custom error, write a test that triggers it and asserts the error name and args.
+
+**Example** (Hardhat/Foundry):
+```solidity
+vm.expectRevert(abi.encodeWithSelector(InsufficientBalance.selector, 1000, 500));
+vault.withdraw(1000);
+```
+
+**Rule**: Treat errors as part of your contract's API. Test them as rigorously as success paths. Ensure error args are correct (e.g., `requested` and `available` match actual values).
+
+## Pitfalls summary
+
+Quick reference for common mistakes:
+
+- Don't use `assert` for user input; reserve it for invariants your code guarantees
+- Avoid leaking sensitive data in error arguments; design as if errors are public (they are)
+- Define one error per failure mode; don't reuse generic errors across unrelated checks
+- Test every error: write a test that triggers it and asserts correct args
+- Combine custom errors with CEI and reentrancy guards; errors alone don't prevent exploits
+- Document errors in NatSpec (`@dev` tags) so integrators know the failure surface
+
+## Security checklist
+
+Before shipping error handling:
+
+- [ ] **All string reverts replaced**: No `require(cond, "string")` in production code; use `if (!cond) revert CustomError()`
+- [ ] **One error per failure mode**: Each distinct failure (zero amount, unauthorized, paused) has its own named error
+- [ ] **Error args are helpful**: Include context (amounts, addresses) but not sensitive internals
+- [ ] **Assert only for invariants**: `assert` statements check conditions your code guarantees, never user input
+- [ ] **Errors documented**: NatSpec comments explain when each error is thrown and what args mean
+- [ ] **Frontend integration**: Error names and args are designed for client-side decoding and user-friendly messages
+- [ ] **Try/catch on risky external calls**: Calls to external modules that can fail are wrapped and re-emitted as your errors
+- [ ] **Test coverage for all errors**: Every custom error has a test that triggers it and asserts correct args
+- [ ] **Access control errors specific**: Authorization failures use distinct errors (`NotOwner`, `NotAdmin`) not generic `Unauthorized`
+- [ ] **No silent catches**: `catch` blocks always emit events or revert with context; never discard errors silently
+
+## Wrap-up and next steps
+
+You've learned how to replace gas-heavy string reverts with typed custom errors, when to use `require` vs `assert`, and how to propagate failures across contract boundaries. Custom errors turn your contract's failure surface into an explicit, machine-readable API: frontends decode them, auditors trace them, and users see helpful messages instead of cryptic reverts.
+
+Combined with the data structures (Lesson 1) and storage optimizations (Lesson 2) from earlier in this module, you now have the tools to build staking contracts that are cheap, clear, and robust. Next, in Lesson 4 (Revert Patterns and Error Recovery), you'll learn when to fail fast with guard clauses, when to soft-fail with pull patterns, and how to design idempotent operations that tolerate retries. By Module 5 you'll assemble all these patterns into a production-ready staking contract where every failure is predictable and every success is gas-efficient.
 

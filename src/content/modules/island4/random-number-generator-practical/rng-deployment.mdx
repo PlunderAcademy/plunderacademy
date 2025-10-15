@@ -2,7 +2,7 @@
 id: "rng-practical-lesson-1"
 slug: "rng-deployment"
 module: "random-number-generator-practical"
-number: "4.6"
+number: 4.6
 title: "Random Number Generator Deployment"
 objective: "Deploy a complete random number generation system using commit-reveal patterns with security safeguards."
 practicalTakeaway: "Launch a production-ready RNG system suitable for gaming and lottery applications."
@@ -12,82 +12,367 @@ practicalTakeaway: "Launch a production-ready RNG system suitable for gaming and
 
 ## Set the stage
 
-You’ve learned commit–reveal and VRF. Here you’ll deploy a minimal RNG system end‑to‑end: a commit–reveal contract, fair mapping to ranges, and operational guidance for production (timeouts, retries, and monitoring).
+Imagine launching a lottery ship where the winning ticket must be drawn fairly, publicly, and without the captain's influence. Any hint of manipulation—crew seeing the result before committing bets, or the captain choosing favorable numbers—sinks trust immediately. On-chain randomness faces the same challenge: miners see transaction data, block hashes are predictable once mined, and naive implementations leak entropy or allow manipulation.
 
-## Core ideas
+A production RNG system solves this through commit-reveal mechanics with strict time windows, fair range mapping via rejection sampling, and comprehensive operational monitoring. Without these safeguards, attackers exploit predictable entropy, front-run reveals, or replay commitments across sessions. Gaming platforms, NFT mints, and lottery contracts all share this vulnerability surface.
 
-- Commit–reveal: permissionless, no off‑chain dependency
-- Fair mapping: rejection sampling to avoid modulo bias
-- Operations: define reveal windows, timeouts, and event logs for observability
+This lesson brings together your commit-reveal knowledge and operational discipline into a deployable system. You'll build a complete random number generator suitable for production gaming and lottery applications, with clear event logs, timeout handling, and bias-free selection. By the end, you'll understand not just the code patterns but the operational playbook: monitoring reveals, handling stalled commits, and providing predictable UX when randomness is inherently two-phase. Reference implementation for alignment: `https://github.com/Plunderswap/zq2-random-number-commit-reveal`.
 
-## Code in practice
+## Conceptual foundations
 
-### 1) Deployable commit–reveal RNG
+### Commit-reveal as a permissionless primitive
+
+Commit-reveal randomness requires no oracle subscriptions, no off-chain coordinators, and no trust in external services. Users commit a hash of their secret plus salt, wait the minimum delay, then reveal by providing the preimage. The contract validates the hash match and mixes in recent block data (blockhash) to produce the final random value. This two-phase process prevents manipulation: the commitment locks in the user's entropy before block hashes become known, and the reveal incorporates on-chain entropy after the commitment is irrevocable.
+
+The tradeoff is UX complexity: users must submit two transactions separated by a delay. For gaming or lottery applications where fairness trumps instant gratification, this cost is acceptable. For high-frequency use cases, consider VRF or other single-transaction alternatives.
+
+### Time windows and reveal enforcement
+
+A robust system defines both `minDelay` (minimum blocks between commit and reveal) and `maxDelay` (maximum blocks before a commitment expires). The minimum delay ensures block hashes used in randomness generation weren't predictable at commit time. The maximum delay prevents users from waiting indefinitely to see favorable conditions before revealing (e.g., waiting for a specific blockhash pattern).
+
+Typical window sizes:
+- **Minimum delay**: 5-10 blocks (~1-2 minutes on 12-second chains) gives enough time for block uncertainty
+- **Maximum delay**: 100-200 blocks (~20-40 minutes) balances liveness with UX tolerance
+- **Zilliqa EVM**: Adjust for ~8-second block times; 10 blocks = ~80 seconds
+
+Expired commitments revert on reveal, forcing users to recommit if they miss the window. This maintains system liveness and prevents stale commitments from accumulating.
+
+### Fair range mapping with rejection sampling
+
+Naive modulo (`randomValue % n`) introduces bias when `n` doesn't divide evenly into `2^256`. For example, `random % 3` biases toward 0 and 1 because `2^256 % 3 = 1`. Rejection sampling fixes this by defining an unbiased zone: `zone = 2^256 - (2^256 % n)`. If the random value falls outside this zone, rehash it until it lands inside, then apply modulo. This guarantees each outcome `[0, n)` has equal probability.
+
+The loop terminates quickly in practice—the probability of falling outside the zone is `(2^256 % n) / 2^256`, negligible for typical `n` values. For `n = 3`, it's `1 / 2^256 ≈ 0`. Even for large `n` like 10,000, rejection happens less than 0.0001% of the time.
+
+### Replay protection and session isolation
+
+Without explicit session or campaign identifiers, an attacker could reuse the same `secret + salt` across multiple rounds or contracts. If a user commits `hash(secret, salt)` in round 1, they could replay that commitment in round 2 if the same contract state exists. To prevent this, include a unique session ID or campaign ID in the commitment preimage: `hash(user, secret, salt, campaignId)`. This ties each commitment to a specific context and prevents cross-round replays.
+
+For single-use systems (like one-time NFT mints), this may be overkill. For recurring games or lotteries, it's essential.
+
+### Operational observability and monitoring
+
+Production RNG systems emit events at every phase: `Committed(user, hash)` and `Revealed(user, randomValue)`. Off-chain monitoring tracks commit-to-reveal latency, identifies stalled commitments (commits that never reveal), and alerts on abnormal patterns (e.g., mass reveals in a single block suggesting coordination). Subgraphs or indexers aggregate these events for dashboards.
+
+Key metrics:
+- **Reveal rate**: percentage of commits that successfully reveal within the window
+- **Median latency**: blocks between commit and reveal
+- **Timeout rate**: commitments that expire without revealing
+- **Session concurrency**: active commitments per user (detect spam or Sybil patterns)
+
+Without observability, you're flying blind—fairness depends on detecting anomalies early.
+
+### Fallback strategies for stalled reveals
+
+If a user commits but never reveals (wallet lost, transaction failed, user abandoned), their commitment occupies state indefinitely. Design for this:
+- **Expire old commitments**: the `maxDelay` window naturally prunes stale state
+- **Refund mechanisms**: if applicable, allow users to reclaim committed assets after timeout
+- **Admin overrides**: for high-stakes systems, consider an emergency reveal or cancel function with time-lock and transparency (emit events, require multisig approval)
+
+Document these fallback paths in your operational playbook so support teams know how to handle edge cases.
+
+## Guided code walk-throughs
+
+These examples show production-ready RNG deployment patterns for gaming and lottery systems.
+
+### 1) Deployable commit-reveal RNG with time windows
+
+A production RNG contract enforces commit-reveal flow with strict time windows and comprehensive error handling. Users commit a hash, wait the minimum delay, then reveal within the maximum window. The contract validates timing, hash matching, and cleans up state after successful reveals.
 
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+/// @title Deployable Random Number Generator
+/// @notice Commit-reveal RNG with enforced time windows
 contract DeployedRng {
-  error AlreadyCommitted(); error NotCommitted(); error TooEarly(); error TooLate(); error BadReveal();
-  struct C { uint64 b; bytes32 h; }
-  mapping(address => C) public c;
-  uint64 public immutable minDelay; uint64 public immutable maxDelay;
-  event Committed(address indexed u, bytes32 h); event Revealed(address indexed u, uint256 r);
-  constructor(uint64 minD, uint64 maxD) { require(minD>0 && maxD>minD, "WIN"); minDelay=minD; maxDelay=maxD; }
-  function commit(bytes32 h) external { if(c[msg.sender].h!=bytes32(0)) revert AlreadyCommitted(); c[msg.sender]=C(uint64(block.number), h); emit Committed(msg.sender,h);}  
-  function reveal(uint256 secret, bytes32 salt) external returns (uint256 r) {
-    C memory m=c[msg.sender]; if(m.h==bytes32(0)) revert NotCommitted();
-    uint64 d=uint64(block.number)-m.b; if(d<minDelay) revert TooEarly(); if(d>maxDelay) revert TooLate();
-    if(keccak256(abi.encodePacked(msg.sender,secret,salt))!=m.h) revert BadReveal(); delete c[msg.sender];
-    r=uint256(keccak256(abi.encodePacked(secret,salt,blockhash(block.number-1)))); emit Revealed(msg.sender,r);
+  error AlreadyCommitted();
+  error NotCommitted();
+  error TooEarly();
+  error TooLate();
+  error BadReveal();
+  error InvalidWindows();
+
+  struct Commitment {
+    uint64 blockNumber;
+    bytes32 commitHash;
+  }
+
+  mapping(address => Commitment) public commitments;
+  uint64 public immutable minDelay;
+  uint64 public immutable maxDelay;
+
+  event Committed(address indexed user, bytes32 commitHash, uint64 blockNumber);
+  event Revealed(address indexed user, uint256 randomValue, uint64 revealBlock);
+
+  constructor(uint64 _minDelay, uint64 _maxDelay) {
+    if (_minDelay == 0 || _maxDelay <= _minDelay) revert InvalidWindows();
+    minDelay = _minDelay;
+    maxDelay = _maxDelay;
+  }
+
+  function commit(bytes32 commitHash) external {
+    if (commitments[msg.sender].commitHash != bytes32(0)) revert AlreadyCommitted();
+    commitments[msg.sender] = Commitment(uint64(block.number), commitHash);
+    emit Committed(msg.sender, commitHash, uint64(block.number));
+  }
+
+  function reveal(uint256 secret, bytes32 salt) external returns (uint256 randomValue) {
+    Commitment memory c = commitments[msg.sender];
+    if (c.commitHash == bytes32(0)) revert NotCommitted();
+    
+    uint64 elapsed = uint64(block.number) - c.blockNumber;
+    if (elapsed < minDelay) revert TooEarly();
+    if (elapsed > maxDelay) revert TooLate();
+    
+    bytes32 expectedHash = keccak256(abi.encodePacked(msg.sender, secret, salt));
+    if (expectedHash != c.commitHash) revert BadReveal();
+    
+    delete commitments[msg.sender];
+    randomValue = uint256(keccak256(abi.encodePacked(
+      msg.sender, secret, salt, blockhash(block.number - 1)
+    )));
+    
+    emit Revealed(msg.sender, randomValue, uint64(block.number));
   }
 }
 ```
 
-Takeaway: keep state small, events clear, and windows explicit.
+**Takeaway**: Keep state minimal (per-user commitment), emit indexed events for monitoring, and enforce windows with explicit custom errors. The blockhash from `block.number - 1` provides on-chain entropy that wasn't predictable at commit time.
 
-### 2) Fair selection helper
+### 2) Fair range mapping with rejection sampling
+
+Naive modulo introduces bias when the range doesn't divide evenly into 2^256. This library implements rejection sampling to guarantee uniform distribution across any range size.
 
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
-library Fair {
-  function index(uint256 rnd, uint256 n) internal pure returns (uint256) {
-    uint256 zone = type(uint256).max - (type(uint256).max % n);
-    while (rnd >= zone) { rnd = uint256(keccak256(abi.encodePacked(rnd))); }
-    return rnd % n;
+
+/// @title Fair Range Mapping
+/// @notice Rejection sampling for unbiased random selection
+library FairSelection {
+  /// @notice Map random value to [0, n) without modulo bias
+  /// @param randomValue Source of randomness (e.g., from commit-reveal)
+  /// @param n Range size (must be > 0)
+  /// @return index Uniformly distributed value in [0, n)
+  function selectIndex(uint256 randomValue, uint256 n) internal pure returns (uint256) {
+    require(n > 0, "Range must be positive");
+    
+    // Define unbiased zone: largest multiple of n that fits in uint256
+    uint256 maxUint = type(uint256).max;
+    uint256 zone = maxUint - (maxUint % n);
+    
+    // Rejection sampling: rehash until we land in the unbiased zone
+    while (randomValue >= zone) {
+      randomValue = uint256(keccak256(abi.encodePacked(randomValue)));
+    }
+    
+    return randomValue % n;
   }
 }
 ```
 
-Takeaway: rejection sampling avoids bias for non‑power‑of‑two ranges.
+**Takeaway**: Rejection sampling adds negligible gas cost for typical ranges but eliminates bias completely. For lottery systems selecting from thousands of participants, this ensures mathematical fairness. Use this pattern whenever mapping randomness to non-power-of-two ranges.
 
 ## Practice and reflection
 
-- Choose `minDelay`/`maxDelay` for your deployment; justify the tradeoff
-- Define your monitoring: which events and alerts indicate reveal liveness problems?
+Apply RNG deployment patterns to your gaming or lottery system:
 
-{/* True/False */}
+- **Design your time windows**: Choose `minDelay` and `maxDelay` values for a lottery contract on Zilliqa EVM (~8 second blocks). Justify the tradeoff between security (longer delays reduce predictability) and UX (shorter delays improve responsiveness). Consider typical user behavior: will they wait 2 minutes? 10 minutes?
+
+- **Plan operational monitoring**: Define which events and metrics indicate reveal liveness problems. What alert thresholds would you set for reveal rate, timeout rate, and median latency? How would you distinguish between normal variance and system degradation?
+
+- **Add replay protection**: Decide whether to include a campaign ID or round number in the commitment preimage. For a recurring weekly lottery, how would you structure session isolation? Should the ID be incremented automatically or supplied by the user?
+
+- **Handle stalled commitments**: Design a fallback strategy for users who commit but never reveal (lost wallet, abandoned transaction, UX confusion). Should you offer refunds after timeout? Implement an admin cancel function? Document the process for support teams.
+
+- **Optimize gas costs**: The rejection sampling loop in `FairSelection` uses `keccak256` on each iteration. For ranges close to powers of 2, this is rare. For arbitrary ranges, estimate worst-case gas usage. Would you cap the loop iterations or accept unbounded retries?
+
+- **Integrate with game logic**: Sketch how you'd use the RNG system in a lottery contract that selects 5 winning participants from 1,000 entries. Would you call `reveal` once and derive multiple indices? Call it 5 times? How do you prevent index collisions (same winner drawn twice)?
+
+{/* True/False (single interactive element) */}
 <TrueFalse statements={[
-  {"id":"rng1","text":"Commit–reveal requires an off‑chain oracle","correctAnswer":false,"explanation":"It's fully on‑chain; oracles are for VRF if desired."},
-  {"id":"rng2","text":"Rejection sampling removes modulo bias","correctAnswer":true,"explanation":"It discards out‑of‑zone values before % n."}
+  {"id":"rng1","text":"Commit-reveal requires an off-chain oracle or coordinator","correctAnswer":false,"explanation":"It's fully on-chain; no external services needed. Oracles are only required for VRF-style verifiable randomness."},
+  {"id":"rng2","text":"Rejection sampling removes modulo bias for non-power-of-two ranges","correctAnswer":true,"explanation":"It discards values outside the unbiased zone before applying modulo, guaranteeing uniform distribution."},
+  {"id":"rng3","text":"Using blockhash(block.number) in the reveal provides unpredictable entropy","correctAnswer":false,"explanation":"blockhash(block.number) is always 0. Use blockhash(block.number - 1) or earlier blocks that weren't predictable at commit time."},
+  {"id":"rng4","text":"A maxDelay window prevents users from waiting indefinitely for favorable conditions","correctAnswer":true,"explanation":"Without maxDelay, users could wait for specific blockhash patterns before revealing, breaking fairness."}
 ]}/>
 
-{/* Concept Matching: ops concepts */}
-<ConceptMatching pairs={[
-  {"conceptId":"min","definitionId":"mindef","concept":"minRevealDelay","definition":"Smallest blocks to wait before revealing","category":"ops"},
-  {"conceptId":"max","definitionId":"maxdef","concept":"maxRevealDelay","definition":"Max blocks allowed before timeout","category":"ops"},
-  {"conceptId":"obs","definitionId":"obsdef","concept":"observability","definition":"Events and alerts for reveal liveness","category":"ops"}
-]}
-/>
+Short reflection: If your RNG system experiences a sudden spike in timeout rate (commitments expiring without reveals), what are three possible root causes? How would you diagnose and mitigate each?
 
-## Ops checklist
+## Security and pitfalls
 
-- Set reveal windows aligned with block times and user UX
-- Expose clean events; add subgraph/ETL hooks for monitoring
-- Document fallback if reveals stall (timeouts, refunds, redraws)
+RNG systems are attractive targets for manipulation. Follow these patterns to maintain fairness and resist attacks.
 
-## Wrap‑up
+### Predictable blockhash usage
 
-You now have a deployable RNG primitive with fair selection. Extend with VRF integration if you need publicly verifiable entropy.
+**Danger**: Using the current block's hash or a predictable block's hash allows miners or validators to manipulate randomness by selectively revealing or withholding blocks. If the reveal transaction happens in block N and you use `blockhash(N)`, the miner knows the hash before including your transaction and can choose to include or skip it based on favorability.
+
+**Bad**:
+```solidity
+function reveal(uint256 secret, bytes32 salt) external returns (uint256) {
+  // WRONG: Current block hash is known to miner
+  bytes32 entropy = blockhash(block.number);
+  return uint256(keccak256(abi.encodePacked(secret, salt, entropy)));
+}
+```
+
+**Good**:
+```solidity
+function reveal(uint256 secret, bytes32 salt) external returns (uint256) {
+  // Use hash from block before reveal, unknown at commit time
+  require(block.number > commitBlock + minDelay, "Too early");
+  bytes32 entropy = blockhash(block.number - 1);
+  return uint256(keccak256(abi.encodePacked(secret, salt, entropy)));
+}
+```
+
+**Rule**: Always use blockhash from a previous block that wasn't predictable when the user committed. Never use `blockhash(block.number)` (always returns zero) or any future block.
+
+### Missing window enforcement
+
+**Danger**: Without minimum delay enforcement, users can commit and reveal in the same block, allowing them to know the blockhash before committing. Without maximum delay, users can wait indefinitely for favorable blockhash conditions, gaming the system.
+
+**Bad**:
+```solidity
+function reveal(uint256 secret, bytes32 salt) external returns (uint256) {
+  Commitment memory c = commitments[msg.sender];
+  require(c.commitHash != bytes32(0), "Not committed");
+  // No time window checks - can reveal immediately or wait forever
+  return generateRandom(secret, salt);
+}
+```
+
+**Good**:
+```solidity
+function reveal(uint256 secret, bytes32 salt) external returns (uint256) {
+  Commitment memory c = commitments[msg.sender];
+  require(c.commitHash != bytes32(0), "Not committed");
+  uint64 elapsed = uint64(block.number) - c.blockNumber;
+  require(elapsed >= minDelay, "Too early");
+  require(elapsed <= maxDelay, "Expired");
+  return generateRandom(secret, salt);
+}
+```
+
+**Rule**: Enforce both minimum and maximum delays. Typical values: `minDelay = 5-10 blocks`, `maxDelay = 100-200 blocks`. Make these immutable or admin-controlled with governance.
+
+### Weak entropy mixing
+
+**Danger**: Using only the user's secret without on-chain entropy gives the user full control over randomness—they can try different secrets off-chain until finding favorable results. Conversely, using only blockhash without user entropy lets miners manipulate outcomes.
+
+**Bad**:
+```solidity
+function reveal(uint256 secret) external returns (uint256) {
+  // Only user entropy - user can grind for favorable results
+  return uint256(keccak256(abi.encodePacked(secret)));
+}
+```
+
+**Good**:
+```solidity
+function reveal(uint256 secret, bytes32 salt) external returns (uint256) {
+  // Mix user entropy + on-chain entropy + commit identity
+  bytes32 userEntropy = keccak256(abi.encodePacked(msg.sender, secret, salt));
+  bytes32 blockEntropy = blockhash(block.number - 1);
+  return uint256(keccak256(abi.encodePacked(userEntropy, blockEntropy)));
+}
+```
+
+**Rule**: Combine user-provided entropy (secret, salt) with on-chain entropy (blockhash) and commitment identity (msg.sender, block number). Neither party can manipulate the result alone.
+
+### Cross-session replay attacks
+
+**Danger**: Without session or campaign identifiers, an attacker can reuse the same commitment hash across multiple rounds. If they discover a favorable outcome in round 1, they replay the same `secret + salt` in round 2 to reproduce the result.
+
+**Bad**:
+```solidity
+function commit(bytes32 commitHash) external {
+  // No session isolation - same hash works across all rounds
+  commitments[msg.sender] = Commitment(block.number, commitHash);
+}
+```
+
+**Good**:
+```solidity
+uint256 public currentCampaignId;
+
+function commit(bytes32 commitHash, uint256 campaignId) external {
+  require(campaignId == currentCampaignId, "Wrong campaign");
+  // Campaign ID must match preimage: hash(user, secret, salt, campaignId)
+  commitments[msg.sender] = Commitment(block.number, commitHash, campaignId);
+}
+
+function reveal(uint256 secret, bytes32 salt) external returns (uint256) {
+  Commitment memory c = commitments[msg.sender];
+  bytes32 expected = keccak256(abi.encodePacked(
+    msg.sender, secret, salt, c.campaignId
+  ));
+  require(expected == c.commitHash, "Bad reveal");
+  // ... rest of reveal logic
+}
+```
+
+**Rule**: Include a unique session ID or campaign ID in the commitment preimage. Increment the ID between rounds or games. This ties each commitment to a specific context and prevents replays.
+
+### Unmonitored reveal failures
+
+**Danger**: Production RNG systems must track whether commits successfully reveal within the allowed window. Without monitoring, a low reveal rate (many commits timing out) signals UX problems, wallet issues, or potential attacks. You won't know if your system is failing until users complain or gaming results are compromised.
+
+**Bad**:
+```solidity
+function reveal(uint256 secret, bytes32 salt) external returns (uint256) {
+  // No events - impossible to monitor off-chain
+  delete commitments[msg.sender];
+  return generateRandom(secret, salt);
+}
+```
+
+**Good**:
+```solidity
+event Committed(address indexed user, bytes32 commitHash, uint64 blockNumber);
+event Revealed(address indexed user, uint256 randomValue, uint64 blockNumber);
+event RevealExpired(address indexed user, uint64 commitBlock);
+
+function reveal(uint256 secret, bytes32 salt) external returns (uint256) {
+  Commitment memory c = commitments[msg.sender];
+  uint64 elapsed = uint64(block.number) - c.blockNumber;
+  
+  if (elapsed > maxDelay) {
+    emit RevealExpired(msg.sender, c.blockNumber);
+    delete commitments[msg.sender];
+    revert("Expired");
+  }
+  
+  uint256 randomValue = generateRandom(secret, salt);
+  emit Revealed(msg.sender, randomValue, uint64(block.number));
+  delete commitments[msg.sender];
+  return randomValue;
+}
+```
+
+**Rule**: Emit indexed events at every state transition (commit, reveal, expiry). Set up off-chain monitoring to track reveal rate, median latency, and timeout rate. Alert on anomalies like sudden drops in reveal rate or spikes in expired commitments.
+
+## Security checklist
+
+Before deploying your RNG system:
+
+- [ ] **Enforce time windows**: Validate both `minDelay` (≥5 blocks) and `maxDelay` (≤200 blocks) on every reveal; revert if outside bounds
+- [ ] **Use safe blockhash sources**: Always use `blockhash(block.number - 1)` or earlier; never use `blockhash(block.number)` (returns zero) or future blocks
+- [ ] **Mix entropy sources**: Combine user entropy (secret, salt) with on-chain entropy (blockhash) and identity (msg.sender); neither party should control randomness alone
+- [ ] **Prevent replay attacks**: Include unique campaign ID or session ID in commitment preimage; validate ID matches current round on reveal
+- [ ] **Clean up state**: Delete expired commitments after reveal or timeout to prevent state bloat and gas costs
+- [ ] **Emit comprehensive events**: Include indexed `Committed`, `Revealed`, and `RevealExpired` events with user, hash, and block number for off-chain monitoring
+- [ ] **Implement rejection sampling**: Use unbiased range mapping for lottery selection; never rely on naive modulo for non-power-of-two ranges
+- [ ] **Test negative paths**: Verify reverts on early reveal, late reveal, double commit, invalid hash, and wrong campaign ID
+- [ ] **Set up monitoring**: Track reveal rate (target >95%), median latency, and timeout rate; alert if reveal rate drops below 90% or timeout rate exceeds 5%
+- [ ] **Document operational playbook**: Define fallback procedures for stalled reveals, user support for expired commitments, and emergency pause/cancel mechanisms
+- [ ] **Audit randomness distribution**: Run statistical tests on 1,000+ reveal outcomes to verify uniform distribution; check for clustering or predictable patterns
+- [ ] **Consider blockhash limitations**: Remember `blockhash(n)` only works for the most recent 256 blocks; design `maxDelay` accordingly or implement alternative entropy sources for longer windows
+
+## Wrap-up and next steps
+
+You've built a production-ready random number generation system using commit-reveal patterns with strict time windows, rejection sampling for bias-free selection, and comprehensive operational monitoring. This approach provides fair, permissionless randomness suitable for gaming platforms, lottery contracts, and NFT mints without relying on external oracles or coordinators. The two-phase flow—commit then reveal—prevents both user manipulation (grinding secrets) and miner manipulation (selective block inclusion), creating a trustless randomness primitive.
+
+The patterns you've learned extend beyond RNG: commit-reveal protects any on-chain action where advanced knowledge enables front-running or gaming. Auction systems use commit-reveal for sealed bids. Governance systems use it for vote privacy. Token sales use it to prevent sniping. The operational discipline—time windows, event monitoring, fallback strategies—applies to any multi-phase protocol where user behavior is unpredictable and system liveness matters.
+
+In the next module, you'll deploy an upgradeable contract system where storage layout safety and initialization patterns prevent catastrophic bugs during upgrades. These RNG monitoring practices (event logs, metrics, alerting) carry forward: upgradeable systems need even more observability since bugs can corrupt state permanently. When you deploy to Zilliqa EVM, adjust block time assumptions (~8 seconds vs ~12 seconds on Ethereum) and consider their finality characteristics when setting `minDelay` windows—faster blocks may require slightly longer delays to achieve equivalent security margins.

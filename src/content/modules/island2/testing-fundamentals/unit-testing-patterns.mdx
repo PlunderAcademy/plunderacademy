@@ -8,53 +8,209 @@ objective: >-
 slug: unit-testing-patterns
 ---
 
-## Big picture
+## Set the stage
 
-Readable tests accelerate reviews and catch regressions early. Staking modules have branching rules (tiers, times, balances); table‑driven tests and helpers keep coverage high without copy‑paste.
+Every ship needs a logbook—clear records of what was tested, why it passed, and what edge cases were probed. In staking systems, small miscalculations compound: a rounding error in reward math or a missed boundary check can drain funds or lock users out.
 
-## Design principles
+Well-structured tests are executable documentation. They prove your deposit flow handles zero amounts, your withdrawal respects time-locks, and your reward calculations round correctly at every tier. When a test fails, the name and assertions should tell you exactly what broke—no detective work required.
 
-- **AAA**: Separate Arrange/Act/Assert so intent is obvious
-- **Table‑driven tests**: Loop over scenarios to cover edge cases succinctly
-- **Custom matchers**: Reuse assertions for events and errors
-- **Deterministic time**: Control timestamps to avoid flakiness
-- **Mocks/stubs**: Replace external dependencies with fakes via interfaces
+By mastering unit testing patterns, you'll write specs that run fast, read like prose, and catch regressions before they reach users. These patterns scale from simple vaults to complex multi-tier staking systems.
 
-## Code in practice
+## Conceptual foundations
 
-### 1) Table‑driven tests for reward math
+### Arrange–Act–Assert (AAA) structure
 
-Drive a set of cases through the same function to validate boundaries.
+Every test should have three clear sections: **Arrange** (set up state and inputs), **Act** (call the function under test), **Assert** (verify outcomes). This structure makes tests scannable—reviewers know where to look for setup vs verification.
+
+**When to use**: Always. Even single-line tests benefit from mental separation.
+
+**Pattern**:
+```typescript
+// Arrange: deploy contracts, fund accounts, set initial state
+// Act: call the function
+// Assert: check state changes, events, reverts
+```
+
+### Table‑driven tests for boundary coverage
+
+Staking systems have natural boundaries: zero amounts, maximum stakes, time-lock expiries, tier thresholds. Rather than writing 10 separate tests with copy‑pasted structure, loop over a table of cases.
+
+**When to use**: Testing math functions, boundary conditions, tiered logic (e.g., reward rates by staking duration).
+
+**Benefit**: Compact, easy to add cases, clear intent. When a boundary case fails, the table makes it obvious which input combination broke—you don't need to read ten separate test functions.
+
+**Common boundaries in staking**:
+- Zero amounts (should revert or handle gracefully)
+- Minimum stake thresholds (1 wei vs 1 token)
+- Maximum values (type(uint256).max, contract balance limits)
+- Time boundaries (0 seconds staked, 1 second, 365 days, max duration)
+- Tier edges (stake just below/at/above tier threshold)
+
+Table-driven tests turn these into a loop, making it trivial to add new cases as edge cases emerge.
+
+### Custom test helpers for readability
+
+Repetitive assertions like "expect Deposited event with user and amount" become noise. Extract them into helpers so your tests read like specifications.
+
+**When to use**: Any assertion repeated 3+ times, especially event checks and complex state verifications.
+
+**Pattern**: `expectDeposit(tx, contract, user, amount)` replaces 2-3 lines of boilerplate.
+
+**Benefits**:
+- Tests focus on **what** is being tested, not **how** to assert it
+- Helpers enforce consistency (all deposit tests check the same event args)
+- When event signatures change, update one helper instead of 50 test files
+- Reviewers understand intent faster
+
+**What to extract**: Event assertions, complex state checks (e.g., `expectPositionState(vault, user, expectedAmount, expectedTimestamp)`), multi-step verifications (e.g., `expectRewardDistributed` that checks balance changes, events, and state updates).
+
+### Deterministic time and state
+
+Flaky tests poison CI. Staking contracts depend on `block.timestamp`; tests must control time explicitly via helpers like Hardhat's `time.increase()` or Foundry's `vm.warp()`.
+
+**When to use**: Any test involving time-locks, reward accruals, or expiry checks.
+
+**Rule**: Never rely on wall-clock time or test execution order.
+
+### Mocking external dependencies
+
+If your staking vault calls an oracle or external reward token, replace it with a simple mock that returns controlled values. This isolates the unit under test and prevents flakiness from external state.
+
+**When to use**: Testing contract interactions without deploying full dependency trees.
+
+**Pattern**: Deploy a `MockERC20` or `MockOracle` that exposes setters for test scenarios.
+
+**Why mock**:
+- **Speed**: Deploying complex dependencies (Uniswap pools, Chainlink oracles) is slow
+- **Control**: Mocks return exactly what you want for each test case
+- **Isolation**: Failures point to the contract under test, not a dependency bug
+- **Determinism**: No external state changes between test runs
+
+**When to use real contracts**: Integration tests that verify the full system works together. Unit tests should mock aggressively; integration tests deploy the real stack.
+
+**Example**: Testing a staking vault that queries a price oracle? Use `MockOracle` with `setPrice(uint256)` for unit tests. Deploy the real Chainlink oracle for integration tests.
+
+### Test naming conventions
+
+Names should describe behavior, not implementation. Use `it("reverts when amount is zero")` not `it("testWithdraw1")`.
+
+**Format**: `describe("ContractName - functionName")` groups related tests; each `it` is a sentence fragment completing "it..."
+
+**Example**:
+```typescript
+describe("StakingVault - withdraw", () => {
+  it("reverts when amount exceeds balance", async () => { /* ... */ });
+  it("emits Withdrawn event with correct params", async () => { /* ... */ });
+  it("reduces position amount by withdrawn value", async () => { /* ... */ });
+  it("transfers tokens to user", async () => { /* ... */ });
+});
+```
+
+**Grouping benefits**: All `withdraw` tests appear together in output. When `withdraw` breaks, you see all failure modes at once—does it revert correctly? Emit events? Update state? Transfer tokens? One glance at the `describe` block answers these questions.
+
+**Anti-pattern**: Flat test files with `it("test1")`, `it("test2")` scattered randomly. No structure, no grouping, no context. Avoid this chaos.
+
+## Guided code walk-throughs
+
+These examples test staking vault patterns with clear AAA structure and helpers. Each demonstrates a specific pattern applied to real staking scenarios—deposits, reward calculations, and time-locked positions.
+
+The key is clarity: anyone reviewing these tests should understand the scenario, the action, and the expected outcome without hunting through code.
+
+### 1) Table‑driven tests for reward math (Staking contract pattern)
+
+**Test the exact reward calculation from Module 2.5's Staking contract:**
+
+The staking contract uses: `reward = (amount × elapsedTime × APY) / 100 / 365 days`
+
+Testing all edge cases individually is verbose. Table-driven tests cover boundaries in a readable loop.
 
 ```ts
-// test/RewardMath.spec.ts (excerpt)
+// test/Staking.rewards.test.ts (excerpt matching Module 2.5)
 import { expect } from "chai";
+import { time } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
+import hre from "hardhat";
 
-function previewReward(amount: bigint, secondsStaked: bigint, aprBps: bigint) {
-  const YEAR = 365n * 24n * 60n * 60n;
-  return (amount * aprBps * secondsStaked) / YEAR / 10_000n;
-}
+describe("Staking - Reward Calculations", () => {
+  async function deployStakingFixture() {
+    const [owner, user] = await hre.viem.getWalletClients();
+    const token = await hre.viem.deployContract("TestToken", []);
+    const staking = await hre.viem.deployContract("Staking", [
+      token.address,
+      owner.account.address,  // feeAddress
+      owner.account.address   // claimant
+    ]);
+    return { staking, token, owner, user };
+  }
 
-describe("previewReward", () => {
-  const cases = [
-    { amount: 0n, secs: 0n, apr: 1000n, want: 0n },
-    { amount: 1_000n, secs: 31_536_000n, apr: 1000n, want: 100n },
-    { amount: 1_000_000n, secs: 1n, apr: 500n, want: 0n }
+  const testCases = [
+    { 
+      name: "30 days at 10% APY",
+      amount: 1000n * 10n**18n,
+      apy: 10n,
+      days: 30n,
+      expectedReward: 8219178082191n  // Approximately 8.22 tokens
+    },
+    { 
+      name: "60 days at 15% APY",
+      amount: 1000n * 10n**18n,
+      apy: 15n,
+      days: 60n,
+      expectedReward: 24657534246575n  // Approximately 24.66 tokens
+    },
+    { 
+      name: "120 days at 27% APY",
+      amount: 1000n * 10n**18n,
+      apy: 27n,
+      days: 120n,
+      expectedReward: 88767123287671n  // Approximately 88.77 tokens
+    },
+    {
+      name: "Zero elapsed time",
+      amount: 1000n * 10n**18n,
+      apy: 10n,
+      days: 0n,
+      expectedReward: 0n
+    }
   ];
 
-  for (const c of cases) {
-    it(`amount=${c.amount} secs=${c.secs} apr=${c.apr}`, () => {
-      expect(previewReward(c.amount, c.secs, c.apr)).to.equal(c.want);
+  for (const tc of testCases) {
+    it(tc.name, async () => {
+      const { staking, token, user } = await loadFixture(deployStakingFixture);
+      
+      const amount = tc.amount;
+      const option = tc.apy === 10n ? 1n : (tc.apy === 15n ? 2n : 3n);
+      
+      // Setup
+      await token.write.transfer([user.account.address, amount]);
+      await token.write.approve([staking.address, amount], { account: user.account });
+      await staking.write.deposit([amount, option], { account: user.account });
+      await staking.write.startReward();
+      
+      // Advance time
+      if (tc.days > 0n) {
+        await time.increase(Number(tc.days) * 24 * 60 * 60);
+      }
+      
+      // Check reward
+      const reward = await staking.read.getStakedItemReward([user.account.address, 0n]);
+      
+      // Allow small rounding difference (< 0.001 tokens)
+      const diff = reward > tc.expectedReward 
+        ? reward - tc.expectedReward 
+        : tc.expectedReward - reward;
+      expect(diff).to.be.lessThan(10n**15n);
     });
   }
 });
 ```
 
-Takeaway: tables compress many assertions into a compact, readable loop.
+**Takeaway**: Tables test all APY tiers and durations from your staking contract. When a case fails, you see exactly which tier broke (e.g., "60 days at 15% APY"), making debugging instant. This matches the **exact formula** students will deploy in Module 2.5.
 
 ### 2) Custom helpers for events and errors
 
 Extract common assertions so tests read like prose.
+
+Every deposit emits a `Deposited(user, amount)` event. Writing `await expect(tx).to.emit(vault, "Deposited").withArgs(user, amount)` fifty times clutters your specs. Extract it once, use it everywhere, and gain consistency plus maintainability.
 
 ```ts
 // test/helpers/assert.ts (excerpt)
@@ -65,12 +221,78 @@ export async function expectDeposit(tx: any, contract: any, user: string, amt: b
 }
 ```
 
-Takeaway: helpers reduce boilerplate and improve signal in specs.
+Takeaway: helpers reduce boilerplate and improve signal in specs. If the event signature changes (add a `positionId` parameter), you update one helper instead of grepping through 50 files.
+
+### 3) AAA structure for deposit flow (Hardhat 3 + viem pattern)
+
+**Explicit sections make setup and verification obvious, matching Island 1's tested pattern:**
+
+This test verifies the Staking contract's `deposit()` function creates a DepositItem with correct APY, duration, and timestamp. The AAA comments make the flow scannable—setup, action, verification.
+
+```ts
+// test/Staking.deposit.test.ts (matching Island 1 Hardhat 3 pattern)
+import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
+import { expect } from "chai";
+import hre from "hardhat";
+
+describe("Staking - Deposits", () => {
+  async function deployStakingFixture() {
+    const [owner, user] = await hre.viem.getWalletClients();
+    const token = await hre.viem.deployContract("TestToken", []);
+    const staking = await hre.viem.deployContract("Staking", [
+      token.address,
+      owner.account.address,
+      owner.account.address
+    ]);
+    return { staking, token, owner, user };
+  }
+
+  it("creates deposit with correct tier settings (Option 1: 30 days)", async () => {
+    // Arrange
+    const { staking, token, user } = await loadFixture(deployStakingFixture);
+    const amount = 1000n * 10n**18n;
+    await token.write.transfer([user.account.address, amount]);
+    await token.write.approve([staking.address, amount], { account: user.account });
+
+    // Act
+    await staking.write.deposit([amount, 1n], { account: user.account });
+
+    // Assert
+    const userStaked = await staking.read.getStakedTokens([user.account.address]);
+    expect(userStaked).to.equal(amount);
+    
+    const depositCount = await staking.read.getStakedItemLength([user.account.address]);
+    expect(depositCount).to.equal(1n);
+    
+    const apy = await staking.read.getStakedItemAPY([user.account.address, 0n]);
+    expect(apy).to.equal(10n);  // Tier 1 = 10% APY
+    
+    const duration = await staking.read.getStakedItemDuration([user.account.address, 0n]);
+    expect(duration).to.equal(30n * 24n * 60n * 60n);  // 30 days in seconds
+  });
+});
+```
+
+**Takeaway**: Separating Arrange/Act/Assert with comments makes intent clear. This matches the **exact Hardhat 3 + viem pattern** from Island 1:
+- `hre.viem.deployContract()` for deployment
+- `hre.viem.getWalletClients()` for accounts
+- `.write.functionName([args], { account })` for transactions
+- `.read.functionName([args])` for view calls
+
+This pattern is **tested and working** in Island 1's ERC20 module.
 
 ## Practice and reflection
 
-- Convert a verbose series of assertions into a table‑driven loop
-- Extract one assertion helper for a frequently‑emitted event
+Apply these patterns to your staking test suite:
+
+- **Table-driven boundary test**: Create a table with 5 cases for `previewReward()` covering zero amount, zero time, max values, and typical stakes
+- **Custom helper**: Extract `expectPositionCreated(tx, vault, user, positionId, amount)` to verify deposit events and state
+- **AAA refactor**: Take an existing test with tangled setup/assertions and split it into clear Arrange/Act/Assert sections
+- **Time control**: Write a test that advances time by 30 days and verifies reward accrual at different durations
+- **Mock integration**: Replace a real ERC20 with `MockERC20` and verify your vault handles transfer failures gracefully
+- **Naming audit**: Review 5 test names and rewrite any that describe implementation instead of behavior
+
+Short reflection: Which of these patterns (AAA, tables, helpers, mocks) would have the biggest impact on your current test suite? Why?
 
 {/* Concept Matching */}
 <ConceptMatching pairs={[
@@ -79,13 +301,168 @@ Takeaway: helpers reduce boilerplate and improve signal in specs.
   {"conceptId":"mock","definitionId":"def-mock","concept":"mock/stub","definition":"Replace external dependency to isolate the unit","category":"testing"}
 ]}/>
 
-## Pitfalls and tips
+## Security and pitfalls
 
-- Don’t assert too much in one test; split into clear behaviors
-- Name tests by behavior, not implementation detail
-- Avoid global mutable state in helpers
+Unit tests guard against regressions and edge-case failures. Follow these patterns to catch issues early.
+
+Poorly structured tests create false confidence: they pass when they shouldn't, fail randomly, or miss critical edge cases. The patterns below address the most common test design flaws that let bugs slip through.
+
+Each anti-pattern comes with a concrete "bad" example (what not to do), a "good" example (the fix), and a rule to remember. Apply these rules consistently and your test suite becomes a reliable safety net instead of a maintenance burden.
+
+### Over-asserting in single tests
+
+**Danger**: Tests that verify 10 different outcomes in one spec become brittle and hard to debug when they fail.
+
+When a test asserts multiple unrelated behaviors, failure messages become cryptic. Did the deposit fail? The reward calculation? The withdrawal? You won't know without digging into the code.
+
+**Bad**:
+```ts
+it("handles full lifecycle", async () => {
+  await vault.deposit(100);
+  expect(await vault.balanceOf(user)).to.equal(100);
+  await time.increase(86400);
+  expect(await vault.previewReward(user)).to.be.gt(0);
+  await vault.withdraw(50);
+  expect(await vault.balanceOf(user)).to.equal(50);
+  // Too many unrelated assertions
+});
+```
+
+**Good**:
+```ts
+it("tracks balance after deposit", async () => { /* ... */ });
+it("accrues rewards after 1 day", async () => { /* ... */ });
+it("reduces balance after withdrawal", async () => { /* ... */ });
+```
+
+**Rule**: One behavior per test. If a test name needs "and", split it.
+
+**Why it matters**: Focused tests run faster (early exit on failure), pinpoint regressions precisely, and serve as clear documentation. A failing "tracks balance after deposit" test tells you exactly what broke.
+
+### Implementation-focused naming
+
+**Danger**: Names like `testWithdraw2` or `checkBalanceUpdate` don't communicate intent. When they fail, you have no clue what behavior broke.
+
+CI fails with "testRewardCalc failed"—now what? You have to open the file, read the code, and reverse-engineer the scenario. Behavioral names eliminate this detective work.
+
+**Bad**:
+```ts
+it("testRewardCalc", async () => { /* what scenario? */ });
+it("withdraw test 3", async () => { /* which edge case? */ });
+```
+
+**Good**:
+```ts
+it("returns zero reward when staked for less than 1 second", async () => { /* clear */ });
+it("reverts withdrawal when time-lock has not expired", async () => { /* explicit */ });
+```
+
+**Rule**: Name tests as sentences describing expected behavior. The name should complete "it..." as if you're explaining to a colleague.
+
+**Format tips**:
+- Start with the outcome: "reverts when...", "emits event when...", "returns zero when..."
+- Include the condition: "when amount is zero", "when user has no balance", "after 30 days"
+- Avoid implementation details: don't reference variable names, internal functions, or storage slots
+
+### Shared mutable state between tests
+
+**Danger**: Global variables or reused contract instances leak state. Test B passes only if Test A ran first—order-dependent failures are nightmares.
+
+Order-dependent tests are the worst kind of flakiness. They pass locally (where test order is consistent) but fail in CI (parallelized or different order). Debugging these wastes hours.
+
+**Bad**:
+```ts
+let vault: StakingVault; // Shared across tests
+beforeEach(async () => {
+  vault = await ethers.deployContract("StakingVault"); // Mutated by tests
+});
+```
+
+This pattern reuses the same vault instance. Test A deposits 100, Test B assumes a fresh vault but gets one with 100 already deposited. Test B fails mysteriously.
+
+**Good**:
+```ts
+beforeEach(async () => {
+  return loadFixture(deployStakingFixture); // Fresh state every test
+});
+```
+
+Fixtures snapshot initial state and restore it before each test. Every test gets a pristine contract, eliminating order dependencies.
+
+**Rule**: Use fixtures or re-deploy; never share mutable contract instances.
+
+**Bonus**: Fixtures are fast—Hardhat snapshots state at the EVM level, so "re-deploying" is instant. No performance penalty for isolation.
+
+### Ignoring time-based flakiness
+
+**Danger**: Tests that rely on `block.timestamp` without control can fail intermittently. Mining delays or test runner parallelization causes non-determinism.
+
+Staking contracts are inherently time-dependent: rewards accrue per second, time-locks expire after 30 days, early withdrawal penalties decay over time. Tests that don't control time will flake.
+
+**Bad**:
+```ts
+await vault.deposit(100);
+// Assume time passes... flaky
+expect(await vault.previewReward(user)).to.be.gt(0);
+```
+
+This test might pass if transactions mine slowly (blocks advance, time increases) or fail if they mine instantly (same block, no time passes). Flakiness ruins CI trust.
+
+**Good**:
+```ts
+await vault.deposit(100);
+await time.increase(86400); // Explicit 1 day
+expect(await vault.previewReward(user)).to.equal(expectedReward);
+```
+
+Explicitly advancing time by 1 day makes the test deterministic. Every run produces the same timestamps, same calculations, same results.
+
+**Rule**: Always manipulate time explicitly with `time.increase()` or `vm.warp()`.
+
+**Tools**:
+- **Hardhat**: `time.increase(seconds)` advances time relatively, `time.increaseTo(timestamp)` sets absolute time, `time.latest()` reads current block timestamp
+- **Foundry**: `vm.warp(timestamp)` sets absolute time, `skip(seconds)` advances relatively, `block.timestamp` reads current time
+
+**Testing multi-period scenarios**: For tests that verify reward accrual over multiple periods (deposit → 7 days → check → 30 days → check), use `time.increase()` between checks. This makes the test's timeline explicit:
+
+```ts
+await vault.deposit(1000);
+await time.increase(7 * 86400); // 7 days
+expect(await vault.previewReward(user)).to.equal(weekReward);
+await time.increase(23 * 86400); // +23 days = 30 total
+expect(await vault.previewReward(user)).to.equal(monthReward);
+```
+
+Control time in every test that touches time-dependent logic—no exceptions. This discipline eliminates an entire class of flakiness.
+
+## Security checklist
+
+Before deploying staking contracts tested with these patterns:
+
+- [ ] **AAA separation**: Every test has clear Arrange/Act/Assert sections (use comments if helpful)
+- [ ] **Behavioral naming**: Test names describe expected behavior, not implementation ("reverts when..." not "testFunc2")
+- [ ] **Table-driven boundaries**: Math and tier logic covered with table-driven cases for zero, min, max, typical values
+- [ ] **Custom helpers extracted**: Repeated event/state assertions moved to reusable helpers (DRY principle); update once when signatures change
+- [ ] **Time control**: All time-dependent tests use explicit `time.increase()` or `vm.warp()`; no reliance on wall-clock or mining delays
+- [ ] **Fixtures for isolation**: Tests use `loadFixture()` or equivalent; no shared mutable state between specs; every test gets fresh contracts
+- [ ] **Mock external dependencies**: Oracles, tokens, and external contracts replaced with controllable mocks for unit tests; real contracts only in integration tests
+- [ ] **One behavior per test**: No "and" in test names; split complex assertions into separate specs for precise failure localization
+- [ ] **Negative cases included**: Tests cover reverts, zero amounts, insufficient balances, expired time-locks, unauthorized callers, edge cases
+- [ ] **Coverage verified**: All public functions and modifiers have at least one happy-path and one failure test; use coverage tools to find gaps
+- [ ] **Test independence verified**: Run tests in random order; no failures indicate order dependencies; shuffle with `--bail` to catch leaky state
+- [ ] **Fast feedback loop**: Unit tests run in under 5 seconds; split slow integration tests into separate suites; fixtures keep deployment fast
 
 ## Wrap‑up and next steps
 
-You can now write compact, expressive unit tests that scale with feature complexity. Next, we’ll focus on security‑oriented tests that target real‑world failure modes.
+You now write structured, maintainable unit tests with clear AAA patterns, table-driven boundaries, and custom helpers. These specs scale from simple vaults to multi-tier reward systems without becoming copy-paste nightmares.
+
+In the previous lesson, you set up Hardhat fixtures and event assertions—the infrastructure for fast, deterministic testing. Here, you've learned to organize tests for readability and coverage: separating Arrange/Act/Assert, compressing boundaries into tables, extracting helpers, naming tests behaviorally, and controlling time explicitly.
+
+These patterns compound. A test suite with AAA structure, table-driven edge cases, custom helpers, and behavioral naming is:
+- **Easier to review**: Intent is obvious; reviewers spot gaps faster
+- **Faster to debug**: Failures pinpoint exact scenarios; no mystery errors
+- **Simpler to maintain**: Helpers centralize repetition; changes propagate cleanly
+- **More comprehensive**: Tables make it easy to add cases; coverage grows naturally
+
+Next, we'll explore test-driven development (TDD) to write tests *before* implementation, using failures as design feedback for staking interfaces. You'll see how writing tests first forces better abstractions and catches design flaws early—before any production code exists.
 

@@ -12,20 +12,80 @@ practicalTakeaway: "Build production-ready NFT contracts with proper access cont
 
 ## Set the stage
 
-ERC721 defines unique, non‑fungible tokens with transfers, approvals, and safe receipts. In practice, you will compose OpenZeppelin building blocks to get security defaults and predictable behavior that marketplaces expect.
+ERC721 is the bedrock of the NFT economy: every profile picture, in-game item, domain name, and digital collectible on Ethereum uses this standard. Unlike ERC20's fungible tokens (1 USDC = any other USDC), ERC721 tokens are unique—each has a distinct `tokenId` and can represent different metadata, rarity, and value. This uniqueness creates scarcity, provenance, and the rich secondary markets that define Web3 ownership.
 
-We will keep the core minimal: minting, safe transfers, approvals, and a clean `baseURI` for IPFS metadata.
+But uniqueness alone isn't enough. ERC721 also defines safe transfer mechanisms to prevent NFTs from being lost to contracts that can't handle them, flexible approval patterns so marketplaces can move tokens on your behalf, and a clean event schema so indexers can track every transfer and sale. Without ERC721's standardization, every NFT project would be incompatible, marketplaces would need custom integrations for each collection, and users would face a fragmented, unusable ecosystem.
 
-## Core ideas
+In this lesson, you'll learn the core ERC721 interface: how ownership is tracked via `tokenId`, how `safeTransferFrom` protects against lost tokens, and when to use `approve` vs `setApprovalForAll`. You'll see how OpenZeppelin's battle-tested implementation gives you security defaults for free, and how to extend it with minting logic, `baseURI` for IPFS metadata, and supply caps. By the end, you'll understand the design decisions behind ERC721 and be ready to build production-ready NFT collections. These patterns will carry through Lessons 2-3 (gas optimization, security) and culminate in Module 3's full collection deployment on Zilliqa testnet.
 
-- Tokens are identified by `tokenId`; ownership is exclusive
-- `safeTransferFrom` protects recipients via `onERC721Received`
-- Approvals: single‑token `approve` vs global `setApprovalForAll`
-- Events (Transfer/Approval/ApprovalForAll) are part of your public contract with clients
+## Conceptual foundations
 
-## Code in practice
+### ERC721 vs ERC20: fungibility and uniqueness
 
-### Minimal ERC721 with owner‑gated mint and baseURI
+**ERC20**: Fungible tokens. Every token is identical and interchangeable. `balanceOf(address)` returns a quantity. Transfers move amounts (`transfer(to, 100)`). Use case: currencies, utility tokens, shares.
+
+**ERC721**: Non-fungible tokens. Every token is unique, identified by `tokenId` (uint256). `balanceOf(address)` returns count of tokens owned. `ownerOf(tokenId)` returns the current owner. Transfers move specific tokens (`transferFrom(from, to, tokenId)`). Use case: collectibles, art, game items, real-world assets.
+
+**Mental model**: ERC20 is like a bank account balance—you care about the total, not which specific dollar bills you hold. ERC721 is like a deed registry—you care about *which* specific house you own, not just how many houses.
+
+**When to use ERC721**: When each token has distinct identity, metadata, or value. When provenance (who owned it before) matters. When scarcity is per-item, not per-amount.
+
+### Token IDs and ownership tracking
+
+Every ERC721 token has a unique `tokenId` (uint256, typically 0…N-1 for sequential minting). The contract maintains a mapping `_owners[tokenId] => owner address`. Only one address can own a given tokenId at a time—no shared ownership without additional logic.
+
+**Pattern**: `mapping(uint256 => address) private _owners;` tracks ownership. `mapping(address => uint256) private _balances;` tracks how many tokens each address owns. When transferring, decrement sender's balance, increment recipient's balance, update `_owners[tokenId]`.
+
+**Why this matters**: Unlike ERC20 (one balance per address), ERC721 needs two mappings: one for "who owns token X" and one for "how many tokens does Alice own." Marketplaces query `ownerOf(tokenId)` to verify ownership before sales. Wallets query `balanceOf(address)` to show "You own 5 NFTs from this collection."
+
+### Safe transfers and receiver checks
+
+**Problem**: If you transfer an NFT to a contract address that doesn't know how to handle NFTs, the token is permanently locked. Example: user accidentally sends to a custodial exchange deposit address that only handles ERC20.
+
+**Solution**: `safeTransferFrom` checks if the recipient is a contract. If yes, it calls `onERC721Received` on the recipient and requires the magic return value (`IERC721Receiver.onERC721Received.selector`). If the recipient doesn't implement this function or returns the wrong value, the transfer reverts. Your NFT is safe.
+
+**When to use safe vs unsafe transfers**: Always use `safeTransferFrom` for user-facing functions (public mints, marketplace transfers). Use `_mint` (unsafe) only when you control the recipient (e.g., minting to your own address during deployment tests). OpenZeppelin's `_safeMint` is preferred for all minting.
+
+**Receiver interface**: Contracts that want to receive NFTs implement `IERC721Receiver` with `onERC721Received(operator, from, tokenId, data) returns (bytes4)`. Example: NFT staking vaults, auction contracts, in-game inventory managers.
+
+### Approvals: per-token and operator patterns
+
+**Per-token approval**: `approve(spender, tokenId)` authorizes `spender` to transfer one specific token. Common use: "I approve this auction contract to transfer my token #42 when the auction ends." Revoked if you transfer the token to someone else.
+
+**Operator approval**: `setApprovalForAll(operator, true)` authorizes `operator` to transfer *all* your tokens from this collection. Common use: "I approve OpenSea to transfer any of my tokens when I accept offers." Persists across transfers; you must explicitly revoke it.
+
+**Security note**: Operator approvals are powerful and risky. Malicious marketplaces or phishing sites can drain all your NFTs if you grant operator approval. Always verify the contract address before calling `setApprovalForAll`. Per-token approvals are safer but less convenient.
+
+**Marketplace pattern**: When you list an NFT for sale, you call `setApprovalForAll(marketplace, true)` once. The marketplace can then transfer any of your listed tokens when buyers purchase them. You don't need to approve each listing individually.
+
+### Events: the public audit log
+
+ERC721 requires three events:
+- `Transfer(from, to, tokenId)`: Emitted on every mint, transfer, burn. Indexed `from`, `to`, `tokenId` so indexers can track ownership history.
+- `Approval(owner, approved, tokenId)`: Emitted when per-token approval is granted. Marketplaces subscribe to this to detect listing authorizations.
+- `ApprovalForAll(owner, operator, approved)`: Emitted when operator approval is granted or revoked. Critical for security monitoring (detect unauthorized approvals).
+
+**Why events matter**: Every NFT marketplace, wallet, and analytics tool relies on events to track ownership and sales. If you don't emit `Transfer` events, your NFTs won't show up in wallets or on OpenSea. Events are cheaper than storage reads and enable real-time indexing without polling the blockchain.
+
+**Best practice**: OpenZeppelin emits these automatically in `_transfer`, `_approve`, and `setApprovalForAll`. Don't suppress them. If you add custom logic (burns, airdrops), ensure events are emitted.
+
+### Base URI and metadata
+
+ERC721 has an optional `tokenURI(tokenId)` function that returns a URI pointing to metadata (JSON with name, description, image, attributes). Standard pattern: `tokenURI(tokenId) = baseURI + tokenId + ".json"`.
+
+**Example**: `baseURI = "ipfs://QmHash/"`, so `tokenURI(42) = "ipfs://QmHash/42.json"`. Marketplaces fetch this JSON and display your NFT's image and traits.
+
+**Mutable vs immutable baseURI**: Immutable (constant in code) guarantees metadata can't be changed post-mint—trustless. Mutable (state variable) allows reveals and updates but requires user trust. For decentralized collections, use IPFS and make baseURI immutable after reveal.
+
+**When to override**: If you want per-token custom URIs (some tokens on IPFS, some on Arweave), override `tokenURI(uint256)` to return different URIs based on tokenId. For most collections, a single baseURI is sufficient.
+
+## Guided code walk-throughs
+
+These examples show how to implement ERC721 contracts for NFT collections.
+
+### 1) Minimal ERC721 with owner-gated mint and baseURI
+
+This is the simplest production-ready NFT contract: sequential token IDs, IPFS metadata, and owner-controlled minting. OpenZeppelin handles all the ERC721 complexity (ownership tracking, transfers, approvals, events). You just add minting logic and metadata.
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -36,78 +96,278 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract JungleNFT is ERC721, Ownable {
     uint256 private _nextId;
+    uint256 public constant MAX_SUPPLY = 10_000;
+
+    error ExceedsMaxSupply();
 
     constructor(address owner_) ERC721("JungleNFT", "JNFT") Ownable(owner_) {}
 
+    /// @notice Returns base URI for token metadata
+    /// @dev Override to point to IPFS folder with metadata JSON files
     function _baseURI() internal pure override returns (string memory) {
-        return "ipfs://base-cid/";
+        return "ipfs://QmExampleHash/";
     }
 
+    /// @notice Mint a single NFT; owner only
+    /// @param to Recipient address
     function mint(address to) external onlyOwner {
-        uint256 id = _nextId++;
-        _safeMint(to, id);
+        if (_nextId >= MAX_SUPPLY) revert ExceedsMaxSupply();
+        _safeMint(to, _nextId++);
+    }
+
+    /// @notice Returns full metadata URI for a token
+    /// @dev Combines baseURI + tokenId + ".json"
+    function tokenURI(uint256 tokenId) 
+        public 
+        view 
+        override 
+        returns (string memory) 
+    {
+        _requireOwned(tokenId); // Revert if token doesn't exist
+        return string.concat(_baseURI(), _toString(tokenId), ".json");
+    }
+
+    /// @dev Helper to convert uint256 to string
+    function _toString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) return "0";
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits--;
+            buffer[digits] = bytes1(uint8(48 + value % 10));
+            value /= 10;
+        }
+        return string(buffer);
     }
 }
 ```
 
-Takeaway: use `_safeMint` and a `baseURI` to make metadata predictable for marketplaces.
+**Takeaway**: Use `_safeMint` and a clean `baseURI` to make metadata predictable for marketplaces. For Module 3's deployment, you'll add multi-phase minting and Merkle proofs, but this core structure stays the same. Always enforce `MAX_SUPPLY` to create scarcity and trust.
 
-### Approvals: per‑token vs operator
+### 2) Safe NFT receiver: accepting tokens in a contract
 
-```solidity
-// Excerpts (conceptual)
-// Per‑token approval lets one address move a single token
-// Operator approval authorizes all tokens of the owner
-
-// approve(spender, tokenId)
-// setApprovalForAll(operator, true)
-```
-
-Takeaway: prefer operator approvals for marketplaces; use per‑token approvals for targeted delegation.
-
-### Receiving NFTs safely
+If your contract needs to hold NFTs (staking vault, auction house, game inventory), implement `IERC721Receiver`. This tells `safeTransferFrom` that your contract knows how to handle NFTs. Without it, transfers to your contract will revert.
 
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract NFTVault is IERC721Receiver {
-    event Received(address operator, address from, uint256 id, bytes data);
+    event Deposited(address indexed depositor, uint256 indexed tokenId, address indexed collection);
+    event Withdrawn(address indexed withdrawer, uint256 indexed tokenId, address indexed collection);
 
-    function onERC721Received(address operator, address from, uint256 id, bytes calldata data)
-        external
-        override
-        returns (bytes4)
-    {
-        emit Received(operator, from, id, data);
-        return IERC721Receiver.onERC721Received.selector;
+    /// @notice Tracks which user deposited which token
+    mapping(address collection => mapping(uint256 tokenId => address depositor)) public depositors;
+
+    /// @notice Handle incoming NFT transfers
+    /// @dev Called by safeTransferFrom; must return magic value
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) external override returns (bytes4) {
+        depositors[msg.sender][tokenId] = from; // Track who deposited
+        emit Deposited(from, tokenId, msg.sender);
+        return IERC721Receiver.onERC721Received.selector; // Magic value
+    }
+
+    /// @notice Withdraw your deposited NFT
+    function withdraw(address collection, uint256 tokenId) external {
+        require(depositors[collection][tokenId] == msg.sender, "NOT_DEPOSITOR");
+        delete depositors[collection][tokenId];
+        IERC721(collection).safeTransferFrom(address(this), msg.sender, tokenId);
+        emit Withdrawn(msg.sender, tokenId, collection);
     }
 }
 ```
 
-Takeaway: `safeTransferFrom` guarantees either success or a revert—no lost NFTs to non‑receiver contracts.
+**Takeaway**: `safeTransferFrom` guarantees either success or a revert—no lost NFTs to non-receiver contracts. For Module 3's advanced features, you'll see this pattern in staking vaults and auction contracts. Always implement `IERC721Receiver` if your contract holds NFTs.
+
+### 3) Approval patterns: marketplace integration
+
+This example shows both approval types and how marketplaces use them. Per-token approvals are for one-off sales; operator approvals are for ongoing marketplace relationships.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+
+/// @notice Simple marketplace demonstrating approval patterns
+contract SimpleMarketplace {
+    event Listed(address indexed seller, uint256 indexed tokenId, uint256 price);
+    event Sold(address indexed buyer, uint256 indexed tokenId, uint256 price);
+
+    struct Listing {
+        address seller;
+        uint256 price;
+    }
+
+    IERC721 public immutable nftContract;
+    mapping(uint256 => Listing) public listings;
+
+    constructor(IERC721 _nft) {
+        nftContract = _nft;
+    }
+
+    /// @notice List NFT for sale
+    /// @dev Seller must have approved marketplace (per-token OR operator)
+    function list(uint256 tokenId, uint256 price) external {
+        require(nftContract.ownerOf(tokenId) == msg.sender, "NOT_OWNER");
+        // Marketplace must be approved to transfer this token
+        require(
+            nftContract.getApproved(tokenId) == address(this) || 
+            nftContract.isApprovedForAll(msg.sender, address(this)),
+            "NOT_APPROVED"
+        );
+        listings[tokenId] = Listing(msg.sender, price);
+        emit Listed(msg.sender, tokenId, price);
+    }
+
+    /// @notice Buy listed NFT
+    function buy(uint256 tokenId) external payable {
+        Listing memory listing = listings[tokenId];
+        require(listing.price > 0, "NOT_LISTED");
+        require(msg.value == listing.price, "WRONG_PAYMENT");
+        
+        delete listings[tokenId];
+        nftContract.safeTransferFrom(listing.seller, msg.sender, tokenId);
+        payable(listing.seller).transfer(msg.value);
+        emit Sold(msg.sender, tokenId, listing.price);
+    }
+}
+```
+
+**Takeaway**: Prefer `setApprovalForAll` for marketplaces (one approval, list many NFTs). Use per-token `approve` for targeted delegation (auction for one specific token). In Module 3, you'll integrate with real marketplaces and test approval flows thoroughly.
 
 ## Practice and reflection
 
-- Sketch which flows in your dApp need operator approvals vs per‑token approvals
-- Decide your `baseURI` strategy: single base + tokenId JSON on IPFS, or on‑chain tokenURI for special items
+Apply ERC721 concepts to your NFT collection design:
+
+- **Approval strategy**: Sketch which flows in your dApp need operator approvals vs per-token approvals. List one use case for each: when would you use `approve(spender, tokenId)` vs `setApprovalForAll(operator, true)`? Consider marketplace listings, auctions, and staking vaults.
+- **BaseURI decision**: Decide your `baseURI` strategy: single base + tokenId JSON on IPFS, or on-chain tokenURI for special items. If IPFS, how will you handle reveals (placeholder first, then switch baseURI)? If on-chain, how will you handle gas costs for large metadata?
+- **Token ID scheme**: Will you use sequential IDs (0, 1, 2...) or randomized IDs? Sequential is gas-efficient and simple; randomized requires extra logic but prevents rarity sniping. Write two sentences defending your choice for your collection.
+- **Receiver implementation**: Design a simple NFT staking vault that accepts deposits via `safeTransferFrom`. What state do you need to track (depositor, deposit time)? How do users withdraw? Sketch the `onERC721Received` logic and a `withdraw` function signature.
+- **Event monitoring**: For your NFT contract, list which events you would subscribe to if building an analytics dashboard: `Transfer`, `Approval`, `ApprovalForAll`. For each, explain what insights it provides (e.g., Transfer → ownership history, sales volume).
+- **Metadata immutability audit**: Review your contract. Is `baseURI` immutable (constant/pure function) or mutable (state variable)? If mutable, justify why users should trust you not to rug pull. If immutable, explain how you'll handle reveals.
 
 {/* Concept Matching */}
 <ConceptMatching pairs={[
-  {"conceptId":"safe","definitionId":"def-safe","concept":"safeTransferFrom","definition":"Checks receiver contracts implement onERC721Received","category":"erc721"},
-  {"conceptId":"approve","definitionId":"def-approve","concept":"approve","definition":"Authorize a single address to move one tokenId","category":"erc721"},
-  {"conceptId":"opall","definitionId":"def-opall","concept":"setApprovalForAll","definition":"Authorize an operator for all your tokens","category":"erc721"}
+  {"conceptId":"safe","definitionId":"def-safe","concept":"safeTransferFrom","definition":"Checks receiver contracts implement onERC721Received to prevent lost NFTs","category":"erc721"},
+  {"conceptId":"approve","definitionId":"def-approve","concept":"approve","definition":"Authorize a single address to move one specific tokenId","category":"erc721"},
+  {"conceptId":"opall","definitionId":"def-opall","concept":"setApprovalForAll","definition":"Authorize an operator to move all your tokens from this collection","category":"erc721"},
+  {"conceptId":"tokenuri","definitionId":"def-tokenuri","concept":"tokenURI","definition":"Returns metadata URI (IPFS/HTTP) for a specific tokenId","category":"metadata"},
+  {"conceptId":"ownerof","definitionId":"def-ownerof","concept":"ownerOf","definition":"Returns the current owner address of a specific tokenId","category":"ownership"}
 ]}/>
 
-## Pitfalls and tips
+Short reflection: If you accidentally transfer an NFT to a contract that doesn't implement `IERC721Receiver`, can you recover it? Write two sentences explaining why `safeTransferFrom` exists and when it's acceptable to use unsafe `transferFrom`.
 
-- Avoid `transferFrom` to contracts unless you know they implement the receiver interface; prefer `safeTransferFrom`
-- Emit events consistently; index subjects consumers will query (owner, operator)
-- Keep metadata stable; changing URIs after reveal confuses caches and marketplaces
+## Security and pitfalls
 
-## Wrap‑up and next steps
+ERC721 has specific security patterns to prevent loss and theft. Follow these guidelines:
 
-You now have a minimal, safe ERC721 core. Next: make minting cheaper and more ergonomic while keeping event contracts intact.
+### Lost NFTs via unsafe transfers
+
+**Danger**: Using `transferFrom` to send NFTs to contracts that can't handle them. The NFT is locked permanently in the contract with no recovery mechanism. Example: user sends NFT to exchange deposit address that only handles ERC20.
+
+**Mitigation**: Always use `safeTransferFrom` for user-facing transfers. It checks if the recipient is a contract and, if so, calls `onERC721Received` to verify it can handle NFTs. If the contract doesn't implement the interface or returns the wrong selector, the transfer reverts.
+
+**When unsafe is acceptable**: Internal minting to known addresses during deployment/testing, or transfers to contracts you control and have verified implement `IERC721Receiver`. Document why unsafe is safe in comments.
+
+**Rule**: Default to `safeTransferFrom` unless you have a specific reason (gas savings for known-safe recipients) and have tested thoroughly.
+
+### Approval phishing and malicious marketplaces
+
+**Danger**: Users granting `setApprovalForAll` to malicious contracts that drain all their NFTs. Common attack vector: phishing sites that mimic real marketplaces, tricking users into approving fake contracts.
+
+**Mitigation**: For marketplace integrations, verify contract addresses against official docs. For users: only approve known marketplaces (OpenSea, Blur, LooksRare) and revoke unused approvals regularly. For contracts: emit `ApprovalForAll` events so monitoring tools can alert users.
+
+**Best practice**: Educate users on approval risks. Display clear warnings in UIs when requesting `setApprovalForAll`. Provide easy revocation UIs (call `setApprovalForAll(badMarketplace, false)`).
+
+**Rule**: Never blindly approve operator access. Always verify the contract address and reputation first.
+
+### TokenURI manipulation and metadata rug pulls
+
+**Danger**: Mutable `baseURI` state variables let owners change metadata post-mint. Attack: mint collection with valuable traits, wait for sales, then switch `baseURI` to worthless placeholder images. Users lose value, trust evaporates.
+
+**Mitigation**: Make `baseURI` immutable (pure function returning constant) for trustless collections. If you need reveals, use a two-step process: immutable placeholder URI, then one-time switch to immutable final URI. Emit `BaseURIUpdated` event and test that it can only be called once.
+
+**Transparency pattern**: Commit final baseURI hash in the constructor, then reveal by setting state variable to match that hash. Users can verify you didn't change metadata by comparing hashes.
+
+**Rule**: For decentralized collections, use IPFS and make metadata immutable. For centralized projects, document your metadata policy and build trust through transparency.
+
+### Supply cap violations and infinite minting
+
+**Danger**: Missing or improperly enforced `MAX_SUPPLY` checks let admins mint unlimited tokens, diluting rarity and breaking promises to collectors. Example: Collection advertises 10k supply, but owner mints 10k more after sellout.
+
+**Mitigation**: Set `MAX_SUPPLY` as `constant` or `immutable` (set in constructor). Check `_nextId + quantity <= MAX_SUPPLY` before every mint. Test boundary conditions: minting at cap should succeed, minting beyond should revert.
+
+**Trustless guarantee**: `constant` / `immutable` supply caps can't be changed post-deployment. This is the strongest guarantee to collectors. Document it prominently in your marketing.
+
+**Rule**: If scarcity is part of your value proposition, enforce it on-chain with immutable caps. No exceptions.
+
+### Event suppression and hidden transfers
+
+**Danger**: Overriding `_transfer` or `_update` without emitting `Transfer` events. Indexers and wallets won't detect ownership changes. NFTs appear to vanish from interfaces.
+
+**Mitigation**: Never suppress OpenZeppelin's default event emissions. If you override `_transfer` or `_update`, always call `super._transfer(...)` or manually emit `Transfer`. Test that events are emitted for every mint, transfer, and burn.
+
+**Indexer dependency**: Marketplaces (OpenSea, Blur) rely on `Transfer` events to update listings and ownership. Missing events = broken marketplace integration = angry users.
+
+**Rule**: Events are part of the ERC721 standard. Emit them consistently or your NFTs won't work with the ecosystem.
+
+### Token ID collisions and reuse
+
+**Danger**: Minting the same tokenId twice (reusing IDs after burns) or allowing user-provided tokenIds without collision checks. This breaks the uniqueness guarantee of ERC721 and causes ownership confusion.
+
+**Mitigation**: Use a sequential counter (`_nextId++`) that never decreases. If you allow burns, don't reuse burned IDs—keep incrementing. If you allow custom IDs, check `_ownerOf(tokenId) == address(0)` before minting.
+
+**OpenZeppelin safety**: `_safeMint` reverts if `tokenId` already exists. Trust this guard; don't try to mint to existing IDs.
+
+**Rule**: Each tokenId must be unique across the collection's lifetime. Never reuse IDs, even after burns.
+
+## Security checklist
+
+Before deploying your ERC721 contract:
+
+- [ ] **SafeTransferFrom used**: All user-facing transfer functions use `safeTransferFrom`; unsafe `transferFrom` only for internal/controlled transfers
+- [ ] **Receiver interface tested**: If contract holds NFTs, `IERC721Receiver` implemented and `onERC721Received` returns correct selector
+- [ ] **Supply cap enforced**: `MAX_SUPPLY` set as `constant` or `immutable`; checked before every mint; boundary tested
+- [ ] **TokenID uniqueness**: Sequential `_nextId` counter used; no ID reuse after burns; `_safeMint` reverts on collisions
+- [ ] **BaseURI immutability**: For trustless collections, `_baseURI()` returns constant IPFS hash; if mutable, policy documented and reveal limited to one-time
+- [ ] **Metadata format validated**: `tokenURI` returns valid format (e.g., `ipfs://QmHash/0.json`); tested for tokenId 0, mid-range, and MAX_SUPPLY-1
+- [ ] **Events emitted**: `Transfer`, `Approval`, `ApprovalForAll` emitted for all relevant operations; tested with event assertions
+- [ ] **Approval patterns secure**: Users warned about `setApprovalForAll` risks; revocation UIs provided; only known marketplaces recommended
+- [ ] **Ownership tracking correct**: `ownerOf` returns correct owner; `balanceOf` returns correct count; tested after mints/transfers/burns
+- [ ] **ERC165 support**: `supportsInterface` returns true for `IERC721` and `IERC165` interface IDs
+- [ ] **Constructor parameters validated**: Name, symbol, owner passed correctly; tested on testnet before mainnet deploy
+- [ ] **Access control on mint**: Only authorized roles can mint; tested with unauthorized callers (expect revert)
+- [ ] **OpenZeppelin version pinned**: `package.json` specifies exact OZ version (e.g., `"@openzeppelin/contracts": "5.0.0"`); not `^5.0.0` (avoids breaking changes)
+
+## Wrap-up and next steps
+
+You've learned the fundamentals of ERC721: unique token IDs, ownership tracking, safe transfers with receiver checks, and flexible approval patterns for marketplace integration. You understand how `tokenURI` and `baseURI` work together for IPFS metadata, why events are critical for ecosystem compatibility, and when to use `safeTransferFrom` vs unsafe alternatives.
+
+The key takeaways for ERC721 core:
+
+1. **Uniqueness**: Each token has a distinct `tokenId`; ownership is exclusive and tracked via mappings.
+2. **Safety**: `safeTransferFrom` prevents lost NFTs by checking receiver contracts implement `IERC721Receiver`.
+3. **Flexibility**: Per-token approvals for targeted delegation; operator approvals for marketplace convenience.
+4. **Transparency**: Events (`Transfer`, `Approval`) are the public audit log; never suppress them.
+5. **Immutability**: Supply caps and baseURI should be immutable for trustless collections; document mutable params clearly.
+
+Combined with OpenZeppelin's battle-tested implementation, you have a secure foundation for NFT collections. The patterns you've learned—sequential token IDs, IPFS metadata, supply caps, and receiver safety—are production standards used by every major NFT project.
+
+Next, in Lesson 2, you'll learn how to optimize minting for gas efficiency: batch minting loops, when to skip Enumerable extensions, and how to measure gas costs in tests. In Lesson 3, you'll add role-based access control, pausability, and reentrancy protection to lock down your contract for production.
+
+Together, these three lessons prepare you for Module 2's advanced features (metadata standards, IPFS integration, reveals, EIP-2981 royalties) and Module 3's practical deployment on Zilliqa testnet, where you'll launch a full multi-phase NFT collection with whitelist verification and emergency controls.
 

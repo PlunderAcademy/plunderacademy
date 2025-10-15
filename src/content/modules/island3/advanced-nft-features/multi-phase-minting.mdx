@@ -10,17 +10,54 @@ practicalTakeaway: "Launch NFT collections with sophisticated minting strategies
 
 # Multi-Phase Minting Concepts
 
-## Big picture
+## Set the stage
 
-Most launches run presale (allowlist) followed by public mint. You’ll model phases with per‑wallet limits, prices, and timings, and optionally add a Merkle allowlist for efficient eligibility checks.
+Mint phases are the ship’s schedule: presale boarding for allowlisted addresses, then public boarding for everyone. If the schedule is ambiguous, lines form, tempers flare, and scalpers game the system. Clear, on‑chain phase state with explicit events keeps launches fair and auditable while your staking arc remains unaffected by sale congestion.
 
-## Design principles
+Most launches run presale (allowlist) followed by public mint. You'll encode per‑wallet caps, prices, and timings, and optionally add Merkle proofs for eligibility. You'll keep supply boundaries firm and avoid loops that risk out‑of‑gas in hot mints.
 
-- Separate config from logic; emit events on phase changes
-- Enforce per‑wallet caps and max supply at the contract boundary
-- Use Merkle proofs for allowlists; avoid storing large lists on‑chain
+By the end, you'll have a phase model that scales to thousands of minters without breaking, keeps pricing transparent, and prevents front‑running or cap manipulation—just as your staking contract enforces deposit limits and time‑locks without looping over all users.
 
-## Try it in code
+## Conceptual foundations
+
+### Phase state machine
+
+- **Definition**: An enum or flag set representing mint stages (Closed, Presale, Public).
+- **When to use**: Always—explicit state prevents accidental mints and makes phase transitions auditable.
+- **Practice**: Emit events on every phase change; index them for frontend dashboards.
+
+### Allowlists and Merkle proofs
+
+- **Definition**: A cryptographic commitment (Merkle root) to a list of eligible addresses; proofs verify membership without storing the full list on‑chain.
+- **When to use**: Presale or whitelist phases with hundreds or thousands of addresses.
+- **Gas savings**: O(log n) verification vs O(n) storage; proofs are ~32 bytes per level.
+- **Actionable tip**: Generate the tree off‑chain; publish the root on‑chain; users submit proofs with their mint calls.
+
+### Per‑wallet caps and global supply
+
+- **Definition**: Limits on how many tokens one address can mint (per‑wallet cap) and total collection size (max supply).
+- **When to use**: Always—caps prevent whale dominance and ensure fair distribution.
+- **Implementation**: Use a mapping for per‑wallet tracking; check global supply before incrementing.
+
+### Pricing and payment validation
+
+- **Definition**: Validate exact payment (ETH or ERC20) before minting; revert on under/overpayment.
+- **When to use**: Any paid mint; free mints skip this but still need phase and cap checks.
+- **CEI reminder**: Check payment → update state → mint (external call to ERC721).
+
+### Time‑based phase transitions
+
+- **Definition**: Automatically enforce phase changes based on block timestamps or admin triggers.
+- **When to use**: If you want trustless transitions (e.g., presale ends at block X); otherwise, admin‑triggered is simpler.
+- **Trade‑off**: Timestamp checks add gas; admin triggers require trust but offer flexibility.
+
+### Idempotency and reentrancy
+
+- **Definition**: Ensure repeated calls with the same inputs don't break state; guard against reentrancy in mint callbacks.
+- **When to use**: Always—use `ReentrancyGuard` on mint functions; check phase/caps before effects.
+- **Arc tie‑in**: Just as staking deposits update balances before transferring tokens (CEI), mints update supply before calling `_safeMint`.
+
+## Guided code walk‑throughs
 
 ### 1) Phase config + allowlist sketch
 
@@ -52,10 +89,62 @@ contract Phases {
 
 Takeaway: keep phase changes explicit and indexable; proofs compress allowlists efficiently.
 
+### 2) Supply guard + per‑wallet cap (no loops)
+
+Add a simple guard for max supply and cap minted tokens per wallet without iterating over buyers.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+error PhaseClosed();
+error ExceedsCap(uint256 requested, uint256 remaining);
+error ExceedsSupply(uint256 requested, uint256 remaining);
+
+contract Caps {
+    uint256 public totalSupply;
+    uint256 public immutable MAX_SUPPLY = 7777;
+    mapping(address => uint256) public minted;
+
+    function _mintCheck(address to, uint256 qty, uint256 capPerWallet) internal {
+        if (qty == 0) revert("Zero");
+        if (totalSupply + qty > MAX_SUPPLY) revert ExceedsSupply(qty, MAX_SUPPLY - totalSupply);
+        uint256 mintedSoFar = minted[to];
+        if (mintedSoFar + qty > capPerWallet) revert ExceedsCap(qty, capPerWallet - mintedSoFar);
+        minted[to] = mintedSoFar + qty; // effects before interactions
+        totalSupply += qty;
+    }
+}
+```
+
+Takeaway: enforce supply and per‑wallet limits with O(1) checks to stay gas‑predictable in hot mints.
+
+### 3) Price checks and CEI
+
+If using ETH mints, validate price and follow CEI; for ERC20, use `SafeERC20` and pull‑based claims.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+error WrongValue(uint256 sent, uint256 expected);
+
+contract PriceGuard {
+    function _checkPrice(uint256 unitPrice, uint256 qty) internal view {
+        uint256 expected = unitPrice * qty;
+        if (msg.value != expected) revert WrongValue(msg.value, expected);
+    }
+}
+```
+
+Takeaway: validate exact payment up front; keep effects before any external calls for safety.
+
 ## Practice and reflection
 
 - Define your phase timeline and event schema
 - Decide per‑wallet caps and how you’ll enforce them in tests
+- Specify payment handling (ETH vs ERC20) and where CEI applies
+- Decide how you’ll publish allowlist Merkle root rotation plans (if any)
 
 {/* Timeline Builder */}
 <TimelineBuilder events={[
@@ -64,12 +153,76 @@ Takeaway: keep phase changes explicit and indexable; proofs compress allowlists 
   {"id":"p3","text":"Open public mint","correctPosition":2}
 ]}/>
 
-## Pitfalls and tips
+## Security and pitfalls
 
-- Don’t reveal and change phases in the same tx unless you intend to; keep actions auditable
-- Avoid per‑tx global loops; enforce limits per wallet with a small mapping
+Multi‑phase mints touch money, access control, and fairness. Follow these patterns to avoid exploits and launch failures.
+
+### Unbounded loops in hot mints
+
+**Danger**: Looping over all minters or tokens in a mint transaction risks out‑of‑gas failures when the collection is popular.
+
+**Bad**:
+```solidity
+function mint() external {
+    for (uint256 i = 0; i < allMinters.length; i++) {
+        // check or update state
+    }
+}
+```
+
+**Good**:
+```solidity
+function mint(uint256 qty) external {
+    uint256 mintedSoFar = minted[msg.sender];
+    require(mintedSoFar + qty <= maxPerWallet, "Cap exceeded");
+    minted[msg.sender] = mintedSoFar + qty; // O(1)
+}
+```
+
+**Rule**: Use per‑wallet mappings and O(1) checks; never iterate over unbounded arrays in mint paths.
+
+### Price manipulation via reentrancy
+
+**Danger**: If mint calls back to the caller (e.g., `_safeMint`), the caller could re‑enter and mint at stale prices or phases.
+
+**Rule**: Use `ReentrancyGuard` on all mint functions; follow CEI (check price → update supply → mint).
+
+### Merkle proof reuse across phases
+
+**Danger**: Reusing the same Merkle root for presale and public phases lets presale users mint again in public without new proofs.
+
+**Rule**: Rotate Merkle roots per phase or track used proofs; emit events when roots change.
+
+### Missing phase transition events
+
+**Danger**: Silent phase changes confuse frontends and indexers; users mint in the wrong phase or miss opportunities.
+
+**Rule**: Emit `PhaseChanged(Phase newPhase)` on every transition; index events for dashboards.
+
+### Overpayment acceptance
+
+**Danger**: Accepting `msg.value > expected` without refunding lets users accidentally overpay; accepting less is an exploit.
+
+**Rule**: Require exact payment: `if (msg.value != expected) revert WrongValue(msg.value, expected);`
+
+## Security checklist
+
+Before shipping multi‑phase mints:
+
+- [ ] **Phase state**: Enum or flags with explicit transitions; emit events on changes
+- [ ] **Merkle proofs**: Root stored on‑chain; proofs verified in presale; rotate roots per phase
+- [ ] **Per‑wallet caps**: Mapping tracks minted per address; O(1) checks
+- [ ] **Global supply**: Check `totalSupply + qty <= MAX_SUPPLY` before minting
+- [ ] **Exact payment**: Revert if `msg.value != expected`; no overpayment acceptance
+- [ ] **CEI discipline**: Check phase/caps → update state → mint (external call)
+- [ ] **ReentrancyGuard**: Applied to all mint functions
+- [ ] **No unbounded loops**: Never iterate over all minters or tokens in a tx
+- [ ] **Event logging**: Emit `PhaseChanged`, `Minted(address, qty)` for indexers
+- [ ] **Admin access**: Phase and config updates restricted to `onlyOwner` or role
+- [ ] **Testing**: Unit tests for phase boundaries, cap enforcement, proof verification
+- [ ] **Gas profiling**: Measure mint gas at max supply to ensure it stays under block limit
 
 ## Wrap‑up
 
-You can now configure presale and public phases with caps and proofs. In the practical module, we’ll stitch these pieces into a launch‑ready collection.
+You can now configure presale and public phases with caps and proofs. In the practical module, we'll stitch these pieces into a launch‑ready collection.
 

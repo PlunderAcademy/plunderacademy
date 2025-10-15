@@ -4,13 +4,43 @@ module: staking-concepts-time-logic
 number: 2.4.1
 title: Staking Contract Architecture and Patterns
 objective: >-
-  Assemble a modular staking system with clear boundaries (vault, policy, distributor) that is testable, upgrade‑aware, and integration‑friendly.
+  Understand unified vs modular staking architectures, learning when to use each pattern and how modular boundaries (vault, policy, distributor) enable scaling and upgrades.
 slug: staking-architecture
 ---
 
-## Where this fits
+## Two Approaches to Staking Architecture
 
-Architecture is the difference between one‑off hacks and maintainable systems. By separating storage, reward policy, and distribution, you make each concern small, swappable, and easy to audit.
+### Understanding Your Options
+
+**Staking contracts can be built two ways:**
+
+🎯 **Unified Contract (What We'll Build in Module 2.5):**
+- Single contract handles deposits, rewards, and withdrawals
+- All logic in one place, easier to understand and audit
+- Perfect for learning fundamentals and most production use cases
+- Examples: Many successful DeFi protocols use this pattern
+
+🏗️ **Modular Architecture (Advanced Pattern - This Lesson):**
+- Separate contracts for vault, reward policy, and distribution
+- Each module is swappable and independently upgradeable
+- Needed for very large protocols with evolving requirements
+- More complexity, but scales better for teams
+
+**Which should you use?**
+- **Starting out?** → Unified contract (simpler, proven, sufficient)
+- **Large protocol with changing requirements?** → Consider modular
+- **Team of 5+ developers?** → Modular helps separate concerns
+- **Solo or small team?** → Unified is likely better
+
+> 💡 **Learning Path:** In Module 2.5's practical exercise, we'll implement a unified staking contract to master the fundamentals. This lesson teaches the modular pattern as advanced knowledge—patterns you'll grow into as your protocols scale. Both approaches are valid and widely used in production.
+
+## Where This Fits
+
+Architecture is the difference between one‑off hacks and maintainable systems. By understanding both unified and modular patterns, you can choose the right approach for your scale and team.
+
+Think of a modular staking system like a harbor with distinct piers: one pier for ships to dock and store cargo (the vault and positions), one for calculating docking fees based on time and ship size (reward policy), and one for paying out fees to crews (distributor). Clear piers mean fewer collisions, simpler inspections, and smoother upgrades as traffic grows.
+
+In this lesson you'll learn modular boundaries that enable testing, upgrades, and integrations at scale. You'll see how stable events, interfaces, and pull‑based reward flows turn a staking system into a predictable platform others can build on. Then in Module 2.5, you'll apply these principles to build a production-ready unified contract.
 
 ## Design principles
 
@@ -19,9 +49,37 @@ Architecture is the difference between one‑off hacks and maintainable systems.
 - **Evented surfaces**: Emit stable events for accrual and claims
 - **Upgrade awareness**: Keep storage stable; swap modules via interfaces
 
+## Conceptual foundations
+
+### Core owns state; modules compute or move value
+
+The core contract stores positions and exposes the public API. The policy contract computes rewards given amount and time; the distributor moves tokens and emits distribution events. Keeping storage and authority in the core prevents accidental state drift across modules.
+
+### Interfaces decouple implementations
+
+Use thin interfaces (`IRewardPolicy`, `IRewardDistributor`) so you can swap implementations without redeploying or migrating storage. This is upgrade‑aware design: storage remains in one place, logic is replaceable by pointing to a new module address that satisfies the same interface.
+
+### Event design is a public contract
+
+Stable, well‑named events are how indexers and dashboards integrate. Treat event parameters as part of your API surface. Include `indexed` subjects like `user`, `positionId`, and capture enough context for analytics without leaking sensitive data.
+
+### Pull > push for reward distribution
+
+Favor pull‑based claims where users call `claim()` to receive their rewards. This isolates failures, simplifies accounting, and reduces gas spikes compared to pushing to many recipients. Distributors can still emit rich events so off‑chain systems stay current.
+
+### Minimal, explicit admin controls
+
+Administrative controls should be narrowly scoped: setting module addresses, adjusting policy parameters through the policy contract, and pausing only if essential. Prefer role‑based access with clear events for changes.
+
+### Storage stability first
+
+Plan data structures to survive future module swaps. Avoid packing fields you expect to grow; reserve space for future variables (when using upgradeable proxies). In non‑upgradeable cores, still design for migration—emit enough events to snapshot state if needed.
+
 ## Snippets and examples
 
-### 1) Define clean module boundaries
+These examples show how to compose a modular staking system while keeping the core small and the boundaries explicit.
+
+### 1) Define clean module boundaries (core + interfaces)
 
 Keep the core small; depend on interfaces for policy and distributor.
 
@@ -47,7 +105,7 @@ contract StakingCore {
 
 Takeaway: core owns state; modules plug in behind interfaces.
 
-### 2) Compose flows with explicit events
+### 2) Compose flows with explicit events (analytics‑friendly)
 
 Stable events make off‑chain consumers reliable and audits simpler.
 
@@ -63,10 +121,129 @@ contract EventsSketch {
 
 Takeaway: mirror consequential state changes with `indexed` subjects.
 
+### 3) StakingVault deposit/withdraw (CEI + SafeERC20)
+
+Vault manages user balances and emits stable events. Reward accounting is delegated to the policy; token movement uses SafeERC20.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract StakingVault is ReentrancyGuard, Ownable {
+    using SafeERC20 for IERC20;
+    IERC20 public immutable stakingToken;
+    event Deposited(address indexed user, uint128 amount);
+    event Withdrawn(address indexed user, uint128 amount);
+
+    mapping(address => uint128) public balanceOf;
+
+    constructor(address token, address initialOwner) Ownable(initialOwner) {
+        stakingToken = IERC20(token);
+    }
+
+    function deposit(uint128 amount) external nonReentrant {
+        require(amount > 0, "amount=0"); // custom errors in full build
+        // Checks
+        // Effects
+        balanceOf[msg.sender] += amount;
+        // Interactions
+        stakingToken.safeTransferFrom(msg.sender, address(this), amount);
+        emit Deposited(msg.sender, amount);
+    }
+
+    function withdraw(uint128 amount) external nonReentrant {
+        require(amount > 0 && amount <= balanceOf[msg.sender], "bad amount");
+        balanceOf[msg.sender] -= amount;
+        stakingToken.safeTransfer(msg.sender, amount);
+        emit Withdrawn(msg.sender, amount);
+    }
+}
+```
+
+Takeaway: core state changes are local and evented; token transfers are safe and last.
+
+### 4) RewardDistributor (pull‑based claims)
+
+Users call `claim()` to receive rewards computed by the policy; distributor moves tokens and emits a single event surface.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+interface IPolicy {
+    function pending(address user) external view returns (uint128);
+}
+
+contract RewardDistributor {
+    using SafeERC20 for IERC20;
+    IERC20 public immutable rewardToken;
+    IPolicy public policy;
+    event RewardPaid(address indexed user, uint128 amount);
+
+    constructor(address token, IPolicy p) { rewardToken = IERC20(token); policy = p; }
+
+    function claim() external {
+        uint128 amt = policy.pending(msg.sender);
+        if (amt == 0) return;
+        rewardToken.safeTransfer(msg.sender, amt);
+        emit RewardPaid(msg.sender, amt);
+    }
+}
+```
+
+Takeaway: claims are isolated; failures don’t block others; events stay consistent.
+
+### (Optional) Architecture diagram
+
+The following diagram shows the flow between `StakingVault` (state), `RewardPolicy` (compute), and `RewardDistributor` (transfer). Keep interfaces stable to swap modules without migrating state.
+
+<svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      {`.box { fill: var(--background); stroke: var(--border); stroke-width: 2; rx: 8; }
+        .label { fill: var(--foreground); font-size: 12px; font-family: ui-monospace, monospace; }
+        .arrow { stroke: var(--foreground); stroke-width: 2; marker-end: url(#arr); }`}
+    </style>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" style={{fill: 'var(--foreground)'}} />
+    </marker>
+  </defs>
+  {/* Boxes */}
+  <rect className="box" x="40" y="40" width="200" height="70" />
+  <text className="label" x="140" y="80" textAnchor="middle">StakingVault</text>
+  <text className="label" x="140" y="96" textAnchor="middle">positions&#123;amount,since&#125;</text>
+
+  <rect className="box" x="280" y="40" width="180" height="70" />
+  <text className="label" x="370" y="76" textAnchor="middle">RewardPolicy</text>
+  <text className="label" x="370" y="92" textAnchor="middle">compute(amount, dt) → reward</text>
+
+  <rect className="box" x="500" y="40" width="180" height="70" />
+  <text className="label" x="590" y="76" textAnchor="middle">RewardDistributor</text>
+  <text className="label" x="590" y="92" textAnchor="middle">safeTransfer + events</text>
+
+  {/* Arrows */}
+  <line x1="240" y1="75" x2="280" y2="75" className="arrow" />
+  <line x1="460" y1="75" x2="500" y2="75" className="arrow" />
+  <line x1="590" y1="110" x2="590" y2="200" className="arrow" />
+  <line x1="590" y1="200" x2="140" y2="200" className="arrow" />
+  <text className="label" x="365" y="195" textAnchor="middle">claim() → tokens</text>
+</svg>
+
 ## Practice and reflection
 
-- Sketch a diagram showing `StakingCore` with `IRewardPolicy` and `IRewardDistributor`
+- Sketch a diagram showing `StakingVault` → `RewardPolicy` → `RewardDistributor` data flow
 - List which events a subgraph would listen to for a staking dashboard
+- Write an interface for `IRewardPolicy` that returns pending rewards and APR
+- Propose an event schema for `PositionOpened` and `PositionClosed` with `indexed` fields
+- Explain how you would swap the policy without migrating storage
 
 {/* Concept Matching */}
 <ConceptMatching pairs={[
@@ -75,7 +252,96 @@ Takeaway: mirror consequential state changes with `indexed` subjects.
   {"conceptId":"dist","definitionId":"def-dist","concept":"reward distributor","definition":"Transfers rewards to users with events","category":"arch"}
 ]}/>
 
+## Security and pitfalls
+
+### Event drift breaks integrations
+
+**Danger**: Renaming or re‑ordering event fields silently breaks indexers.
+
+**Bad**:
+```solidity
+event RewardPaid(uint128 amount, address user); // user not indexed, order flipped
+```
+
+**Good**:
+```solidity
+event RewardPaid(address indexed user, uint128 amount);
+```
+
+**Rule**: Treat events as public contracts; avoid churn after launch.
+
+### Pushing rewards increases blast radius
+
+**Danger**: Looping over users to push rewards can OOG and block progress.
+
+**Bad**:
+```solidity
+function distributeAll(address[] memory users) external {
+    for (uint256 i; i < users.length; i++) { /* transfer */ }
+}
+```
+
+**Good**:
+```solidity
+function claim() external { /* isolated transfer */ }
+```
+
+**Rule**: Prefer pull‑based claims; batch only off‑chain.
+
+### Entangled storage across modules
+
+**Danger**: Letting a policy write user state causes coupling and migration pain.
+
+**Bad**:
+```solidity
+// policy mutates user balances
+mapping(address => uint128) public balanceOf;
+```
+
+**Good**:
+```solidity
+// policy is view‑only; core owns storage
+function pending(address user) external view returns (uint128);
+```
+
+**Rule**: Core owns state; modules are pure/view or controlled by core.
+
+### Unscoped admin powers
+
+**Danger**: A single `onlyOwner` that can flip everything invites mistakes.
+
+**Bad**:
+```solidity
+function setAnything(address a, address b, uint256 x) external onlyOwner {}
+```
+
+**Good**:
+```solidity
+// narrow, evented changes
+event PolicyUpdated(address indexed oldP, address indexed newP);
+function setPolicy(address newP) external onlyOwner { emit PolicyUpdated(address(policy), newP); policy = IRewardPolicy(newP); }
+```
+
+**Rule**: Keep admin actions minimal, explicit, and evented.
+
+## Security checklist
+
+Before shipping architecture:
+
+- [ ] **Core owns state**: No module writes user storage directly
+- [ ] **Stable events**: `indexed` subjects, names and ordering locked
+- [ ] **Pull claims**: No on‑chain loops pushing to many users
+- [ ] **Interfaces only**: Modules referenced via thin interfaces
+- [ ] **CEI discipline**: Checks → Effects → Interactions in value flows
+- [ ] **SafeERC20**: All token transfers use `safeTransfer*`
+- [ ] **Reentrancy guarded**: `nonReentrant` on deposit/withdraw/claim paths
+- [ ] **Scoped admin**: Only necessary setters; all changes emit events
+- [ ] **Upgradeable awareness**: Storage planned; modules swappable without migration
+- [ ] **Observability**: Events cover accruals, claims, policy swaps
+
 ## Wrap‑up
 
-By drawing clear lines between core, policy, and distributor, you get a system that’s easier to test, swap, and scale. Next we’ll implement time‑based logic for accruals and locks.
+By drawing clear lines between core, policy, and distributor, you get a system that’s easier to test, swap, and scale. You now have a blueprint for a modular staking system that’s predictable for indexers, safe to upgrade, and friendly to downstream integrations.
+
+Next up, we’ll layer in time‑based logic—accurate accrual windows, locks, and vesting—so that your policy can compute rewards deterministically and your vault can enforce predictable exits. In Module 5, you’ll assemble these pieces into a complete, deployable staking contract and test suite (Zilliqa deployment considerations will be covered there).
 
