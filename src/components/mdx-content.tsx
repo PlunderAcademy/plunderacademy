@@ -82,6 +82,25 @@ const components = {
   img: (props: React.ComponentPropsWithoutRef<'img'>) => (
     <img className="rounded-lg my-6 max-w-full" alt="" {...props} />
   ),
+  // Table components for proper styling
+  table: (props: React.ComponentPropsWithoutRef<'table'>) => (
+    <div className="my-6 overflow-x-auto">
+      <table className="w-full border-collapse border border-border" {...props} />
+    </div>
+  ),
+  thead: (props: React.ComponentPropsWithoutRef<'thead'>) => (
+    <thead className="bg-muted" {...props} />
+  ),
+  tbody: (props: React.ComponentPropsWithoutRef<'tbody'>) => <tbody {...props} />,
+  tr: (props: React.ComponentPropsWithoutRef<'tr'>) => (
+    <tr className="border-b border-border" {...props} />
+  ),
+  th: (props: React.ComponentPropsWithoutRef<'th'>) => (
+    <th className="px-4 py-2 text-left font-semibold" {...props} />
+  ),
+  td: (props: React.ComponentPropsWithoutRef<'td'>) => (
+    <td className="px-4 py-2" {...props} />
+  ),
   // Interactive learning components
   WordJumble,
   ConceptMatching,

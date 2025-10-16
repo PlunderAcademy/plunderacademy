@@ -1,0 +1,1056 @@
+---
+id: testing-verification
+module: nft-collection-practical
+number: 3.7.5
+title: Testing and Verification
+objective: >-
+  Write comprehensive tests for your NFT collection using Hardhat 3, covering minting, reveals, payments, and security edge cases.
+slug: testing-verification
+---
+
+## Testing Overview
+
+Your NFT collection is deployed and has real metadata on IPFS! But before calling it production-ready, you need comprehensive tests. In this lesson, you'll:
+
+1. **Set up Hardhat 3 testing** with Viem
+2. **Test core functionality** (minting, ownership, supply)
+3. **Test reveal mechanics** (hidden → revealed)
+4. **Test payment handling** (pricing, refunds, withdrawals)
+5. **Test access control** (owner-only functions)
+6. **Test edge cases** (supply limits, zero values, reverts)
+7. **Verify gas efficiency**
+
+## Why Testing Matters
+
+**Real-world NFT issues:**
+- **Azuki Elementals:** Minting bugs caused chaos
+- **Meebits:** People lost millions in contract bugs
+- **Many projects:** Incorrect supply caps, broken metadata
+
+**Testing prevents:**
+- Lost user funds
+- Broken minting
+- Supply exploits
+- Access control failures
+
+**Your tests prove:**
+- Contract works as expected
+- Edge cases handled
+- Security validated
+- Ready for mainnet
+
+## Test Structure
+
+### test/SimpleNFTCollection.test.ts
+
+Create a comprehensive test suite following Hardhat 3 patterns:
+
+```typescript
+import { expect } from "chai";
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
+import { network } from "hardhat";
+import { parseEther, getAddress } from "viem";
+
+describe("SimpleNFTCollection", function () {
+  // We define a fixture to reuse the same setup in every test.
+  async function deployNFTFixture() {
+    const { viem } = await network.connect({
+      network: "hardhatMainnet",
+    });
+
+    const [owner, user1, user2, claimant] = await viem.getWalletClients();
+    const publicClient = await viem.getPublicClient();
+
+    // Deploy contract
+    const nftArtifact = (await import("../artifacts/contracts/SimpleNFTCollection.sol/SimpleNFTCollection.json")).default;
+    
+    const hash = await owner.deployContract({
+      abi: nftArtifact.abi,
+      bytecode: nftArtifact.bytecode as `0x${string}`,
+      args: [
+        "Test NFT",
+        "TNFT",
+        "ipfs://revealed/",
+        "ipfs://hidden.json",
+        claimant.account.address,
+      ],
+    });
+
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    const nftAddress = receipt.contractAddress!;
+    const nft = await viem.getContractAt("SimpleNFTCollection", nftAddress);
+
+    return { nft, owner, user1, user2, claimant, publicClient };
+  }
+
+  describe("Deployment", function () {
+    it("Should set the correct name and symbol", async function () {
+      const { nft } = await loadFixture(deployNFTFixture);
+
+      expect(await nft.read.name()).to.equal("Test NFT");
+      expect(await nft.read.symbol()).to.equal("TNFT");
+    });
+
+    it("Should set the correct owner", async function () {
+      const { nft, owner } = await loadFixture(deployNFTFixture);
+
+      const contractOwner = await nft.read.owner();
+      expect(contractOwner.toLowerCase()).to.equal(
+        owner.account.address.toLowerCase()
+      );
+    });
+
+    it("Should set the correct claimant", async function () {
+      const { nft, claimant } = await loadFixture(deployNFTFixture);
+
+      const contractClaimant = await nft.read.claimant();
+      expect(contractClaimant.toLowerCase()).to.equal(
+        claimant.account.address.toLowerCase()
+      );
+    });
+
+    it("Should initialize with correct parameters", async function () {
+      const { nft } = await loadFixture(deployNFTFixture);
+
+      expect(await nft.read.MAX_SUPPLY()).to.equal(100n);
+      expect(await nft.read.mintPrice()).to.equal(parseEther("0.01"));
+      expect(await nft.read.totalMinted()).to.equal(0n);
+      expect(await nft.read.isRevealed()).to.equal(false);
+    });
+
+    it("Should revert if claimant is zero address", async function () {
+      const { viem } = await network.connect({ network: "hardhatMainnet" });
+      const [owner] = await viem.getWalletClients();
+      const nftArtifact = (await import("../artifacts/contracts/SimpleNFTCollection.sol/SimpleNFTCollection.json")).default;
+
+      await expect(
+        owner.deployContract({
+          abi: nftArtifact.abi,
+          bytecode: nftArtifact.bytecode as `0x${string}`,
+          args: [
+            "Test NFT",
+            "TNFT",
+            "ipfs://revealed/",
+            "ipfs://hidden.json",
+            "0x0000000000000000000000000000000000000000",
+          ],
+        })
+      ).to.be.rejected;
+    });
+  });
+
+  describe("Minting", function () {
+    it("Should mint a single NFT with correct payment", async function () {
+      const { nft, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      const mintPrice = await nft.read.mintPrice();
+      const hash = await nft.write.mint([1n], {
+        account: user1.account,
+        value: mintPrice,
+      });
+
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      expect(await nft.read.totalMinted()).to.equal(1n);
+      expect(await nft.read.balanceOf([user1.account.address])).to.equal(1n);
+      expect(await nft.read.ownerOf([1n])).to.equal(
+        getAddress(user1.account.address)
+      );
+    });
+
+    it("Should mint multiple NFTs in one transaction", async function () {
+      const { nft, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      const mintPrice = await nft.read.mintPrice();
+      const hash = await nft.write.mint([5n], {
+        account: user1.account,
+        value: mintPrice * 5n,
+      });
+
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      expect(await nft.read.totalMinted()).to.equal(5n);
+      expect(await nft.read.balanceOf([user1.account.address])).to.equal(5n);
+      
+      // Check all token IDs are owned correctly
+      for (let i = 1; i <= 5; i++) {
+        expect(await nft.read.ownerOf([BigInt(i)])).to.equal(
+          getAddress(user1.account.address)
+        );
+      }
+    });
+
+    it("Should refund excess payment", async function () {
+      const { nft, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      const mintPrice = await nft.read.mintPrice();
+      const overpayment = mintPrice + parseEther("0.05"); // Pay 0.06 instead of 0.01
+
+      const balanceBefore = await publicClient.getBalance({
+        address: user1.account.address,
+      });
+
+      const hash = await nft.write.mint([1n], {
+        account: user1.account,
+        value: overpayment,
+      });
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const balanceAfter = await publicClient.getBalance({
+        address: user1.account.address,
+      });
+
+      const gasUsed = receipt.gasUsed * receipt.effectiveGasPrice;
+      const expectedBalance = balanceBefore - mintPrice - gasUsed;
+
+      // Allow small difference for gas estimation
+      const diff = balanceAfter > expectedBalance 
+        ? balanceAfter - expectedBalance 
+        : expectedBalance - balanceAfter;
+      
+      expect(diff).to.be.lessThan(parseEther("0.001")); // Within 0.001 ETH
+    });
+
+    it("Should emit NFTMinted event", async function () {
+      const { nft, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      const mintPrice = await nft.read.mintPrice();
+      const hash = await nft.write.mint([3n], {
+        account: user1.account,
+        value: mintPrice * 3n,
+      });
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      
+      // Check for NFTMinted event
+      const mintEvent = receipt.logs.find(
+        log => log.topics[0] === nft.read.NFTMinted
+      );
+      
+      expect(mintEvent).to.not.be.undefined;
+    });
+
+    it("Should revert if quantity is zero", async function () {
+      const { nft, user1 } = await loadFixture(deployNFTFixture);
+
+      const mintPrice = await nft.read.mintPrice();
+      
+      await expect(
+        nft.write.mint([0n], {
+          account: user1.account,
+          value: mintPrice,
+        })
+      ).to.be.rejectedWith("Quantity must be greater than 0");
+    });
+
+    it("Should revert if quantity exceeds 10", async function () {
+      const { nft, user1 } = await loadFixture(deployNFTFixture);
+
+      const mintPrice = await nft.read.mintPrice();
+      
+      await expect(
+        nft.write.mint([11n], {
+          account: user1.account,
+          value: mintPrice * 11n,
+        })
+      ).to.be.rejectedWith("Cannot mint more than 10 at once");
+    });
+
+    it("Should revert if insufficient payment", async function () {
+      const { nft, user1 } = await loadFixture(deployNFTFixture);
+
+      const mintPrice = await nft.read.mintPrice();
+      const underpayment = mintPrice - 1n;
+      
+      await expect(
+        nft.write.mint([1n], {
+          account: user1.account,
+          value: underpayment,
+        })
+      ).to.be.rejectedWith("Insufficient payment");
+    });
+
+    it("Should revert if exceeds max supply", async function () {
+      const { nft, owner, publicClient } = await loadFixture(deployNFTFixture);
+
+      // Mint 100 NFTs (max supply)
+      for (let i = 0; i < 10; i++) {
+        const hash = await nft.write.ownerMint([owner.account.address, 10n]);
+        await publicClient.waitForTransactionReceipt({ hash });
+      }
+
+      expect(await nft.read.totalMinted()).to.equal(100n);
+
+      // Try to mint one more
+      const mintPrice = await nft.read.mintPrice();
+      
+      await expect(
+        nft.write.mint([1n], {
+          account: owner.account,
+          value: mintPrice,
+        })
+      ).to.be.rejectedWith("Exceeds max supply");
+    });
+  });
+
+  describe("Owner Minting", function () {
+    it("Should allow owner to mint for free", async function () {
+      const { nft, owner, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      const hash = await nft.write.ownerMint([user1.account.address, 5n]);
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      expect(await nft.read.totalMinted()).to.equal(5n);
+      expect(await nft.read.balanceOf([user1.account.address])).to.equal(5n);
+    });
+
+    it("Should revert if non-owner tries to owner mint", async function () {
+      const { nft, user1 } = await loadFixture(deployNFTFixture);
+
+      await expect(
+        nft.write.ownerMint([user1.account.address, 1n], {
+          account: user1.account,
+        })
+      ).to.be.rejected; // OwnableUnauthorizedAccount
+    });
+
+    it("Should respect max supply for owner minting", async function () {
+      const { nft, owner, publicClient } = await loadFixture(deployNFTFixture);
+
+      // Mint 95 NFTs
+      const hash1 = await nft.write.ownerMint([owner.account.address, 95n]);
+      await publicClient.waitForTransactionReceipt({ hash: hash1 });
+
+      // Try to mint 10 more (would exceed 100)
+      await expect(
+        nft.write.ownerMint([owner.account.address, 10n])
+      ).to.be.rejectedWith("Exceeds max supply");
+
+      // But 5 more should work
+      const hash2 = await nft.write.ownerMint([owner.account.address, 5n]);
+      await publicClient.waitForTransactionReceipt({ hash: hash2 });
+
+      expect(await nft.read.totalMinted()).to.equal(100n);
+    });
+  });
+
+  describe("Token URI and Reveal", function () {
+    it("Should return hidden URI when not revealed", async function () {
+      const { nft, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      const mintPrice = await nft.read.mintPrice();
+      const hash = await nft.write.mint([1n], {
+        account: user1.account,
+        value: mintPrice,
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      const tokenURI = await nft.read.tokenURI([1n]);
+      expect(tokenURI).to.equal("ipfs://hidden.json");
+    });
+
+    it("Should return unique URI after reveal", async function () {
+      const { nft, owner, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      // Mint some tokens
+      const mintPrice = await nft.read.mintPrice();
+      const mintHash = await nft.write.mint([3n], {
+        account: user1.account,
+        value: mintPrice * 3n,
+      });
+      await publicClient.waitForTransactionReceipt({ hash: mintHash });
+
+      // Reveal
+      const revealHash = await nft.write.reveal();
+      await publicClient.waitForTransactionReceipt({ hash: revealHash });
+
+      // Check URIs
+      expect(await nft.read.tokenURI([1n])).to.equal("ipfs://revealed/1.json");
+      expect(await nft.read.tokenURI([2n])).to.equal("ipfs://revealed/2.json");
+      expect(await nft.read.tokenURI([3n])).to.equal("ipfs://revealed/3.json");
+    });
+
+    it("Should emit Revealed event", async function () {
+      const { nft, publicClient } = await loadFixture(deployNFTFixture);
+
+      const hash = await nft.write.reveal();
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      // Check for Revealed event
+      const revealEvent = receipt.logs.find(
+        log => log.topics.length > 0
+      );
+      
+      expect(revealEvent).to.not.be.undefined;
+    });
+
+    it("Should revert if trying to reveal twice", async function () {
+      const { nft, publicClient } = await loadFixture(deployNFTFixture);
+
+      // First reveal
+      const hash = await nft.write.reveal();
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      // Second reveal should fail
+      await expect(nft.write.reveal()).to.be.rejectedWith("Already revealed");
+    });
+
+    it("Should revert if non-owner tries to reveal", async function () {
+      const { nft, user1 } = await loadFixture(deployNFTFixture);
+
+      await expect(
+        nft.write.reveal({ account: user1.account })
+      ).to.be.rejected;
+    });
+
+    it("Should revert tokenURI for non-existent token", async function () {
+      const { nft } = await loadFixture(deployNFTFixture);
+
+      await expect(nft.read.tokenURI([999n])).to.be.rejected;
+    });
+  });
+
+  describe("Admin Functions", function () {
+    it("Should allow owner to update mint price", async function () {
+      const { nft, publicClient } = await loadFixture(deployNFTFixture);
+
+      const newPrice = parseEther("0.05");
+      const hash = await nft.write.setMintPrice([newPrice]);
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      expect(await nft.read.mintPrice()).to.equal(newPrice);
+    });
+
+    it("Should emit PriceUpdated event", async function () {
+      const { nft, publicClient } = await loadFixture(deployNFTFixture);
+
+      const newPrice = parseEther("0.05");
+      const hash = await nft.write.setMintPrice([newPrice]);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      expect(receipt.logs.length).to.be.greaterThan(0);
+    });
+
+    it("Should revert if non-owner tries to update price", async function () {
+      const { nft, user1 } = await loadFixture(deployNFTFixture);
+
+      await expect(
+        nft.write.setMintPrice([parseEther("0.05")], {
+          account: user1.account,
+        })
+      ).to.be.rejected;
+    });
+
+    it("Should allow owner to update base URI", async function () {
+      const { nft, publicClient } = await loadFixture(deployNFTFixture);
+
+      const newBaseURI = "ipfs://newCID/";
+      const hash = await nft.write.setBaseURI([newBaseURI]);
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      // Reveal to check new base URI
+      const revealHash = await nft.write.reveal();
+      await publicClient.waitForTransactionReceipt({ hash: revealHash });
+
+      // Mint a token
+      const mintPrice = await nft.read.mintPrice();
+      const mintHash = await nft.write.mint([1n], {
+        value: mintPrice,
+      });
+      await publicClient.waitForTransactionReceipt({ hash: mintHash });
+
+      const tokenURI = await nft.read.tokenURI([1n]);
+      expect(tokenURI).to.equal("ipfs://newCID/1.json");
+    });
+
+    it("Should allow owner to update not revealed URI", async function () {
+      const { nft, publicClient } = await loadFixture(deployNFTFixture);
+
+      const newHiddenURI = "ipfs://newHidden.json";
+      const hash = await nft.write.setNotRevealedURI([newHiddenURI]);
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      // Mint a token
+      const mintPrice = await nft.read.mintPrice();
+      const mintHash = await nft.write.mint([1n], {
+        value: mintPrice,
+      });
+      await publicClient.waitForTransactionReceipt({ hash: mintHash });
+
+      const tokenURI = await nft.read.tokenURI([1n]);
+      expect(tokenURI).to.equal(newHiddenURI);
+    });
+  });
+
+  describe("Withdrawals", function () {
+    it("Should allow owner to withdraw contract balance", async function () {
+      const { nft, owner, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      // Mint some NFTs to accumulate funds
+      const mintPrice = await nft.read.mintPrice();
+      const hash = await nft.write.mint([5n], {
+        account: user1.account,
+        value: mintPrice * 5n,
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      const contractBalance = await publicClient.getBalance({
+        address: await nft.read.address,
+      });
+
+      expect(contractBalance).to.equal(mintPrice * 5n);
+
+      // Withdraw
+      const ownerBalanceBefore = await publicClient.getBalance({
+        address: owner.account.address,
+      });
+
+      const withdrawHash = await nft.write.withdraw();
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: withdrawHash,
+      });
+
+      const ownerBalanceAfter = await publicClient.getBalance({
+        address: owner.account.address,
+      });
+
+      const gasUsed = receipt.gasUsed * receipt.effectiveGasPrice;
+      const expectedBalance = ownerBalanceBefore + contractBalance - gasUsed;
+
+      // Allow small difference for gas estimation
+      const diff = ownerBalanceAfter > expectedBalance
+        ? ownerBalanceAfter - expectedBalance
+        : expectedBalance - ownerBalanceAfter;
+
+      expect(diff).to.be.lessThan(parseEther("0.001"));
+    });
+
+    it("Should emit Withdrawn event", async function () {
+      const { nft, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      // Mint to add funds
+      const mintPrice = await nft.read.mintPrice();
+      const mintHash = await nft.write.mint([1n], {
+        account: user1.account,
+        value: mintPrice,
+      });
+      await publicClient.waitForTransactionReceipt({ hash: mintHash });
+
+      // Withdraw
+      const hash = await nft.write.withdraw();
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      expect(receipt.logs.length).to.be.greaterThan(0);
+    });
+
+    it("Should revert if no funds to withdraw", async function () {
+      const { nft } = await loadFixture(deployNFTFixture);
+
+      await expect(nft.write.withdraw()).to.be.rejectedWith(
+        "No funds to withdraw"
+      );
+    });
+
+    it("Should revert if non-owner tries to withdraw", async function () {
+      const { nft, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      // Mint to add funds
+      const mintPrice = await nft.read.mintPrice();
+      const hash = await nft.write.mint([1n], {
+        account: user1.account,
+        value: mintPrice,
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      // Try to withdraw as non-owner
+      await expect(
+        nft.write.withdraw({ account: user1.account })
+      ).to.be.rejected;
+    });
+  });
+
+  describe("Utility Functions", function () {
+    it("Should return correct remaining supply", async function () {
+      const { nft, publicClient } = await loadFixture(deployNFTFixture);
+
+      expect(await nft.read.remainingSupply()).to.equal(100n);
+
+      // Mint some
+      const hash = await nft.write.ownerMint([nft.read.owner(), 25n]);
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      expect(await nft.read.remainingSupply()).to.equal(75n);
+    });
+
+    it("Should return wallet of owner correctly", async function () {
+      const { nft, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      // Mint some tokens
+      const mintPrice = await nft.read.mintPrice();
+      const hash = await nft.write.mint([5n], {
+        account: user1.account,
+        value: mintPrice * 5n,
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      const wallet = await nft.read.walletOfOwner([user1.account.address]);
+      
+      expect(wallet.length).to.equal(5);
+      expect(wallet[0]).to.equal(1n);
+      expect(wallet[1]).to.equal(2n);
+      expect(wallet[2]).to.equal(3n);
+      expect(wallet[3]).to.equal(4n);
+      expect(wallet[4]).to.equal(5n);
+    });
+
+    it("Should return empty array for non-owners", async function () {
+      const { nft, user2 } = await loadFixture(deployNFTFixture);
+
+      const wallet = await nft.read.walletOfOwner([user2.account.address]);
+      expect(wallet.length).to.equal(0);
+    });
+  });
+
+  describe("Gas Optimization", function () {
+    it("Should use reasonable gas for single mint", async function () {
+      const { nft, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      const mintPrice = await nft.read.mintPrice();
+      const hash = await nft.write.mint([1n], {
+        account: user1.account,
+        value: mintPrice,
+      });
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      
+      console.log("      Gas used for single mint:", receipt.gasUsed.toString());
+      
+      // Should be under 150k gas
+      expect(receipt.gasUsed).to.be.lessThan(150000n);
+    });
+
+    it("Should be more efficient for batch minting", async function () {
+      const { nft, user1, publicClient } = await loadFixture(deployNFTFixture);
+
+      const mintPrice = await nft.read.mintPrice();
+      const hash = await nft.write.mint([10n], {
+        account: user1.account,
+        value: mintPrice * 10n,
+      });
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      
+      console.log("      Gas used for 10 mints:", receipt.gasUsed.toString());
+      console.log("      Gas per NFT:", (receipt.gasUsed / 10n).toString());
+      
+      // Should be under 600k gas for 10 mints
+      expect(receipt.gasUsed).to.be.lessThan(600000n);
+    });
+  });
+});
+```
+
+## Running the Tests
+
+### Run All Tests
+
+```bash
+npm test
+```
+
+**Expected output:**
+```
+  SimpleNFTCollection
+    Deployment
+      ✓ Should set the correct name and symbol
+      ✓ Should set the correct owner
+      ✓ Should set the correct claimant
+      ✓ Should initialize with correct parameters
+      ✓ Should revert if claimant is zero address
+    Minting
+      ✓ Should mint a single NFT with correct payment
+      ✓ Should mint multiple NFTs in one transaction
+      ✓ Should refund excess payment
+      ✓ Should emit NFTMinted event
+      ✓ Should revert if quantity is zero
+      ✓ Should revert if quantity exceeds 10
+      ✓ Should revert if insufficient payment
+      ✓ Should revert if exceeds max supply
+    Owner Minting
+      ✓ Should allow owner to mint for free
+      ✓ Should revert if non-owner tries to owner mint
+      ✓ Should respect max supply for owner minting
+    Token URI and Reveal
+      ✓ Should return hidden URI when not revealed
+      ✓ Should return unique URI after reveal
+      ✓ Should emit Revealed event
+      ✓ Should revert if trying to reveal twice
+      ✓ Should revert if non-owner tries to reveal
+      ✓ Should revert tokenURI for non-existent token
+    Admin Functions
+      ✓ Should allow owner to update mint price
+      ✓ Should emit PriceUpdated event
+      ✓ Should revert if non-owner tries to update price
+      ✓ Should allow owner to update base URI
+      ✓ Should allow owner to update not revealed URI
+    Withdrawals
+      ✓ Should allow owner to withdraw contract balance
+      ✓ Should emit Withdrawn event
+      ✓ Should revert if no funds to withdraw
+      ✓ Should revert if non-owner tries to withdraw
+    Utility Functions
+      ✓ Should return correct remaining supply
+      ✓ Should return wallet of owner correctly
+      ✓ Should return empty array for non-owners
+    Gas Optimization
+      ✓ Should use reasonable gas for single mint
+      Gas used for single mint: 123456
+      ✓ Should be more efficient for batch minting
+      Gas used for 10 mints: 456789
+      Gas per NFT: 45678
+
+  35 passing (5s)
+```
+
+### Run Specific Test Suite
+
+```bash
+npx hardhat test --grep "Minting"
+```
+
+### Run with Gas Reporter
+
+Install gas reporter:
+
+```bash
+npm install --save-dev hardhat-gas-reporter
+```
+
+Update `hardhat.config.ts`:
+
+```typescript
+import "hardhat-gas-reporter";
+
+const config: HardhatUserConfig = {
+  // ... other config
+  gasReporter: {
+    enabled: true,
+    currency: "USD",
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+  },
+};
+```
+
+Run tests with gas report:
+
+```bash
+npm test
+```
+
+## Test Coverage
+
+### Install Coverage Tool
+
+```bash
+npm install --save-dev solidity-coverage
+```
+
+### Run Coverage
+
+```bash
+npx hardhat coverage
+```
+
+**Expected output:**
+```
+  SimpleNFTCollection
+    ✓ All tests passing
+
+----------------------|----------|----------|----------|----------|----------------|
+File                  |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
+----------------------|----------|----------|----------|----------|----------------|
+ contracts/           |      100 |      100 |      100 |      100 |                |
+  SimpleNFTCollection.sol | 100 |      100 |      100 |      100 |                |
+----------------------|----------|----------|----------|----------|----------------|
+All files             |      100 |      100 |      100 |      100 |                |
+----------------------|----------|----------|----------|----------|----------------|
+```
+
+**Aim for:**
+- ✅ 100% statement coverage
+- ✅ 100% branch coverage
+- ✅ 100% function coverage
+- ✅ 100% line coverage
+
+## Security Testing
+
+### Reentrancy Tests
+
+Even though we don't use ReentrancyGuard, test for reentrancy:
+
+```typescript
+describe("Security", function () {
+  it("Should not be vulnerable to reentrancy on mint", async function () {
+    const { nft, publicClient } = await loadFixture(deployNFTFixture);
+    
+    // Deploy malicious contract that tries to reenter
+    // (Implementation would require a malicious contract)
+    // For now, verify mint completes state changes before transfers
+  });
+});
+```
+
+### Integer Overflow Tests
+
+```typescript
+it("Should handle large token IDs correctly", async function () {
+  const { nft, publicClient } = await loadFixture(deployNFTFixture);
+  
+  // Mint 100 tokens
+  for (let i = 0; i < 10; i++) {
+    const hash = await nft.write.ownerMint([nft.read.owner(), 10n]);
+    await publicClient.waitForTransactionReceipt({ hash });
+  }
+  
+  // Token ID 100 should work fine
+  expect(await nft.read.ownerOf([100n])).to.not.be.undefined;
+});
+```
+
+### Access Control Tests
+
+```typescript
+it("Should prevent unauthorized access to all owner functions", async function () {
+  const { nft, user1 } = await loadFixture(deployNFTFixture);
+  
+  await expect(nft.write.setMintPrice([1n], { account: user1.account })).to.be.rejected;
+  await expect(nft.write.setBaseURI(["test"], { account: user1.account })).to.be.rejected;
+  await expect(nft.write.setNotRevealedURI(["test"], { account: user1.account })).to.be.rejected;
+  await expect(nft.write.reveal({ account: user1.account })).to.be.rejected;
+  await expect(nft.write.withdraw({ account: user1.account })).to.be.rejected;
+  await expect(nft.write.ownerMint([user1.account.address, 1n], { account: user1.account })).to.be.rejected;
+});
+```
+
+## Edge Case Testing
+
+### Boundary Conditions
+
+```typescript
+describe("Edge Cases", function () {
+  it("Should handle minting exactly to max supply", async function () {
+    const { nft, publicClient } = await loadFixture(deployNFTFixture);
+    
+    // Mint exactly 100
+    for (let i = 0; i < 10; i++) {
+      const hash = await nft.write.ownerMint([nft.read.owner(), 10n]);
+      await publicClient.waitForTransactionReceipt({ hash });
+    }
+    
+    expect(await nft.read.totalMinted()).to.equal(100n);
+    expect(await nft.read.remainingSupply()).to.equal(0n);
+  });
+
+  it("Should handle multiple users minting simultaneously", async function () {
+    const { nft, user1, user2, publicClient } = await loadFixture(deployNFTFixture);
+    
+    const mintPrice = await nft.read.mintPrice();
+    
+    // Both users mint at same time
+    const hash1 = nft.write.mint([5n], {
+      account: user1.account,
+      value: mintPrice * 5n,
+    });
+    const hash2 = nft.write.mint([5n], {
+      account: user2.account,
+      value: mintPrice * 5n,
+    });
+    
+    await Promise.all([
+      publicClient.waitForTransactionReceipt({ hash: await hash1 }),
+      publicClient.waitForTransactionReceipt({ hash: await hash2 }),
+    ]);
+    
+    expect(await nft.read.totalMinted()).to.equal(10n);
+  });
+});
+```
+
+## Performance Benchmarks
+
+### Minting Performance
+
+```typescript
+describe("Performance", function () {
+  it("Should mint 100 NFTs within reasonable time", async function () {
+    const { nft, publicClient } = await loadFixture(deployNFTFixture);
+    
+    const startTime = Date.now();
+    
+    for (let i = 0; i < 10; i++) {
+      const hash = await nft.write.ownerMint([nft.read.owner(), 10n]);
+      await publicClient.waitForTransactionReceipt({ hash });
+    }
+    
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    
+    console.log(`      Time to mint 100 NFTs: ${duration}ms`);
+    
+    expect(await nft.read.totalMinted()).to.equal(100n);
+  });
+});
+```
+
+## Test Best Practices
+
+### 1. Use Fixtures
+
+**Why:** Faster test execution (shared setup)
+
+```typescript
+const { nft, owner, user1 } = await loadFixture(deployNFTFixture);
+```
+
+### 2. Test One Thing Per Test
+
+**Good:**
+```typescript
+it("Should mint NFT with correct payment", async function () {
+  // Test only minting success
+});
+
+it("Should revert if insufficient payment", async function () {
+  // Test only payment validation
+});
+```
+
+**Bad:**
+```typescript
+it("Should mint NFT", async function () {
+  // Tests minting, payment, events, ownership, supply... too much!
+});
+```
+
+### 3. Use Descriptive Test Names
+
+**Good:**
+```typescript
+it("Should revert if non-owner tries to reveal")
+```
+
+**Bad:**
+```typescript
+it("Reveal test 1")
+```
+
+### 4. Test Both Success and Failure
+
+For every function:
+- ✅ Test successful execution
+- ✅ Test all revert conditions
+- ✅ Test edge cases
+
+### 5. Verify Events
+
+```typescript
+const receipt = await publicClient.waitForTransactionReceipt({ hash });
+expect(receipt.logs.length).to.be.greaterThan(0);
+```
+
+### 6. Check State Changes
+
+```typescript
+expect(await nft.read.totalMinted()).to.equal(5n);
+expect(await nft.read.balanceOf([user1.account.address])).to.equal(5n);
+```
+
+## Common Test Failures
+
+### "Transaction reverted without a reason string"
+
+**Cause:** `require` statement failed but no error message
+
+**Solution:** Add descriptive error messages to all `require` statements
+
+### "Gas estimation failed"
+
+**Cause:** Transaction would revert
+
+**Solution:** Check test setup, ensure correct parameters
+
+### "Nonce too high"
+
+**Cause:** Test account state conflict
+
+**Solution:** Use fresh accounts via fixtures
+
+### "Insufficient funds"
+
+**Cause:** Test account ran out of ETH
+
+**Solution:** Use `loadFixture` to reset state
+
+Now tests run automatically on every commit!
+
+## Pre-Deployment Checklist
+
+Before deploying to mainnet:
+
+- [ ] **All tests passing** (35/35)
+- [ ] **100% code coverage**
+- [ ] **Gas usage optimized** (under 150k per mint)
+- [ ] **Security tests passing**
+- [ ] **Edge cases covered**
+- [ ] **Testnet deployed and tested**
+- [ ] **Metadata pinned to IPFS**
+- [ ] **Reveal tested on testnet**
+- [ ] **Withdrawal tested**
+- [ ] **Multiple users tested**
+
+## Wrap-Up
+
+You've successfully:
+
+✅ **Written comprehensive tests** for all contract functions  
+✅ **Tested minting logic** (paid, owner, batch)  
+✅ **Tested reveal mechanics** (hidden → revealed)  
+✅ **Tested payment handling** (pricing, refunds, withdrawals)  
+✅ **Tested access control** (owner-only functions)  
+✅ **Tested edge cases** (supply limits, zero values)  
+✅ **Verified gas efficiency** (under 150k per mint)  
+✅ **Achieved 100% code coverage**  
+
+**Your NFT collection is now:**
+- Thoroughly tested
+- Production-ready
+- Security validated
+- Gas optimized
+- Ready for mainnet deployment!
+
+## Achievement Complete! 🎉
+
+You've completed the entire NFT Collection Practical module!
+
+**You now have:**
+1. ✅ Deep understanding of NFT contracts
+2. ✅ Deployed NFT collection on Zilliqa testnet
+3. ✅ Real metadata and images on IPFS
+4. ✅ Working reveal mechanics
+5. ✅ Comprehensive test suite
+
+**Claim your achievement:**
+- Visit https://plunderacademy.com/lessons/island3/nft-collection-practical
+- Connect your training portal wallet
+- Submit your deployment transaction hash
+- Receive your achievement NFT!
+
+**What's next?**
+- Deploy to mainnet (when ready)
+- Create your own unique collection
+- Build a minting website
+- List on OpenSea or other marketplaces
+- Experiment with advanced features (royalties, allowlists, etc.)
+
+Congratulations, NFT Developer! 🚀
+

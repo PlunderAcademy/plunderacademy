@@ -1,0 +1,340 @@
+---
+id: intro-to-nft-contracts
+module: nft-collection-practical
+number: 3.7.1
+title: Introduction to NFT Collection Development
+objective: >-
+  Understand what you'll build in this module and how NFT collections differ from ERC20 tokens and staking contracts.
+slug: intro-to-nft-contracts
+---
+
+## Welcome to NFT Collection Development
+
+Congratulations on making it this far! You've deployed ERC20 tokens, built a sophisticated staking contract with time-based rewards, and mastered testing on Zilliqa testnet. Now it's time to level up: **NFTs**.
+
+In this module, you'll build and deploy a complete NFT collection with:
+- **Fixed supply minting** (100 unique tokens)
+- **Paid minting** with ZIL payments
+- **Reveal mechanics** (mystery box → reveal)
+- **Metadata on IPFS** (decentralized storage)
+- **Owner controls** for pricing and reveals
+- **Achievement verification** via claimant tracking
+
+By the end, you'll have a production-ready NFT collection deployed on Zilliqa testnet and an achievement NFT to prove it.
+
+## What Makes NFTs Different?
+
+You've worked with **ERC20 tokens** (fungible) and **staking contracts** (time-based logic). NFTs introduce **uniqueness and individuality**:
+
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>ERC20</th>
+<th>Staking Contract</th>
+<th>ERC721 (NFT)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Token identity</strong></td>
+<td>All tokens identical</td>
+<td>N/A (not a token)</td>
+<td>Each token unique (tokenId)</td>
+</tr>
+<tr>
+<td><strong>Ownership tracking</strong></td>
+<td>Balance per address</td>
+<td>Deposit items per user</td>
+<td>One owner per tokenId</td>
+</tr>
+<tr>
+<td><strong>Transfer logic</strong></td>
+<td>Amount-based</td>
+<td>Lock/unlock deposits</td>
+<td>Individual token transfer</td>
+</tr>
+<tr>
+<td><strong>Metadata</strong></td>
+<td>Name, symbol only</td>
+<td>N/A</td>
+<td>Rich metadata per token (image, traits)</td>
+</tr>
+<tr>
+<td><strong>Use case</strong></td>
+<td>Currency, utility</td>
+<td>Earning rewards</td>
+<td>Collectibles, art, memberships</td>
+</tr>
+</tbody>
+</table>
+
+**Mental model:**
+- **ERC20**: Like a bank account - you care about *how many* tokens
+- **Staking**: Like a savings account - you care about *when* you deposited
+- **ERC721**: Like a trading card collection - you care about *which specific* tokens
+
+## What You'll Build
+
+### SimpleNFTCollection Contract
+
+A production-ready NFT collection with:
+
+**Core features:**
+- ✅ **100 token supply** (MAX_SUPPLY = 100)
+- ✅ **Paid minting** (0.01 ZIL per NFT, adjustable)
+- ✅ **Batch minting** (mint multiple in one transaction)
+- ✅ **Owner minting** (free mints for giveaways)
+- ✅ **Reveal mechanics** (hidden → revealed metadata)
+- ✅ **IPFS metadata** (decentralized, immutable)
+- ✅ **Withdrawal function** (collect mint payments)
+- ✅ **Claimant tracking** (achievement verification)
+
+**Security features:**
+- ✅ Supply cap enforcement
+- ✅ Owner-only admin functions
+- ✅ Reentrancy protection
+- ✅ Refund excess payments
+- ✅ Safe minting (prevents lost NFTs)
+
+### Project Structure
+
+```
+my-nft-collection/
+├── contracts/
+│   └── SimpleNFTCollection.sol
+├── scripts/
+│   ├── deploy-nft.ts
+│   ├── mint-nft.ts
+│   ├── reveal.ts
+│   ├── interact.ts
+│   └── generate-svgs.js       # Auto-generate 100 SVG images
+├── metadata/
+│   ├── hidden.json
+│   ├── images/
+│   │   ├── shape-001.svg
+│   │   ├── shape-002.svg
+│   │   └── ... (100 total)
+│   └── revealed/
+│       ├── 1.json
+│       ├── 2.json
+│       └── ... (100 total)
+├── test/
+│   └── SimpleNFTCollection.test.ts
+├── hardhat.config.ts
+├── package.json
+└── .env
+```
+
+## Module Roadmap
+
+### Lesson 3.7.1 (This Lesson)
+**Introduction to NFT Contracts**
+- What makes NFTs unique
+- Module overview and prerequisites
+
+### Lesson 3.7.2
+**Understanding the NFT Contract**
+- Line-by-line contract walkthrough
+- ERC721 core concepts (ownerOf, tokenURI, safeTransferFrom)
+- Reveal mechanics explained
+- Claimant integration for achievements
+- Owner controls and security
+
+### Lesson 3.7.3
+**Deployment Setup**
+- Hardhat 3 project setup (same as staking contract)
+- Zilliqa 2.0 configuration
+- Deployment scripts with placeholder URIs
+- Local testing with Hardhat node
+- Zilliqa testnet deployment
+- Achievement claim with transaction hash
+
+### Lesson 3.7.4
+**Metadata and IPFS Setup**
+- Understanding NFT metadata standards
+- Auto-generate 100 SVG images with script
+- Create JSON metadata files
+- Pin to IPFS with Pinata
+- Update contract URIs
+- Test reveal mechanics
+
+### Lesson 3.7.5
+**Testing and Verification**
+- Hardhat 3 testing patterns
+- Minting tests (success and failure)
+- Reveal mechanics tests
+- Payment and withdrawal tests
+- Security edge cases
+- Gas optimization verification
+
+## Prerequisites
+
+Before starting this module, you should have:
+
+✅ **Completed Island 1, Module 5** (ERC20 token deployment)
+- Understanding of Solidity basics
+- Experience with OpenZeppelin contracts
+- Familiarity with contract deployment
+
+✅ **Completed Island 2, Module 5** (Staking contract)
+- Hardhat 3 setup and configuration
+- Zilliqa testnet deployment experience
+- Testing and verification skills
+- Achievement claim process
+
+✅ **Read Island 3, Modules 1-2** (ERC721 fundamentals)
+- ERC721 core concepts
+- Metadata standards
+- Security best practices
+
+✅ **Tools installed:**
+- Node.js 18+ and npm
+- MetaMask with Zilliqa testnet configured
+- Testnet ZIL from faucet
+- Text editor (VS Code recommended)
+
+## Key Concepts to Remember
+
+### From ERC20 (Island 1, Module 5):
+- **OpenZeppelin inheritance** (using battle-tested contracts)
+- **Constructor parameters** (name, symbol, initial values)
+- **Owner controls** (Ownable pattern)
+- **Events** (emit for important state changes)
+
+### From Staking Contract (Island 2, Module 5):
+- **Hardhat 3 with Viem** (new testing patterns)
+- **Zilliqa configuration** (shanghai EVM, specific chain IDs)
+- **Environment variables** (.env for private keys and addresses)
+- **Claimant tracking** (for achievement verification)
+- **Deployment scripts** (automated, verifiable deployment)
+
+### New for NFTs:
+- **Token IDs** (each NFT has a unique ID: 1, 2, 3, ... 100)
+- **Metadata URIs** (IPFS links to JSON describing each NFT)
+- **Reveal mechanics** (hidden placeholder → revealed metadata)
+- **Paid minting** (users send ZIL to mint)
+- **IPFS storage** (decentralized, permanent metadata hosting)
+
+## NFTs vs Your Previous Work
+
+### Similarities to ERC20:
+- Both use OpenZeppelin base contracts
+- Both have supply caps (totalSupply)
+- Both emit Transfer events
+- Both use Ownable for admin controls
+
+### Similarities to Staking:
+- Both accept payments (staking: tokens, NFT: ETH)
+- Both track per-user data (staking: deposits, NFT: owned tokens)
+- Both need claimant integration
+- Both use same Hardhat 3 + Zilliqa setup
+
+### Unique to NFTs:
+- **Individual token tracking** (not balances)
+- **Metadata per token** (images, traits, descriptions)
+- **External storage** (IPFS for metadata/images)
+- **Reveal mechanics** (time-delayed metadata switch)
+- **Marketplace integration** (OpenSea, Rarible, etc.)
+
+## What Success Looks Like
+
+By the end of this module, you will:
+
+✅ **Understand NFT contracts** at a deep level
+- ERC721 standard and why it exists
+- How tokenURI and metadata work
+- Reveal mechanics and IPFS integration
+
+✅ **Deploy a complete NFT collection**
+- 100 unique tokens with generated SVG art
+- Metadata hosted on IPFS
+- Deployed on Zilliqa testnet
+- Verified on block explorer
+
+✅ **Test thoroughly**
+- Comprehensive test suite
+- Edge cases covered
+- Security validated
+- Gas costs optimized
+
+✅ **Claim your achievement**
+- Submit deployment transaction hash
+- Receive achievement NFT
+- Prove your NFT development skills
+
+## Real-World Applications
+
+NFT collections power:
+- **Digital art** (Bored Apes, CryptoPunks, Art Blocks)
+- **Gaming items** (Axie Infinity, Gods Unchained)
+- **Membership passes** (VeeFriends, Proof Collective)
+- **Event tickets** (NFT tickets for concerts, conferences)
+- **Domain names** (ENS, Unstoppable Domains)
+- **Real-world assets** (property deeds, certificates)
+- **Loyalty programs** (Starbucks Odyssey, Nike .SWOOSH)
+
+The skills you learn here apply to all of these use cases.
+
+## Development Philosophy
+
+We follow the same principles as the staking contract:
+
+**1. Security First**
+- Use OpenZeppelin's audited contracts
+- Validate all inputs
+- Prevent reentrancy
+- Cap supply to prevent inflation
+
+**2. User Experience**
+- Clear error messages
+- Refund excess payments
+- Safe minting (prevent lost NFTs)
+- Deterministic metadata
+
+**3. Transparency**
+- Emit events for all state changes
+- Open source code
+- Verifiable on block explorer
+- IPFS for permanent metadata
+
+**4. Production Ready**
+- Tested thoroughly
+- Gas optimized
+- Marketplace compatible
+- Standards compliant
+
+## Common Questions
+
+**Q: Do I need to create 100 unique images manually?**
+A: No! We provide a script that auto-generates 100 colorful SVG shapes. Takes ~5 seconds.
+
+**Q: What if I want to use PNG/JPG instead of SVG?**
+A: You can! Lesson 3.7.4 covers how to upload any image type to IPFS.
+
+**Q: Can I customize the MAX_SUPPLY?**
+A: Yes! Change the constant in the contract and adjust the metadata generation scripts.
+
+**Q: Do I need to pay for IPFS hosting?**
+A: No! We'll use Pinata's free tier (1 GB free, plenty for this collection).
+
+**Q: How much does it cost to deploy on Zilliqa testnet?**
+A: Testnet ZIL is free from the faucet. Deployment costs ~$0 (testnet gas).
+
+**Q: Will this work on Ethereum or other chains?**
+A: Yes! The contract is EVM-compatible. Just change the Hardhat network configuration.
+
+**Q: Can I sell these NFTs?**
+A: These are testnet NFTs for learning. For mainnet, you'd deploy to Zilliqa mainnet.
+
+**Q: What's different from the staking contract?**
+A: Staking accepts ERC20 deposits. NFTs mint unique tokens for ZIL payments. Staking tracks time. NFTs track ownership.
+
+## Ready to Build?
+
+You've got the background. Now let's dive into the contract itself!
+
+**Next lesson:** We'll walk through the `SimpleNFTCollection` contract line-by-line, understanding every function and design decision.
+
+Let's go! 🚀
+

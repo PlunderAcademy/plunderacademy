@@ -6,6 +6,7 @@ export type { InteractiveElementProps, ModuleQuizProps } from "./interactive-ele
 export { TraditionalQuiz } from "./quiz/traditional-quiz";
 export { TokenDeployChallenge } from "./elements/token-deploy-challenge";
 export { StakingDeployChallenge } from "./elements/staking-deploy-challenge";
+export { NftDeployChallenge } from "./elements/nft-deploy-challenge";
 
 // Interactive Elements (Compact Production Versions)
 export { WordJumbleCompact } from "./elements/word-jumble-compact";

@@ -7,6 +7,7 @@ import { QuizMeta, MissionMeta } from "@/lib/mdx";
 import { TraditionalQuiz } from "./quiz/traditional-quiz";
 import { TokenDeployChallenge } from "./elements/token-deploy-challenge";
 import { StakingDeployChallenge } from "./elements/staking-deploy-challenge";
+import { NftDeployChallenge } from "./elements/nft-deploy-challenge";
 import { isTransactionSubmissionModule } from "./shared/utils";
 
 // TODO: These will be added in future milestones
@@ -84,6 +85,14 @@ export function InteractiveElement({
       if (moduleSlug === 'staking-contract-practical') {
         return (
           <StakingDeployChallenge 
+            missionData={missionData} 
+            moduleSlug={moduleSlug} 
+          />
+        );
+      }
+      if (moduleSlug === 'nft-collection-practical') {
+        return (
+          <NftDeployChallenge 
             missionData={missionData} 
             moduleSlug={moduleSlug} 
           />

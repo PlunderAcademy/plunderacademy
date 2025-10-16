@@ -238,7 +238,7 @@ export default async function DesertModulePage({ params }: DesertModulePageProps
         </Card>
 
         {/* Interactive Element Section */}
-        {quizData ? (
+        {(quizData || resolvedParams.module === 'nft-collection-practical') ? (
           <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
         ) : (
           <Card>
