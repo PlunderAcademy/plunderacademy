@@ -141,7 +141,7 @@ export default function Home() {
           {/* Treasure Map Header */}
           <div className="relative mb-8">
             <Image
-              src="/overall_map.webp"
+              src="/overall-map.webp"
               alt="Learning Path Treasure Map"
               width={1000}
               height={400}

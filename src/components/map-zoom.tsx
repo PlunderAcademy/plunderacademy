@@ -121,7 +121,7 @@ export function MapZoom({ islands }: MapZoomProps) {
         }}
       >
         <Image
-          src="/overall_map.webp"
+          src="/overall-map.webp"
           alt="Adventure Islands Map"
           width={1440}
           height={810}
