@@ -126,21 +126,13 @@ Testing all edge cases individually is verbose. Table-driven tests cover boundar
 
 ```ts
 // test/Staking.rewards.test.ts (excerpt matching Module 2.5)
-import { expect } from "chai";
-import { time } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import hre from "hardhat";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { network } from "hardhat";
 
-describe("Staking - Reward Calculations", () => {
-  async function deployStakingFixture() {
-    const [owner, user] = await hre.viem.getWalletClients();
-    const token = await hre.viem.deployContract("TestToken", []);
-    const staking = await hre.viem.deployContract("Staking", [
-      token.address,
-      owner.account.address,  // feeAddress
-      owner.account.address   // claimant
-    ]);
-    return { staking, token, owner, user };
-  }
+describe("Staking - Reward Calculations", async function () {
+  const { viem, networkHelpers } = await network.connect();
+  const [owner, user] = await viem.getWalletClients();
 
   const testCases = [
     { 
@@ -175,7 +167,12 @@ describe("Staking - Reward Calculations", () => {
 
   for (const tc of testCases) {
     it(tc.name, async () => {
-      const { staking, token, user } = await loadFixture(deployStakingFixture);
+      const token = await viem.deployContract("TestToken", []);
+      const staking = await viem.deployContract("Staking", [
+        token.address,
+        owner.account.address,  // feeAddress
+        owner.account.address   // claimant
+      ]);
       
       const amount = tc.amount;
       const option = tc.apy === 10n ? 1n : (tc.apy === 15n ? 2n : 3n);
@@ -188,7 +185,7 @@ describe("Staking - Reward Calculations", () => {
       
       // Advance time
       if (tc.days > 0n) {
-        await time.increase(Number(tc.days) * 24 * 60 * 60);
+        await networkHelpers.time.increase(Number(tc.days) * 24 * 60 * 60);
       }
       
       // Check reward
@@ -198,7 +195,7 @@ describe("Staking - Reward Calculations", () => {
       const diff = reward > tc.expectedReward 
         ? reward - tc.expectedReward 
         : tc.expectedReward - reward;
-      expect(diff).to.be.lessThan(10n**15n);
+      assert.ok(diff < 10n**15n, `Reward ${reward} should be close to ${tc.expectedReward}`);
     });
   }
 });
@@ -210,46 +207,53 @@ describe("Staking - Reward Calculations", () => {
 
 Extract common assertions so tests read like prose.
 
-Every deposit emits a `Deposited(user, amount)` event. Writing `await expect(tx).to.emit(vault, "Deposited").withArgs(user, amount)` fifty times clutters your specs. Extract it once, use it everywhere, and gain consistency plus maintainability.
+Every deposit should transfer tokens and update state. Writing repetitive assertions clutters your specs. Extract them into helpers for clarity and maintainability.
 
 ```ts
-// test/helpers/assert.ts (excerpt)
-import { expect } from "chai";
+// test/helpers/staking-helpers.ts (excerpt)
+import assert from "node:assert/strict";
 
-export async function expectDeposit(tx: any, contract: any, user: string, amt: bigint) {
-  await expect(tx).to.emit(contract, "Deposited").withArgs(user, amt);
+export async function verifyDepositState(
+  staking: any,
+  user: string,
+  expectedAmount: bigint,
+  expectedCount: bigint
+) {
+  const userStaked = await staking.read.getStakedTokens([user]);
+  assert.equal(userStaked, expectedAmount, "User staked amount incorrect");
+  
+  const depositCount = await staking.read.getStakedItemLength([user]);
+  assert.equal(depositCount, expectedCount, "Deposit count incorrect");
 }
 ```
 
-Takeaway: helpers reduce boilerplate and improve signal in specs. If the event signature changes (add a `positionId` parameter), you update one helper instead of grepping through 50 files.
+Takeaway: helpers reduce boilerplate and improve signal in specs. If you change how state is stored, you update one helper instead of grepping through 50 files.
 
 ### 3) AAA structure for deposit flow (Hardhat 3 + viem pattern)
 
-**Explicit sections make setup and verification obvious, matching Island 1's tested pattern:**
+**Explicit sections make setup and verification obvious:**
 
 This test verifies the Staking contract's `deposit()` function creates a DepositItem with correct APY, duration, and timestamp. The AAA comments make the flow scannable—setup, action, verification.
 
 ```ts
-// test/Staking.deposit.test.ts (matching Island 1 Hardhat 3 pattern)
-import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import { expect } from "chai";
-import hre from "hardhat";
+// test/Staking.deposit.test.ts (Hardhat 3 pattern)
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { network } from "hardhat";
 
-describe("Staking - Deposits", () => {
-  async function deployStakingFixture() {
-    const [owner, user] = await hre.viem.getWalletClients();
-    const token = await hre.viem.deployContract("TestToken", []);
-    const staking = await hre.viem.deployContract("Staking", [
+describe("Staking - Deposits", async function () {
+  const { viem } = await network.connect();
+  const [owner, user] = await viem.getWalletClients();
+
+  it("creates deposit with correct tier settings (Option 1: 30 days)", async () => {
+    // Arrange
+    const token = await viem.deployContract("TestToken", []);
+    const staking = await viem.deployContract("Staking", [
       token.address,
       owner.account.address,
       owner.account.address
     ]);
-    return { staking, token, owner, user };
-  }
-
-  it("creates deposit with correct tier settings (Option 1: 30 days)", async () => {
-    // Arrange
-    const { staking, token, user } = await loadFixture(deployStakingFixture);
+    
     const amount = 1000n * 10n**18n;
     await token.write.transfer([user.account.address, amount]);
     await token.write.approve([staking.address, amount], { account: user.account });
@@ -259,27 +263,28 @@ describe("Staking - Deposits", () => {
 
     // Assert
     const userStaked = await staking.read.getStakedTokens([user.account.address]);
-    expect(userStaked).to.equal(amount);
+    assert.equal(userStaked, amount);
     
     const depositCount = await staking.read.getStakedItemLength([user.account.address]);
-    expect(depositCount).to.equal(1n);
+    assert.equal(depositCount, 1n);
     
     const apy = await staking.read.getStakedItemAPY([user.account.address, 0n]);
-    expect(apy).to.equal(10n);  // Tier 1 = 10% APY
+    assert.equal(apy, 10n);  // Tier 1 = 10% APY
     
     const duration = await staking.read.getStakedItemDuration([user.account.address, 0n]);
-    expect(duration).to.equal(30n * 24n * 60n * 60n);  // 30 days in seconds
+    assert.equal(duration, 30n * 24n * 60n * 60n);  // 30 days in seconds
   });
 });
 ```
 
-**Takeaway**: Separating Arrange/Act/Assert with comments makes intent clear. This matches the **exact Hardhat 3 + viem pattern** from Island 1:
-- `hre.viem.deployContract()` for deployment
-- `hre.viem.getWalletClients()` for accounts
+**Takeaway**: Separating Arrange/Act/Assert with comments makes intent clear. This matches the **Hardhat 3 + viem pattern**:
+- `viem.deployContract()` for deployment
+- `viem.getWalletClients()` for accounts
 - `.write.functionName([args], { account })` for transactions
 - `.read.functionName([args])` for view calls
+- `assert` for verifications
 
-This pattern is **tested and working** in Island 1's ERC20 module.
+This pattern is **tested and working** in Module 2.5's comprehensive test suite.
 
 ## Practice and reflection
 
@@ -374,7 +379,7 @@ Order-dependent tests are the worst kind of flakiness. They pass locally (where 
 ```ts
 let vault: StakingVault; // Shared across tests
 beforeEach(async () => {
-  vault = await ethers.deployContract("StakingVault"); // Mutated by tests
+  vault = await viem.deployContract("StakingVault", []); // Mutated by tests
 });
 ```
 
@@ -382,16 +387,17 @@ This pattern reuses the same vault instance. Test A deposits 100, Test B assumes
 
 **Good**:
 ```ts
-beforeEach(async () => {
-  return loadFixture(deployStakingFixture); // Fresh state every test
+it("test scenario", async () => {
+  const vault = await viem.deployContract("StakingVault", []); // Fresh per test
+  // ... test logic
 });
 ```
 
-Fixtures snapshot initial state and restore it before each test. Every test gets a pristine contract, eliminating order dependencies.
+Each test deploys its own contracts. Every test gets a pristine contract, eliminating order dependencies.
 
-**Rule**: Use fixtures or re-deploy; never share mutable contract instances.
+**Rule**: Deploy fresh contracts in each test; never share mutable contract instances.
 
-**Bonus**: Fixtures are fast—Hardhat snapshots state at the EVM level, so "re-deploying" is instant. No performance penalty for isolation.
+**Bonus**: With the async `describe` pattern, you can also create helper functions that return fresh deployments, giving you reusable setup code without shared state.
 
 ### Ignoring time-based flakiness
 
@@ -411,26 +417,28 @@ This test might pass if transactions mine slowly (blocks advance, time increases
 **Good**:
 ```ts
 await vault.deposit(100);
-await time.increase(86400); // Explicit 1 day
-expect(await vault.previewReward(user)).to.equal(expectedReward);
+await networkHelpers.time.increase(86400); // Explicit 1 day
+const reward = await vault.previewReward(user);
+assert.equal(reward, expectedReward);
 ```
 
 Explicitly advancing time by 1 day makes the test deterministic. Every run produces the same timestamps, same calculations, same results.
 
-**Rule**: Always manipulate time explicitly with `time.increase()` or `vm.warp()`.
+**Rule**: Always manipulate time explicitly with `networkHelpers.time.increase()`.
 
 **Tools**:
-- **Hardhat**: `time.increase(seconds)` advances time relatively, `time.increaseTo(timestamp)` sets absolute time, `time.latest()` reads current block timestamp
-- **Foundry**: `vm.warp(timestamp)` sets absolute time, `skip(seconds)` advances relatively, `block.timestamp` reads current time
+- **Hardhat 3**: Get `networkHelpers` from `await network.connect()`, then use `networkHelpers.time.increase(seconds)` to advance time relatively, `networkHelpers.time.increaseTo(timestamp)` for absolute time, `networkHelpers.time.latest()` to read current block timestamp
 
-**Testing multi-period scenarios**: For tests that verify reward accrual over multiple periods (deposit → 7 days → check → 30 days → check), use `time.increase()` between checks. This makes the test's timeline explicit:
+**Testing multi-period scenarios**: For tests that verify reward accrual over multiple periods (deposit → 7 days → check → 30 days → check), use `networkHelpers.time.increase()` between checks. This makes the test's timeline explicit:
 
 ```ts
 await vault.deposit(1000);
-await time.increase(7 * 86400); // 7 days
-expect(await vault.previewReward(user)).to.equal(weekReward);
-await time.increase(23 * 86400); // +23 days = 30 total
-expect(await vault.previewReward(user)).to.equal(monthReward);
+await networkHelpers.time.increase(7 * 86400); // 7 days
+const weekReward = await vault.previewReward(user);
+assert.equal(weekReward, expectedWeekReward);
+await networkHelpers.time.increase(23 * 86400); // +23 days = 30 total
+const monthReward = await vault.previewReward(user);
+assert.equal(monthReward, expectedMonthReward);
 ```
 
 Control time in every test that touches time-dependent logic—no exceptions. This discipline eliminates an entire class of flakiness.
@@ -442,15 +450,15 @@ Before deploying staking contracts tested with these patterns:
 - [ ] **AAA separation**: Every test has clear Arrange/Act/Assert sections (use comments if helpful)
 - [ ] **Behavioral naming**: Test names describe expected behavior, not implementation ("reverts when..." not "testFunc2")
 - [ ] **Table-driven boundaries**: Math and tier logic covered with table-driven cases for zero, min, max, typical values
-- [ ] **Custom helpers extracted**: Repeated event/state assertions moved to reusable helpers (DRY principle); update once when signatures change
-- [ ] **Time control**: All time-dependent tests use explicit `time.increase()` or `vm.warp()`; no reliance on wall-clock or mining delays
-- [ ] **Fixtures for isolation**: Tests use `loadFixture()` or equivalent; no shared mutable state between specs; every test gets fresh contracts
+- [ ] **Custom helpers extracted**: Repeated state assertions moved to reusable helpers (DRY principle); update once when patterns change
+- [ ] **Time control**: All time-dependent tests use explicit `networkHelpers.time.increase()`; no reliance on wall-clock or mining delays
+- [ ] **Test isolation**: Each test deploys fresh contracts; no shared mutable state between specs
 - [ ] **Mock external dependencies**: Oracles, tokens, and external contracts replaced with controllable mocks for unit tests; real contracts only in integration tests
 - [ ] **One behavior per test**: No "and" in test names; split complex assertions into separate specs for precise failure localization
 - [ ] **Negative cases included**: Tests cover reverts, zero amounts, insufficient balances, expired time-locks, unauthorized callers, edge cases
 - [ ] **Coverage verified**: All public functions and modifiers have at least one happy-path and one failure test; use coverage tools to find gaps
-- [ ] **Test independence verified**: Run tests in random order; no failures indicate order dependencies; shuffle with `--bail` to catch leaky state
-- [ ] **Fast feedback loop**: Unit tests run in under 5 seconds; split slow integration tests into separate suites; fixtures keep deployment fast
+- [ ] **Test independence verified**: Run tests in random order; no failures indicate order dependencies
+- [ ] **Fast feedback loop**: Unit tests run quickly with isolated contract deployments per test
 
 ## Wrap‑up and next steps
 

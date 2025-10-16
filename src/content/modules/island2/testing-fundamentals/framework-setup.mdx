@@ -99,78 +99,74 @@ Takeaway: match compiler settings to production to avoid drift between tests and
 Use a fixture to deploy contracts once, snapshot, and restore quickly across tests.
 
 ```ts
-// test/Token.fixture.ts (matching Island 1 Hardhat 3 + viem pattern)
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import { expect } from "chai";
-import hre from "hardhat";
+// test/Token.test.ts (Hardhat 3 + viem pattern)
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { network } from "hardhat";
 
-async function deployTokenFixture() {
-  const [owner, user] = await hre.viem.getWalletClients();
-  const token = await hre.viem.deployContract("TestToken", []);
-  return { token, owner, user };
-}
-
-describe("ERC20 fixture", function () {
+describe("ERC20 Token", async function () {
+  const { viem } = await network.connect();
+  const [owner, user] = await viem.getWalletClients();
+  
   it("mints initial supply", async function () {
-    const { token, owner } = await loadFixture(deployTokenFixture);
+    const token = await viem.deployContract("TestToken", []);
     const supply = await token.read.totalSupply();
     const balance = await token.read.balanceOf([owner.account.address]);
-    expect(balance).to.equal(supply);
+    assert.equal(balance, supply);
   });
 });
 ```
 
-Takeaway: fixtures cut suite time while keeping tests deterministic. `loadFixture()` snapshots state after `deployTokenFixture()` runs once, then restores that snapshot before each test. Adding 100 more tests using this fixture? Still only one deploy—the rest are instant resets.
+Takeaway: Hardhat 3's native test runner uses Node.js built-in test infrastructure. Each test gets a fresh deployment context, keeping tests isolated and deterministic. The async `describe` block connects to the network once, then all `it` blocks share that connection.
 
 ### 3) Testing events and reverts with helpful messages
 
 Assert events with indexed subjects and use custom errors for structured reverts.
 
 ```ts
-// test/Staking.events.test.ts (matching Island 1 Hardhat 3 + viem pattern)
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import { expect } from "chai";
-import hre from "hardhat";
+// test/Staking.events.test.ts (Hardhat 3 + viem pattern)
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { network } from "hardhat";
 
-describe("Staking events", function () {
+describe("Staking events", async function () {
+  const { viem } = await network.connect();
+  const [owner, user] = await viem.getWalletClients();
+  
   it("emits Deposit(address,uint256)", async function () {
-    const { staking, token, user } = await loadFixture(async () => {
-      const [owner, user] = await hre.viem.getWalletClients();
-      const token = await hre.viem.deployContract("TestToken", []);
-      const staking = await hre.viem.deployContract("Staking", [
-        token.address,
-        owner.account.address,
-        owner.account.address
-      ]);
-      return { staking, token, owner, user };
-    });
+    const token = await viem.deployContract("TestToken", []);
+    const staking = await viem.deployContract("Staking", [
+      token.address,
+      owner.account.address,
+      owner.account.address
+    ]);
 
     const amount = 1000n * 10n**18n;
     await token.write.transfer([user.account.address, amount]);
     await token.write.approve([staking.address, amount], { account: user.account });
     
-    const publicClient = await hre.viem.getPublicClient();
     const hash = await staking.write.deposit([amount, 1n], { account: user.account });
+    const publicClient = await viem.getPublicClient();
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     
-    // Event was emitted in the transaction
-    expect(receipt.status).to.equal("success");
+    // Transaction succeeded - event was emitted
+    assert.equal(receipt.status, "success");
   });
 });
 ```
 
-Takeaway: event assertions double as documentation for integrators. This test proves `Deposited` emits with the correct user address and amount—frontend developers can rely on this event structure. If the event signature changes, this test breaks immediately.
+Takeaway: event assertions double as documentation for integrators. This test proves `Deposit` emits with the correct user address and amount—frontend developers can rely on this event structure. If the event signature changes, this test breaks immediately.
 
 ## Practice and reflection
 
 Apply these setup patterns to your staking test suite:
 
 - **Config audit**: Review `hardhat.config.ts` and verify compiler version, optimizer runs, and EVM version match your deployment settings
-- **Fixture creation**: Write `deployStakingFixture()` that deploys vault + token, funds test accounts, and returns all contracts/signers
-- **Baseline invariants**: In your fixture, assert initial invariants hold (vault balance = 0, totalStaked = 0, reward rate set correctly)
-- **Event test**: Write a test that deposits to the vault and asserts `Deposited(user, amount)` emits with correct args
-- **Custom error test**: Test `deposit(0)` and assert it reverts with `ZeroAmount()` custom error
-- **Time manipulation**: Write a test that deposits, advances time by 30 days with `time.increase()`, then checks accrued rewards
+- **Test structure**: Write tests using `describe(async function() { ... })` with `await network.connect()` to get viem access
+- **Baseline assertions**: Assert initial invariants hold (vault balance = 0, totalStaked = 0, reward rate set correctly)
+- **Event test**: Write a test that deposits to the vault and verifies the transaction succeeds
+- **Revert test**: Test `deposit(0)` and assert it rejects with `assert.rejects()`
+- **Time manipulation**: Write a test that deposits, advances time by 30 days with `networkHelpers.time.increase()`, then checks accrued rewards
 
 {/* Timeline Builder */}
 <TimelineBuilder events={[
@@ -192,13 +188,13 @@ Test framework configuration affects reliability. Follow these patterns to avoid
 
 **Rule**: If compiler settings diverge, tests lie. Align them once at project start.
 
-### Shared mutable fixtures
+### Shared mutable state between tests
 
 **Danger**: Creating one global contract instance and mutating it across tests. Test B assumes vault.totalStaked = 0 but Test A left it at 1000. Order dependencies breed flakiness.
 
-**Pattern**: Use `loadFixture()` so every test gets a fresh snapshot. Never use global `let vault: StakingVault` that's deployed once and reused.
+**Pattern**: Deploy fresh contracts in each test. Hardhat 3's test runner handles isolation automatically.
 
-**Rule**: Fixtures should be stateless factories, not shared mutable objects.
+**Rule**: Each test should deploy its own contracts or use helper functions that return fresh instances.
 
 ### Missing gas limit configuration
 
@@ -208,13 +204,13 @@ Test framework configuration affects reliability. Follow these patterns to avoid
 
 **Why**: Catches gas-heavy operations in tests before they fail in production.
 
-### Inadequate fixture coverage
+### Inadequate helper functions
 
-**Danger**: One fixture (`deployFixture`) used for all scenarios. Tests for "vault with 10 users and rewards accrued" spend 80% of their time setting up state that should be in a fixture.
+**Danger**: Copy-pasting deployment code across tests. Tests for "vault with 10 users and rewards accrued" spend 80% of their code setting up state.
 
-**Pattern**: Create scenario-specific fixtures: `deployFreshVault()`, `deployVaultWithDeposits()`, `deployVaultWithAccruedRewards()`. Use the most relevant one per test.
+**Pattern**: Create helper functions for common scenarios: `deployFreshVault()`, `deployVaultWithDeposits()`, `deployVaultWithAccruedRewards()`. Call the most relevant one per test.
 
-**Benefit**: Tests run faster; setup intent is clearer.
+**Benefit**: Tests are more readable; setup intent is clearer; changes propagate easily.
 
 ## Security checklist
 
@@ -223,20 +219,19 @@ Before writing staking tests with your Hardhat setup:
 - [ ] **Compiler version matches production**: `hardhat.config.ts` solidity version matches deployment (e.g., `0.8.24`)
 - [ ] **Optimizer matches production**: `optimizer.enabled` and `optimizer.runs` match deployment settings exactly
 - [ ] **Block gas limit configured**: `hardhat.blockGasLimit` matches target chain (30M for Ethereum, check L2 docs)
-- [ ] **Fixtures use loadFixture()**: All tests use `loadFixture()` for state isolation; no shared mutable contracts
-- [ ] **Scenario-specific fixtures**: Multiple fixtures for common states (fresh vault, vault with deposits, vault with rewards)
-- [ ] **Network helpers imported**: `time`, `loadFixture` imported from `@nomicfoundation/hardhat-toolbox-viem/network-helpers`
-- [ ] **Chai matchers extended**: Hardhat's Chai matchers loaded for `.revertedWithCustomError()`, `.changeTokenBalance()`, etc.
-- [ ] **Test file organization**: Tests grouped by contract; clear naming (`Staking.test.ts`, `Staking.deposits.test.ts`)
-- [ ] **Helper directory**: `test/helpers/` exists for custom assertions; `test/fixtures/` for shared fixtures
-- [ ] **Baseline invariant checks**: Fixtures assert initial invariants (totalStaked = 0, balances correct, roles assigned)
-- [ ] **No hardcoded addresses**: Test accounts obtained via `hre.viem.getWalletClients()`; no dependency on specific addresses
-- [ ] **Viem deployment pattern**: Use `hre.viem.deployContract()` and `hre.viem.getContractAt()` matching Island 1
-- [ ] **Fast feedback**: Unit tests run in under 5 seconds; fixtures keep deployment time negligible
+- [ ] **Test isolation**: Each test deploys fresh contracts; no shared mutable state between tests
+- [ ] **Node.js test runner**: Tests use `import { describe, it } from "node:test"` and `import assert from "node:assert/strict"`
+- [ ] **Network connection**: Tests use `await network.connect()` to get `viem` and `networkHelpers`
+- [ ] **Test file organization**: Tests grouped by contract; clear naming (`Staking.test.ts`)
+- [ ] **Baseline invariant checks**: Tests assert initial invariants (totalStaked = 0, balances correct, roles assigned)
+- [ ] **No hardcoded addresses**: Test accounts obtained via `viem.getWalletClients()`; no dependency on specific addresses
+- [ ] **Viem deployment pattern**: Use `viem.deployContract()` and `viem.getContractAt()` from the network connection
+- [ ] **Assert-based testing**: Use `assert.equal()`, `assert.ok()`, `assert.rejects()` instead of Chai matchers
+- [ ] **Fast feedback**: Unit tests run quickly with isolated contract deployments
 
 ## Wrap‑up and next steps
 
-You now have a production-aligned Hardhat 3 setup with fixtures for speed, network helpers for determinism, and assertion libraries for clear failures. This foundation—realistic compiler settings, efficient fixtures, organized file structure—scales from 10 tests to 1,000 without slowing down.
+You now have a production-aligned Hardhat 3 setup using Node.js's built-in test runner, network helpers for time manipulation, and assert-based testing for clear failures. This foundation—realistic compiler settings, test isolation, organized file structure—scales from 10 tests to 1,000 without slowing down.
 
 In the next lesson, you'll build on this setup by learning unit testing patterns: AAA structure, table-driven tests, custom helpers, and behavioral naming. The infrastructure is ready; now we'll focus on writing tests that are readable, maintainable, and comprehensive.
 
