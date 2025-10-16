@@ -77,7 +77,7 @@ export function StakingDeployChallenge({ moduleSlug, missionData }: DeployElemen
       transactionHash: transactionId.trim(),
       chainId: selectedChain === 'testnet' ? 33101 : 32769,
       claimantAddress: address,
-      method: 'deployment' // Staking contract only supports full deployment
+      method: 'deployment' as const // Staking contract only supports full deployment
     };
     
     const requestPayload = {
