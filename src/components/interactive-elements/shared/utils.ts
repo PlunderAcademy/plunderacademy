@@ -6,7 +6,8 @@ export const MODULE_TO_ACHIEVEMENT_MAP: Record<string, string> = {
   'evm-fundamentals': '0002', 
   'intro-to-solidity': '0003',
   'zilliqa-evm-setup': '0004',
-  'creating-erc20-tokens': '0005'
+  'creating-erc20-tokens': '0005',
+  'staking-contract-practical': '0010'
 };
 
 // Get achievement number for a module
@@ -16,7 +17,7 @@ export function getAchievementNumber(moduleSlug: string): string | undefined {
 
 // Check if a module uses transaction submission instead of quiz
 export function isTransactionSubmissionModule(moduleSlug: string): boolean {
-  return moduleSlug === 'creating-erc20-tokens';
+  return moduleSlug === 'creating-erc20-tokens' || moduleSlug === 'staking-contract-practical';
 }
 
 // Format time in MM:SS format

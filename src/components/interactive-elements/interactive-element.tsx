@@ -6,6 +6,7 @@ import { Trophy } from "lucide-react";
 import { QuizMeta, MissionMeta } from "@/lib/mdx";
 import { TraditionalQuiz } from "./quiz/traditional-quiz";
 import { TokenDeployChallenge } from "./elements/token-deploy-challenge";
+import { StakingDeployChallenge } from "./elements/staking-deploy-challenge";
 import { isTransactionSubmissionModule } from "./shared/utils";
 
 // TODO: These will be added in future milestones
@@ -79,6 +80,16 @@ export function InteractiveElement({
       );
       
     case 'deploy':
+      // Use different deploy challenge components based on module
+      if (moduleSlug === 'staking-contract-practical') {
+        return (
+          <StakingDeployChallenge 
+            missionData={missionData} 
+            moduleSlug={moduleSlug} 
+          />
+        );
+      }
+      // Default to token deploy challenge (for creating-erc20-tokens)
       return (
         <TokenDeployChallenge 
           missionData={missionData} 

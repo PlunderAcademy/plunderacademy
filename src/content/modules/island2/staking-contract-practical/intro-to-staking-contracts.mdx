@@ -33,10 +33,10 @@ slug: intro-to-staking-contracts
 - **Protocol TVL:** Total Value Locked attracts attention and trust
 
 **Real examples:**
-- **Ethereum 2.0:** Stake ETH to secure the network, earn ~4-7% APY
-- **Curve (veCRV):** Lock CRV for up to 4 years, earn trading fees + governance power
-- **Synthetix:** Stake SNX to mint synths, earn protocol fees
-- **PancakeSwap Syrup Pools:** Stake CAKE, earn partner tokens
+- **Zilliqa  2.0:** Stake ZIL to secure the network, earn ~12% APY
+- **Kalijo (https://stake.kalijo.io/):** Lock SEED for 30/90/365 days for 2/5/12% apy PLUS additional $kUSD rewards
+- Many other examples like ETH staking, Curve, etc.
+
 
 ## The Staking Contract We'll Build
 
@@ -70,42 +70,31 @@ slug: intro-to-staking-contracts
 
 ✅ **Battle-tested security:**
 - OpenZeppelin SafeERC20 (handles non-standard tokens)
-- ReentrancyGuard (prevents attack vectors)
+- ReentrancyGuard (prevents reentrancy attack vectors)
 - Ownable (admin controls)
-- SafeMath (overflow protection, though Solidity 0.8+ has built-in checks)
+- Math.mulDiv() (overflow-safe reward calculations)
+- Solidity 0.8.28+ built-in overflow checks
 
 ### Contract Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────┐
-│              Staking Contract                        │
-├─────────────────────────────────────────────────────┤
-│  State Variables:                                    │
-│  - stakingToken (ERC20)                             │
-│  - rewardToken (same as stakingToken)               │
-│  - apy1, apy2, apy3 (rate tiers)                    │
-│  - exitPenaltyPerc (early withdrawal penalty)       │
-│  - withdrawFee (normal withdrawal fee)              │
-│  - totalStaked (contract-wide tracking)             │
-│                                                      │
-│  User Data:                                          │
-│  - mapping(address => UserInfo)                     │
-│    ├─ amount (total staked)                         │
-│    └─ depositItems[] (array of deposits)            │
-│         ├─ apy                                       │
-│         ├─ duration                                  │
-│         ├─ amount                                    │
-│         └─ timestamp                                 │
-│                                                      │
-│  Core Functions:                                     │
-│  - deposit(amount, option) → stake with tier        │
-│  - withdraw(index) → claim one deposit               │
-│  - getStakedItemReward(user, index) → preview       │
-│  - startReward() → begin accrual (owner only)       │
-│  - stopReward() → pause accrual (owner only)        │
-│  - updateApy() → adjust rates (owner only)          │
-└─────────────────────────────────────────────────────┘
-```
+**What's inside the contract:**
+
+**State Variables:**
+- Token addresses (what token users stake)
+- APY rates for each tier (10%, 15%, 27%)
+- Penalty and fee percentages
+- Total amount staked across all users
+
+**User Data Tracking:**
+- Each user has a `UserInfo` containing:
+  - Total amount they've staked
+  - Array of individual deposits (each with its own APY, duration, amount, timestamp)
+
+**Main Functions:**
+- `deposit()` - Lock tokens and choose duration tier
+- `withdraw()` - Get tokens back (with or without rewards)
+- `startReward()` - Owner turns on reward accrual
+- `updateApy()` - Owner adjusts rates for new deposits
 
 ## Understanding the Data Structures
 
@@ -176,9 +165,10 @@ mapping(address => UserInfo) private userInfo;
 
 ```solidity
 // In constructor, reference an existing deployed token
-constructor(address tokenAddr, address feeAddr) {
+constructor(address tokenAddr, address feeAddr, address _claimant) {
     stakingToken = IERC20(tokenAddr);
     rewardToken = stakingToken;  // Same token for staking and rewards
+    claimant = _claimant;  // For achievement verification
     // ...
 }
 ```
@@ -271,41 +261,36 @@ constructor(address tokenAddr, address feeAddr, address _claimant) {
 - You understand constructor parameters
 - You can claim achievement credit for completing the module
 
-## Staking Contract Comparison
+## Why This Design?
 
-### Simple vs Advanced Patterns
+### One Contract vs Multiple Contracts
 
-**Our contract (unified/simple):**
+**Our approach: Everything in one contract**
 ```solidity
+import "@openzeppelin/contracts/utils/math/Math.sol";
+
 contract Staking is Ownable, ReentrancyGuard {
-    IERC20 public stakingToken;
-    mapping(address => UserInfo) private userInfo;
-    
-    function deposit(uint256 amount, uint256 option) public { }
-    function withdraw(uint256 index) public { }
-    function _calculateReward(address user, uint256 index) internal { }
+    using SafeERC20 for IERC20;
+    // State: tokens, rates, user deposits, claimant
+    // Logic: deposit, withdraw, calculate rewards (using Math.mulDiv)
+    // Admin: start/stop, update rates (with safety caps)
 }
 ```
 
-**Modular pattern (advanced - from Module 2.4.1):**
-```solidity
-contract StakingVault { /* storage only */ }
-contract RewardPolicy { /* calculations only */ }
-contract RewardDistributor { /* transfers only */ }
-```
+**Why this is good for learning:**
+- ✅ See the complete flow in one place
+- ✅ Easier to understand how pieces connect
+- ✅ Lower gas costs (no cross-contract calls)
+- ✅ Simpler to audit and deploy
+- ✅ Used by many production protocols
 
-**When to use each:**
+**Advanced alternative: Split into multiple contracts**
+- One contract for storage, another for logic, another for rewards
+- More flexible (can upgrade logic without migrating data)
+- Better for large teams (different people work on different contracts)
+- Higher complexity and gas costs
 
-| Factor | Unified (Our Contract) | Modular (Advanced) |
-|--------|----------------------|-------------------|
-| **Learning** | ✅ Perfect for understanding flow | ⚠️ Requires understanding 3+ contracts |
-| **Team size** | ✅ 1-3 developers | ✅ 5+ developers |
-| **Audit cost** | ✅ Lower (one contract) | ⚠️ Higher (multiple contracts + interactions) |
-| **Flexibility** | ⚠️ Changes require redeployment | ✅ Swap policy without migrating storage |
-| **Gas costs** | ✅ Lower (fewer external calls) | ⚠️ Higher (cross-contract calls) |
-| **Production ready** | ✅ Yes (many protocols use this) | ✅ Yes (larger protocols prefer this) |
-
-**Bottom line:** Both patterns are production-ready. Start unified, refactor to modular if you need swappable logic.
+**For this module:** We use the unified approach because it's clearer, cheaper, and battle-tested. Many successful protocols use this exact pattern!
 
 ## What You'll Build in This Module
 
@@ -337,126 +322,30 @@ contract RewardDistributor { /* transfers only */ }
 - Block explorer verification
 - Security best practices
 
-## Prerequisites Check
+## Practice Your Understanding
 
-**Before proceeding, ensure you have:**
+Before moving to the next lesson, make sure you understand these key concepts:
 
-✅ **Completed Island 1 (Modules 1.1-1.5)**
-- Understanding of ERC20 tokens
-- Hardhat 3 development environment set up
-- Experience deploying to Zilliqa testnet
-- Wallet connected to training portal
+**Think about these questions:**
+- What's the difference between a 30-day stake at 10% APY vs a 120-day stake at 27% APY?
+- Why might a user choose a shorter lock period even though it pays less?
+- What happens if a user needs their tokens back before the lock period ends?
 
-✅ **Completed Island 2 (Modules 2.1-2.4)**
-- OpenZeppelin ecosystem knowledge
-- Struct and mapping patterns
-- Hardhat testing fundamentals
-- Time-based logic understanding
+**Simple calculation practice:**
 
-✅ **Development environment ready:**
-- Node.js installed
-- Hardhat 3 configured
-- MetaMask with Zilliqa testnet
-- Testnet ZIL for gas fees
+If Alice stakes 1000 tokens for 30 days at 10% APY and waits the full period:
+- Annual reward would be: 1000 × 10% = 100 tokens
+- For 30 days: 100 × (30/365) = approximately 8.22 tokens
+- After 2% withdrawal fee: She gets back 1000 - 20 + 8.22 = **988.22 tokens**
 
-✅ **Optional but helpful:**
-- An existing ERC20 token deployed (from Module 1.5)
-- Or willingness to deploy a new one for staking
+Try this one yourself: If Bob stakes 5000 tokens for 60 days at 15% APY, how much does he earn? (Hint: follow the same pattern!)
 
-## Practice and Reflection
-
-Before diving into code, solidify your understanding:
-
-**Design exercise:** Sketch out a staking program for your own project:
-- What token will users stake?
-- What duration tiers will you offer? (30/60/90 days? 1/3/6/12 months?)
-- What APY will each tier earn?
-- Will you charge withdrawal fees? Early exit penalties?
-- How many tokens will you allocate to the reward pool?
-- How long should the rewards last?
-
-**Calculation exercise:** Given these parameters:
-- User stakes: 1,000 tokens
-- Duration: 60 days
-- APY: 15%
-- Early withdrawal penalty: 5%
-- Normal withdrawal fee: 2%
-
-Calculate:
-1. Total rewards if they wait the full 60 days
-2. Amount received if they withdraw after 30 days (early)
-3. Amount received if they withdraw after 80 days (late, but capped at 60)
-
-{/* Multiple Choice */}
-<MultipleChoice question="If a user deposits 1000 tokens for 30 days at 10% APY, and withdraws after 15 days with a 5% early exit penalty, what do they receive?" options={[
-  "1000 tokens (full principal, no penalty)",
-  "950 tokens (5% penalty applied, no rewards)",
-  "1000 + (partial rewards for 15 days)",
-  "500 tokens (half because they withdrew at halfway point)"
-]} correctAnswer={1} explanation="Early withdrawal means: (1) 5% penalty is applied to principal (1000 * 0.95 = 950), and (2) NO rewards are paid. They get 950 tokens back." />
-
-## Security Considerations Preview
-
-**Before we write any code, understand these security principles:**
-
-### Reentrancy Protection
-
-**The danger:** A malicious token could call back into your contract during transfer:
-
-```solidity
-// BAD: No protection
-function withdraw(uint256 index) public {
-    uint256 amount = user.depositItems[index].amount;
-    stakingToken.transfer(msg.sender, amount);  // ← Malicious token calls withdraw() again!
-    user.amount -= amount;  // ← Never reached on first call
-}
-
-// GOOD: ReentrancyGuard
-function withdraw(uint256 index) public nonReentrant {
-    // Can't be called again until this execution completes
-}
-```
-
-### SafeERC20 for Non-Standard Tokens
-
-**The issue:** Not all ERC20 tokens return `bool` from `transfer()`:
-
-```solidity
-// BAD: Assumes all tokens return bool
-bool success = stakingToken.transfer(msg.sender, amount);
-
-// GOOD: SafeERC20 handles edge cases
-using SafeERC20 for IERC20;
-stakingToken.safeTransfer(msg.sender, amount);  // Reverts on failure
-```
-
-### Integer Math Precision
-
-**The trap:** Division before multiplication loses precision:
-
-```solidity
-// BAD: Loses precision
-uint256 reward = (amount / 365 days) * elapsed * apy / 100;
-
-// GOOD: Multiply first, divide last
-uint256 reward = (amount * elapsed * apy) / 100 / 365 days;
-```
-
-We'll explore all of these in detail in the next lesson!
-
-## Interactive Practice
-
-Put the staking flow steps in the correct order:
-
-<TimelineBuilder events={[
-  {"id":"step1","text":"User approves staking contract to spend tokens","correctPosition":0},
-  {"id":"step2","text":"User calls deposit(amount, option) with duration tier","correctPosition":1},
-  {"id":"step3","text":"Contract creates DepositItem with APY, duration, timestamp","correctPosition":2},
-  {"id":"step4","text":"Time passes, rewards accrue based on elapsed time","correctPosition":3},
-  {"id":"step5","text":"User calls withdraw(index) for specific deposit","correctPosition":4},
-  {"id":"step6","text":"Contract calculates rewards, applies fee/penalty","correctPosition":5},
-  {"id":"step7","text":"Contract transfers principal + rewards to user","correctPosition":6}
-]}/>
+**Key concept review:**
+- ✅ Staking = locking tokens for a period to earn rewards
+- ✅ Longer locks = higher APY rates
+- ✅ Early withdrawal = penalty + no rewards
+- ✅ Normal withdrawal = small fee + full rewards
+- ✅ Each deposit is tracked separately (you can have multiple)
 
 ## Wrap-Up
 

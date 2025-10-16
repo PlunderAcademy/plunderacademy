@@ -5,6 +5,7 @@ export type { InteractiveElementProps, ModuleQuizProps } from "./interactive-ele
 // Individual Interactive Element Types
 export { TraditionalQuiz } from "./quiz/traditional-quiz";
 export { TokenDeployChallenge } from "./elements/token-deploy-challenge";
+export { StakingDeployChallenge } from "./elements/staking-deploy-challenge";
 
 // Interactive Elements (Compact Production Versions)
 export { WordJumbleCompact } from "./elements/word-jumble-compact";

@@ -441,14 +441,19 @@ export async function getModules(): Promise<ModuleMeta[]> {
               practicalTakeaway: data.practicalTakeaway,
             };
           }).sort((a, b) => {
-            // Sort by lesson number (e.g., "1.1", "1.2", etc.)
-            const aNum = typeof a.number === 'string' 
-              ? parseFloat(a.number.replace(/[^\d.]/g, ''))
-              : a.number;
-            const bNum = typeof b.number === 'string'
-              ? parseFloat(b.number.replace(/[^\d.]/g, ''))
-              : b.number;
-            return aNum - bNum;
+            // Sort by lesson number (e.g., "1.1", "1.2", "2.5.1", "2.5.2", etc.)
+            const aParts = String(a.number).split('.').map(n => parseInt(n) || 0);
+            const bParts = String(b.number).split('.').map(n => parseInt(n) || 0);
+            
+            // Compare each part sequentially
+            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+              const aPart = aParts[i] || 0;
+              const bPart = bParts[i] || 0;
+              if (aPart !== bPart) {
+                return aPart - bPart;
+              }
+            }
+            return 0;
           });
           
           const metadata = moduleMetadata[moduleSlug];
@@ -487,14 +492,19 @@ export async function getModules(): Promise<ModuleMeta[]> {
             practicalTakeaway: data.practicalTakeaway,
           };
         }).sort((a, b) => {
-          // Sort by lesson number (e.g., "1.1", "1.2", etc.)
-          const aNum = typeof a.number === 'string' 
-            ? parseFloat(a.number.replace(/[^\d.]/g, ''))
-            : a.number;
-          const bNum = typeof b.number === 'string'
-            ? parseFloat(b.number.replace(/[^\d.]/g, ''))
-            : b.number;
-          return aNum - bNum;
+          // Sort by lesson number (e.g., "1.1", "1.2", "2.5.1", "2.5.2", etc.)
+          const aParts = String(a.number).split('.').map(n => parseInt(n) || 0);
+          const bParts = String(b.number).split('.').map(n => parseInt(n) || 0);
+          
+          // Compare each part sequentially
+          for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+            const aPart = aParts[i] || 0;
+            const bPart = bParts[i] || 0;
+            if (aPart !== bPart) {
+              return aPart - bPart;
+            }
+          }
+          return 0;
         });
         
         const metadata = moduleMetadata[moduleSlug];

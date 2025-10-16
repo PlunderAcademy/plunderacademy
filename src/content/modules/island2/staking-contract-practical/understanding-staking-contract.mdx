@@ -10,62 +10,174 @@ slug: understanding-staking-contract
 
 ## The Complete Staking Contract
 
-In this lesson, we'll walk through the **entire staking contract** line by line. You'll understand every function, every calculation, and every security decision. By the end, you'll be ready to deploy your own version to Zilliqa testnet.
+In this lesson, we'll walk through the **entire staking contract** in a beginner-friendly way. If you've deployed an ERC20 token before, you're ready for this! We'll build up your understanding step-by-step, explaining each piece and why it matters.
 
-### Contract Overview
+<div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-500 dark:border-red-700 rounded-lg p-6 my-6">
+
+### ⚠️ CRITICAL: Understanding Centralization Risks
+
+**This is a centralized staking contract.** Before deploying or using it, understand these risks:
+
+**Owner Powers (Potential Risks):**
+- 🟡 **Can stop rewards at any time** via `stopReward()` - users stop earning (but can still withdraw principal)
+- 🟡 **Can change fee structures** via `updateFee()` - affects user withdrawals (capped at 10% max)
+- 🟡 **Can change penalty rates** via `updateExitPenalty()` - affects early withdrawals (capped at 20% max)
+- 🟡 **Can adjust APY rates** via `updateApy()` - only affects NEW deposits (existing deposits keep their rates)
+
+**What This Means:**
+- Users must **trust the contract owner** not to act maliciously
+- Owner can adjust parameters, but there are safety caps in place
+- User deposits are protected - owner cannot withdraw principal
+- **Better than many learning contracts, but still centralized**
+
+**Real-World Context:**
+- Many successful protocols start centralized (Uniswap V1, early Aave)
+- Useful for learning, testing, and controlled deployments
+- Production systems often add: timelocks, multisig ownership, or DAO governance
+
+**For Production Use, Consider:**
+- ✅ Transfer ownership to a multisig wallet (not single EOA)
+- ✅ Add timelock delays for sensitive parameter changes
+- ✅ This contract already has fee caps (10% withdrawal, 20% penalty) - good start!
+- ✅ Consider progressive decentralization plan
+- ✅ Regular third-party audits
+
+**Safety Improvements in This Contract:**
+- ✅ Withdrawal fees capped at 10% max
+- ✅ Exit penalties capped at 20% max
+- ✅ Zero address validation on deployment
+- ✅ `availableRewards` logic protects user principal
+- ✅ Transparent events for all parameter changes
+
+**For This Tutorial:**
+- You're deploying to testnet with test tokens
+- You'll learn the mechanics before adding governance
+- Understanding centralization helps you design better systems
+
+</div>
+
+### Starting Simple: What Does This Contract Do?
+
+Think of this contract like a **time-locked vault** for tokens:
+
+1. **Users deposit tokens** and choose how long to lock them (30, 60, or 120 days)
+2. **The contract tracks** each deposit separately with its own timer
+3. **Rewards accrue over time** based on how long tokens are locked
+4. **Users withdraw** their tokens plus rewards when the lock period ends
+
+That's it! Everything else in this contract supports these four basic operations.
+
+### Contract Overview: The Building Blocks
+
+Let's start with the contract declaration. This is similar to your ERC20 token, but with some extra security features:
 
 ```solidity
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.17;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract Staking is Ownable, ReentrancyGuard {
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
     // ... contract body
 }
 ```
 
-**Inheritance explained:**
-- `Ownable` → Provides `onlyOwner` modifier for admin functions
-- `ReentrancyGuard` → Provides `nonReentrant` modifier for deposit/withdraw safety
+**Breaking this down for beginners:**
 
-**Libraries used:**
-- `SafeMath` → Safe arithmetic (though Solidity 0.8+ has built-in overflow checks)
-- `SafeERC20` → Handles non-standard ERC20 tokens that don't return bool
+**`Ownable`** - Remember this from your ERC20 token?
+- Gives you `onlyOwner` modifier for admin-only functions
+- You used this in your token for minting or pausing
+- Here we'll use it for starting rewards and adjusting rates
 
-## Part 1: State Variables and Data Structures
+**`ReentrancyGuard`** - This is NEW (you didn't need it for ERC20)
+- Prevents a specific attack where someone calls your function again before it finishes
+- Critical for any contract that handles withdrawals
+- Provides the `nonReentrant` modifier we'll use on deposit() and withdraw()
 
-### Core Data Structures
+**`SafeERC20`** - Also NEW, but easy to understand
+- Your ERC20 token returns `true` or `false` from transfer()
+- Some tokens don't! They just revert or do nothing
+- SafeERC20 handles all these edge cases so you don't have to worry
+
+**`Math`** - OpenZeppelin's safe math library
+- Provides `mulDiv()` for overflow-safe multiplication and division
+- Critical for reward calculations with large numbers
+- Prevents overflow attacks that could break reward calculations
+
+## Part 1: Understanding How We Track Deposits
+
+### The Challenge: Tracking Multiple Deposits
+
+Remember your ERC20 token? It just tracked one number per user:
+```solidity
+mapping(address => uint256) private _balances;  // Simple!
+```
+
+But staking is more complex. Imagine Alice:
+- **Jan 1**: Stakes 1000 tokens for 30 days
+- **Jan 10**: Stakes 500 more tokens for 60 days  
+- **Jan 20**: Stakes 2000 tokens for 120 days
+
+We need to track EACH deposit separately because:
+- They have different lock end times
+- They earn different reward rates
+- Alice can withdraw them individually
+
+### Solution: The DepositItem Struct
+
+Think of this like a "receipt" for one deposit:
 
 ```solidity
-// Deposit Item
 struct DepositItem {
-    uint256 apy;        // Annual Percentage Yield (10, 15, or 27)
-    uint256 duration;   // Lock period in seconds (30/60/120 days)
-    uint256 amount;     // Tokens in this deposit
-    uint256 timestamp;  // When deposit was made
-}
-
-// Info of each user
-struct UserInfo {
-    uint256 amount;             // Total amount across all deposits
-    DepositItem[] depositItems; // Array of individual deposits
+    uint256 apy;        // How much interest? (10%, 15%, or 27%)
+    uint256 duration;   // How long locked? (30, 60, or 120 days in seconds)
+    uint256 amount;     // How many tokens in THIS deposit?
+    uint256 timestamp;  // When did we make this deposit?
 }
 ```
 
-**Design insights:**
-- Each deposit is tracked independently
-- Users can have multiple active deposits with different maturities
-- `amount` (total) is maintained separately for quick lookups
-- Array allows iteration and individual withdrawal by index
+**Real example from Alice's first deposit:**
+```solidity
+DepositItem {
+    apy: 10,                    // She gets 10% annual interest
+    duration: 2592000,          // That's 30 days in seconds
+    amount: 1000,               // She deposited 1000 tokens
+    timestamp: 1704067200       // Jan 1, 2024
+}
+```
+
+**Why we need all four fields:**
+- **apy**: To calculate how much reward she earns
+- **duration**: To know when she can withdraw without penalty
+- **amount**: To know how much to give back
+- **timestamp**: To calculate how much time has passed
+
+### The UserInfo Struct: Organizing All Deposits
+
+Now, how do we store Alice's THREE deposits? We use an array:
+
+```solidity
+struct UserInfo {
+    uint256 amount;             // Quick total: 1000 + 500 + 2000 = 3500
+    DepositItem[] depositItems; // Array of her deposits: [deposit1, deposit2, deposit3]
+}
+```
+
+**Why we have BOTH `amount` and `depositItems`:**
+
+`amount` is like a **quick summary**: "Alice has 3500 tokens staked total"
+- Useful for dashboards: "You have X tokens staked"
+- Updated whenever she deposits or withdraws
+
+`depositItems` is the **detailed list**: Each individual deposit with its own timer
+- Needed for calculating rewards per deposit
+- Needed to withdraw specific deposits
+- Needed to show "Deposit 1 matures in 5 days"
 
 ### Immutable Token References
 
@@ -93,6 +205,7 @@ constructor(address tokenAddr, address feeAddr) {
 ```solidity
 uint256 public startedTimestamp;  // When rewards begin accruing (0 = not started)
 address public feeAddress;        // Where withdrawal fees are sent
+address public claimant;          // For achievement verification (training portal wallet)
 uint256 public totalStaked;       // Contract-wide total of all staked tokens
 
 uint256 public apy1;              // APY for 30-day lock
@@ -103,9 +216,10 @@ uint256 public exitPenaltyPerc;   // Penalty for early withdrawal (%)
 uint256 public withdrawFee;       // Fee on normal withdrawal (%)
 ```
 
-**Separation of concerns:**
+**What these variables do:**
 - `totalStaked` → Tracks principal (doesn't include rewards)
 - `feeAddress` → Can be changed by owner
+- `claimant` → Your training portal wallet address (for achievement verification)
 - APY values → Can be updated (but only affects NEW deposits)
 
 ### User Storage
@@ -125,21 +239,35 @@ mapping(address => UserInfo) private userInfo;
 event Deposit(address indexed user, uint256 amount);
 event Withdraw(address indexed user, uint256 amount);
 event EmergencyWithdraw(address indexed user, uint256 amount);
+event ApyUpdated(uint256 newApy1, uint256 newApy2, uint256 newApy3);
+event FeeUpdated(address indexed newFeeAddress, uint256 newWithdrawFee);
+event ExitPenaltyUpdated(uint256 newPenaltyPerc);
 ```
 
 **Why these events?**
 - `indexed user` → Allows filtering by user address off-chain
-- Frontends can listen for events to update UI
+- User events (`Deposit`, `Withdraw`, `EmergencyWithdraw`) track all staking activity
+- Admin events (`ApyUpdated`, `FeeUpdated`, `ExitPenaltyUpdated`) provide transparency for parameter changes
+- Frontends can listen for events to update UI in real-time
 - Block explorers display transaction activity
 - Achievement system can verify user participation
 
 ## Part 2: Constructor and Initialization
 
 ```solidity
-constructor(address tokenAddr, address feeAddr) {
+constructor(
+    address tokenAddr,
+    address feeAddr,
+    address _claimant
+) Ownable(msg.sender) {
+    require(tokenAddr != address(0), "Invalid token address");
+    require(feeAddr != address(0), "Invalid fee address");
+    require(_claimant != address(0), "Invalid claimant address");
+    
     stakingToken = IERC20(tokenAddr);
     rewardToken = stakingToken;
     feeAddress = feeAddr;
+    claimant = _claimant;
 
     apy1 = 10;   // 10% APY for 30-day lock
     apy2 = 15;   // 15% APY for 60-day lock
@@ -155,32 +283,65 @@ constructor(address tokenAddr, address feeAddr) {
 **Constructor parameters:**
 - `tokenAddr` → Address of ERC20 token users will stake
 - `feeAddr` → Where to send withdrawal fees (could be treasury, burn address, etc.)
+- `_claimant` → Your training portal wallet address (for achievement verification)
+
+**Important:** `Ownable(msg.sender)` is required in Solidity 0.8.28+ to explicitly set the contract owner.
+
+**Safety validations:**
+- All three addresses are checked to ensure they're not `address(0)`
+- Prevents accidental deployment with invalid addresses
+- Deployment will revert if any address is zero
 
 **Default values:**
 - APY rates are set but can be changed later via `updateApy()`
 - Rewards don't start accruing until `startReward()` is called
-- Owner can adjust penalties/fees after deployment
+- Owner can adjust penalties/fees after deployment (within caps)
+- The `claimant` address is stored for achievement verification by the training portal
 
-**Adding claimant for achievements:**
+## Part 3: Calculating Rewards - The Heart of Staking
 
-For the training module, you might modify the constructor to include:
+### Starting With Simple Math
 
-```solidity
-address public claimant;
+Before we look at the code, let's understand the basic idea with simple numbers:
 
-constructor(address tokenAddr, address feeAddr, address _claimant) {
-    stakingToken = IERC20(tokenAddr);
-    rewardToken = stakingToken;
-    feeAddress = feeAddr;
-    claimant = _claimant;  // Your training portal wallet
-    
-    // ... rest of initialization
-}
+**Question:** If Alice stakes 1000 tokens for 30 days at 10% APY, how much does she earn?
+
+**Manual calculation:**
+```
+Annual reward = 1000 tokens × 10% = 100 tokens per year
+Daily reward = 100 ÷ 365 = 0.274 tokens per day
+30-day reward = 0.274 × 30 = 8.22 tokens
 ```
 
-## Part 3: Reward Calculation Logic
+That's it! Now we just need to teach the contract to do this math.
 
-### The Core Calculation Function
+### The Challenge: Tracking Time
+
+Here's the tricky part - we need to handle different scenarios:
+
+**Scenario A: User deposits BEFORE rewards start**
+```
+Jan 1: Alice deposits (timestamp = Jan 1)
+Jan 5: Owner starts rewards (startedTimestamp = Jan 5)
+Jan 20: Alice checks her rewards
+
+Question: Should she earn for 19 days or 15 days?
+Answer: 15 days (only count time AFTER rewards started)
+```
+
+**Scenario B: User deposits AFTER rewards started**
+```
+Jan 1: Owner starts rewards (startedTimestamp = Jan 1)
+Jan 10: Alice deposits (timestamp = Jan 10)
+Jan 20: Alice checks her rewards
+
+Question: How many days?
+Answer: 10 days (from her deposit until now)
+```
+
+### The Calculation Function Explained
+
+Now let's see how the code handles this:
 
 ```solidity
 function _calculateReward(address _user, uint256 _index) internal view returns (uint256) {
@@ -199,12 +360,18 @@ function _calculateReward(address _user, uint256 _index) internal view returns (
     if (dt > user.depositItems[_index].duration)
         dt = user.depositItems[_index].duration;
     
-    return (user.depositItems[_index].amount * dt) * user.depositItems[_index].apy 
-           / 100 / 365 days;
+    // Use mulDiv for overflow-safe calculation
+    // Formula: (amount * apy * dt) / (365 days * 100)
+    uint256 numerator = Math.mulDiv(
+        user.depositItems[_index].amount,
+        user.depositItems[_index].apy,
+        100
+    );
+    return Math.mulDiv(numerator, dt, 365 days);
 }
 ```
 
-**Step-by-step breakdown:**
+### Breaking It Down Step-by-Step
 
 #### Step 1: Validate and Early Exit
 
@@ -263,103 +430,121 @@ if (dt > user.depositItems[_index].duration)
 - We cap `dt` at 30 days
 - User doesn't get extra rewards for waiting longer
 
-#### Step 4: Calculate Reward
+#### Step 4: Calculate Reward (Overflow-Safe!)
 
 ```solidity
-return (user.depositItems[_index].amount * dt) * user.depositItems[_index].apy 
-       / 100 / 365 days;
+// Use mulDiv for overflow-safe calculation
+// Formula: (amount * apy * dt) / (365 days * 100)
+uint256 numerator = Math.mulDiv(
+    user.depositItems[_index].amount,
+    user.depositItems[_index].apy,
+    100
+);
+return Math.mulDiv(numerator, dt, 365 days);
 ```
+
+**Why use `Math.mulDiv()`?**
+
+The naive approach `(amount * dt * apy) / 100 / 365 days` can overflow with large numbers:
+- If amount = 1,000,000,000 tokens (1B with 18 decimals = 10^27)
+- Multiplying three large numbers could exceed `uint256` max (2^256)
+- Contract would break or produce wrong results
+
+**How `Math.mulDiv()` works:**
+```solidity
+Math.mulDiv(a, b, c) = (a * b) / c
+```
+- Performs intermediate calculation with 512-bit precision
+- Then divides, fitting result back into uint256
+- Prevents overflow while maintaining accuracy
 
 **Formula breakdown:**
 ```
-reward = (amount × elapsed_seconds × apy) / 100 / 31,536,000
+Step 1: numerator = (amount * apy) / 100
+Step 2: reward = (numerator * dt) / (365 days)
+
+Combined: reward = (amount * apy * dt) / (100 * 365 days)
 
 Where:
 - amount = tokens staked in this deposit
-- elapsed_seconds = time since deposit (capped at duration)
 - apy = annual percentage yield (10, 15, or 27)
-- 365 days = 31,536,000 seconds (conversion to annual rate)
+- dt = elapsed seconds (capped at duration)
+- 365 days = 31,536,000 seconds
 - 100 = percentage divisor
 ```
 
 **Example calculation:**
 ```
 Amount: 1,000 tokens
-Duration: 30 days (already elapsed)
+Duration: 30 days (2,592,000 seconds)
 APY: 10%
 
-Reward = (1000 × 2,592,000 × 10) / 100 / 31,536,000
-       = 25,920,000,000 / 100 / 31,536,000
-       = 259,200,000 / 31,536,000
-       = 8.219 tokens
+Step 1: numerator = mulDiv(1000, 10, 100) = 100
+Step 2: reward = mulDiv(100, 2,592,000, 31,536,000) = 8.219 tokens
 
 Verification: 1000 × 0.10 × (30/365) = 8.219 ✓
 ```
 
 ### Public View Functions for UI
 
+The contract provides three essential view functions:
+
 ```solidity
+function getStakedTokens(address _user) external view returns (uint256) {
+    return userInfo[_user].amount;
+}
+
+function getStakedItemLength(address _user) external view returns (uint256) {
+    return userInfo[_user].depositItems.length;
+}
+
 function getStakedItemReward(address _user, uint256 _index) 
     external view returns (uint256) 
 {
     return _calculateReward(_user, _index);
 }
-
-function getStakedItemAmount(address _user, uint256 _index) 
-    external view returns (uint256) 
-{
-    UserInfo storage user = userInfo[_user];
-    require(_index < user.depositItems.length, "Index out of bound");
-    return user.depositItems[_index].amount;
-}
-
-function getStakedItemAPY(address _user, uint256 _index) 
-    external view returns (uint256) 
-{
-    UserInfo storage user = userInfo[_user];
-    require(_index < user.depositItems.length, "Index out of bound");
-    return user.depositItems[_index].apy;
-}
-
-function getStakedItemDuration(address _user, uint256 _index) 
-    external view returns (uint256) 
-{
-    UserInfo storage user = userInfo[_user];
-    require(_index < user.depositItems.length, "Index out of bound");
-    return user.depositItems[_index].duration;
-}
-
-function getStakedItemElapsed(address _user, uint256 _index) 
-    external view returns (uint256) 
-{
-    UserInfo storage user = userInfo[_user];
-    require(_index < user.depositItems.length, "Index out of bound");
-
-    uint256 depositTimestamp = user.depositItems[_index].timestamp;
-    if (startedTimestamp > depositTimestamp)
-        depositTimestamp = startedTimestamp;
-
-    return block.timestamp - depositTimestamp;
-}
-
-function getStakedTokens(address _user) external view returns (uint256) {
-    UserInfo storage user = userInfo[_user];
-    return user.amount;
-}
-
-function getStakedItemLength(address _user) external view returns (uint256) {
-    UserInfo storage user = userInfo[_user];
-    return user.depositItems.length;
-}
 ```
 
-**Why so many getters?**
-- Frontends need to display each deposit separately
-- Users want to see: amount, APY, time remaining, accrued rewards
-- Granular functions are gas-efficient for view calls
-- Each function has a single responsibility
+**What each function does:**
 
-## Part 4: Deposit Function
+`getStakedTokens(address)` - Returns total amount staked by a user
+- Quick overview: "Alice has 3500 tokens staked total"
+- Useful for dashboard displays
+
+`getStakedItemLength(address)` - Returns number of deposits a user has
+- "Alice has 3 active deposits"
+- Used to loop through all deposits
+
+`getStakedItemReward(address, index)` - Returns earned rewards for a specific deposit
+- "Deposit #0 has earned 8.22 tokens"
+- Calls the internal `_calculateReward()` function
+
+**Accessing other deposit details:**
+
+To get details like APY, duration, amount, or timestamp for a specific deposit, frontends would need to:
+1. Listen to `Deposit` events to track when deposits were made
+2. Store deposit details off-chain
+3. Or add additional getter functions if needed
+
+This minimal interface keeps the contract lean while still providing essential information!
+
+## Part 4: Deposit Function - Locking Your Tokens
+
+### What Happens When You Stake?
+
+Let's follow Alice through the entire staking process:
+
+**Alice's goal:** Stake 1000 tokens for 30 days
+
+**What needs to happen:**
+1. ✅ Alice must have already approved the staking contract (just like with your ERC20 token!)
+2. ✅ The contract transfers her tokens in
+3. ✅ The contract creates a "receipt" tracking her deposit
+4. ✅ The contract remembers: amount, time, and rate
+
+### Walking Through the Deposit Function
+
+Here's the complete function, then we'll break it down:
 
 ```solidity
 function deposit(uint256 _amount, uint256 _option) public nonReentrant {
@@ -373,7 +558,7 @@ function deposit(uint256 _amount, uint256 _option) public nonReentrant {
     stakingToken.safeTransferFrom(address(msg.sender), address(this), _amount);
     uint256 amountTransferred = stakingToken.balanceOf(address(this)) - initialBalance;
     
-    user.amount = user.amount.add(amountTransferred);
+    user.amount += amountTransferred;
     totalStaked += amountTransferred;
 
     // Determine APY and duration based on option
@@ -396,15 +581,164 @@ function deposit(uint256 _amount, uint256 _option) public nonReentrant {
     user.depositItems.push(DepositItem({
         apy: apy,
         duration: duration,
-        amount: _amount,
+        amount: amountTransferred,  // Use actual received amount, not _amount!
         timestamp: block.timestamp
     }));
 
-    emit Deposit(msg.sender, _amount);
+    emit Deposit(msg.sender, amountTransferred);
 }
 ```
 
-**Security features:**
+### Step-by-Step: What Each Part Does
+
+#### Phase 1: Validation Checks
+
+```solidity
+require(_amount > 0, "Invalid Amount");
+require(_option == 1 || _option == 2 || _option == 3, "Invalid Option");
+```
+
+**In plain English:**
+- "You must stake MORE than 0 tokens"
+- "You must choose option 1, 2, or 3" (30, 60, or 120 days)
+
+Just like your ERC20 had `require(amount > 0)` in transfer, same idea here!
+
+#### Phase 2: The Reentrancy Guard
+
+```solidity
+function deposit(uint256 _amount, uint256 _option) public nonReentrant {
+```
+
+**What's `nonReentrant`?**
+
+Remember we added `ReentrancyGuard`? This prevents a sneaky attack:
+
+**WITHOUT nonReentrant:**
+```
+1. Malicious token's transfer function calls deposit() AGAIN
+2. Contract thinks user deposited twice
+3. User gets double credit! 💰💰 (bad!)
+```
+
+**WITH nonReentrant:**
+```
+1. First call to deposit() sets a "lock"
+2. If deposit() tries to call itself → REVERTS
+3. Lock releases when function completes ✅
+```
+
+Think of it like: "This function can't call itself until it's finished."
+
+#### Phase 3: The Smart Transfer Trick
+
+```solidity
+uint256 initialBalance = stakingToken.balanceOf(address(this));
+stakingToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+uint256 amountTransferred = stakingToken.balanceOf(address(this)) - initialBalance;
+```
+
+**Why check the balance before AND after?**
+
+Some tokens charge fees on transfer! Example:
+```
+Alice tries to stake 1000 tokens
+Token has 2% transfer fee
+Contract actually receives: 1000 - 20 = 980 tokens
+
+If we just trusted _amount, we'd owe her 1000 but only have 980!
+So we measure: after - before = exactly what we received ✅
+```
+
+For normal tokens (like yours probably is), this just equals `_amount`. But it protects against weird tokens!
+
+#### Phase 4: Update Tracking
+
+```solidity
+user.amount += amountTransferred;
+totalStaked += amountTransferred;
+```
+
+**Two counters get updated:**
+- **user.amount**: Alice's total across all her deposits
+- **totalStaked**: Everyone's total (used for contract-wide stats)
+
+**Example:**
+```
+Before Alice stakes:
+- user.amount = 0
+- totalStaked = 50,000 (from other users)
+
+Alice stakes 1000:
+- user.amount = 0 + 1000 = 1000
+- totalStaked = 50,000 + 1000 = 51,000
+```
+
+#### Phase 5: Choose Your Reward Tier
+
+```solidity
+uint256 apy;
+uint256 duration;
+if (_option == 1) {
+    apy = apy1;           // 10% APY
+    duration = 30 days;    // 2,592,000 seconds
+}
+else if (_option == 2) {
+    apy = apy2;           // 15% APY
+    duration = 60 days;    // 5,184,000 seconds
+}
+else {
+    apy = apy3;           // 27% APY
+    duration = 120 days;   // 10,368,000 seconds
+}
+```
+
+**Think of it like a bank CD:**
+- Option 1 = "Short term, lower rate"
+- Option 2 = "Medium term, medium rate"  
+- Option 3 = "Long term, highest rate"
+
+The longer you commit, the better your reward!
+
+**Important:** These are the CURRENT rates. If the owner changes rates tomorrow, Alice keeps HER rate (the one when she deposited).
+
+#### Phase 6: Create the Deposit Receipt
+
+```solidity
+user.depositItems.push(DepositItem({
+    apy: apy,
+    duration: duration,
+    amount: amountTransferred,  // Use actual received amount!
+    timestamp: block.timestamp
+}));
+```
+
+**This creates Alice's "receipt":**
+```solidity
+DepositItem {
+    apy: 10,              // She gets 10% 
+    duration: 2592000,    // For 30 days
+    amount: 1000,         // The ACTUAL amount received (amountTransferred)
+    timestamp: 1704067200 // Starting now
+}
+```
+
+**Critical:** We use `amountTransferred` (not `_amount`) to handle tokens with transfer fees! If Alice tried to stake 1000 tokens but the token has a 2% fee, we'd actually receive 980 tokens. By using `amountTransferred`, we correctly track the 980 tokens we actually have.
+
+This gets added to her `depositItems` array. If she stakes again later, she'll have multiple receipts!
+
+#### Phase 7: Announce the Deposit
+
+```solidity
+emit Deposit(msg.sender, amountTransferred);
+```
+
+This broadcasts an event that:
+- Block explorers can display
+- Frontends can listen for (to update UI)
+- Achievement systems can verify
+
+### Why This Function Is Secure
 
 ### 1. ReentrancyGuard Protection
 
@@ -479,16 +813,90 @@ if (_option == 1) {
 - This deposit keeps `apy: 10` (value at deposit time)
 - New deposits get `apy: 12`
 
-## Part 5: Withdraw Function
+## Part 5: Withdraw Function - Getting Your Tokens Back
+
+### The Two Paths: Early vs Normal Withdrawal
+
+This is the most important function to understand. There are TWO completely different paths:
+
+**Path A: Early Withdrawal** (withdrawing before lock period ends)
+```
+You staked for 30 days, but it's only been 20 days
+❌ You get your principal back MINUS a 5% penalty
+❌ You get ZERO rewards
+```
+
+**Path B: Normal Withdrawal** (withdrawing after lock period ends)
+```
+You staked for 30 days, and 30+ days have passed
+✅ You get your principal back MINUS a small 2% fee
+✅ You get FULL rewards for the lock period
+```
+
+Let's see both scenarios with real numbers first, then look at the code.
+
+### Example A: Alice Withdraws Early (Penalty!)
+
+**Alice's deposit:**
+- Amount: 1000 tokens
+- Lock: 30 days (for 10% APY)
+- Day 20: Alice needs her tokens back urgently
+
+**What happens:**
+```
+Original deposit: 1000 tokens
+Early withdrawal penalty: 5%
+Penalty amount: 1000 × 0.05 = 50 tokens
+
+Alice receives: 1000 - 50 = 950 tokens
+Rewards: 0 (forfeit for early exit)
+
+Total back to Alice: 950 tokens
+```
+
+She lost 50 tokens and gets no rewards. Ouch! This discourages early withdrawal.
+
+### Example B: Alice Withdraws Normally (Rewards!)
+
+**Alice's deposit:**
+- Amount: 1000 tokens
+- Lock: 30 days (for 10% APY)
+- Day 35: Alice waits for the full 30 days (actually waited 35, but only counts 30)
+
+**What happens:**
+```
+Original deposit: 1000 tokens
+Withdrawal fee: 2%
+Fee amount: 1000 × 0.02 = 20 tokens
+Rewards earned: 8.22 tokens (1000 × 10% × 30/365)
+
+Alice receives: 1000 - 20 + 8.22 = 988.22 tokens
+Fee address gets: 20 tokens
+
+Total back to Alice: 988.22 tokens (she made 8.22 profit after fees!)
+```
+
+Much better! She waited and earned rewards.
+
+### Now Let's See the Code
+
+Here's the complete withdraw function:
 
 ```solidity
 function withdraw(uint256 _index) public nonReentrant {
-    require(startedTimestamp > 0, "Not started yet");
-    
     UserInfo storage user = userInfo[msg.sender];
     require(_index < user.depositItems.length, "Index out of bound");
     
     uint256 amount = user.depositItems[_index].amount;
+    
+    // Calculate reward BEFORE modifying user.amount (needed for _calculateReward)
+    uint256 reward = _calculateReward(msg.sender, _index);
+    
+    // Calculate available rewards BEFORE decrementing totalStaked
+    uint256 totalBalance = stakingToken.balanceOf(address(this));
+    uint256 availableRewards = totalBalance > totalStaked ? totalBalance - totalStaked : 0;
+    
+    // Now update state
     user.amount -= amount;
     totalStaked -= amount;
 
@@ -500,60 +908,106 @@ function withdraw(uint256 _index) public nonReentrant {
     
     if (dt < user.depositItems[_index].duration) {
         // EARLY WITHDRAWAL PATH
-        uint256 total = rewardToken.balanceOf(address(this));
+        uint256 availableBalance = stakingToken.balanceOf(address(this));
         amount -= amount * exitPenaltyPerc / 100;  // Apply penalty
-        if (amount > total)
-            amount = total;
-        if (amount > 0) {
-            stakingToken.safeTransfer(address(msg.sender), amount);
-            emit EmergencyWithdraw(msg.sender, amount);
-        }
+        
+        require(amount <= availableBalance, "Insufficient contract balance");
+        require(amount > 0, "Withdrawal amount is zero");
+        
+        stakingToken.safeTransfer(address(msg.sender), amount);
+        emit EmergencyWithdraw(msg.sender, amount);
     }
     else {
         // NORMAL WITHDRAWAL PATH
-        uint256 total = rewardToken.balanceOf(address(this));
-        
-        // Send fee to feeAddress
         uint256 fee = amount * withdrawFee / 100;
-        if (fee > total)
-            fee = total;
-        if (fee > 0)
-            stakingToken.safeTransfer(feeAddress, fee);
-
-        total -= fee;
         
-        // Send amount + rewards to user
-        amount -= fee;
-        amount += _calculateReward(msg.sender, _index);
-        if (amount > total)
-            amount = total;
-        if (amount > 0) {
-            stakingToken.safeTransfer(address(msg.sender), amount);
-            emit Withdraw(msg.sender, amount);
+        // Cap reward to available reward pool (not including principal)
+        if (reward > availableRewards) {
+            reward = availableRewards;
         }
+        
+        // Transfer fee from principal (always possible since amount is from principal)
+        if (fee > 0) {
+            stakingToken.safeTransfer(feeAddress, fee);
+        }
+        
+        // Calculate final withdrawal: principal - fee + capped rewards
+        uint256 withdrawAmount = amount - fee + reward;
+        
+        // Final sanity check: ensure we have enough balance
+        require(withdrawAmount <= totalBalance - fee, "Insufficient contract balance");
+        require(withdrawAmount > 0, "Withdrawal amount is zero");
+        
+        stakingToken.safeTransfer(address(msg.sender), withdrawAmount);
+        emit Withdraw(msg.sender, withdrawAmount);
     }
 
-    // Remove this deposit from array
-    for (uint256 i = _index; i < user.depositItems.length - 1; i++)
-        user.depositItems[i] = user.depositItems[i + 1];
+    // Gas optimization: swap-and-pop instead of linear shift
+    uint256 lastIndex = user.depositItems.length - 1;
+    if (_index != lastIndex) {
+        user.depositItems[_index] = user.depositItems[lastIndex];
+    }
     user.depositItems.pop();
 }
 ```
 
-**Function flow:**
+### Breaking It Down Step-by-Step
 
-### Phase 1: Update State (Effects)
+### Phase 1: Calculate Values BEFORE State Changes (Critical!)
 
 ```solidity
 uint256 amount = user.depositItems[_index].amount;
+
+// Calculate reward BEFORE modifying user.amount (needed for _calculateReward)
+uint256 reward = _calculateReward(msg.sender, _index);
+
+// Calculate available rewards BEFORE decrementing totalStaked
+uint256 totalBalance = stakingToken.balanceOf(address(this));
+uint256 availableRewards = totalBalance > totalStaked ? totalBalance - totalStaked : 0;
+
+// Now update state
 user.amount -= amount;      // Update user total
 totalStaked -= amount;      // Update contract total
 ```
 
-**Checks-Effects-Interactions pattern:**
-1. ✅ Update state first
-2. ✅ Then do external calls
-3. ✅ Prevents reentrancy vulnerabilities
+**Why calculate BEFORE updating state?**
+
+**Bug #1 - Reward calculation depends on `user.amount`:**
+
+Look at `_calculateReward()`:
+```solidity
+function _calculateReward(address _user, uint256 _index) internal view returns (uint256) {
+    UserInfo storage user = userInfo[_user];
+    if (startedTimestamp == 0 || user.amount == 0)  // ← Checks user.amount!
+        return 0;
+    // ... rest of calculation
+}
+```
+
+If we calculate AFTER decrementing `user.amount`, the user gets 0 rewards! 💥
+
+**Bug #2 - Available rewards calculation depends on `totalStaked`:**
+
+```solidity
+uint256 availableRewards = totalBalance > totalStaked ? totalBalance - totalStaked : 0;
+```
+
+If we calculate AFTER decrementing `totalStaked`, we'd incorrectly include the user's principal in the available reward pool! This could allow withdrawing more than the actual rewards deposited by the owner.
+
+**The Fix (calculate BEFORE):**
+```
+1. reward = _calculateReward(...);  // Uses current user.amount ✅
+2. availableRewards = totalBalance - totalStaked;  // Uses current totalStaked ✅
+3. user.amount -= amount;  // Now we can safely update state
+4. totalStaked -= amount;
+5. User gets correct rewards from correct pool! 🎉
+```
+
+**Checks-Effects-Interactions pattern (modified):**
+1. ✅ Calculate values that depend on current state
+2. ✅ Update state
+3. ✅ Then do external calls
+4. ✅ Prevents reentrancy and calculation bugs
 
 ### Phase 2: Calculate Time Elapsed
 
@@ -573,16 +1027,14 @@ Same logic as `_calculateReward()`.
 
 ```solidity
 if (dt < user.depositItems[_index].duration) {
-    uint256 total = rewardToken.balanceOf(address(this));
+    uint256 availableBalance = stakingToken.balanceOf(address(this));
     amount -= amount * exitPenaltyPerc / 100;  // 5% penalty
     
-    if (amount > total)
-        amount = total;
+    require(amount <= availableBalance, "Insufficient contract balance");
+    require(amount > 0, "Withdrawal amount is zero");
         
-    if (amount > 0) {
         stakingToken.safeTransfer(address(msg.sender), amount);
         emit EmergencyWithdraw(msg.sender, amount);
-    }
 }
 ```
 
@@ -596,37 +1048,56 @@ User receives: 1000 - (1000 × 0.05) = 950 tokens
 NO REWARDS PAID
 ```
 
+**Safety checks:**
+- `require(amount <= availableBalance)` → Ensures contract has enough balance
+- `require(amount > 0)` → Prevents zero-value withdrawal (after penalty is applied)
+
 **Why "EmergencyWithdraw" event?**
 - Signals this was not a normal completion
-- Frontends can display differently
-- Analytics can track early exits
+- Frontends can display differently (e.g., "Early Exit")
+- Analytics can track early exits and penalty revenue
 
 #### Normal Withdrawal (After Lock Ends)
 
 ```solidity
 else {
-    uint256 total = rewardToken.balanceOf(address(this));
+    // Note: totalBalance, availableRewards, and reward were calculated earlier (Phase 1)
     
-    // Step 1: Deduct fee and send to feeAddress
     uint256 fee = amount * withdrawFee / 100;
-    if (fee > total)
-        fee = total;
-    if (fee > 0)
-        stakingToken.safeTransfer(feeAddress, fee);
-
-    total -= fee;
     
-    // Step 2: Add rewards and send to user
-    amount -= fee;
-    amount += _calculateReward(msg.sender, _index);
-    if (amount > total)
-        amount = total;
-    if (amount > 0) {
-        stakingToken.safeTransfer(address(msg.sender), amount);
-        emit Withdraw(msg.sender, amount);
+    // Cap reward to available reward pool (not including principal)
+    if (reward > availableRewards) {
+        reward = availableRewards;
     }
+    
+    // Transfer fee from principal (always possible since amount is from principal)
+    if (fee > 0) {
+        stakingToken.safeTransfer(feeAddress, fee);
+    }
+    
+    // Calculate final withdrawal: principal - fee + capped rewards
+    uint256 withdrawAmount = amount - fee + reward;
+    
+    // Final sanity check: ensure we have enough balance
+    require(withdrawAmount <= totalBalance - fee, "Insufficient contract balance");
+    require(withdrawAmount > 0, "Withdrawal amount is zero");
+    
+    stakingToken.safeTransfer(address(msg.sender), withdrawAmount);
+    emit Withdraw(msg.sender, withdrawAmount);
 }
 ```
+
+**Key improvement: `availableRewards` calculation (done in Phase 1)**
+
+```solidity
+uint256 availableRewards = totalBalance > totalStaked ? totalBalance - totalStaked : 0;
+```
+
+This protects user deposits by:
+1. **Separating principal from rewards**: `totalStaked` tracks all user deposits
+2. **Only paying from surplus**: Rewards come from `totalBalance - totalStaked`
+3. **Capping rewards**: If reward pool is low, users get partial rewards but always get their principal back
+4. **Calculated BEFORE state changes**: Uses current `totalStaked` value to ensure accuracy
 
 **Example:**
 ```
@@ -635,55 +1106,123 @@ Waited full 30 days
 APY: 10%
 Withdrawal fee: 2%
 
-Rewards: 8.219 tokens
+Calculated reward: 8.219 tokens
+Contract balance: 1,005 tokens
+Total staked: 1,000 tokens
+Available rewards: 1,005 - 1,000 = 5 tokens
+
+Actual reward paid: min(8.219, 5) = 5 tokens (capped!)
 Fee: 1000 × 0.02 = 20 tokens
 
-User receives: 1000 - 20 + 8.219 = 988.219 tokens
+User receives: 1000 - 20 + 5 = 985 tokens
 Fee address receives: 20 tokens
 ```
 
 **Safety checks:**
-- `if (amount > total)` → Don't try to transfer more than contract holds
-- `if (amount > 0)` → Don't attempt zero-value transfers (some tokens revert)
+- `availableRewards` calculation → Protects user principal from being used for rewards
+- `if (reward > availableRewards)` → Cap rewards to what's actually available
+- `require(withdrawAmount <= totalBalance - fee)` → Final sanity check
+- `require(withdrawAmount > 0)` → Revert if something went wrong
 
-### Phase 4: Array Cleanup
+**This design ensures:**
+- ✅ Users ALWAYS get their principal back (minus fee)
+- ✅ Rewards are paid from the surplus pool only
+- ✅ Contract can't run out of tokens for withdrawals
+
+### Phase 4: Cleaning Up the Receipt Array (Gas Optimized!)
+
+After sending tokens, we need to remove this deposit from the array. The contract uses a clever **swap-and-pop** optimization:
 
 ```solidity
-for (uint256 i = _index; i < user.depositItems.length - 1; i++)
-    user.depositItems[i] = user.depositItems[i + 1];
+// Gas optimization: swap-and-pop instead of linear shift
+uint256 lastIndex = user.depositItems.length - 1;
+if (_index != lastIndex) {
+    user.depositItems[_index] = user.depositItems[lastIndex];
+}
 user.depositItems.pop();
 ```
 
-**Array removal pattern:**
+**Why swap-and-pop?**
+
+**Old approach (linear shift):**
+- Loop through array shifting every element
+- Cost: O(n) gas, where n = number of deposits
+- If you have 10 deposits and remove #2, you shift 8 elements
+
+**New approach (swap-and-pop):**
+- Copy last element to deleted position
+- Remove last element
+- Cost: O(1) gas - always the same!
+- Only 2 operations regardless of array size
+
+**Visual example:** Alice has 4 deposits and withdraws #1:
 
 ```
-Before: [Deposit0, Deposit1, Deposit2, Deposit3]
-Withdraw index 1
+BEFORE:
+Index:     0         1         2         3
+       [DepA,    DepB,    DepC,    DepD]
+                   ↑
+             Withdrawing this one
 
-Step 1: Shift items left
-[Deposit0, Deposit2, Deposit3, Deposit3]
-         ^^^^^^^^ ^^^^^^^^ ^^^^^^^^
-         moved   moved    duplicate
+STEP 1: Copy last deposit to withdrawn position
+Index:     0         1         2         3
+       [DepA,    DepD,    DepC,    DepD]
+                   ↑                 ↑
+                 copied          original
 
-Step 2: Pop last item
-[Deposit0, Deposit2, Deposit3]
+STEP 2: Remove the duplicate at end
+       [DepA,    DepD,    DepC]
+
+FINAL:
+Alice now has [DepA, DepD, DepC] ✅
+Order changed, but that's okay! Each deposit is independent.
 ```
 
-**Gas cost:**
-- O(n) where n = items after the removed index
-- Worst case: removing first item in large array
-- Acceptable because users typically have few deposits
+**Trade-offs:**
+- ✅ **Much cheaper gas** (constant vs linear cost)
+- ✅ **Scales better** (same cost for 1 or 100 deposits)
+- ⚠️ **Order not preserved** (deposits may shuffle)
+- ✅ **Order doesn't matter** (each deposit is independent!)
 
-## Part 6: Admin Functions
+**Important:** This is why we pass `_index` to withdraw - you're saying "withdraw my deposit at index #2" not "withdraw 1000 tokens". Frontends should track deposits by index, not assume they stay in order.
 
-### Start and Stop Rewards
+## Part 6: Admin Functions - You're the Contract Owner!
+
+As the person who deployed this contract, you have special powers! These are your admin functions.
+
+### Starting and Stopping Rewards
+
+**The Scenario:** You just deployed your staking contract. What now?
+
+1. ✅ Deploy contract
+2. ✅ Transfer reward tokens to the contract
+3. ✅ Test with a small deposit
+4. ✅ **Call `startReward()`** ← This turns on reward accrual!
 
 ```solidity
 function startReward() external onlyOwner {
     require(startedTimestamp == 0, "Can only start rewards once");
     startedTimestamp = block.timestamp;
 }
+```
 
+**What this does:**
+- Sets `startedTimestamp` to NOW
+- From this moment, all deposits start earning rewards
+- Can only be called ONCE (prevents restarting after stopping)
+
+**Example timeline:**
+```
+Jan 1: You deploy contract
+Jan 2: You transfer 100,000 reward tokens to contract
+Jan 3: Users start depositing (but earning 0 rewards yet!)
+Jan 5: You call startReward()
+Jan 5+: NOW users start earning rewards!
+```
+
+### Emergency Stop
+
+```solidity
 function stopReward() external onlyOwner {
     startedTimestamp = 0;
     apy1 = 0;
@@ -692,17 +1231,23 @@ function stopReward() external onlyOwner {
 }
 ```
 
-**Use cases:**
+**When would you use this?**
+- Reward pool is running low
+- You found a bug and need to pause
+- Staking program is ending
 
-**`startReward()`:**
-- Called after contract deployment
-- After reward pool is funded
-- When ready to open staking to public
+**What it does:**
+- Stops all future reward accrual
+- Sets all APY rates to 0
+- **IMPORTANT:** Users can still withdraw! They just stop earning NEW rewards
 
-**`stopReward()`:**
-- Emergency pause of new rewards
-- End of staking program
-- NOTE: Doesn't prevent withdrawals (users can still claim existing rewards)
+**Example:**
+```
+Alice staked 30 days ago, earned 8.22 tokens so far
+You call stopReward()
+Alice can still withdraw and get her 8.22 earned rewards ✅
+She just won't earn any MORE rewards from this point ✅
+```
 
 ### Update APY Rates
 
@@ -715,6 +1260,7 @@ function updateApy(uint256 newApy1, uint256 newApy2, uint256 newApy3)
     apy1 = newApy1;
     apy2 = newApy2;
     apy3 = newApy3;
+    emit ApyUpdated(newApy1, newApy2, newApy3);
 }
 ```
 
@@ -727,12 +1273,14 @@ Owner calls updateApy(12, 18, 30)
 Now: apy1 = 12
 
 Bob deposits 1000 tokens → gets apy: 12
-Alice still has apy: 10 (unchanged)
+Alice still has apy: 10 (unchanged) ✅
 ```
 
-**Safety limit:**
+**Safety features:**
 - Max APY = 10,000% (100× return per year)
 - Prevents typos: owner meant 120% but typed 12000
+- Emits `ApyUpdated` event for transparency
+- Existing deposits are **never** affected
 
 ### Update Penalties and Fees
 
@@ -740,45 +1288,45 @@ Alice still has apy: 10 (unchanged)
 function updateExitPenalty(uint256 newPenaltyPerc) external onlyOwner {
     require(newPenaltyPerc <= 20, "May not set higher than 20%");
     exitPenaltyPerc = newPenaltyPerc;
+    emit ExitPenaltyUpdated(newPenaltyPerc);
 }
 
 function updateFee(address newFeeAddress, uint256 newWithdrawFee) 
     external onlyOwner 
 {
+    require(newFeeAddress != address(0), "Invalid fee address");
+    require(newWithdrawFee <= 10, "Fee cannot exceed 10%");
     feeAddress = newFeeAddress;
     withdrawFee = newWithdrawFee;
+    emit FeeUpdated(newFeeAddress, newWithdrawFee);
 }
 ```
 
-**Safety considerations:**
-- Early exit penalty capped at 20% (protects users from unreasonable penalties)
-- Withdrawal fee has NO cap (owner discretion, but affects user trust)
-- Fee address can be changed (useful if multisig wallet changes)
+**Safety features (improved!):**
+- ✅ Early exit penalty capped at **20% max**
+- ✅ Withdrawal fee NOW capped at **10% max** (protects users!)
+- ✅ Fee address validated (can't be zero address)
+- ✅ Both emit events for transparency
+- ✅ Fee address can be changed (useful if multisig wallet changes)
 
-### Emergency Reward Withdrawal
+**Why the 10% withdrawal fee cap matters:**
 
+**Before (no cap):**
 ```solidity
-function withdrawEmergencyReward(uint256 _amount) external onlyOwner {
-    require(_amount <= rewardToken.balanceOf(address(this)) - totalStaked, 
-            'not enough tokens to take out');
-    rewardToken.safeTransfer(address(msg.sender), _amount);
-}
+// Owner could do this:
+updateFee(feeAddr, 99)  // 99% fee! Users lose almost everything!
 ```
 
-**What this does:**
-- Allows owner to withdraw REWARD tokens only
-- CANNOT withdraw staked principal (`totalStaked` is protected)
-- Useful for migrating rewards to new contract version
+**Now (with cap):**
+```solidity
+// Owner tries:
+updateFee(feeAddr, 99)  // ❌ REVERTS: "Fee cannot exceed 10%"
 
-**Example:**
+// Maximum possible:
+updateFee(feeAddr, 10)  // ✅ Passes (10% max)
 ```
-Contract holds: 1,000,000 tokens
-Total staked: 800,000 tokens
-Available for withdrawal: 200,000 tokens (rewards pool)
 
-Owner can withdraw up to 200,000
-Owner CANNOT touch the 800,000 (user deposits)
-```
+This protects users from excessive fees while still allowing reasonable fee adjustments.
 
 ### Rewards Remaining View
 
@@ -798,80 +1346,85 @@ function rewardsRemaining() public view returns (uint256) {
 - Alerts when running low
 - Helps plan reward pool refills
 
-### Emergency Reset
+**Important safety feature:**
+- This calculation protects user deposits
+- Only counts tokens ABOVE `totalStaked` as available rewards
+- Used internally by the `withdraw()` function to cap reward payouts
+- Ensures the contract always prioritizes returning user principal
 
-```solidity
-function reset() external onlyOwner {
-    uint256 balance = rewardToken.balanceOf(address(this));
-    rewardToken.safeTransfer(address(msg.sender), balance);
-    totalStaked = 0;
-}
+## Complete User Journey Through the Contract
+
+Let's trace a complete user journey step by step:
+
+### Step 1: Alice Approves Tokens
+
+```javascript
+await stakingToken.approve(stakingContract.address, 1000)
 ```
 
-**⚠️ DANGEROUS FUNCTION:**
-- Withdraws ALL tokens (including user deposits!)
-- Resets `totalStaked` to 0 (breaks accounting)
-- Should only be used if contract is being deprecated
-- Users should be notified to withdraw first
+**State:** Alice's wallet → Staking contract can spend up to 1000 tokens
 
-**Safer alternative pattern:**
-```solidity
-// Better: Require totalStaked == 0
-function reset() external onlyOwner {
-    require(totalStaked == 0, "Users must withdraw first");
-    uint256 balance = rewardToken.balanceOf(address(this));
-    rewardToken.safeTransfer(address(msg.sender), balance);
-}
+### Step 2: Alice Deposits for 30 Days
+
+```javascript
+await staking.deposit(1000, 1)
 ```
 
-## Interactive Code Exploration
+**State:**
+- `userInfo[alice].amount = 1000`
+- `userInfo[alice].depositItems[0] = {apy: 10, duration: 30 days, amount: 1000, timestamp: now}`
+- `totalStaked = 1000`
 
-Let's trace a complete user journey through the contract:
+### Step 3: Owner Starts Rewards
 
-<CodeTrace steps={[
-  {
-    "step": 1,
-    "title": "Alice Approves Tokens",
-    "code": "await stakingToken.approve(stakingContract.address, 1000)",
-    "state": "Alice's wallet → Staking contract can spend up to 1000 tokens"
-  },
-  {
-    "step": 2,
-    "title": "Alice Deposits for 30 Days",
-    "code": "await staking.deposit(1000, 1)",
-    "state": "userInfo[alice].amount = 1000\nuserInfo[alice].depositItems[0] = {apy: 10, duration: 30 days, amount: 1000, timestamp: now}\ntotalStaked = 1000"
-  },
-  {
-    "step": 3,
-    "title": "Owner Starts Rewards",
-    "code": "await staking.startReward()",
-    "state": "startedTimestamp = block.timestamp\nRewards begin accruing"
-  },
-  {
-    "step": 4,
-    "title": "15 Days Pass",
-    "code": "await time.increase(15 * 24 * 60 * 60)",
-    "state": "Elapsed: 15 days\nReward accrued: ~4.11 tokens"
-  },
-  {
-    "step": 5,
-    "title": "Alice Checks Reward",
-    "code": "await staking.getStakedItemReward(alice.address, 0)",
-    "state": "Returns: 4.11 tokens (halfway through 30-day lock)"
-  },
-  {
-    "step": 6,
-    "title": "30 Days Complete",
-    "code": "await time.increase(15 * 24 * 60 * 60)",
-    "state": "Elapsed: 30 days\nReward accrued: ~8.22 tokens\nLock period complete ✓"
-  },
-  {
-    "step": 7,
-    "title": "Alice Withdraws",
-    "code": "await staking.withdraw(0)",
-    "state": "Fee: 20 tokens (2%)\nAlice receives: 980 + 8.22 = 988.22 tokens\nFee address receives: 20 tokens\nuserInfo[alice].depositItems = [] (empty)"
-  }
-]} />
+```javascript
+await staking.startReward()
+```
+
+**State:**
+- `startedTimestamp = block.timestamp`
+- Rewards begin accruing
+
+### Step 4: 15 Days Pass
+
+```javascript
+await time.increase(15 * 24 * 60 * 60)
+```
+
+**State:**
+- Elapsed: 15 days
+- Reward accrued: ~4.11 tokens
+
+### Step 5: Alice Checks Reward
+
+```javascript
+await staking.getStakedItemReward(alice.address, 0)
+```
+
+**State:** Returns: 4.11 tokens (halfway through 30-day lock)
+
+### Step 6: 30 Days Complete
+
+```javascript
+await time.increase(15 * 24 * 60 * 60)
+```
+
+**State:**
+- Elapsed: 30 days
+- Reward accrued: ~8.22 tokens
+- Lock period complete ✓
+
+### Step 7: Alice Withdraws
+
+```javascript
+await staking.withdraw(0)
+```
+
+**State:**
+- Fee: 20 tokens (2%)
+- Alice receives: 980 + 8.22 = 988.22 tokens
+- Fee address receives: 20 tokens
+- `userInfo[alice].depositItems = []` (empty)
 
 ## Practice Exercises
 
@@ -924,6 +1477,7 @@ Which deposits can she withdraw penalty-free right now?
 
 Before deploying this contract, verify:
 
+- [ ] **Reward calculation ordering:** Calculate rewards BEFORE updating `user.amount`
 - [ ] **ReentrancyGuard on value functions:** `deposit()` and `withdraw()` are protected
 - [ ] **SafeERC20 for all transfers:** No raw `transfer()` or `transferFrom()` calls
 - [ ] **Checks-Effects-Interactions:** State updated before external calls
@@ -934,19 +1488,104 @@ Before deploying this contract, verify:
 - [ ] **Zero-value protections:** Checks before transfers
 - [ ] **Events emitted:** All state changes emit appropriate events
 - [ ] **Emergency controls:** Owner can stop rewards, but users can still withdraw
+- [ ] **`availableRewards` calculation:** Protects user principal from being used for rewards
 
-## Wrap-Up
+## Wrap-Up: You're Ready to Deploy!
 
-You now have a complete understanding of the staking contract:
+### What You've Learned
 
-- ✅ **Data structures:** DepositItem and UserInfo tracking
-- ✅ **Reward calculations:** Time-based accrual with APY
-- ✅ **Deposit flow:** Token transfers, tier selection, array management
-- ✅ **Withdrawal flow:** Early vs normal paths, penalties, fees
-- ✅ **Admin controls:** APY updates, reward management, emergency functions
-- ✅ **Security patterns:** Reentrancy guards, SafeERC20, CEI discipline
+Congratulations! You've just walked through a production-ready staking contract. Let's recap what you now understand:
 
-**Next up:** In Module 2.5.3, you'll deploy this contract to Zilliqa testnet using Hardhat 3, set up deployment scripts with claimant integration, and claim your achievement!
+**✅ The Basics (Part 1-2)**
+- How to track multiple deposits per user using structs and arrays
+- Why we use `ReentrancyGuard` and `SafeERC20` (new concepts beyond ERC20!)
+- How the constructor sets up the contract with token addresses and initial rates
+
+**✅ The Math (Part 3)**
+- How reward calculations work: amount × time × APY
+- How to handle different start times (user vs reward start)
+- Why we cap rewards at the lock duration
+
+**✅ The Core Functions (Part 4-5)**
+- **Deposit:** How tokens move in, receipts get created, rates get locked in
+- **Withdraw:** The two paths (early penalty vs normal rewards), array cleanup
+
+**✅ Admin Powers (Part 6)**
+- When and how to start/stop rewards
+- How to adjust rates for new deposits
+- Emergency functions for contract management
+
+### How This Compares to Your ERC20 Token
+
+Remember your first token deployment? This staking contract builds on those same concepts:
+
+**What You Already Know (From ERC20):**
+- ✅ `Ownable` for admin functions (`onlyOwner` modifier)
+- ✅ Mappings to track user balances
+- ✅ Transfer functions and approval patterns
+- ✅ Events for tracking state changes
+- ✅ Basic validation with `require()`
+
+**What's New in Staking:**
+- 🆕 **ReentrancyGuard** - Extra security for withdrawals
+- 🆕 **Structs & Arrays** - Track multiple deposits per user (not just one balance!)
+- 🆕 **Time Logic** - Calculate rewards based on `block.timestamp`
+- 🆕 **Two Paths** - Different logic for early vs normal withdrawals
+- 🆕 **SafeERC20** - Handle weird token edge cases
+
+**You already knew 60% of this!** The staking contract just adds time-based logic and better tracking on top of ERC20 concepts you've already used.
+
+### What Happens Next?
+
+**In Module 2.5.3 (Deployment):**
+- You'll use Hardhat 3 to deploy THIS contract to Zilliqa testnet
+- You'll see your contract on the block explorer
+- You'll test deposits and withdrawals
+- You'll submit your transaction hash and earn your achievement!
+
+**In Module 2.5.4 (Testing):**
+- You'll write tests for all these functions
+- You'll use time travel to test the 30/60/120 day locks
+- You'll verify your contract is secure
+
+### Quick Reference: Key Functions
+
+When you deploy and use your contract, remember:
+
+**As Contract Owner:**
+1. `startReward()` - Turn on reward accrual
+2. `updateApy(a, b, c)` - Adjust rates for NEW deposits
+3. `stopReward()` - Emergency pause
+
+**As a User:**
+1. `approve(stakingContract, amount)` - Let contract spend your tokens (ERC20 call)
+2. `deposit(amount, option)` - Stake with option 1/2/3 (30/60/120 days)
+3. `getStakedItemReward(yourAddress, index)` - Check your rewards
+4. `withdraw(index)` - Get your tokens + rewards back
+
+**Example user flow:**
+```javascript
+// 1. Approve (on your token contract)
+await token.approve(stakingAddress, 1000)
+
+// 2. Deposit for 30 days
+await staking.deposit(1000, 1)
+
+// 3. Wait 30+ days...
+
+// 4. Check rewards
+const rewards = await staking.getStakedItemReward(myAddress, 0)
+console.log("I earned:", rewards)
+
+// 5. Withdraw deposit #0
+await staking.withdraw(0)
+```
+
+### You're Ready!
+
+You understand this contract better than most people who've deployed staking contracts! 
+
+**Next up:** In Module 2.5.3, let's actually deploy this to Zilliqa testnet and see it in action!
 
 Ready to deploy? Let's go! 🚀
 

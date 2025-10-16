@@ -246,7 +246,7 @@ export default async function FrostModulePage({ params }: FrostModulePageProps) 
         </Card>
 
         {/* Interactive Element Section */}
-        {quizData ? (
+        {(quizData || resolvedParams.module === 'staking-contract-practical') ? (
           <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
         ) : (
           <Card>
