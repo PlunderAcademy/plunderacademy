@@ -93,7 +93,7 @@ my-nft-collection/
 
 ### Create the SVG Generator Script
 
-Create `scripts/generate-svgs.js`:
+Create `scripts/generate-svgs.cjs`:
 
 ```javascript
 #!/usr/bin/env node
@@ -145,12 +145,12 @@ svgShapes.forEach((svg, idx) => {
 console.log(`✅ Successfully created ${svgShapes.length} SVG files in ${outDir}/`);
 ```
 
-**Note:** The full script with all 100 shapes is [available here](/islands/island3/generate-svgs.js).
+**Note:** The full script with all 100 shapes is [available here](/islands/island3/generate-svgs.cjs).
 
 ### Run the Generator
 
 ```bash
-node scripts/generate-svgs.js
+node scripts/generate-svgs.cjs
 ```
 
 **Output:**
@@ -207,7 +207,7 @@ Create `metadata/hidden.json`:
 
 ### Generate Metadata Script
 
-Create `scripts/generate-metadata.js`:
+Create `scripts/generate-metadata.cjs`:
 
 ```javascript
 #!/usr/bin/env node
@@ -304,7 +304,7 @@ console.log(`📝 Don't forget to replace IMAGES_CID in the files after uploadin
 ### Run the Metadata Generator
 
 ```bash
-node scripts/generate-metadata.js
+node scripts/generate-metadata.cjs
 ```
 
 **Output:**
@@ -388,14 +388,14 @@ echo "IMAGES_CID=QmXYZ123...abc" >> .env
 
 Now update all metadata files to reference the images:
 
-**Option 1: Manual update** `scripts/generate-metadata.js`:
+**Option 1: Manual update** `scripts/generate-metadata.cjs`:
 ```javascript
-const imagesCID = 'QmXYZ123...abc'; // Your actual CID
+export IMAGES_CID=QmXYZ123...abc (Replace REPLACE_WITH_YOUR_IMAGES_CID)
 ```
 
 Then re-run:
 ```bash
-node scripts/generate-metadata.js
+node scripts/generate-metadata.cjs
 ```
 
 **Option 2: Use sed (Linux/Mac):**
@@ -493,12 +493,6 @@ main().catch(console.error);
 
 **Run it:**
 ```bash
-export NFT_CONTRACT_ADDRESS=0xYourNFTAddress
-npm run interact:testnet
-```
-
-Or run directly:
-```bash
 HARDHAT_NETWORK=zilliqaTestnet npx hardhat run scripts/update-uris.ts --network zilliqaTestnet
 ```
 
@@ -524,8 +518,8 @@ All tokens show the same hidden metadata!
 ### View in Browser
 
 **IPFS Gateway URLs:**
-- https://gateway.pinata.cloud/ipfs/QmHiddenCID/hidden.json
-- https://ipfs.io/ipfs/QmHiddenCID/hidden.json
+- https://gateway.pinata.cloud/ipfs/QmHiddenCID/
+- https://ipfs.io/ipfs/QmHiddenCID/
 
 **Should see:**
 ```json
