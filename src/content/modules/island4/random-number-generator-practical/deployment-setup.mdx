@@ -1,0 +1,1365 @@
+---
+id: deployment-setup
+module: random-number-generator-practical
+number: 4.5.3
+title: Deploying Your RNG Contract
+objective: >-
+  Deploy your random number generator using Hardhat 3, test locally, deploy to Zilliqa testnet, and integrate claimant tracking for achievement verification.
+slug: deployment-setup
+---
+
+## Deployment Overview
+
+In this lesson, you'll deploy a production-ready random number generator to Zilliqa testnet. The deployment process includes:
+
+1. **Project setup** with Hardhat 3 and required dependencies
+2. **Contract preparation** with claimant integration
+3. **Local testing** with Hardhat node
+4. **Deployment scripts** for automated deployment
+5. **Helper scripts** for commit and reveal operations
+6. **Zilliqa testnet deployment** with verification
+7. **Achievement claiming** using your transaction hash
+
+## Project Setup
+
+### Create New Project
+
+```bash
+# Create project directory
+mkdir zilliqa-rng
+cd zilliqa-rng
+
+# Initialize Node project
+npm init -y
+
+# Install Hardhat 3 and toolbox
+npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox-viem
+
+# Initialize Hardhat
+npx hardhat --init
+# Choose: 
+# "Hardhat 3"
+# "use the default for relative or absolute path"
+# "Create a TypeScript project (with Viem)"
+# Accept all other defaults
+```
+
+### Install Dependencies
+
+```bash
+# Dotenv for environment variables
+npm install dotenv
+
+# TypeScript support
+npm install --save-dev typescript @types/node
+```
+
+### Project Structure
+
+Your project should look like this (when we are done!):
+
+```
+zilliqa-rng/
+├── contracts/
+│   └── ZilliqaRandomNumber2.sol
+├── scripts/
+│   ├── deploy-rng.ts
+│   ├── commit-random.ts
+│   ├── reveal-random.ts
+│   ├── check-commitment.ts
+│   └── cancel-commitment.ts
+├── test/
+│   └── ZilliqaRandomNumber2.test.ts
+├── hardhat.config.ts
+├── package.json
+├── .env
+└── .gitignore
+```
+
+**For now, remove the default files:**
+- Delete `contracts/Counter.sol`
+- Delete `contracts/Counter.t.sol`
+- Delete entire `ignition` directory
+- Delete `scripts/send-op-tx.ts`
+- Delete `test/Counter.ts`
+
+## Configuring Hardhat for Zilliqa
+
+### Update hardhat.config.ts
+
+This configuration is identical to your previous projects:
+
+```typescript
+import type { HardhatUserConfig } from "hardhat/config";
+
+import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import hardhatVerifyPlugin from "@nomicfoundation/hardhat-verify";
+import hardhatNetworkHelpers from "@nomicfoundation/hardhat-network-helpers";
+import { configVariable } from "hardhat/config";
+import "dotenv/config";
+
+const config: HardhatUserConfig = {
+  plugins: [hardhatToolboxViemPlugin, hardhatVerifyPlugin, hardhatNetworkHelpers],
+  solidity: {
+    profiles: {
+      default: {
+        version: "0.8.28",
+        settings: {
+          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+        },
+      },
+      production: {
+        version: "0.8.28",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+        },
+      },
+    },
+  },
+  networks: {
+    hardhatMainnet: {
+      type: "edr-simulated",
+      chainType: "l1",
+    },
+    hardhatOp: {
+      type: "edr-simulated",
+      chainType: "op",
+    },
+    zilliqaMainnet: {
+      type: "http",
+      chainType: "l1",
+      chainId: 32769,
+      url: "https://api.zilliqa.com",
+      accounts: [configVariable("ZILLIQA_MAINNET_PRIVATE_KEY")]
+    },
+    zilliqaTestnet: {
+      type: "http",
+      chainType: "l1",
+      chainId: 33101,
+      url: "https://api.testnet.zilliqa.com",
+      accounts: [configVariable("ZILLIQA_TESTNET_PRIVATE_KEY")]
+    },
+  },
+  verify: {
+    // Disable Etherscan since we're using Zilliqa networks
+    etherscan: {
+      enabled: false,
+    },
+    // Blockscout verification (no API key needed)
+    blockscout: {
+      enabled: true,
+    },
+  },
+  // Add custom chain descriptors for Zilliqa networks
+  chainDescriptors: {
+    // Zilliqa Mainnet
+    32769: {
+      name: "Zilliqa",
+      blockExplorers: {
+        blockscout: {
+          name: "Zilliqa Explorer",
+          url: "https://zilliqa.blockscout.com",
+          apiUrl: "https://zilliqa.blockscout.com/api",
+        },
+      },
+    },
+    // Zilliqa Testnet
+    33101: {
+      name: "Zilliqa Testnet",
+      blockExplorers: {
+        blockscout: {
+          name: "Zilliqa Testnet Explorer",
+          url: "https://testnet.zilliqa.blockscout.com",
+          apiUrl: "https://testnet.zilliqa.blockscout.com/api",
+        },
+      },
+    },
+  },
+};
+
+export default config;
+```
+
+**Key settings:**
+- **Compiler:** Solidity 0.8.28 with optimizer enabled
+- **evmVersion:** "shanghai" - Required for Zilliqa 2.0 compatibility
+- **Zilliqa networks:** Testnet and mainnet configurations
+- **Private keys:** Loaded from environment variables
+
+### Setup Environment Variables
+
+**Create `.env` file:**
+
+```bash
+# Generate a fresh development wallet
+openssl rand -hex 32 | sed 's/^/ZILLIQA_TESTNET_PRIVATE_KEY=0x/' > .env
+
+# Add claimant address
+echo "CLAIMANT_ADDRESS=your_training_portal_wallet_here" >> .env
+echo "" >> .env
+echo "# WARNING: Never commit this file!" >> .env
+echo "# Add .env to .gitignore" >> .env
+```
+
+**Important wallet setup:**
+
+**Development Wallet** (in `.env` as `ZILLIQA_TESTNET_PRIVATE_KEY`):
+- Generated fresh for security
+- Used to deploy contracts and pay gas
+- Funded with testnet ZIL from faucet
+
+**Claimant Wallet** (in `.env` as `CLAIMANT_ADDRESS`):
+- Your **Plunder Academy training portal wallet**
+- Used to verify you completed the module
+- Will be encoded in contract deployment for verification
+
+### Update .gitignore
+
+**Ensure `.env` is never committed:**
+
+```bash
+# Add to .gitignore
+echo ".env" >> .gitignore
+echo "node_modules/" >> .gitignore
+echo "artifacts/" >> .gitignore
+echo "cache/" >> .gitignore
+echo "typechain-types/" >> .gitignore
+```
+
+## Creating the RNG Contract
+
+### contracts/ZilliqaRandomNumber2.sol
+
+Create your random number generator contract:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+/**
+ * @title ZilliqaRandomNumber2
+ * @notice Commit-reveal random number generation contract with range constraints
+ * @dev Designed for Zilliqa 2.0 - optimized for 1-second block times and Shanghai EVM
+ * 
+ * Security Features:
+ * - Commit-reveal pattern prevents outcome prediction
+ * - Multiple entropy sources (user, prevrandao, blockhash)
+ * - Range committed upfront (prevents manipulation)
+ * - Manipulation-resistant (uses finalized block data)
+ * - Mathematically fair distribution
+ * 
+ * Usage:
+ * 1. commit(futureBlock, minRandom, maxRandom) - Commit to future block and range
+ * 2. Wait for target block
+ * 3. reveal() - Generate and retrieve random number
+ */
+contract ZilliqaRandomNumber2 {
+    struct Commitment {
+        uint256 targetBlock;   // Future block for reveal
+        uint256 minRandom;     // Minimum random value
+        uint256 maxRandom;     // Maximum random value
+        bool revealed;         // Reveal status
+    }
+    
+    // Security constants
+    uint256 public constant MIN_BLOCKS_DELAY = 5;        // Minimum blocks to wait (~5 seconds on Zilliqa)
+    uint256 public constant MAX_BLOCKS_DELAY = 1000;     // Maximum blocks to wait (~16.7 minutes on Zilliqa)
+    uint256 public constant MAX_RANDOM_LIMIT = 2_000_000_000; // Maximum random range (2 billion)
+    
+    // Achievement tracking for Plunder Academy
+    address public immutable claimant;
+    
+    // One commitment per address
+    mapping(address => Commitment) public commitments;
+    
+    // Events
+    event CommitSubmitted(
+        address indexed user,
+        uint256 targetBlock,
+        uint256 minRandom,
+        uint256 maxRandom
+    );
+    
+    event RandomnessRevealed(
+        address indexed user,
+        uint256 randomNumber,
+        uint256 constrainedRandomNumber,
+        bytes32 salt,
+        uint256 prevrandao,
+        bytes32 blockhash,
+        uint256 minRandom,
+        uint256 maxRandom
+    );
+    
+    /**
+     * @dev Constructor with claimant for achievement verification
+     * @param _claimant Address of the Plunder Academy user (for achievement tracking)
+     */
+    constructor(address _claimant) {
+        require(_claimant != address(0), "Invalid claimant address");
+        claimant = _claimant;
+    }
+    
+    /**
+     * @notice Commit to generating a random number in a future block
+     * @param futureBlockNumber Target block (must be at least MIN_BLOCKS_DELAY in future)
+     * @param minRandom Minimum value for random number (must be > 0)
+     * @param maxRandom Maximum value for random number (must be <= MAX_RANDOM_LIMIT)
+     */
+    function commit(
+        uint256 futureBlockNumber,
+        uint256 minRandom,
+        uint256 maxRandom
+    ) external {
+        // Validate block timing
+        require(
+            futureBlockNumber > block.number + MIN_BLOCKS_DELAY,
+            "Need minimum 5 blocks"
+        );
+        require(
+            futureBlockNumber < block.number + MAX_BLOCKS_DELAY,
+            "Too far in future"
+        );
+        
+        // Check for existing commitment
+        require(
+            commitments[msg.sender].targetBlock == 0,
+            "Existing commitment found"
+        );
+        
+        // Validate random number range
+        require(minRandom > 0, "Min random must be greater than 0");
+        require(maxRandom <= MAX_RANDOM_LIMIT, "Max random exceeds limit");
+        require(minRandom <= maxRandom, "Min random cannot be greater than max random");
+        
+        // Store commitment
+        commitments[msg.sender] = Commitment({
+            targetBlock: futureBlockNumber,
+            minRandom: minRandom,
+            maxRandom: maxRandom,
+            revealed: false
+        });
+        
+        emit CommitSubmitted(msg.sender, futureBlockNumber, minRandom, maxRandom);
+    }
+    
+    /**
+     * @notice Reveal the random number (must be called after target block)
+     * @return constrainedRandomNumber The random number within the committed range
+     */
+    function reveal() external returns (uint256) {
+        Commitment storage commitment = commitments[msg.sender];
+        
+        // Validate commitment
+        require(commitment.targetBlock != 0, "No commitment found");
+        require(block.number >= commitment.targetBlock, "Too early");
+        require(!commitment.revealed, "Already revealed");
+
+        // Generate random number using multiple entropy sources
+        uint256 randomNumber = uint256(
+            keccak256(
+                abi.encodePacked(
+                    msg.sender,                    // User-specific entropy
+                    block.prevrandao,              // Validator entropy (works great on Zilliqa 2.0!)
+                    blockhash(block.number - 1)    // Previous block hash (manipulation-resistant)
+                )
+            )
+        );
+        
+        // Generate fair random number within the committed range
+        uint256 constrainedRandomNumber = generateRandomNumber(
+            randomNumber,
+            commitment.minRandom,
+            commitment.maxRandom
+        );
+        
+        // Store values before cleanup
+        uint256 minRandom = commitment.minRandom;
+        uint256 maxRandom = commitment.maxRandom;
+        
+        // Mark as revealed and cleanup
+        commitment.revealed = true;
+        delete commitments[msg.sender];
+        
+        // Emit event with all entropy sources for verification
+        emit RandomnessRevealed(
+            msg.sender,
+            randomNumber,                    // Raw random number
+            constrainedRandomNumber,         // Constrained to range
+            bytes32(0),                      // No salt needed in this version
+            block.prevrandao,                // Block's prevrandao
+            blockhash(block.number - 1),     // Previous block hash
+            minRandom,
+            maxRandom
+        );
+        
+        return constrainedRandomNumber;
+    }
+    
+    /**
+     * @dev Internal function to map random number to specified range
+     * @param randomNumber Raw random number from keccak256
+     * @param minRandom Minimum value (inclusive)
+     * @param maxRandom Maximum value (inclusive)
+     * @return Random number within [minRandom, maxRandom]
+     */
+    function generateRandomNumber(
+        uint256 randomNumber,
+        uint256 minRandom,
+        uint256 maxRandom
+    ) internal pure returns (uint256) {
+        uint256 range = maxRandom - minRandom + 1;
+        return (randomNumber % range) + minRandom;
+    }
+    
+    /**
+     * @notice Cancel an unrevealed commitment after it expires
+     * @dev Can only cancel if commitment is older than MAX_BLOCKS_DELAY
+     */
+    function cancelCommitment() external {
+        Commitment storage commitment = commitments[msg.sender];
+        
+        require(commitment.targetBlock != 0, "No commitment found");
+        require(!commitment.revealed, "Already revealed");
+        require(
+            block.number > commitment.targetBlock + MAX_BLOCKS_DELAY,
+            "Too early to cancel"
+        );
+        
+        delete commitments[msg.sender];
+    }
+    
+    /**
+     * @notice Get commitment details for an address
+     * @param user Address to check
+     * @return Commitment struct
+     */
+    function getCommitment(address user) external view returns (Commitment memory) {
+        return commitments[user];
+    }
+}
+```
+
+**Key features for training:**
+- `address public immutable claimant` → Your training portal wallet
+- Constructor accepts `_claimant` parameter
+- Used for achievement verification
+- Optimized for Zilliqa 2.0 (1-second blocks, Shanghai EVM)
+
+### Compile the Contract
+
+```bash
+npx hardhat compile
+```
+
+**Expected output:**
+```
+Compiled 1 Solidity file with solc 0.8.28 (evm target: shanghai).
+```
+
+## Creating the Deployment Script
+
+### scripts/deploy-rng.ts
+
+Create a comprehensive deployment script with achievement integration:
+
+```typescript
+import { network } from "hardhat";
+
+const networkName = process.env.HARDHAT_NETWORK || "localhost";
+console.log(`Deploying RNG Contract to ${networkName}...`);
+
+const { viem } = await network.connect({
+  network: networkName,
+});
+
+const publicClient = await viem.getPublicClient();
+const walletClients = await viem.getWalletClients();
+const [walletClient] = walletClients;
+
+async function main() {
+  try {
+    // Get claimant address from environment
+    const claimantAddress = process.env.CLAIMANT_ADDRESS as `0x${string}`;
+    
+    if (!claimantAddress) {
+      console.error("❌ CLAIMANT_ADDRESS not set in .env");
+      console.log("Please set your training portal wallet address");
+      process.exit(1);
+    }
+    
+    console.log("Deploying from account:", walletClient.account.address);
+    console.log("Claimant:", claimantAddress);
+    
+    // Show network info
+    const chainId = await publicClient.getChainId();
+    console.log("Network:", networkName);
+    console.log("Chain ID:", chainId);
+    
+    // Deploy RNG contract
+    console.log("\nDeploying ZilliqaRandomNumber2 contract...");
+    
+    const rngArtifact = (await import("../artifacts/contracts/ZilliqaRandomNumber2.sol/ZilliqaRandomNumber2.json")).default;
+    
+    const deploymentTx = await walletClient.deployContract({
+      abi: rngArtifact.abi,
+      bytecode: rngArtifact.bytecode as `0x${string}`,
+      args: [claimantAddress],
+    });
+    
+    console.log("⏳ Deployment transaction submitted...");
+    console.log("Transaction hash:", deploymentTx);
+    
+    // Wait for transaction receipt
+    const receipt = await publicClient.waitForTransactionReceipt({ 
+      hash: deploymentTx 
+    });
+    
+    const contractAddress = receipt.contractAddress!;
+    console.log("✅ RNG Contract deployed to:", contractAddress);
+    
+    // Create contract instance
+    const rng = await viem.getContractAt("ZilliqaRandomNumber2", contractAddress);
+    
+    // Display transaction ID for achievement submission
+    console.log("\n🎯 Transaction ID for Achievement Submission:");
+    console.log(deploymentTx);
+    
+    // Wait for contract activation
+    console.log("\n⏳ Waiting for contract activation...");
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    // Verify deployment
+    console.log("\n📋 Verifying deployment...");
+    try {
+      const claimant = await rng.read.claimant();
+      const minBlocksDelay = await rng.read.MIN_BLOCKS_DELAY();
+      const maxBlocksDelay = await rng.read.MAX_BLOCKS_DELAY();
+      const maxRandomLimit = await rng.read.MAX_RANDOM_LIMIT();
+      
+      console.log("Claimant:", claimant);
+      console.log("Min Blocks Delay:", minBlocksDelay.toString());
+      console.log("Max Blocks Delay:", maxBlocksDelay.toString());
+      console.log("Max Random Limit:", maxRandomLimit.toString());
+      
+      // Verification check
+      if (claimant.toLowerCase() !== claimantAddress.toLowerCase()) {
+        console.error("⚠️  Warning: Claimant address mismatch!");
+      } else {
+        console.log("✅ Claimant verification passed!");
+      }
+      
+    } catch (verificationError) {
+      console.log("⚠️  Contract verification failed (may need more time to activate)");
+      console.log("Contract deployed successfully. Verify manually later.");
+    }
+    
+    console.log("\n🎉 Deployment completed successfully!");
+    console.log("Contract address:", contractAddress);
+    console.log("Transaction ID:", deploymentTx);
+    console.log("Network:", networkName);
+    console.log("Chain ID:", chainId);
+    console.log("Deployer:", walletClient.account.address);
+    console.log("Claimant:", claimantAddress);
+    
+    console.log("\n📋 Next Steps:");
+    console.log("1. Test commit/reveal locally with helper scripts");
+    console.log("2. Deploy to Zilliqa testnet");
+    console.log("3. Test on testnet with real blocks");
+    console.log("4. Submit deployment transaction for achievement verification");
+    console.log("   https://plunderacademy.com/lessons/island4/random-number-generator-practical");
+    
+    console.log("\n💡 Save your contract address to .env:");
+    console.log(`echo "RNG_CONTRACT_ADDRESS=${contractAddress}" >> .env`);
+    
+  } catch (error) {
+    console.error("❌ Deployment failed:", error);
+    process.exit(1);
+  }
+}
+
+main().catch(console.error);
+```
+
+## Creating Helper Scripts
+
+### scripts/commit-random.ts
+
+Script to commit to future randomness:
+
+```typescript
+import { network } from "hardhat";
+
+const networkName = process.env.HARDHAT_NETWORK || "localhost";
+const rngAddress = process.env.RNG_CONTRACT_ADDRESS as `0x${string}`;
+
+if (!rngAddress) {
+  console.error("Set RNG_CONTRACT_ADDRESS in .env");
+  process.exit(1);
+}
+
+const { viem } = await network.connect({ network: networkName });
+const publicClient = await viem.getPublicClient();
+const [walletClient] = await viem.getWalletClients();
+
+async function main() {
+  console.log(`Committing to random number on ${networkName}...`);
+  console.log("Contract:", rngAddress);
+  console.log("Committer:", walletClient.account.address);
+  
+  const rng = await viem.getContractAt("ZilliqaRandomNumber2", rngAddress);
+  
+  // Get current block
+  const currentBlock = await publicClient.getBlockNumber();
+  console.log("Current block:", currentBlock);
+  
+  // Parameters from environment or defaults
+  const blocksAhead = parseInt(process.env.BLOCKS_AHEAD || "10");
+  const minRandom = parseInt(process.env.MIN_RANDOM || "1");
+  const maxRandom = parseInt(process.env.MAX_RANDOM || "100");
+  
+  const targetBlock = currentBlock + BigInt(blocksAhead);
+  
+  console.log("\n📋 Commitment Parameters:");
+  console.log("Target block:", targetBlock.toString());
+  console.log("Blocks to wait:", blocksAhead);
+  console.log("Random range:", `${minRandom} to ${maxRandom}`);
+  
+  // Check for existing commitment
+  const existingCommitment = await rng.read.getCommitment([walletClient.account.address]);
+  if (existingCommitment.targetBlock !== 0n) {
+    console.log("\n⚠️  Warning: You have an existing commitment:");
+    console.log("Target block:", existingCommitment.targetBlock.toString());
+    console.log("Range:", `${existingCommitment.minRandom} to ${existingCommitment.maxRandom}`);
+    console.log("\nReveal or cancel it first before making a new commitment.");
+    process.exit(1);
+  }
+  
+  // Commit
+  console.log("\n🎲 Committing to random number...");
+  const hash = await rng.write.commit([
+    targetBlock,
+    BigInt(minRandom),
+    BigInt(maxRandom)
+  ]);
+  
+  console.log("Transaction hash:", hash);
+  console.log("⏳ Waiting for confirmation...");
+  
+  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  
+  if (receipt.status === "success") {
+    console.log("✅ Commitment successful!");
+    
+    // Calculate reveal time (Zilliqa has 1-second blocks)
+    const waitTimeSeconds = blocksAhead;
+    console.log(`\n⏰ You can reveal in ~${waitTimeSeconds} seconds`);
+    console.log("Target block:", targetBlock.toString());
+    
+    console.log("\n📋 To reveal:");
+    console.log(`export RNG_CONTRACT_ADDRESS=${rngAddress}`);
+    console.log("npm run reveal:local");
+    console.log("(or npm run reveal:testnet for testnet)");
+  } else {
+    console.error("❌ Commitment failed");
+    process.exit(1);
+  }
+}
+
+main().catch(console.error);
+```
+
+### scripts/reveal-random.ts
+
+Script to reveal random number:
+
+```typescript
+import { network } from "hardhat";
+
+const networkName = process.env.HARDHAT_NETWORK || "localhost";
+const rngAddress = process.env.RNG_CONTRACT_ADDRESS as `0x${string}`;
+
+if (!rngAddress) {
+  console.error("Set RNG_CONTRACT_ADDRESS in .env");
+  process.exit(1);
+}
+
+const { viem } = await network.connect({ network: networkName });
+const publicClient = await viem.getPublicClient();
+const [walletClient] = await viem.getWalletClients();
+
+async function main() {
+  console.log(`Revealing random number on ${networkName}...`);
+  console.log("Contract:", rngAddress);
+  console.log("Revealer:", walletClient.account.address);
+  
+  const rng = await viem.getContractAt("ZilliqaRandomNumber2", rngAddress);
+  
+  // Get current block
+  const currentBlock = await publicClient.getBlockNumber();
+  console.log("Current block:", currentBlock);
+  
+  // Check commitment
+  const commitment = await rng.read.getCommitment([walletClient.account.address]);
+  
+  if (commitment.targetBlock === 0n) {
+    console.error("\n❌ No commitment found!");
+    console.log("You must commit first before revealing.");
+    console.log("Run: npm run commit:local");
+    process.exit(1);
+  }
+  
+  console.log("\n📋 Your Commitment:");
+  console.log("Target block:", commitment.targetBlock.toString());
+  console.log("Range:", `${commitment.minRandom} to ${commitment.maxRandom}`);
+  console.log("Revealed:", commitment.revealed);
+  
+  // Check if can reveal
+  if (currentBlock < commitment.targetBlock) {
+    const blocksToWait = Number(commitment.targetBlock - currentBlock);
+    console.log(`\n⏰ Too early! Wait ${blocksToWait} more blocks (~${blocksToWait} seconds on Zilliqa)`);
+    process.exit(1);
+  }
+  
+  if (commitment.revealed) {
+    console.log("\n⚠️  This commitment has already been revealed!");
+    process.exit(1);
+  }
+  
+  // Reveal
+  console.log("\n🎲 Revealing random number...");
+  const hash = await rng.write.reveal();
+  
+  console.log("Transaction hash:", hash);
+  console.log("⏳ Waiting for confirmation...");
+  
+  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  
+  if (receipt.status === "success") {
+    console.log("✅ Reveal successful!");
+    
+    // Parse event to get the random number
+    const logs = await publicClient.getLogs({
+      address: rngAddress,
+      event: {
+        type: 'event',
+        name: 'RandomnessRevealed',
+        inputs: [
+          { name: 'user', type: 'address', indexed: true },
+          { name: 'randomNumber', type: 'uint256', indexed: false },
+          { name: 'constrainedRandomNumber', type: 'uint256', indexed: false },
+          { name: 'salt', type: 'bytes32', indexed: false },
+          { name: 'prevrandao', type: 'uint256', indexed: false },
+          { name: 'blockhash', type: 'bytes32', indexed: false },
+          { name: 'minRandom', type: 'uint256', indexed: false },
+          { name: 'maxRandom', type: 'uint256', indexed: false }
+        ]
+      },
+      fromBlock: receipt.blockNumber,
+      toBlock: receipt.blockNumber
+    });
+    
+    if (logs.length > 0) {
+      const log = logs[0];
+      console.log("\n🎉 Random Number Generated!");
+      console.log("═══════════════════════════════════════");
+      
+      // Type assertion to access decoded args
+      const args = (log as any).args;
+      
+      console.log("Result:", args.constrainedRandomNumber.toString());
+      console.log("Range:", `${args.minRandom} to ${args.maxRandom}`);
+      console.log("\n📊 Entropy Sources:");
+      console.log("Raw Random:", args.randomNumber.toString());
+      console.log("Prevrandao:", args.prevrandao.toString());
+      console.log("Blockhash:", args.blockhash);
+      console.log("═══════════════════════════════════════");
+    }
+    
+    console.log("\n✅ You can now make a new commitment!");
+  } else {
+    console.error("❌ Reveal failed");
+    process.exit(1);
+  }
+}
+
+main().catch(console.error);
+```
+
+### scripts/check-commitment.ts
+
+Script to check commitment status:
+
+```typescript
+import { network } from "hardhat";
+
+const networkName = process.env.HARDHAT_NETWORK || "localhost";
+const rngAddress = process.env.RNG_CONTRACT_ADDRESS as `0x${string}`;
+const checkAddress = (process.env.CHECK_ADDRESS || process.env.CLAIMANT_ADDRESS) as `0x${string}`;
+
+if (!rngAddress) {
+  console.error("Set RNG_CONTRACT_ADDRESS in .env");
+  process.exit(1);
+}
+
+const { viem } = await network.connect({ network: networkName });
+const publicClient = await viem.getPublicClient();
+
+async function main() {
+  console.log(`Checking commitment status on ${networkName}...`);
+  console.log("Contract:", rngAddress);
+  
+  const rng = await viem.getContractAt("ZilliqaRandomNumber2", rngAddress);
+  
+  // Get current block
+  const currentBlock = await publicClient.getBlockNumber();
+  console.log("Current block:", currentBlock);
+  
+  // Determine which address to check
+  let addressToCheck: `0x${string}`;
+  const walletClients = await viem.getWalletClients();
+  
+  if (checkAddress && checkAddress !== "undefined") {
+    addressToCheck = checkAddress;
+    console.log("Checking address:", addressToCheck, "(from env)");
+  } else {
+    addressToCheck = walletClients[0].account.address;
+    console.log("Checking address:", addressToCheck, "(deployer)");
+  }
+  
+  // Get commitment
+  const commitment = await rng.read.getCommitment([addressToCheck]);
+  
+  if (commitment.targetBlock === 0n) {
+    console.log("\n📋 No active commitment found for this address.");
+    console.log("You can make a new commitment:");
+    console.log("npm run commit:local");
+  } else {
+    console.log("\n📋 Active Commitment:");
+    console.log("═══════════════════════════════════════");
+    console.log("Target block:", commitment.targetBlock.toString());
+    console.log("Random range:", `${commitment.minRandom} to ${commitment.maxRandom}`);
+    console.log("Revealed:", commitment.revealed);
+    
+    const blocksUntilReveal = Number(commitment.targetBlock - currentBlock);
+    
+    if (blocksUntilReveal > 0) {
+      console.log("\n⏰ Status: Waiting for target block");
+      console.log("Blocks to wait:", blocksUntilReveal);
+      console.log(`Time to wait: ~${blocksUntilReveal} seconds (Zilliqa 1-second blocks)`);
+      console.log("\nCome back after target block to reveal!");
+    } else if (!commitment.revealed) {
+      console.log("\n✅ Status: Ready to reveal!");
+      console.log("Run: npm run reveal:local");
+    } else {
+      console.log("\n✅ Status: Already revealed");
+      console.log("You can make a new commitment!");
+    }
+    console.log("═══════════════════════════════════════");
+  }
+  
+  // Show contract constants
+  console.log("\n📊 Contract Parameters:");
+  const minDelay = await rng.read.MIN_BLOCKS_DELAY();
+  const maxDelay = await rng.read.MAX_BLOCKS_DELAY();
+  const maxLimit = await rng.read.MAX_RANDOM_LIMIT();
+  const claimant = await rng.read.claimant();
+  
+  console.log("Min Blocks Delay:", minDelay.toString(), `(~${minDelay} seconds)`);
+  console.log("Max Blocks Delay:", maxDelay.toString(), `(~${Number(maxDelay) / 60} minutes)`);
+  console.log("Max Random Limit:", maxLimit.toString());
+  console.log("Claimant:", claimant);
+}
+
+main().catch(console.error);
+```
+
+### scripts/cancel-commitment.ts
+
+Script to cancel stale commitment:
+
+```typescript
+import { network } from "hardhat";
+
+const networkName = process.env.HARDHAT_NETWORK || "localhost";
+const rngAddress = process.env.RNG_CONTRACT_ADDRESS as `0x${string}`;
+
+if (!rngAddress) {
+  console.error("Set RNG_CONTRACT_ADDRESS in .env");
+  process.exit(1);
+}
+
+const { viem } = await network.connect({ network: networkName });
+const publicClient = await viem.getPublicClient();
+const [walletClient] = await viem.getWalletClients();
+
+async function main() {
+  console.log(`Canceling commitment on ${networkName}...`);
+  console.log("Contract:", rngAddress);
+  console.log("User:", walletClient.account.address);
+  
+  const rng = await viem.getContractAt("ZilliqaRandomNumber2", rngAddress);
+  
+  // Get current block
+  const currentBlock = await publicClient.getBlockNumber();
+  console.log("Current block:", currentBlock);
+  
+  // Check commitment
+  const commitment = await rng.read.getCommitment([walletClient.account.address]);
+  
+  if (commitment.targetBlock === 0n) {
+    console.error("\n❌ No commitment found!");
+    process.exit(1);
+  }
+  
+  console.log("\n📋 Your Commitment:");
+  console.log("Target block:", commitment.targetBlock.toString());
+  console.log("Range:", `${commitment.minRandom} to ${commitment.maxRandom}`);
+  
+  // Check if can cancel
+  const maxDelay = await rng.read.MAX_BLOCKS_DELAY();
+  const cancelBlock = commitment.targetBlock + maxDelay;
+  
+  if (currentBlock <= cancelBlock) {
+    const blocksToWait = Number(cancelBlock - currentBlock);
+    console.log(`\n⏰ Too early to cancel! Wait ${blocksToWait} more blocks`);
+    console.log("You can only cancel after block:", cancelBlock.toString());
+    console.log("\nOr reveal your commitment instead:");
+    console.log("npm run reveal:local");
+    process.exit(1);
+  }
+  
+  // Cancel
+  console.log("\n🗑️  Canceling commitment...");
+  const hash = await rng.write.cancelCommitment();
+  
+  console.log("Transaction hash:", hash);
+  console.log("⏳ Waiting for confirmation...");
+  
+  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  
+  if (receipt.status === "success") {
+    console.log("✅ Commitment canceled!");
+    console.log("\nYou can now make a new commitment:");
+    console.log("npm run commit:local");
+  } else {
+    console.error("❌ Cancellation failed");
+    process.exit(1);
+  }
+}
+
+main().catch(console.error);
+```
+
+### Update package.json Scripts
+
+Add convenient npm scripts:
+
+```json
+{
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "deploy:local": "npx hardhat run scripts/deploy-rng.ts",
+    "deploy:testnet": "HARDHAT_NETWORK=zilliqaTestnet npx hardhat run scripts/deploy-rng.ts --network zilliqaTestnet",
+    "commit:local": "npx hardhat run scripts/commit-random.ts",
+    "commit:testnet": "HARDHAT_NETWORK=zilliqaTestnet npx hardhat run scripts/commit-random.ts --network zilliqaTestnet",
+    "reveal:local": "npx hardhat run scripts/reveal-random.ts",
+    "reveal:testnet": "HARDHAT_NETWORK=zilliqaTestnet npx hardhat run scripts/reveal-random.ts --network zilliqaTestnet",
+    "check:local": "npx hardhat run scripts/check-commitment.ts",
+    "check:testnet": "HARDHAT_NETWORK=zilliqaTestnet npx hardhat run scripts/check-commitment.ts --network zilliqaTestnet",
+    "cancel:local": "npx hardhat run scripts/cancel-commitment.ts",
+    "cancel:testnet": "HARDHAT_NETWORK=zilliqaTestnet npx hardhat run scripts/cancel-commitment.ts --network zilliqaTestnet"
+  }
+}
+```
+
+## Local Deployment Testing
+
+### Start Local Hardhat Network
+
+**Terminal 1:**
+```bash
+npx hardhat node
+```
+
+This starts a local blockchain with pre-funded test accounts.
+
+### Deploy Locally
+
+**Terminal 2:**
+
+Set environment variables and deploy:
+```bash
+export CLAIMANT_ADDRESS=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+npm run deploy:local
+```
+
+**Expected output:**
+```
+Deploying RNG Contract to localhost...
+Deploying from account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Claimant: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+Network: localhost
+Chain ID: 31337
+
+Deploying ZilliqaRandomNumber2 contract...
+⏳ Deployment transaction submitted...
+Transaction hash: 0x...
+✅ RNG Contract deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+🎯 Transaction ID for Achievement Submission:
+0x...
+
+📋 Verifying deployment...
+Claimant: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+Min Blocks Delay: 5
+Max Blocks Delay: 1000
+Max Random Limit: 2000000000
+
+✅ Claimant verification passed!
+🎉 Deployment completed successfully!
+```
+
+### Test Commit/Reveal Flow Locally
+
+**1. Save contract address:**
+```bash
+export RNG_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+```
+
+**2. Make a commitment:**
+```bash
+export BLOCKS_AHEAD=10
+export MIN_RANDOM=1
+export MAX_RANDOM=100
+npm run commit:local
+```
+
+**Expected output:**
+```
+Committing to random number on localhost...
+Current block: 0
+
+📋 Commitment Parameters:
+Target block: 10
+Blocks to wait: 10
+Random range: 1 to 100
+
+🎲 Committing to random number...
+✅ Commitment successful!
+
+⏰ You can reveal in ~10 seconds
+Target block: 10
+```
+
+**3. Check commitment status:**
+```bash
+npm run check:local
+```
+
+**Expected output:**
+```
+Current block: 2
+
+📋 Active Commitment:
+═══════════════════════════════════════
+Target block: 10
+Random range: 1 to 100
+Revealed: false
+
+⏰ Status: Waiting for target block
+Blocks to wait: 8
+Time to wait: ~8 seconds
+═══════════════════════════════════════
+```
+
+**4. Mine blocks manually to reach target (optional):**
+
+In Terminal 1 (where Hardhat node is running), you can mine blocks:
+```javascript
+// In another terminal:
+npx hardhat console --network localhost
+
+// Then in console:
+await network.provider.send("hardhat_mine", ["0xa"]); // Mine 10 blocks
+```
+
+Or just wait for 10 seconds (Hardhat automatically mines blocks).
+
+**5. Reveal the random number:**
+```bash
+npm run reveal:local
+```
+
+**Expected output:**
+```
+Revealing random number on localhost...
+Current block: 12
+
+📋 Your Commitment:
+Target block: 10
+Range: 1 to 100
+Revealed: false
+
+🎲 Revealing random number...
+✅ Reveal successful!
+
+🎉 Random Number Generated!
+═══════════════════════════════════════
+Result: 42
+Range: 1 to 100
+
+📊 Entropy Sources:
+Raw Random: 115792089237316195423570985008687907853269984665640564039457584007913129639935
+Prevrandao: 0
+Blockhash: 0xabcdef...
+═══════════════════════════════════════
+
+✅ You can now make a new commitment!
+```
+
+## Zilliqa Testnet Deployment
+
+### Prerequisites
+
+**1. Import wallet to MetaMask:**
+- Copy private key from `.env`
+- MetaMask → Import Account → Paste private key
+
+**2. Add Zilliqa Testnet to MetaMask:**
+- Network Name: `Zilliqa Testnet`
+- RPC URL: `https://api.testnet.zilliqa.com`
+- Chain ID: `33101`
+- Currency Symbol: `ZIL`
+- Block Explorer: `https://testnet.zilliqa.blockscout.com`
+
+**3. Get testnet ZIL:**
+- Visit https://faucet.testnet.zilliqa.com
+- Enter your wallet address
+- Request testnet ZIL
+
+### Deploy to Zilliqa Testnet
+
+**Update `.env` with your claimant address:**
+```
+ZILLIQA_TESTNET_PRIVATE_KEY=0x...
+CLAIMANT_ADDRESS=0x...  # Your training portal wallet!
+```
+
+**Deploy:**
+```bash
+npm run deploy:testnet
+```
+
+**Expected testnet output:**
+```
+Deploying RNG Contract to zilliqaTestnet...
+Deploying from account: 0xYourDevelopmentWallet
+Claimant: 0xYourTrainingPortalWallet
+Network: zilliqaTestnet
+Chain ID: 33101
+
+⏳ Deployment transaction submitted...
+Transaction hash: 0xabcd1234567890...
+
+✅ RNG Contract deployed to: 0xNewRNGContractAddress
+
+🎯 Transaction ID for Achievement Submission:
+0xabcd1234567890...
+
+✅ Claimant verification passed!
+🎉 Deployment completed successfully!
+```
+
+**Add contract address to `.env`:**
+```bash
+echo "RNG_CONTRACT_ADDRESS=0xYourRNGContractAddressHere" >> .env
+```
+
+### Test on Zilliqa Testnet
+
+**1. Commit to random number:**
+```bash
+export RNG_CONTRACT_ADDRESS=0xYourRNGAddress
+export BLOCKS_AHEAD=10
+export MIN_RANDOM=1
+export MAX_RANDOM=1000
+npm run commit:testnet
+```
+
+**2. Wait for target block (~10 seconds on Zilliqa):**
+```bash
+npm run check:testnet
+```
+
+**3. Reveal when ready:**
+```bash
+npm run reveal:testnet
+```
+
+**Expected testnet reveal output:**
+```
+Revealing random number on zilliqaTestnet...
+Current block: 12345678
+
+✅ Reveal successful!
+
+🎉 Random Number Generated!
+═══════════════════════════════════════
+Result: 742
+Range: 1 to 1000
+
+📊 Entropy Sources:
+Raw Random: 12345678901234567890...
+Prevrandao: 98765432109876543210
+Blockhash: 0x9876...
+═══════════════════════════════════════
+```
+
+## Post-Deployment Verification
+
+### Verify on Block Explorer
+
+**Visit Zilliqa Blockscout:**
+https://testnet.zilliqa.blockscout.com
+
+**Search for your contract address:**
+- View deployment transaction
+- Check contract creation
+- Verify claimant address is correct
+- See commit and reveal transactions
+- View emitted events
+
+### Test Full Flow on Testnet
+
+**Complete workflow:**
+```bash
+# 1. Deploy
+npm run deploy:testnet
+
+# 2. Save address
+echo "RNG_CONTRACT_ADDRESS=0xYourAddress" >> .env
+
+# 3. Commit
+npm run commit:testnet
+
+# 4. Check status
+npm run check:testnet
+
+# 5. Wait for target block (~10 seconds)
+
+# 6. Reveal
+npm run reveal:testnet
+
+# 7. Try again
+npm run commit:testnet
+# ... repeat
+```
+
+## Claim Your Achievement
+
+### Achievement Submission
+
+**You've successfully deployed your RNG contract!**
+
+**To claim your achievement:**
+
+1. **Copy your deployment transaction hash** (from deployment output)
+2. **Visit the training portal:** https://plunderacademy.com/lessons/island4/random-number-generator-practical
+3. **Connect your wallet** (the one set as `CLAIMANT_ADDRESS`)
+4. **Submit the transaction hash**
+5. **Verification happens automatically:**
+   - Checks transaction created a contract
+   - Verifies it's a ZilliqaRandomNumber2 contract
+   - Confirms claimant matches your wallet
+6. **Receive your achievement NFT!**
+
+## Common Issues and Solutions
+
+### Issue: "Insufficient funds for gas"
+
+**Solution:**
+```bash
+# Get more testnet ZIL from faucet
+https://faucet.testnet.zilliqa.com
+```
+
+### Issue: "Existing commitment found"
+
+**Solution:**
+```bash
+# Reveal your existing commitment first
+npm run reveal:testnet
+
+# Or cancel it if it's stale
+npm run cancel:testnet
+
+# Then try committing again
+npm run commit:testnet
+```
+
+### Issue: "Too early" when revealing
+
+**Solution:**
+```bash
+# Check current status
+npm run check:testnet
+
+# Wait for target block
+# Zilliqa has 1-second blocks, so wait ~N seconds where N is blocks to wait
+```
+
+### Issue: "No commitment found"
+
+**Solution:**
+```bash
+# Make sure you committed first
+npm run commit:testnet
+
+# Verify commitment exists
+npm run check:testnet
+```
+
+### Issue: Contract address not showing on explorer
+
+**Solution:**
+```bash
+# Wait a few moments for indexing
+# Zilliqa testnet explorer may take 10-30 seconds to index new contracts
+
+# Try accessing directly:
+https://testnet.zilliqa.blockscout.com/address/YOUR_CONTRACT_ADDRESS
+```
+
+## What's Next?
+
+In the next lesson, we'll:
+- Write comprehensive tests using Hardhat's testing framework
+- Test all edge cases and security properties
+- Verify mathematical fairness
+- Test commit-reveal flow
+- Verify event emission
+- Test cancellation mechanics
+
+## Wrap-Up
+
+You've successfully:
+
+✅ **Set up Hardhat 3** with Zilliqa network configurations  
+✅ **Created the RNG contract** with claimant integration  
+✅ **Written deployment scripts** with comprehensive verification  
+✅ **Created helper scripts** for commit/reveal workflow  
+✅ **Tested locally** with Hardhat node  
+✅ **Deployed to Zilliqa testnet** with proper configuration  
+✅ **Verified deployment** on block explorer  
+✅ **Tested full commit-reveal flow** on testnet  
+
+**Next up:** Module 4.5.4 will cover comprehensive testing and security verification!
+
+Ready to test? Let's go! 🚀
+

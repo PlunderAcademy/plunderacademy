@@ -14,6 +14,8 @@ practicalTakeaway: "Build secure swap contracts that handle price impact and pre
 
 On a busy harbor, boats exchange cargo quickly and safely by following a strict order: check documents, update the manifest, then hand cargo over the rail. AMMs do the same for tokens. Each swap reads the latest reserves, computes a quote, updates balances, and emits an event—always in a predictable order. This discipline prevents reentrancy, ensures accurate pricing, and creates a reliable audit trail for analytics and incident response.
 
+**We're implementing [Uniswap v2's](https://github.com/Uniswap/v2-core/tree/master/contracts) battle-tested swap mechanics**—the same pattern that secures billions in TVL across Ethereum, BSC, Polygon, and now Zilliqa. The `IPair` interface, `getReserves()`, and `swap()` function you'll use are Uniswap v2's design, proven through years of production use. Most DEX routers (Sushiswap, PancakeSwap, etc.) follow this exact pattern.
+
 When swaps ignore discipline, traders run aground: stale quotes misprice outputs, missing `minOut` drains value during volatility, and sloppy token handling causes reentrancy or transfer failures. A swap that reads reserves once and reuses them across multiple operations exposes users to sandwiching attacks. Omitting `SafeERC20` wrappers can silently fail on non‑standard tokens. Skipping event emission breaks volume tracking and anomaly detection. This lesson refactors a minimal swap into a production‑ready pattern using interfaces, CEI, `SafeERC20`, slippage protection, deadlines, and stable events.
 
 By the end, you will implement a single‑pool swap in a lightweight `SwapRouter` that you can extend to routing, fee accounting, and observability. You'll understand why interfaces decouple your router from pool internals, how CEI prevents reentrancy, and why every swap must emit a structured event. This lesson bridges directly to price feeds (4.3) and randomness/airdrop patterns later in Island 4, where external data and commit‑reveal sequencing strengthen your UX and safety rails.
@@ -321,6 +323,19 @@ Before shipping swap mechanics:
 ## Wrap‑up
 
 You can execute a safe single‑pool swap with slippage protection, deadlines, `SafeERC20`, and event observability—all wrapped in CEI discipline. You understand why interfaces decouple your router from pool internals, how to orient reserves based on token order, and why every swap must enforce `minOut` and emit a structured event. These patterns form the foundation of production DeFi routers, whether you're building a simple swap interface or a complex aggregator with multi‑hop routing.
+
+**You've mastered Uniswap v2's constant product AMM**—the same design that powers most DEXs today. The `x·y=k` formula, `IPair` interface, and security patterns (CEI, slippage, safe transfers) are industry standards with years of battle-testing across billions in TVL.
+
+### What about Uniswap v3?
+
+[Uniswap v3](https://github.com/Uniswap/v3-core/tree/main/contracts) introduces **concentrated liquidity**—LPs can allocate capital to specific price ranges for improved capital efficiency. While powerful, v3 adds significant complexity:
+
+- **Ticks and ranges**: Liquidity is allocated to discrete price ticks
+- **Position management**: LPs manage active positions instead of passive pools
+- **Advanced math**: Square root pricing and tick calculations
+- **Higher IL risk**: Narrow ranges amplify impermanent loss
+
+**Recommendation**: Master v2 first (as you've done here). Uniswap v3 is graduate-level material suited for advanced modules or specialized courses. Most projects still use v2-style constant product pools for simplicity, gas efficiency, and passive liquidity provision.
 
 The discipline you've learned—CEI, fresh reserve reads, safe token handling, reentrancy guards—applies far beyond swaps. Lending protocols follow CEI when processing borrows and liquidations. Yield aggregators use the same slippage controls when rebalancing capital. Staking systems emit similar events for deposits and withdrawals. Master these primitives and you'll build safer, more maintainable DeFi infrastructure across any use case.
 

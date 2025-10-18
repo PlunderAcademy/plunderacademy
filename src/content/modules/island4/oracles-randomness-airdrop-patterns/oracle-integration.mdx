@@ -398,10 +398,145 @@ Before shipping oracle integration:
 - [ ] **Observability**: Expose current feed address, `maxAge`, last accepted price, and pause state
 - [ ] **Monitoring setup**: Alert on staleness, deviation trips, feed switches, and pause events
 
+## Zilliqa Chainlink Deployment
+
+**Zilliqa provides Chainlink Community Deployment price feeds** on both testnet and mainnet. These feeds are production-ready and maintained by Zilliqa's oracle infrastructure.
+
+### Available Price Feeds
+
+**Testnet (Chain ID: 33101)**
+- **ZIL/USD**: `0x845f152725A2FF60cb2F5a0E024B5A749f7551C0`
+- **USDT/USD**: `0xcb893BC5741672Ffc7A7992876253BE83f2c550D`
+
+**Mainnet (Chain ID: 32769)**
+- **ZIL/USD**: `0x8245E42c7eBF756E7A18A59Fd828159f29587a23`
+- **USDT/USD**: `0x54d10Ee86cd2C3258b23FDb78782F70e84966683`
+
+Reference: [Zilliqa Chainlink Documentation](https://dev.zilliqa.com/zilliqa2/ecosystem/chainlink/)
+
+### Zilliqa-Specific Example: FeedConsumer
+
+This example integrates with Zilliqa's deployed price feeds:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+interface PriceFeedInterface {
+  function latestRoundData() external view returns (
+    uint80 roundId,
+    int256 answer,
+    uint256 startedAt,
+    uint256 updatedAt,
+    uint80 answeredInRound
+  );
+  function decimals() external view returns (uint8);
+  function description() external view returns (string memory);
+}
+
+contract FeedConsumer {
+  PriceFeedInterface public immutable dataFeed;
+  uint256 public immutable maxAge;
+
+  event PriceQueried(int256 price, uint256 timestamp);
+
+  constructor(address feedAddress, uint256 _maxAge) {
+    dataFeed = PriceFeedInterface(feedAddress);
+    maxAge = _maxAge; // e.g., 900 seconds (15 min)
+  }
+
+  /// @notice Get latest price with staleness check
+  function getLatestPrice() public returns (int256 price) {
+    (
+      /* uint80 roundID */,
+      int256 answer,
+      /* uint startedAt */,
+      uint256 updatedAt,
+      /* uint80 answeredInRound */
+    ) = dataFeed.latestRoundData();
+    
+    // Validate positivity
+    require(answer > 0, "Invalid price");
+    
+    // Check freshness
+    require(block.timestamp - updatedAt <= maxAge, "Stale price");
+    
+    price = answer;
+    emit PriceQueried(price, block.timestamp);
+  }
+
+  /// @notice Get price normalized to 1e18 scale
+  function getPriceX18() external returns (uint256) {
+    int256 price = getLatestPrice();
+    uint8 d = dataFeed.decimals();
+    
+    if (d <= 18) {
+      return uint256(price) * (10 ** (18 - d));
+    } else {
+      return uint256(price) / (10 ** (d - 18));
+    }
+  }
+
+  function decimals() external view returns (uint8) {
+    return dataFeed.decimals();
+  }
+
+  function description() external view returns (string memory) {
+    return dataFeed.description();
+  }
+}
+```
+
+### Deployment Example (Zilliqa Testnet)
+
+```solidity
+// Deploy FeedConsumer for ZIL/USD on testnet
+FeedConsumer consumer = new FeedConsumer(
+  0x845f152725A2FF60cb2F5a0E024B5A749f7551C0, // ZIL/USD testnet
+  900 // 15 minute staleness tolerance
+);
+
+// Get price (8 decimals for Chainlink USD pairs)
+int256 price = consumer.getLatestPrice();
+// Example: 1791000 / 1e8 = 0.01791 USD per ZIL
+
+// Or get normalized to 1e18
+uint256 priceX18 = consumer.getPriceX18();
+// Example: 17910000000000000 (0.01791 * 1e18)
+```
+
+### Integration Notes for Zilliqa
+
+1. **Update frequency**: Zilliqa Chainlink feeds update based on deviation thresholds and heartbeat intervals (typically every few minutes)
+2. **Decimals**: USD pairs use 8 decimals (Chainlink standard)
+3. **Staleness**: Feeds should update every 1-2 minutes under normal conditions; set `maxAge` to 15-30 minutes for swaps
+4. **Gas costs**: Reading price feeds is a view call—zero gas cost for read-only queries
+5. **Testnet faucet**: Get testnet ZIL from [https://faucet.testnet.zilliqa.com](https://faucet.testnet.zilliqa.com)
+
+### Testing on Zilliqa Testnet
+
+```bash
+# 1. Add Zilliqa Testnet to MetaMask
+Network Name: Zilliqa Testnet
+RPC URL: https://api.testnet.zilliqa.com
+Chain ID: 33101
+Currency Symbol: ZIL
+Block Explorer: https://testnet.zilliqa.blockscout.com
+
+# 2. Get testnet ZIL from faucet
+# Visit: https://faucet.testnet.zilliqa.com
+
+# 3. Deploy FeedConsumer via Remix
+# Use ZIL/USD testnet address: 0x845f152725A2FF60cb2F5a0E024B5A749f7551C0
+
+# 4. Call getLatestPrice() and verify price
+# Example response: 1791000 (divide by 1e8 for human-readable: 0.01791 USD)
+```
+
 ## Wrap‑up
 
-You can safely read decentralized price feeds by validating freshness, normalizing units, and defining a clear fail‑closed policy. These guardrails keep swaps, quotes, and liquidation logic predictable even when external data sources misbehave.
+You can safely read decentralized price feeds on Zilliqa by validating freshness, normalizing units, and defining a clear fail‑closed policy. Zilliqa's Chainlink deployment provides production-ready price feeds for ZIL/USD and USDT/USD on both testnet and mainnet.
 
-The patterns you learned—staleness checks, decimal normalization, deviation guards, and circuit breakers—apply to any oracle integration, not just Chainlink. Whether you're reading prices, rates, or other off‑chain facts, the discipline is the same: treat oracle outputs as untrusted, validate locally, and fail closed when signals are questionable.
+The patterns you learned—staleness checks, decimal normalization, deviation guards, and circuit breakers—apply to any oracle integration. Whether you're reading Chainlink feeds on Zilliqa, Ethereum, or other EVM chains, the discipline is the same: treat oracle outputs as untrusted, validate locally, and fail closed when signals are questionable.
 
-Next, we'll tackle randomness via commit–reveal and VRF, applying the same discipline of verifying assumptions before acting. When deploying on Zilliqa EVM or other networks, keep `maxAge`, deviation thresholds, and events identical so your monitoring and tests remain chain‑agnostic. Oracle integration is a trust boundary—guard it carefully.
+Next, we'll tackle randomness via commit–reveal and VRF, applying the same discipline of verifying assumptions before acting. The same `maxAge`, deviation thresholds, and events work identically across all EVM-compatible chains—your monitoring and tests remain chain‑agnostic. Oracle integration is a trust boundary—guard it carefully.
