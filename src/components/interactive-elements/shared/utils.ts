@@ -8,7 +8,9 @@ export const MODULE_TO_ACHIEVEMENT_MAP: Record<string, string> = {
   'zilliqa-evm-setup': '0004',
   'creating-erc20-tokens': '0005',
   'staking-contract-practical': '0010',
-  'nft-collection-practical': '0030'
+  'nft-collection-practical': '0030',
+  'random-number-generator-practical': '0050',
+  'upgradable-contract-practical': '0060'
 };
 
 // Get achievement number for a module
@@ -18,7 +20,11 @@ export function getAchievementNumber(moduleSlug: string): string | undefined {
 
 // Check if a module uses transaction submission instead of quiz
 export function isTransactionSubmissionModule(moduleSlug: string): boolean {
-  return moduleSlug === 'creating-erc20-tokens' || moduleSlug === 'staking-contract-practical' || moduleSlug === 'nft-collection-practical';
+  return moduleSlug === 'creating-erc20-tokens' || 
+         moduleSlug === 'staking-contract-practical' || 
+         moduleSlug === 'nft-collection-practical' ||
+         moduleSlug === 'random-number-generator-practical' ||
+         moduleSlug === 'upgradable-contract-practical';
 }
 
 // Format time in MM:SS format

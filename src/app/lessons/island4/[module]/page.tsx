@@ -250,7 +250,7 @@ export default async function CastleModulePage({ params }: CastleModulePageProps
         </Card>
 
         {/* Interactive Element Section */}
-        {quizData ? (
+        {(quizData || resolvedParams.module === 'random-number-generator-practical' || resolvedParams.module === 'upgradable-contract-practical') ? (
           <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
         ) : (
           <Card>

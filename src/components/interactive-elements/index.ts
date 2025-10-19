@@ -7,6 +7,8 @@ export { TraditionalQuiz } from "./quiz/traditional-quiz";
 export { TokenDeployChallenge } from "./elements/token-deploy-challenge";
 export { StakingDeployChallenge } from "./elements/staking-deploy-challenge";
 export { NftDeployChallenge } from "./elements/nft-deploy-challenge";
+export { RngDeployChallenge } from "./elements/rng-deploy-challenge";
+export { UpgradeableDeployChallenge } from "./elements/upgradeable-deploy-challenge";
 
 // Interactive Elements (Compact Production Versions)
 export { WordJumbleCompact } from "./elements/word-jumble-compact";

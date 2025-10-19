@@ -1,0 +1,320 @@
+---
+id: intro-to-upgradeable-contracts
+module: upgradable-contract-practical
+number: 4.6.1
+title: Introduction to Upgradeable Contracts
+objective: >-
+  Understand why upgradeable contracts matter, how proxy patterns work, and when to use them in production systems.
+slug: intro-to-upgradeable-contracts
+---
+
+## Why Upgradeable Contracts?
+
+Imagine deploying a smart contract that manages millions of dollars in user funds, only to discover a critical bug three months later. With traditional immutable contracts, you're stuck. You'd need to:
+
+1. Deploy a new contract at a new address
+2. Convince all users to migrate their funds
+3. Update every integration and frontend
+4. Lose all historical data and state
+
+**This is exactly what happened to this training portal!**
+
+When Plunder Academy first launched, the achievement registry had a limitation: users could only submit one achievement at a time, costing gas for each submission. As more students completed multiple modules, this became expensive and inefficient.
+
+With upgradeable contracts, we could:
+- Fix the gas inefficiency by adding batch submissions
+- Keep the same contract address
+- Preserve all existing achievement data
+- Maintain uninterrupted service
+
+**You'll be deploying and upgrading the actual contract that powers this training portal!**
+
+## What Are Upgradeable Contracts?
+
+Upgradeable contracts use a **proxy pattern** where:
+
+1. **Proxy Contract**: Holds all user data (balances, achievements, state)
+2. **Implementation Contract**: Contains the business logic (functions, rules)
+
+When users interact with the proxy:
+```
+User → Proxy Contract → delegatecall → Implementation Contract
+                ↓
+         State stored here
+```
+
+The magic of `delegatecall`: the implementation code runs **in the proxy's context**, reading and writing the proxy's storage. To upgrade, you simply point the proxy to a new implementation contract.
+
+### Real-World Example: This Training Portal
+
+**Current Setup:**
+- Proxy Address: `0x...` (never changes)
+- Implementation V1: Basic achievement claiming
+- Implementation V2: Adds batch submission (coming in this lesson!)
+
+Students interact with the proxy address. When we upgrade to V2, the proxy address stays the same, but calls get routed to the new implementation. All existing achievements remain intact.
+
+## Proxy Patterns: UUPS vs Transparent
+
+Two main patterns exist:
+
+### UUPS (Universal Upgradeable Proxy Standard)
+
+**How it works:**
+- Upgrade logic lives in the **implementation** contract
+- Implementation inherits `UUPSUpgradeable`
+- Lower gas costs (no admin checks on every call)
+
+**Pros:**
+- Gas efficient for high-volume contracts
+- Simpler proxy contract
+- Industry standard (used by this training portal!)
+
+**Cons:**
+- If V2 forgets to inherit `UUPSUpgradeable`, contract becomes frozen
+- Requires discipline across all versions
+
+### Transparent Proxy
+
+**How it works:**
+- Upgrade logic lives in a separate **ProxyAdmin** contract
+- Proxy checks if caller is admin on every call
+
+**Pros:**
+- Safer (upgrade logic separate from implementation)
+- Can't accidentally lock upgrades
+
+**Cons:**
+- Higher gas costs on every transaction
+- More complex deployment
+
+**For this lesson, we're using UUPS** because:
+1. It's more gas-efficient for our high-traffic registry
+2. It's the industry standard for modern dApps
+3. It's what production systems (like ours) use
+
+## When to Use Upgradeable Contracts
+
+### ✅ Good Use Cases
+
+**1. Long-lived protocols with evolving requirements**
+- DeFi platforms adding new features
+- DAOs expanding governance mechanisms
+- Training registries improving gas efficiency (like ours!)
+
+**2. Bug fixes in production systems**
+- Security vulnerabilities discovered post-launch
+- Edge cases found through real usage
+- Performance optimizations needed
+
+**3. Compliance and regulation changes**
+- Tax reporting requirements
+- KYC/AML integration
+- Legal framework updates
+
+### ❌ When NOT to Use
+
+**1. Simple token contracts**
+- ERC20 tokens with fixed supply
+- Basic NFT collections
+- Tokens where immutability builds trust
+
+**2. High-security vaults**
+- Multi-signature wallets
+- Time-locked treasuries
+- Systems where upgrade = attack vector
+
+**3. Decentralized governance**
+- Fully autonomous protocols
+- Immutability as a feature
+- Trust-minimized systems
+
+## Storage Layout: The Silent Killer
+
+The biggest danger in upgradeable contracts is **storage collisions**. Here's why:
+
+### Version 1 Layout
+```solidity
+contract V1 {
+    uint256 public totalAchievements;    // Slot 0
+    address public owner;                // Slot 1
+}
+```
+
+### BAD Version 2 (Reordered)
+```solidity
+contract V2 {
+    address public owner;                // NOW Slot 0 (was Slot 1)
+    uint256 public totalAchievements;    // NOW Slot 1 (was Slot 0)
+}
+```
+
+**What happens?**
+- Slot 0 stored `totalAchievements` (e.g., 1000)
+- V2 now interprets Slot 0 as `owner` address
+- Address becomes `0x00000000000000000000000000000000000003E8` (1000 in hex)
+- `totalAchievements` reads from Slot 1, which was the old owner address
+- **Silent data corruption!**
+
+### GOOD Version 2 (Append-Only)
+```solidity
+contract V2 {
+    // V1 storage (NEVER REORDER)
+    uint256 public totalAchievements;    // Slot 0 (unchanged)
+    address public owner;                // Slot 1 (unchanged)
+    
+    // V2 additions (append only)
+    uint256 public batchSubmissionCount; // Slot 2 (new)
+}
+```
+
+**Golden Rule:** Always append new variables at the end, never reorder or delete existing ones.
+
+## Initialization vs Constructors
+
+Another critical difference: **constructors don't work with proxies**.
+
+### Why Constructors Fail
+
+```solidity
+contract V1 is UUPSUpgradeable {
+    address public owner;
+    
+    constructor() {
+        owner = msg.sender; // ❌ Sets owner in IMPLEMENTATION storage
+    }
+}
+```
+
+When the implementation deploys, `owner` gets set in the **implementation's storage**. But when users interact via the **proxy**, they see `owner = address(0)` because the proxy's storage is empty.
+
+### Use Initialize Functions
+
+```solidity
+contract V1 is Initializable, UUPSUpgradeable {
+    address public owner;
+    
+    constructor() {
+        _disableInitializers(); // Prevent direct initialization
+    }
+    
+    function initialize(address _owner) external initializer {
+        owner = _owner; // ✅ Sets owner in PROXY storage
+    }
+}
+```
+
+After deploying the proxy, call `proxy.initialize(owner)` to set up state. The `initializer` modifier prevents calling it twice.
+
+## Security Considerations
+
+### 1. Initialization Protection
+
+**Bad:**
+```solidity
+function initialize(address _owner) external {
+    owner = _owner; // Can be called multiple times!
+}
+```
+
+**Good:**
+```solidity
+function initialize(address _owner) external initializer {
+    owner = _owner; // Can only be called once
+}
+```
+
+### 2. Upgrade Authorization
+
+**Bad:**
+```solidity
+function _authorizeUpgrade(address) internal override {
+    // No checks! Anyone can upgrade
+}
+```
+
+**Good:**
+```solidity
+function _authorizeUpgrade(address) internal override onlyOwner {
+    // Only owner (multisig) can upgrade
+}
+```
+
+### 3. Implementation Initialization Guard
+
+**Bad:**
+```solidity
+constructor() {
+    // Nothing here - implementation can be initialized
+}
+```
+
+**Good:**
+```solidity
+constructor() {
+    _disableInitializers(); // Prevent implementation exploitation
+}
+```
+
+## What You'll Build
+
+In this practical, you'll:
+
+1. **Deploy TrainingRegistryV1** with Foundry/Forge
+   - EIP-712 voucher verification (the same system verifying YOUR achievements!)
+   - Claimant tracking for achievement verification
+   - UUPS upgradeable pattern
+
+2. **Write Solidity tests** (new for you!)
+   - Test voucher submission and verification
+   - Test initialization and access controls
+   - Test storage layout
+
+3. **Upgrade to TrainingRegistryV2**
+   - Add batch voucher submission for gas savings
+   - Maintain backward compatibility
+   - Verify state preservation across upgrade
+
+4. **Test the upgrade**
+   - Deploy V1, create state, upgrade to V2
+   - Verify old data intact, new features work
+   - Prove storage safety
+
+## Hardhat vs Foundry: What's Different?
+
+You've been using Hardhat 3 for all previous practicals. Foundry is a different toolkit:
+
+| Feature | Hardhat | Foundry |
+|---------|---------|---------|
+| **Tests** | TypeScript/JavaScript | Solidity |
+| **Speed** | Slower (Node.js) | Blazing fast (Rust) |
+| **Deployment** | `hardhat ignition deploy` | `forge script` |
+| **Testing** | `npx hardhat test` | `forge test` |
+| **Gas Reports** | Plugin required | Built-in (`--gas-report`) |
+| **Debugger** | console.log in JS | `forge debug` |
+
+**Why Foundry for this lesson?**
+- Production contracts often use Foundry for speed
+- Writing tests in Solidity keeps you in one language
+- Better for complex contract interactions
+- Industry standard for upgradeable contracts
+
+**Don't worry!** We'll walk through every command and pattern. The Solidity you know transfers directly to Foundry tests.
+
+## Wrap-Up
+
+Upgradeable contracts are powerful but dangerous. They let you:
+- Fix bugs without migrating users
+- Add features while preserving state
+- Maintain the same address and integrations
+
+But they require strict discipline:
+- Append-only storage (never reorder variables)
+- Initialize functions (not constructors)
+- Upgrade authorization (multisigs, not EOAs)
+- Comprehensive testing across upgrade boundaries
+
+**Next up:** We'll dive into the TrainingRegistry contract architecture—the actual code powering this training portal's achievement system. You'll see how EIP-712 vouchers work, how claimant tracking proves you deployed a contract, and how storage layout is structured for safe upgrades.
+
+Ready to deploy the same contract you've been interacting with? Let's go! 🚀
+

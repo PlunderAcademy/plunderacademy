@@ -52,6 +52,10 @@ npm install dotenv
 
 # TypeScript support
 npm install --save-dev typescript @types/node
+
+# Small change needed in the tsconfig.json file
+# Add this line to the compilerOptions:
+# "resolveJsonModule": true,
 ```
 
 ### Project Structure
@@ -688,7 +692,7 @@ if (!rngAddress) {
   process.exit(1);
 }
 
-const { viem } = await network.connect({ network: networkName });
+const { viem, networkHelpers } = await network.connect({ network: networkName });
 const publicClient = await viem.getPublicClient();
 const [walletClient] = await viem.getWalletClients();
 
@@ -722,7 +726,17 @@ async function main() {
   if (currentBlock < commitment.targetBlock) {
     const blocksToWait = Number(commitment.targetBlock - currentBlock);
     console.log(`\n⏰ Too early! Wait ${blocksToWait} more blocks (~${blocksToWait} seconds on Zilliqa)`);
-    process.exit(1);
+    
+    // If on local network, auto-mine blocks
+    if (networkName === "localhost" || networkName.startsWith("hardhat")) {
+      console.log(`\n💡 Auto-mining 15 blocks on local network...`);
+      await networkHelpers.mine(15);
+      const newBlock = await publicClient.getBlockNumber();
+      console.log("✅ Advanced to block:", newBlock.toString());
+      console.log("Proceeding with reveal...\n");
+    } else {
+      process.exit(1);
+    }
   }
   
   if (commitment.revealed) {
@@ -799,14 +813,14 @@ import { network } from "hardhat";
 
 const networkName = process.env.HARDHAT_NETWORK || "localhost";
 const rngAddress = process.env.RNG_CONTRACT_ADDRESS as `0x${string}`;
-const checkAddress = (process.env.CHECK_ADDRESS || process.env.CLAIMANT_ADDRESS) as `0x${string}`;
+const checkAddress = process.env.CHECK_ADDRESS as `0x${string}` | undefined;
 
 if (!rngAddress) {
   console.error("Set RNG_CONTRACT_ADDRESS in .env");
   process.exit(1);
 }
 
-const { viem } = await network.connect({ network: networkName });
+const { viem, networkHelpers } = await network.connect({ network: networkName });
 const publicClient = await viem.getPublicClient();
 
 async function main() {
@@ -816,14 +830,24 @@ async function main() {
   const rng = await viem.getContractAt("ZilliqaRandomNumber2", rngAddress);
   
   // Get current block
-  const currentBlock = await publicClient.getBlockNumber();
+  let currentBlock = await publicClient.getBlockNumber();
+  console.log("Initial block:", currentBlock);
+  
+  // Advance 10 blocks on local networks
+  if (networkName === "localhost" || networkName.startsWith("hardhat")) {
+    console.log("⚡ Advancing 15 blocks on local network...");
+    await networkHelpers.mine(15);
+    currentBlock = await publicClient.getBlockNumber();
+    console.log("Advanced to block:", currentBlock);
+  }
+  
   console.log("Current block:", currentBlock);
   
   // Determine which address to check
   let addressToCheck: `0x${string}`;
   const walletClients = await viem.getWalletClients();
   
-  if (checkAddress && checkAddress !== "undefined") {
+  if (checkAddress) {
     addressToCheck = checkAddress;
     console.log("Checking address:", addressToCheck, "(from env)");
   } else {
@@ -851,7 +875,15 @@ async function main() {
       console.log("\n⏰ Status: Waiting for target block");
       console.log("Blocks to wait:", blocksUntilReveal);
       console.log(`Time to wait: ~${blocksUntilReveal} seconds (Zilliqa 1-second blocks)`);
-      console.log("\nCome back after target block to reveal!");
+      
+      // If on local network, offer to mine blocks
+      if (networkName === "localhost" || networkName.startsWith("hardhat")) {
+        console.log("\n💡 TIP: You're on a local network!");
+        console.log("You can advance blocks instantly using network helpers:");
+        console.log(`  await networkHelpers.mine(${blocksUntilReveal});`);
+      } else {
+        console.log("\nCome back after target block to reveal!");
+      }
     } else if (!commitment.revealed) {
       console.log("\n✅ Status: Ready to reveal!");
       console.log("Run: npm run reveal:local");
@@ -893,7 +925,7 @@ if (!rngAddress) {
   process.exit(1);
 }
 
-const { viem } = await network.connect({ network: networkName });
+const { viem, networkHelpers } = await network.connect({ network: networkName });
 const publicClient = await viem.getPublicClient();
 const [walletClient] = await viem.getWalletClients();
 
@@ -925,12 +957,22 @@ async function main() {
   const cancelBlock = commitment.targetBlock + maxDelay;
   
   if (currentBlock <= cancelBlock) {
-    const blocksToWait = Number(cancelBlock - currentBlock);
+    const blocksToWait = Number(cancelBlock - currentBlock + 1n);
     console.log(`\n⏰ Too early to cancel! Wait ${blocksToWait} more blocks`);
     console.log("You can only cancel after block:", cancelBlock.toString());
-    console.log("\nOr reveal your commitment instead:");
-    console.log("npm run reveal:local");
-    process.exit(1);
+    
+    // If on local network, offer to mine blocks
+    if (networkName === "localhost" || networkName.startsWith("hardhat")) {
+      console.log(`\n💡 Auto-mining 15 blocks on local network...`);
+      await networkHelpers.mine(15);
+      const newBlock = await publicClient.getBlockNumber();
+      console.log("✅ Advanced to block:", newBlock.toString());
+      console.log("Proceeding with cancellation...\n");
+    } else {
+      console.log("\nOr reveal your commitment instead:");
+      console.log("npm run reveal:local");
+      process.exit(1);
+    }
   }
   
   // Cancel
@@ -995,7 +1037,7 @@ This starts a local blockchain with pre-funded test accounts.
 
 Set environment variables and deploy:
 ```bash
-export CLAIMANT_ADDRESS=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+export CLAIMANT_ADDRESS=0xyourwalletfortrainingportalacheivement
 npm run deploy:local
 ```
 
@@ -1059,8 +1101,11 @@ Target block: 10
 
 **3. Check commitment status:**
 ```bash
+export CHECK_ADDRESS=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 (this is a local wallet only for testing)
 npm run check:local
 ```
+
+NOTE: locally, this will advance the blocks 15 blocks.
 
 **Expected output:**
 ```
@@ -1068,30 +1113,16 @@ Current block: 2
 
 📋 Active Commitment:
 ═══════════════════════════════════════
-Target block: 10
+Target block: 11
 Random range: 1 to 100
 Revealed: false
 
-⏰ Status: Waiting for target block
-Blocks to wait: 8
-Time to wait: ~8 seconds
+✅ Status: Ready to reveal!
+Run: npm run reveal:local
 ═══════════════════════════════════════
 ```
 
-**4. Mine blocks manually to reach target (optional):**
-
-In Terminal 1 (where Hardhat node is running), you can mine blocks:
-```javascript
-// In another terminal:
-npx hardhat console --network localhost
-
-// Then in console:
-await network.provider.send("hardhat_mine", ["0xa"]); // Mine 10 blocks
-```
-
-Or just wait for 10 seconds (Hardhat automatically mines blocks).
-
-**5. Reveal the random number:**
+**4. Reveal the random number:**
 ```bash
 npm run reveal:local
 ```
@@ -1145,10 +1176,11 @@ Blockhash: 0xabcdef...
 
 ### Deploy to Zilliqa Testnet
 
-**Update `.env` with your claimant address:**
+**Update `.env` with your claimant and deploy wallet address:**
 ```
 ZILLIQA_TESTNET_PRIVATE_KEY=0x...
 CLAIMANT_ADDRESS=0x...  # Your training portal wallet!
+CHECK_ADDRESS=0x... # Your deployer wallet address (you used this to get testnet ZIL)
 ```
 
 **Deploy:**
@@ -1186,6 +1218,7 @@ echo "RNG_CONTRACT_ADDRESS=0xYourRNGContractAddressHere" >> .env
 **1. Commit to random number:**
 ```bash
 export RNG_CONTRACT_ADDRESS=0xYourRNGAddress
+export CHECK_ADDRESS=0x... # Your deployer wallet address (you used this to get testnet ZIL)
 export BLOCKS_AHEAD=10
 export MIN_RANDOM=1
 export MAX_RANDOM=1000

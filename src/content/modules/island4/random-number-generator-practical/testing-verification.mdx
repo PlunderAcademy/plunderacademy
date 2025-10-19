@@ -866,7 +866,7 @@ describe("ZilliqaRandomNumber2", async function () {
     it("Should handle minimum block delay (5 blocks)", async function () {
       const rng = await deployRNG();
       const currentBlock = await publicClient.getBlockNumber();
-      const targetBlock = currentBlock + 6n; // Just above minimum (5)
+      const targetBlock = currentBlock + 7n; // Need > current + 5, so +7 ensures it works even after the commit tx
 
       await rng.write.commit([targetBlock, 1n, 100n], {
         account: user1.account,
@@ -1086,84 +1086,61 @@ npm test
 ```
   ZilliqaRandomNumber2
     Deployment
-      ✓ Should set the correct claimant (125ms)
-      ✓ Should initialize with correct constants (45ms)
-      ✓ Should revert if claimant is zero address (35ms)
-      ✓ Should have no commitments initially (40ms)
-    
+      ✔ Should set the correct claimant (153ms)
+      ✔ Should initialize with correct constants (143ms)
+      ✔ Should revert if claimant is zero address (78ms)
+      ✔ Should have no commitments initially (171ms)
     Commit Function
-      ✓ Should commit successfully with valid parameters (95ms)
-      ✓ Should emit CommitSubmitted event (88ms)
-      ✓ Should revert if target block is too soon (42ms)
-      ✓ Should revert if target block is too far (41ms)
-      ✓ Should revert if minRandom is zero (43ms)
-      ✓ Should revert if maxRandom exceeds limit (44ms)
-      ✓ Should revert if minRandom > maxRandom (43ms)
-      ✓ Should revert if user has existing commitment (125ms)
-      ✓ Should allow different users to commit simultaneously (152ms)
-      ✓ Should accept maximum allowed range (93ms)
-      ✓ Should accept various valid ranges (1205ms)
-    
+      ✔ Should commit successfully with valid parameters (189ms)
+      ✔ Should emit CommitSubmitted event (271ms)
+      ✔ Should revert if target block is too soon (184ms)
+      ✔ Should revert if target block is too far (198ms)
+      ✔ Should revert if minRandom is zero (199ms)
+      ✔ Should revert if maxRandom exceeds limit (309ms)
+      ✔ Should revert if minRandom > maxRandom (185ms)
+      ✔ Should revert if user has existing commitment (271ms)
+      ✔ Should allow different users to commit simultaneously (294ms)
+      ✔ Should accept maximum allowed range (337ms)
+      ✔ Should accept various valid ranges (502ms)
     Reveal Function
-      ✓ Should reveal successfully after target block (195ms)
-      ✓ Should emit RandomnessRevealed event (188ms)
-      ✓ Should return random number within specified range (192ms)
-      ✓ Should revert if no commitment found (35ms)
-      ✓ Should revert if revealing too early (125ms)
-      ✓ Should allow user to commit again after revealing (285ms)
-      ✓ Should generate different results for different users (295ms)
-    
+      ✔ Should reveal successfully after target block (329ms)
+      ✔ Should emit RandomnessRevealed event with all entropy sources (447ms)
+      ✔ Should return random number within specified range (364ms)
+      ✔ Should revert if no commitment found (188ms)
+      ✔ Should revert if revealing too early (263ms)
+      ✔ Should allow user to commit again after revealing (477ms)
+      ✔ Should generate different results for different users (443ms)
     Cancel Commitment Function
-      ✓ Should cancel commitment after expiry (1105ms)
-      ✓ Should revert if no commitment to cancel (37ms)
-      ✓ Should revert if trying to cancel too early (95ms)
-      ✓ Should revert if trying to cancel just after target block (155ms)
-      ✓ Should allow new commitment after cancellation (1195ms)
-    
+      ✔ Should cancel commitment after expiry (255ms)
+      ✔ Should revert if no commitment to cancel (215ms)
+      ✔ Should revert if trying to cancel too early (330ms)
+      ✔ Should revert if trying to cancel just after target block (299ms)
+      ✔ Should allow new commitment after cancellation (457ms)
     Security Properties
-      ✓ Should use user address as part of entropy (195ms)
-      ✓ Should use block.prevrandao as entropy (188ms)
-      ✓ Should use previous block hash as entropy (192ms)
-      ✓ Should prevent same-block commit and reveal (43ms)
-    
+      ✔ Should use user address as part of entropy (388ms)
+      ✔ Should use block.prevrandao as entropy (302ms)
+      ✔ Should use previous block hash as entropy (302ms)
+      ✔ Should prevent same-block commit and reveal (186ms)
     Edge Cases and Boundaries
-      ✓ Should handle minimum valid range (1-1) (192ms)
-      ✓ Should handle maximum valid range (195ms)
-      ✓ Should handle minimum block delay (93ms)
-      ✓ Should handle near-maximum block delay (94ms)
-      ✓ Should handle large min value with small range (194ms)
-    
+      ✔ Should handle minimum valid range (1-1) (367ms)
+      ✔ Should handle maximum valid range (1 to 2 billion) (313ms)
+      ✔ Should handle minimum block delay (5 blocks) (239ms)
+      ✔ Should handle near-maximum block delay (210ms)
+      ✔ Should handle large min value with small range (347ms)
     Mathematical Correctness
-      ✓ Should correctly constrain random numbers to range (965ms)
-      ✓ Should verify entropy calculation is correct (195ms)
-    
+      ✔ Should correctly constrain random numbers to range (1249ms)
+      ✔ Should verify entropy calculation is correct (280ms)
     Gas Efficiency
-      ✓ Should have reasonable gas costs for commit (94ms)
-      ✓ Should have reasonable gas costs for reveal (195ms)
+      ✔ Should have reasonable gas costs for commit (232ms)
+      ✔ Should have reasonable gas costs for reveal (291ms)
 
-  43 passing (8.5s)
-```
-
-### Run Specific Test Suites
-
-```bash
-# Test only deployment
-npm test -- --grep "Deployment"
-
-# Test only commit function
-npm test -- --grep "Commit Function"
-
-# Test only reveal function
-npm test -- --grep "Reveal Function"
-
-# Test only security
-npm test -- --grep "Security Properties"
+  40 passing (43426ms)
 ```
 
 ### Test with Coverage
 
 ```bash
-npx hardhat coverage
+npx hardhat test --coverage
 ```
 
 This generates a coverage report showing which lines of your contract are tested.
@@ -1340,7 +1317,7 @@ You've successfully:
 
 **Key Achievements:**
 
-1. **43+ test cases** covering all scenarios
+1. **40+ test cases** covering all scenarios
 2. **High code coverage** (aim for 95%+)
 3. **Security validation** of commit-reveal pattern
 4. **Mathematical verification** of fairness

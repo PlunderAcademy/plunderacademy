@@ -8,6 +8,8 @@ import { TraditionalQuiz } from "./quiz/traditional-quiz";
 import { TokenDeployChallenge } from "./elements/token-deploy-challenge";
 import { StakingDeployChallenge } from "./elements/staking-deploy-challenge";
 import { NftDeployChallenge } from "./elements/nft-deploy-challenge";
+import { RngDeployChallenge } from "./elements/rng-deploy-challenge";
+import { UpgradeableDeployChallenge } from "./elements/upgradeable-deploy-challenge";
 import { isTransactionSubmissionModule } from "./shared/utils";
 
 // TODO: These will be added in future milestones
@@ -93,6 +95,22 @@ export function InteractiveElement({
       if (moduleSlug === 'nft-collection-practical') {
         return (
           <NftDeployChallenge 
+            missionData={missionData} 
+            moduleSlug={moduleSlug} 
+          />
+        );
+      }
+      if (moduleSlug === 'random-number-generator-practical') {
+        return (
+          <RngDeployChallenge 
+            missionData={missionData} 
+            moduleSlug={moduleSlug} 
+          />
+        );
+      }
+      if (moduleSlug === 'upgradable-contract-practical') {
+        return (
+          <UpgradeableDeployChallenge 
             missionData={missionData} 
             moduleSlug={moduleSlug} 
           />
