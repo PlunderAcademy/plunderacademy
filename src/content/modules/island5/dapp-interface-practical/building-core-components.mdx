@@ -138,7 +138,7 @@ export function Header() {
           <ConnectButton 
             chainStatus="icon"
             accountStatus="address"
-            showBalance={false}
+            showBalance={true}
           />
         </div>
       </div>
@@ -155,8 +155,9 @@ export function Header() {
 
 **RainbowKit ConnectButton props:**
 - `chainStatus="icon"` - Small chain icon (vs full name)
-- `accountStatus="address"` - Show abbreviated address
-- `showBalance={false}` - Hide balance for cleaner UI
+- `accountStatus="address" or accountStatus="full"` - Show abbreviated address
+- `showBalance={false} or showBalance={true}` - Show/Hide balance depending what you like UI
+- see here for other props - https://rainbowkit.com/docs/connect-button
 
 ## Step 3: Create Footer component
 
@@ -206,7 +207,7 @@ export function Footer() {
             Block Explorer
           </a>
           <a
-            href="https://dev-wallet.zilliqa.com"
+            href="https://faucet.testnet.zilliqa.com/"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-foreground"
@@ -431,8 +432,8 @@ export function Header() {
           <ThemeToggle />
           <ConnectButton 
             chainStatus="icon"
-            accountStatus="address"
-            showBalance={false}
+            accountStatus="full"
+            showBalance={true}
           />
         </div>
       </div>
@@ -443,38 +444,47 @@ export function Header() {
 
 **Configure dark mode in Tailwind (globals.css):**
 
-Tailwind CSS v4 handles themes differently. Ensure your `src/app/globals.css` has theme variables:
+Tailwind CSS v4 handles themes differently. Ensure your `src/app/globals.css` has theme variables - replace the content with this:
 
 ```css
-/* src/app/globals.css */
 @import "tailwindcss";
 
-@theme inline {
-  --color-background: 0 0% 100%;
-  --color-foreground: 0 0% 3.9%;
-  --color-card: 0 0% 100%;
-  --color-card-foreground: 0 0% 3.9%;
-  --color-border: 0 0% 89.8%;
-  --color-muted: 0 0% 96.1%;
-  --color-muted-foreground: 0 0% 45.1%;
-  --color-primary: 262.1 83.3% 57.8%;
-  --color-primary-foreground: 210 40% 98%;
-  --color-accent: 0 0% 96.1%;
-  --color-accent-foreground: 0 0% 9%;
-  
-  .dark {
-    --color-background: 0 0% 3.9%;
-    --color-foreground: 0 0% 98%;
-    --color-card: 0 0% 3.9%;
-    --color-card-foreground: 0 0% 98%;
-    --color-border: 0 0% 14.9%;
-    --color-muted: 0 0% 14.9%;
-    --color-muted-foreground: 0 0% 63.9%;
-    --color-primary: 262.1 83.3% 57.8%;
-    --color-primary-foreground: 210 40% 98%;
-    --color-accent: 0 0% 14.9%;
-    --color-accent-foreground: 0 0% 98%;
-  }
+:root {
+  --background: hsl(250, 100%, 97%);
+  --foreground: hsl(250, 20%, 15%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(250, 20%, 15%);
+  --border: hsl(250, 40%, 85%);
+  --muted: hsl(250, 50%, 92%);
+  --muted-foreground: hsl(250, 10%, 45%);
+  --primary: hsl(262, 83%, 58%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(200, 98%, 48%);
+  --secondary-foreground: hsl(0, 0%, 100%);
+  --accent: hsl(280, 75%, 92%);
+  --accent-foreground: hsl(262, 80%, 45%);
+}
+
+.dark {
+  --background: hsl(250, 50%, 8%);
+  --foreground: hsl(250, 10%, 95%);
+  --card: hsl(250, 40%, 12%);
+  --card-foreground: hsl(250, 10%, 95%);
+  --border: hsl(250, 30%, 25%);
+  --muted: hsl(250, 30%, 18%);
+  --muted-foreground: hsl(250, 10%, 65%);
+  --primary: hsl(262, 83%, 65%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(200, 98%, 55%);
+  --secondary-foreground: hsl(0, 0%, 100%);
+  --accent: hsl(250, 35%, 15%);
+  --accent-foreground: hsl(262, 83%, 70%);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
 }
 ```
 

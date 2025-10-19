@@ -31,8 +31,6 @@ You'll need contract addresses and ABIs. We'll use:
 - **ERC20 token**: Your deployed token (or example from Zilliqa testnet)
 - **NFT collection**: Your deployed NFTs (or example collection)
 
-> **Don't have contracts?** No problem! We'll provide testnet examples you can use.
-
 ## Step 1: Set up contract addresses and ABIs
 
 Create environment variables for your contracts.
@@ -43,22 +41,16 @@ Create environment variables for your contracts.
 # .env.local (add these lines)
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_id_here
 
-# ERC20 Token Contract (use your own or this example)
+# ERC20 Token Contract (use your own)
 NEXT_PUBLIC_TOKEN_ADDRESS=0x1234567890123456789012345678901234567890
 
-# NFT Collection Contract (use your own or this example)
+# NFT Collection Contract (use your own)
 NEXT_PUBLIC_NFT_ADDRESS=0x0987654321098765432109876543210987654321
 ```
 
-**Replace with your actual contract addresses** from previous islands, or use example addresses we'll provide.
+**Replace with your actual contract addresses** from previous islands.
 
-### Create ABI files
-
-Create `src/lib/abis/` directory:
-
-```bash
-mkdir -p src/lib/abis
-```
+### Create ABI files (Optional)
 
 **Option 1: Use viem's built-in ABIs** (easiest):
 
@@ -322,7 +314,7 @@ touch src/components/nft-gallery.tsx
 // src/components/nft-gallery.tsx
 "use client";
 
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { erc721Abi } from "viem";
 import { useState, useEffect } from "react";
 
@@ -331,9 +323,17 @@ interface NFTGalleryProps {
   maxDisplay?: number;
 }
 
+interface NFTMetadata {
+  name?: string;
+  description?: string;
+  image?: string;
+  tokenId: number;
+}
+
 export function NFTGallery({ nftAddress, maxDisplay = 12 }: NFTGalleryProps) {
   const { address, isConnected } = useAccount();
-  const [ownedTokens, setOwnedTokens] = useState<number[]>([]);
+  const [nftMetadata, setNftMetadata] = useState<Record<number, NFTMetadata>>({});
+  const [loadingMetadata, setLoadingMetadata] = useState(false);
 
   // Read user's NFT balance
   const { data: balance, isPending } = useReadContract({
@@ -343,6 +343,7 @@ export function NFTGallery({ nftAddress, maxDisplay = 12 }: NFTGalleryProps) {
     args: address ? [address] : undefined,
     query: {
       enabled: isConnected && !!address,
+      refetchInterval: 30000,
     },
   });
 
@@ -353,17 +354,90 @@ export function NFTGallery({ nftAddress, maxDisplay = 12 }: NFTGalleryProps) {
     functionName: "name",
   });
 
-  // Fetch owned token IDs (simplified - just display count)
+  // Use the contract's walletOfOwner function to get all token IDs
+  const { data: tokenIds } = useReadContract({
+    address: nftAddress,
+    abi: [{
+      inputs: [{ name: "_owner", type: "address" }],
+      name: "walletOfOwner",
+      outputs: [{ name: "", type: "uint256[]" }],
+      stateMutability: "view",
+      type: "function",
+    }],
+    functionName: "walletOfOwner",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: isConnected && !!address && balance !== undefined && Number(balance) > 0,
+      refetchInterval: 30000,
+    },
+  });
+
+  // Get tokenURI for each token
+  const tokenURIQueries = (tokenIds as bigint[] | undefined)?.slice(0, maxDisplay).map((id) => ({
+    address: nftAddress,
+    abi: erc721Abi,
+    functionName: "tokenURI" as const,
+    args: [id],
+  })) || [];
+
+  const { data: tokenURIs } = useReadContracts({
+    contracts: tokenURIQueries,
+    query: {
+      enabled: tokenIds && tokenIds.length > 0,
+      refetchInterval: 30000,
+    },
+  });
+
+  // Fetch metadata from tokenURIs
   useEffect(() => {
-    if (balance && balance > 0n) {
-      // In a real app, you'd query tokenOfOwnerByIndex or use an indexer
-      // For now, just show the count
-      const count = Number(balance);
-      setOwnedTokens(Array.from({ length: Math.min(count, maxDisplay) }, (_, i) => i + 1));
-    } else {
-      setOwnedTokens([]);
+    async function fetchMetadata() {
+      if (!tokenURIs || tokenURIs.length === 0 || !tokenIds) return;
+      
+      setLoadingMetadata(true);
+      const metadata: Record<number, NFTMetadata> = {};
+      const idsToFetch = (tokenIds as bigint[]).slice(0, maxDisplay);
+
+      for (let i = 0; i < tokenURIs.length; i++) {
+        const uri = tokenURIs[i].result as string;
+        const tokenId = idsToFetch[i];
+        
+        if (!uri || !tokenId) continue;
+
+        try {
+          // Handle IPFS URIs
+          let fetchUrl = uri;
+          if (uri.startsWith('ipfs://')) {
+            fetchUrl = uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
+          }
+
+          const response = await fetch(fetchUrl);
+          const data = await response.json();
+          
+          // Handle IPFS images
+          let imageUrl = data.image;
+          if (imageUrl?.startsWith('ipfs://')) {
+            imageUrl = imageUrl.replace('ipfs://', 'https://ipfs.io/ipfs/');
+          }
+
+          metadata[Number(tokenId)] = {
+            ...data,
+            image: imageUrl,
+            tokenId: Number(tokenId),
+          };
+        } catch (error) {
+          console.error(`Failed to fetch metadata for token ${tokenId}:`, error);
+          metadata[Number(tokenId)] = {
+            tokenId: Number(tokenId),
+          };
+        }
+      }
+
+      setNftMetadata(metadata);
+      setLoadingMetadata(false);
     }
-  }, [balance, maxDisplay]);
+
+    fetchMetadata();
+  }, [tokenURIs, tokenIds, maxDisplay]);
 
   if (!isConnected) {
     return (
@@ -376,7 +450,7 @@ export function NFTGallery({ nftAddress, maxDisplay = 12 }: NFTGalleryProps) {
     );
   }
 
-  if (isPending) {
+  if (isPending || loadingMetadata) {
     return (
       <div className="rounded-lg border border-border bg-card p-6">
         <h3 className="text-lg font-semibold mb-4">Your NFTs</h3>
@@ -407,23 +481,58 @@ export function NFTGallery({ nftAddress, maxDisplay = 12 }: NFTGalleryProps) {
             You don't own any NFTs from {collectionName || "this collection"} yet
           </p>
         </div>
+      ) : !tokenIds || tokenIds.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-2">🔍</div>
+          <p className="text-sm text-muted-foreground">
+            Loading your NFTs...
+          </p>
+        </div>
       ) : (
         <div>
           <p className="text-sm text-muted-foreground mb-4">
             {collectionName || "NFT Collection"}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {ownedTokens.map((tokenId) => (
-              <div
-                key={tokenId}
-                className="aspect-square rounded-lg border border-border bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
-              >
-                <div className="text-center">
-                  <div className="text-2xl mb-1">🎨</div>
-                  <p className="text-xs text-muted-foreground">#{tokenId}</p>
+            {(tokenIds as bigint[]).slice(0, maxDisplay).map((tokenId) => {
+              const tokenIdNum = Number(tokenId);
+              const metadata = nftMetadata[tokenIdNum];
+
+              return (
+                <div
+                  key={tokenIdNum}
+                  className="group aspect-square rounded-lg border border-border bg-muted/50 overflow-hidden hover:border-primary/40 transition-all hover:scale-105"
+                >
+                  {metadata?.image ? (
+                    <div className="relative h-full w-full">
+                      <img
+                        src={metadata.image}
+                        alt={metadata.name || `NFT #${tokenIdNum}`}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = '';
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                        <div className="text-white">
+                          <p className="text-xs font-medium truncate">
+                            {metadata.name || `#${tokenIdNum}`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <div className="text-2xl mb-1">🎨</div>
+                        <p className="text-xs text-muted-foreground">#{tokenIdNum}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           {nftCount > maxDisplay && (
             <p className="text-xs text-muted-foreground mt-4 text-center">
@@ -439,11 +548,17 @@ export function NFTGallery({ nftAddress, maxDisplay = 12 }: NFTGalleryProps) {
 
 **Key points:**
 - **balanceOf**: ERC721 returns count of owned NFTs
-- **Simplified display**: Shows placeholders (real app would fetch metadata)
+- **walletOfOwner**: Custom function that returns all token IDs owned by an address (batch read)
+- **useReadContracts**: Fetches multiple `tokenURI` calls in parallel for efficiency
+- **Metadata fetching**: Automatically fetches and parses JSON metadata from tokenURIs
+- **IPFS support**: Handles IPFS URIs by converting them to HTTP gateways
+- **Image display**: Shows actual NFT images with hover effects and fallbacks
 - **Empty state**: Friendly message when no NFTs owned
-- **Responsive grid**: Adapts to screen size
+- **Responsive grid**: Adapts to screen size (2-4 columns)
+- **Loading skeleton**: Animated placeholders during metadata fetch
+- **Error resilience**: Continues loading other NFTs if one fails
 
-> **Note:** A production NFT gallery would use `tokenOfOwnerByIndex` to get specific token IDs, then fetch metadata from `tokenURI`. We're keeping this simple for the lesson—you can enhance it later!
+> **Note:** This implementation uses `walletOfOwner` (a common extension to ERC721) for efficiency. If your contract doesn't have this function, you can iterate through `tokenOfOwnerByIndex` instead. The component also handles IPFS metadata and images—perfect for most NFT collections!
 
 ## Step 5: Update homepage with data components
 

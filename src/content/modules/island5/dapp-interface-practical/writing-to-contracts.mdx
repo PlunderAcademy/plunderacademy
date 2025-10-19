@@ -70,7 +70,7 @@ touch src/components/transfer-form.tsx
 // src/components/transfer-form.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
 import { parseUnits, isAddress } from "viem";
 import { erc20Abi } from "viem";
@@ -118,11 +118,12 @@ export function TransferForm({
       setRecipient("");
       setAmount("");
       setErrors({});
-      onSuccess?.();
-      // Auto-reset write state after 5 seconds
-      setTimeout(() => resetWrite(), 5000);
+      if (onSuccess) {
+        onSuccess();
+      }
     }
-  }, [isSuccess, onSuccess, resetWrite]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuccess]);
 
   // Validate form
   function validateForm(): boolean {
@@ -192,13 +193,13 @@ export function TransferForm({
   const showError = writeError || isReceiptError;
 
   return (
-    <div className="rounded-lg border border-border bg-card p-6">
-      <h2 className="text-xl font-semibold mb-4">Transfer Tokens</h2>
+    <div className="rounded-xl border-2 border-primary/20 bg-card shadow-lg p-6">
+      <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Transfer Tokens</h2>
       
-      <form onSubmit={handleTransfer} className="space-y-4">
+      <form onSubmit={handleTransfer} className="space-y-5">
         {/* Recipient Input */}
         <div>
-          <label htmlFor="recipient" className="block text-sm font-medium mb-2">
+          <label htmlFor="recipient" className="block text-sm font-semibold mb-2">
             Recipient Address
           </label>
           <input
@@ -208,20 +209,20 @@ export function TransferForm({
             onChange={(e) => setRecipient(e.target.value)}
             placeholder="0x..."
             disabled={isPending}
-            className={`w-full rounded-md border px-3 py-2 text-sm font-mono ${
+            className={`w-full rounded-lg border-2 px-4 py-3 text-sm font-mono transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
               errors.recipient 
-                ? "border-destructive bg-destructive/10" 
-                : "border-border bg-background"
+                ? "border-red-500 bg-red-500/10" 
+                : "border-border bg-background hover:border-primary/50"
             } disabled:opacity-50`}
           />
           {errors.recipient && (
-            <p className="text-sm text-destructive mt-1">{errors.recipient}</p>
+            <p className="text-sm text-red-500 mt-1.5">{errors.recipient}</p>
           )}
         </div>
 
         {/* Amount Input */}
         <div>
-          <label htmlFor="amount" className="block text-sm font-medium mb-2">
+          <label htmlFor="amount" className="block text-sm font-semibold mb-2">
             Amount ({tokenSymbol})
           </label>
           <input
@@ -231,14 +232,14 @@ export function TransferForm({
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.0"
             disabled={isPending}
-            className={`w-full rounded-md border px-3 py-2 text-sm ${
+            className={`w-full rounded-lg border-2 px-4 py-3 text-base transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
               errors.amount 
-                ? "border-destructive bg-destructive/10" 
-                : "border-border bg-background"
+                ? "border-red-500 bg-red-500/10" 
+                : "border-border bg-background hover:border-primary/50"
             } disabled:opacity-50`}
           />
           {errors.amount && (
-            <p className="text-sm text-destructive mt-1">{errors.amount}</p>
+            <p className="text-sm text-red-500 mt-1.5">{errors.amount}</p>
           )}
         </div>
 
@@ -246,11 +247,11 @@ export function TransferForm({
         <button
           type="submit"
           disabled={isPending || !recipient || !amount}
-          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-2 w-full rounded-xl bg-gradient-to-r from-primary via-purple-600 to-secondary px-8 py-4 text-lg font-bold text-white shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:from-gray-400 disabled:to-gray-500 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:scale-100"
         >
-          {isWritePending && "Awaiting signature..."}
-          {isConfirming && "Confirming transaction..."}
-          {!isPending && "Transfer"}
+          {isWritePending && "⏳ Awaiting signature..."}
+          {isConfirming && "⏳ Confirming transaction..."}
+          {!isPending && "🚀 Transfer Tokens"}
         </button>
       </form>
 
@@ -568,14 +569,54 @@ const { isLoading, isSuccess, isError } = useWaitForTransactionReceipt({
 
 ### Transaction lifecycle states
 
-| State | Hook | What it means | UI message |
-|-------|------|---------------|------------|
-| **Idle** | `!isPending && !hash` | Nothing happening | Show form |
-| **Awaiting signature** | `isWritePending` | MetaMask open, user deciding | "Check your wallet" |
-| **Submitted** | `hash && isLoading` | Tx sent, waiting for block | "Confirming..." |
-| **Confirmed** | `isSuccess` | Tx mined, receipt available | "Success!" |
-| **Reverted** | `isError` | Tx failed on-chain | "Transaction failed" |
-| **Rejected** | `writeError` (specific) | User clicked "Reject" | "You rejected" |
+<table>
+  <thead>
+    <tr>
+      <th>State</th>
+      <th>Hook</th>
+      <th>What it means</th>
+      <th>UI message</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Idle</strong></td>
+      <td><code>!isPending && !hash</code></td>
+      <td>Nothing happening</td>
+      <td>Show form</td>
+    </tr>
+    <tr>
+      <td><strong>Awaiting signature</strong></td>
+      <td><code>isWritePending</code></td>
+      <td>MetaMask open, user deciding</td>
+      <td>"Check your wallet"</td>
+    </tr>
+    <tr>
+      <td><strong>Submitted</strong></td>
+      <td><code>hash && isLoading</code></td>
+      <td>Tx sent, waiting for block</td>
+      <td>"Confirming..."</td>
+    </tr>
+    <tr>
+      <td><strong>Confirmed</strong></td>
+      <td><code>isSuccess</code></td>
+      <td>Tx mined, receipt available</td>
+      <td>"Success!"</td>
+    </tr>
+    <tr>
+      <td><strong>Reverted</strong></td>
+      <td><code>isError</code></td>
+      <td>Tx failed on-chain</td>
+      <td>"Transaction failed"</td>
+    </tr>
+    <tr>
+      <td><strong>Rejected</strong></td>
+      <td><code>writeError</code> (specific)</td>
+      <td>User clicked "Reject"</td>
+      <td>"You rejected"</td>
+    </tr>
+  </tbody>
+</table>
 
 ## Common issues and fixes
 
