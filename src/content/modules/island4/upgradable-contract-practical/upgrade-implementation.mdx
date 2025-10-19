@@ -12,7 +12,7 @@ slug: upgrade-implementation
 
 Now comes the exciting part: **upgrading the live contract!** This is why we built it upgradeable in the first place.
 
-**The problem:**
+**The problem: (This is a theoretical problem, for this example)**
 - Users claim one achievement at a time
 - Each submission costs gas (~150,000 gas)
 - Heavy users completing 10 achievements pay 10x gas
@@ -118,11 +118,6 @@ contract TrainingRegistryV2 is
     mapping(address => uint256[]) private _walletTokenIds;
     mapping(address => mapping(uint256 => bool)) private _hasTokenId;
     address public claimant;
-
-    // ========================================
-    // V2 STORAGE (APPENDED)
-    // ========================================
-    uint256 public batchSubmissionCount;  // Track batch usage
 
     event IssuerUpdated(address indexed issuer, bool allowed);
     event TaskCompleted(uint256 indexed taskCode, address indexed wallet);
@@ -283,9 +278,13 @@ contract TrainingRegistryV2 is
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    string private _baseDirectoryURI;
-    uint8 public uriPadDigits;
-    uint256[37] private __gap;  // Reduced from 38 (consumed 1 slot for batchSubmissionCount)
+    // ========================================
+    // STORAGE LAYOUT (matches V1 exactly, then adds V2)
+    // ========================================
+    string private _baseDirectoryURI;     // Slot 5 (from V1)
+    uint8 public uriPadDigits;            // Slot 6 (from V1)
+    uint256[37] private __gap;            // Slots 7-43 (reduced from 38)
+    uint256 public batchSubmissionCount;  // Slot 44 (NEW in V2)
 }
 ```
 
@@ -639,77 +638,263 @@ forge test --match-contract UpgradeTest -vvv
 
 **Expected output:**
 ```
-Running 7 tests for test/Upgrade.t.sol:UpgradeTest
-[PASS] testUpgradePreservesState() (gas: 456789)
-[PASS] testV2BatchRevertsOnEmptyArray() (gas: 123456)
-[PASS] testV2BatchRevertsOnLengthMismatch() (gas: 134567)
-[PASS] testV2BatchSkipsCompleted() (gas: 345678)
-[PASS] testV2BatchSubmission() (gas: 567890)
-[PASS] testV2OldFunctionStillWorks() (gas: 234567)
+Ran 6 tests for test/Upgrade.t.sol:UpgradeTest
+[PASS] testUpgradePreservesState() (gas: 2933901)
+[PASS] testV2BatchRevertsOnEmptyArray() (gas: 2551876)
+[PASS] testV2BatchRevertsOnLengthMismatch() (gas: 2553002)
+[PASS] testV2BatchSkipsCompleted() (gas: 2933274)
+[PASS] testV2BatchSubmission() (gas: 3153488)
+[PASS] testV2OldFunctionStillWorks() (gas: 2689255)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 4.04ms (5.90ms CPU time)
 
-Test result: ok. 7 passed; 0 failed; finished in 5.67ms
+Ran 1 test suite in 7.45ms (4.04ms CPU time): 6 tests passed, 0 failed, 0 skipped (6 total tests)
 ```
 
 ## Gas Comparison
 
 ### Measure Gas Savings
 
-Create a gas comparison test:
-
+Create a gas comparison test (Note this contract single calls are actually really compressed so the batch doesnt save a lot here but this was just an example):
+test/GasCompare.t.sol
 ```solidity
-function testGasComparison() public {
-    // Setup V2
-    implV2 = new TrainingRegistryV2();
-    registryV1.upgradeToAndCall(address(implV2), "");
-    registryV2 = TrainingRegistryV2(address(proxy));
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
 
-    // Measure V1 individual submissions
-    uint256 gasV1Start = gasleft();
-    for (uint256 i = 1; i <= 5; i++) {
-        vm.prank(learner);
-        registryV2.submitVoucher(i, _signVoucher(i, learner));
+import {Test, console2} from "forge-std/Test.sol";
+import {TrainingRegistryV1} from "../src/TrainingRegistryV1.sol";
+import {TrainingRegistryV2} from "../src/TrainingRegistryV2.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
+contract GasCompareTest is Test {
+    using MessageHashUtils for bytes32;
+
+    TrainingRegistryV1 public implV1;
+    TrainingRegistryV2 public implV2;
+    ERC1967Proxy public proxy;
+    TrainingRegistryV1 public registryV1;
+    TrainingRegistryV2 public registryV2;
+    
+    address public owner;
+    address public issuer;
+    uint256 public issuerPk;
+    address public learner;
+    address public claimant;
+
+    bytes32 private constant VOUCHER_TYPEHASH = keccak256(
+        "CompletionVoucher(uint256 taskCode,address wallet)"
+    );
+
+    function setUp() public {
+        owner = address(this);
+        (issuer, issuerPk) = makeAddrAndKey("ISSUER");
+        learner = address(0xBEEF);
+        claimant = address(0xC1A1);
+
+        // Deploy V1
+        implV1 = new TrainingRegistryV1();
+        bytes memory initData = abi.encodeWithSelector(
+            TrainingRegistryV1.initialize.selector,
+            owner,
+            "https://base/",
+            "TrainingCert",
+            "1",
+            claimant
+        );
+        proxy = new ERC1967Proxy(address(implV1), initData);
+        registryV1 = TrainingRegistryV1(address(proxy));
+        
+        registryV1.setIssuer(issuer, true);
     }
-    uint256 gasV1Used = gasV1Start - gasleft();
-    
-    // Setup second user for V2 batch
-    address learner2 = address(0xCAFE);
-    
-    // Measure V2 batch submission
-    uint256[] memory taskCodes = new uint256[](5);
-    bytes[] memory signatures = new bytes[](5);
-    for (uint256 i = 0; i < 5; i++) {
-        taskCodes[i] = i + 1;
-        signatures[i] = _signVoucher(i + 1, learner2);
+
+    function testGasComparison() public {
+        // Setup V2
+        implV2 = new TrainingRegistryV2();
+        registryV1.upgradeToAndCall(address(implV2), "");
+        registryV2 = TrainingRegistryV2(address(proxy));
+
+        // Measure V1 individual submissions
+        uint256 gasV1Start = gasleft();
+        for (uint256 i = 1; i <= 5; i++) {
+            vm.prank(learner);
+            registryV2.submitVoucher(i, _signVoucher(i, learner));
+        }
+        uint256 gasV1Used = gasV1Start - gasleft();
+        
+        // Setup second user for V2 batch
+        address learner2 = address(0xCAFE);
+        
+        // Measure V2 batch submission
+        uint256[] memory taskCodes = new uint256[](5);
+        bytes[] memory signatures = new bytes[](5);
+        for (uint256 i = 0; i < 5; i++) {
+            taskCodes[i] = i + 1;
+            signatures[i] = _signVoucher(i + 1, learner2);
+        }
+        
+        uint256 gasV2Start = gasleft();
+        vm.prank(learner2);
+        registryV2.submitVoucherBatch(taskCodes, signatures);
+        uint256 gasV2Used = gasV2Start - gasleft();
+        
+        console2.log("V1 (5 individual):", gasV1Used);
+        console2.log("V2 (1 batch of 5):", gasV2Used);
+        console2.log("Savings:", gasV1Used - gasV2Used);
+        console2.log("Savings %:", ((gasV1Used - gasV2Used) * 100) / gasV1Used);
+        
+        // Verify savings
+        assertTrue(gasV2Used < gasV1Used, "V2 should use less gas");
     }
-    
-    uint256 gasV2Start = gasleft();
-    vm.prank(learner2);
-    registryV2.submitVoucherBatch(taskCodes, signatures);
-    uint256 gasV2Used = gasV2Start - gasleft();
-    
-    console2.log("V1 (5 individual):", gasV1Used);
-    console2.log("V2 (1 batch of 5):", gasV2Used);
-    console2.log("Savings:", gasV1Used - gasV2Used);
-    console2.log("Savings %:", ((gasV1Used - gasV2Used) * 100) / gasV1Used);
-    
-    // Verify savings
-    assertTrue(gasV2Used < gasV1Used, "V2 should use less gas");
+
+    function testGasComparison10Tasks() public {
+        // Setup V2
+        implV2 = new TrainingRegistryV2();
+        registryV1.upgradeToAndCall(address(implV2), "");
+        registryV2 = TrainingRegistryV2(address(proxy));
+
+        // Measure V1 individual submissions (10 tasks)
+        uint256 gasV1Start = gasleft();
+        for (uint256 i = 1; i <= 10; i++) {
+            vm.prank(learner);
+            registryV2.submitVoucher(i, _signVoucher(i, learner));
+        }
+        uint256 gasV1Used = gasV1Start - gasleft();
+        
+        // Setup second user for V2 batch
+        address learner2 = address(0xCAFE);
+        
+        // Measure V2 batch submission (10 tasks)
+        uint256[] memory taskCodes = new uint256[](10);
+        bytes[] memory signatures = new bytes[](10);
+        for (uint256 i = 0; i < 10; i++) {
+            taskCodes[i] = i + 1;
+            signatures[i] = _signVoucher(i + 1, learner2);
+        }
+        
+        uint256 gasV2Start = gasleft();
+        vm.prank(learner2);
+        registryV2.submitVoucherBatch(taskCodes, signatures);
+        uint256 gasV2Used = gasV2Start - gasleft();
+        
+        console2.log("\n=== 10 Tasks Comparison ===");
+        console2.log("V1 (10 individual):", gasV1Used);
+        console2.log("V2 (1 batch of 10):", gasV2Used);
+        console2.log("Savings:", gasV1Used - gasV2Used);
+        console2.log("Savings %:", ((gasV1Used - gasV2Used) * 100) / gasV1Used);
+        
+        // Verify savings scale with batch size
+        assertTrue(gasV2Used < gasV1Used, "V2 should use less gas");
+    }
+
+    function testGasComparison20Tasks() public {
+        // Setup V2
+        implV2 = new TrainingRegistryV2();
+        registryV1.upgradeToAndCall(address(implV2), "");
+        registryV2 = TrainingRegistryV2(address(proxy));
+
+        // Measure V1 individual submissions (20 tasks - max batch size)
+        uint256 gasV1Start = gasleft();
+        for (uint256 i = 1; i <= 20; i++) {
+            vm.prank(learner);
+            registryV2.submitVoucher(i, _signVoucher(i, learner));
+        }
+        uint256 gasV1Used = gasV1Start - gasleft();
+        
+        // Setup second user for V2 batch
+        address learner2 = address(0xCAFE);
+        
+        // Measure V2 batch submission (20 tasks - max)
+        uint256[] memory taskCodes = new uint256[](20);
+        bytes[] memory signatures = new bytes[](20);
+        for (uint256 i = 0; i < 20; i++) {
+            taskCodes[i] = i + 1;
+            signatures[i] = _signVoucher(i + 1, learner2);
+        }
+        
+        uint256 gasV2Start = gasleft();
+        vm.prank(learner2);
+        registryV2.submitVoucherBatch(taskCodes, signatures);
+        uint256 gasV2Used = gasV2Start - gasleft();
+        
+        console2.log("\n=== 20 Tasks Comparison (Max Batch) ===");
+        console2.log("V1 (20 individual):", gasV1Used);
+        console2.log("V2 (1 batch of 20):", gasV2Used);
+        console2.log("Savings:", gasV1Used - gasV2Used);
+        console2.log("Savings %:", ((gasV1Used - gasV2Used) * 100) / gasV1Used);
+        
+        // Maximum savings should be significant
+        assertTrue(gasV2Used < gasV1Used, "V2 should use less gas");
+    }
+
+    // ============ HELPER FUNCTIONS ============
+
+    function _signVoucher(uint256 taskCode, address wallet) internal view returns (bytes memory) {
+        bytes32 structHash = keccak256(abi.encode(VOUCHER_TYPEHASH, taskCode, wallet));
+        bytes32 domainSeparator = _domainSeparator();
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
+        
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(issuerPk, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _domainSeparator() internal view returns (bytes32) {
+        bytes32 typehash = keccak256(
+            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+        );
+        return keccak256(
+            abi.encode(
+                typehash,
+                keccak256(bytes("TrainingCert")),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(proxy)
+            )
+        );
+    }
 }
 ```
 
 **Run it:**
 ```bash
-forge test --match-test testGasComparison -vvv
+forge test --match-contract GasCompareTest -vv
 ```
 
 **Output:**
 ```
-V1 (5 individual): 750,000
-V2 (1 batch of 5): 250,000
-Savings: 500,000
-Savings %: 66
+[⠒] Compiling...
+[⠒] Compiling 1 files with Solc 0.8.28
+[⠢] Solc 0.8.28 finished in 2.42s
+Compiler run successful!
 
-✅ V2 batch saves 66% gas!
+Ran 3 tests for test/GasCompare.t.sol:GasCompareTest
+[PASS] testGasComparison() (gas: 3701177)
+Logs:
+  V1 (5 individual): 574329
+  V2 (1 batch of 5): 568268
+  Savings: 6061
+  Savings %: 1
+
+[PASS] testGasComparison10Tasks() (gas: 4765634)
+Logs:
+
+=== 10 Tasks Comparison ===
+  V1 (10 individual): 1109719
+  V2 (1 batch of 10): 1085309
+  Savings: 24410
+  Savings %: 2
+
+[PASS] testGasComparison20Tasks() (gas: 6895574)
+Logs:
+
+=== 20 Tasks Comparison (Max Batch) ===
+  V1 (20 individual): 2180692
+  V2 (1 batch of 20): 2119456
+  Savings: 61236
+  Savings %: 2
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 9.16ms (14.73ms CPU time)
+
+Ran 1 test suite in 12.90ms (9.16ms CPU time): 3 tests passed, 0 failed, 0 skipped (3 total tests)
 ```
 
 ## Storage Layout Verification
@@ -718,35 +903,10 @@ Savings %: 66
 
 ```bash
 # V1 layout
-forge inspect TrainingRegistryV1 storage-layout --pretty > v1-storage.json
+forge inspect TrainingRegistryV1 storage-layout
 
 # V2 layout
-forge inspect TrainingRegistryV2 storage-layout --pretty > v2-storage.json
-
-# Compare
-diff v1-storage.json v2-storage.json
-```
-
-**Expected diff:**
-```diff
-  {
-    "storage": [
-      // ... V1 slots unchanged ...
-+     {
-+       "label": "batchSubmissionCount",
-+       "offset": 0,
-+       "slot": "5",
-+       "type": "uint256"
-+     },
-      {
-        "label": "__gap",
-        "offset": 0,
-        "slot": "6",
--       "type": "uint256[38]"
-+       "type": "uint256[37]"
-      }
-    ]
-  }
+forge inspect TrainingRegistryV2 storage-layout
 ```
 
 ## Common Upgrade Pitfalls
@@ -823,6 +983,25 @@ You've successfully:
 You deployed and upgraded the actual contract architecture powering Plunder Academy achievements! This is production-grade upgradeable contract development. The patterns you learned apply to any upgradeable protocol managing real value.
 
 **Congratulations!** You've mastered upgradeable smart contracts - one of the most advanced topics in Solidity development. This skill is highly valued in the industry and essential for building long-lived DeFi protocols. 🎉🚀
+
+## Claim Your Achievement
+
+### Achievement Submission
+
+**You've successfully deployed TrainingRegistryV2!**
+
+**To claim your achievement:**
+
+1. **Find your deployment transaction hash** (from deployment output or `broadcast/` folder)
+
+3. **Connect your wallet** (the one set as `CLAIMANT_ADDRESS`)
+4. **Submit the deployment transaction hash for TrainingRegistryV2 below!**
+5. **Verification happens automatically:**
+   - Checks transaction deployed a contract
+   - Verifies it's a TrainingRegistryV2 implementation
+   - Confirms proxy was deployed and initialized
+   - Validates claimant matches your wallet
+6. **Receive your achievement NFT!**
 
 **Next:** Island 5 will teach you to build full-stack dapps, connecting these backend contracts to beautiful frontends with wagmi and RainbowKit!
 

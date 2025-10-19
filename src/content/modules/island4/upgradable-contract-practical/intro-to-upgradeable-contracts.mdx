@@ -63,35 +63,41 @@ Two main patterns exist:
 **How it works:**
 - Upgrade logic lives in the **implementation** contract
 - Implementation inherits `UUPSUpgradeable`
+- Minimal proxy (just delegatecall fallback)
 - Lower gas costs (no admin checks on every call)
 
 **Pros:**
 - Gas efficient for high-volume contracts
-- Simpler proxy contract
+- Simpler, leaner proxy contract
 - Industry standard (used by this training portal!)
 
 **Cons:**
 - If V2 forgets to inherit `UUPSUpgradeable`, contract becomes frozen
 - Requires discipline across all versions
+- Implementation must include upgrade logic in every version
 
 ### Transparent Proxy
 
 **How it works:**
 - Upgrade logic lives in a separate **ProxyAdmin** contract
-- Proxy checks if caller is admin on every call
+- Proxy checks if caller is admin on every call (adds gas overhead)
+- Admin calls are handled by proxy, not delegated
 
 **Pros:**
 - Safer (upgrade logic separate from implementation)
 - Can't accidentally lock upgrades
+- No risk of implementation forgetting upgrade logic
 
 **Cons:**
-- Higher gas costs on every transaction
-- More complex deployment
+- Higher gas costs on every transaction (admin check overhead)
+- More complex deployment (extra ProxyAdmin contract)
+- Potential function selector collisions
 
 **For this lesson, we're using UUPS** because:
 1. It's more gas-efficient for our high-traffic registry
 2. It's the industry standard for modern dApps
 3. It's what production systems (like ours) use
+4. Lower deployment costs and runtime gas savings
 
 ## When to Use Upgradeable Contracts
 
@@ -284,14 +290,47 @@ In this practical, you'll:
 
 You've been using Hardhat 3 for all previous practicals. Foundry is a different toolkit:
 
-| Feature | Hardhat | Foundry |
-|---------|---------|---------|
-| **Tests** | TypeScript/JavaScript | Solidity |
-| **Speed** | Slower (Node.js) | Blazing fast (Rust) |
-| **Deployment** | `hardhat ignition deploy` | `forge script` |
-| **Testing** | `npx hardhat test` | `forge test` |
-| **Gas Reports** | Plugin required | Built-in (`--gas-report`) |
-| **Debugger** | console.log in JS | `forge debug` |
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Hardhat</th>
+<th>Foundry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tests</strong></td>
+<td>TypeScript/JavaScript</td>
+<td>Solidity</td>
+</tr>
+<tr>
+<td><strong>Speed</strong></td>
+<td>Slower (Node.js)</td>
+<td>Blazing fast (Rust)</td>
+</tr>
+<tr>
+<td><strong>Deployment</strong></td>
+<td><code>hardhat ignition deploy</code></td>
+<td><code>forge script</code></td>
+</tr>
+<tr>
+<td><strong>Testing</strong></td>
+<td><code>npx hardhat test</code></td>
+<td><code>forge test</code></td>
+</tr>
+<tr>
+<td><strong>Gas Reports</strong></td>
+<td>Plugin required</td>
+<td>Built-in (<code>--gas-report</code>)</td>
+</tr>
+<tr>
+<td><strong>Debugger</strong></td>
+<td>console.log in JS</td>
+<td><code>forge debug</code></td>
+</tr>
+</tbody>
+</table>
 
 **Why Foundry for this lesson?**
 - Production contracts often use Foundry for speed
@@ -314,7 +353,15 @@ But they require strict discipline:
 - Upgrade authorization (multisigs, not EOAs)
 - Comprehensive testing across upgrade boundaries
 
+**Want deeper theory?** Before or after this practical, check out the **Proxy Patterns & Upgradeability** module (Lessons 4.7-4.8) for:
+- Deep dive into Transparent vs UUPS patterns
+- Storage collision prevention techniques
+- ERC1967 slot conventions
+- CI/CD integration for layout validation
+- Advanced security checklists
+
 **Next up:** We'll dive into the TrainingRegistry contract architecture—the actual code powering this training portal's achievement system. You'll see how EIP-712 vouchers work, how claimant tracking proves you deployed a contract, and how storage layout is structured for safe upgrades.
 
 Ready to deploy the same contract you've been interacting with? Let's go! 🚀
+
 

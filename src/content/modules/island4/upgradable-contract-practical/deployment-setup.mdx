@@ -247,7 +247,7 @@ mkdir training-registry-upgradeable
 cd training-registry-upgradeable
 
 # Initialize Foundry project (creates empty structure)
-forge init --no-commit
+forge init (use --force if not an empty dir)
 
 # Project structure created:
 # ├── src/              # Contracts here (empty)
@@ -259,10 +259,15 @@ forge init --no-commit
 ```
 
 **What was created:**
-- Empty `src/`, `script/`, and `test/` directories
+- `src/`, `script/`, and `test/` directories
 - `lib/forge-std/` - Foundry standard library for testing
 - `foundry.toml` - Configuration file (we'll update this)
 - `.gitignore` - Already configured for Foundry projects
+
+**Delete demo files**
+- remove script/Counter.s.sol
+- remove src/Counter.sol
+- remove test/Counter.t.sol
 
 Your project is now ready for the TrainingRegistry contracts!
 
@@ -270,10 +275,10 @@ Your project is now ready for the TrainingRegistry contracts!
 
 ```bash
 # Install OpenZeppelin upgradeable contracts
-forge install OpenZeppelin/openzeppelin-contracts-upgradeable --no-commit
+forge install OpenZeppelin/openzeppelin-contracts-upgradeable
 
 # Install OpenZeppelin regular contracts (needed as dependency)
-forge install OpenZeppelin/openzeppelin-contracts --no-commit
+forge install OpenZeppelin/openzeppelin-contracts
 
 # These get added as git submodules in lib/
 ```
@@ -839,14 +844,14 @@ contract Verify is Script {
         
         // Validation
         if (claimant != expectedClaimant) {
-            console2.log("\n⚠️  WARNING: Claimant mismatch!");
+            console2.log("WARNING: Claimant mismatch!");
             console2.log("Expected:", expectedClaimant);
             console2.log("Got:", claimant);
         } else {
-            console2.log("\n✅ Claimant correctly set!");
+            console2.log("Claimant correctly set!");
         }
         
-        console2.log("\n=== Verification Complete ===");
+        console2.log("=== Verification Complete ===");
     }
 }
 ```
@@ -863,6 +868,9 @@ Cast is Foundry's CLI for interacting with contracts:
 ### Read Contract State
 
 ```bash
+# Need to export var firstly
+export PROXY_ADDRESS=0xYourProxyAddressHere
+
 # Get owner
 cast call $PROXY_ADDRESS "owner()" --rpc-url zilliqaTestnet
 
@@ -871,53 +879,7 @@ cast call $PROXY_ADDRESS "claimant()" --rpc-url zilliqaTestnet
 
 # Get URI for token 1
 cast call $PROXY_ADDRESS "uri(uint256)" 1 --rpc-url zilliqaTestnet
-
-# Check if issuer
-cast call $PROXY_ADDRESS "isIssuer(address)" 0xIssuerAddress --rpc-url zilliqaTestnet
 ```
-
-### Write to Contract
-
-```bash
-# Set issuer (as owner)
-cast send $PROXY_ADDRESS \
-  "setIssuer(address,bool)" \
-  0xIssuerAddress \
-  true \
-  --rpc-url zilliqaTestnet \
-  --private-key $PRIVATE_KEY \
-  --legacy
-
-# Update base URI
-cast send $PROXY_ADDRESS \
-  "setBaseURI(string)" \
-  "https://new-uri.com/" \
-  --rpc-url zilliqaTestnet \
-  --private-key $PRIVATE_KEY \
-  --legacy
-```
-
-## Claim Your Achievement
-
-### Achievement Submission
-
-**You've successfully deployed TrainingRegistryV1!**
-
-**To claim your achievement:**
-
-1. **Find your deployment transaction hash** (from deployment output or `broadcast/` folder)
-2. **Visit the training portal:**
-   ```
-   https://plunderacademy.com/lessons/island4/upgradable-contract-practical
-   ```
-3. **Connect your wallet** (the one set as `CLAIMANT_ADDRESS`)
-4. **Submit the deployment transaction hash**
-5. **Verification happens automatically:**
-   - Checks transaction deployed a contract
-   - Verifies it's a TrainingRegistryV1 implementation
-   - Confirms proxy was deployed and initialized
-   - Validates claimant matches your wallet
-6. **Receive your achievement NFT!**
 
 ## Common Issues and Solutions
 

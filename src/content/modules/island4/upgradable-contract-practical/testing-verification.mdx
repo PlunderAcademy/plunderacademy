@@ -484,60 +484,45 @@ forge test
 
 **Expected output:**
 ```
-[⠊] Compiling...
-[⠒] Compiling 1 files with 0.8.20
-[⠢] Solc 0.8.20 finished in 1.23s
+[⠰] Compiling...
+[⠃] Compiling 6 files with Solc 0.8.28
+[⠊] Solc 0.8.28 finished in 2.43s
 Compiler run successful!
 
-Running 24 tests for test/TrainingRegistryV1.t.sol:TrainingRegistryV1Test
-[PASS] testBatchTransferReverts() (gas: 245123)
-[PASS] testCannotInitializeTwice() (gas: 12456)
-[PASS] testGetWalletAchievements() (gas: 312567)
-[PASS] testHasAchievement() (gas: 156234)
-[PASS] testImplementationCannotBeInitialized() (gas: 8934)
-[PASS] testInitializeRevertsOnZeroClaimant() (gas: 145678)
-[PASS] testInitialization() (gas: 12345)
-[PASS] testMultipleTasksSameUser() (gas: 567890)
-[PASS] testOwnerCanUpgrade() (gas: 234567)
-[PASS] testPauseOnlyOwner() (gas: 11234)
-[PASS] testPauseStopsSubmissions() (gas: 89456)
-[PASS] testRemoveIssuer() (gas: 34567)
-[PASS] testSetBaseURI() (gas: 45678)
-[PASS] testSetIssuer() (gas: 23456)
-[PASS] testSetIssuerOnlyOwner() (gas: 12345)
-[PASS] testSetUriPadDigits() (gas: 34567)
-[PASS] testSubmitVoucherEmitsEvent() (gas: 167890)
-[PASS] testSubmitVoucherRevertsOnDoubleSubmit() (gas: 198765)
-[PASS] testSubmitVoucherRevertsOnInvalidIssuer() (gas: 78901)
-[PASS] testSubmitVoucherRevertsOnWalletMismatch() (gas: 89012)
-[PASS] testSubmitVoucherSucceeds() (gas: 178901)
-[PASS] testTransferOwnership() (gas: 56789)
-[PASS] testTransferOwnershipOnlyOwner() (gas: 12345)
-[PASS] testTransferReverts() (gas: 189012)
-[PASS] testUnpauseAllowsSubmissions() (gas: 201234)
-[PASS] testUpgradeOnlyOwner() (gas: 34567)
-[PASS] testUriPadding() (gas: 23456)
+Ran 27 tests for test/TrainingRegistryV1.t.sol:TrainingRegistryV1Test
+[PASS] testBatchTransferReverts() (gas: 268765)
+[PASS] testCannotInitializeTwice() (gas: 23039)
+[PASS] testGetWalletAchievements() (gas: 373417)
+[PASS] testHasAchievement() (gas: 159389)
+[PASS] testImplementationCannotBeInitialized() (gas: 18781)
+[PASS] testInitialization() (gas: 40230)
+[PASS] testInitializeRevertsOnZeroClaimant() (gas: 2871853)
+[PASS] testMultipleTasksSameUser() (gas: 606121)
+[PASS] testOwnerCanUpgrade() (gas: 2666391)
+[PASS] testPauseOnlyOwner() (gas: 19165)
+[PASS] testPauseStopsSubmissions() (gas: 48728)
+[PASS] testRemoveIssuer() (gas: 19151)
+[PASS] testSetBaseURI() (gas: 43603)
+[PASS] testSetIssuer() (gas: 42667)
+[PASS] testSetIssuerOnlyOwner() (gas: 19154)
+[PASS] testSetUriPadDigits() (gas: 36349)
+[PASS] testSubmitVoucherEmitsEvent() (gas: 157768)
+[PASS] testSubmitVoucherRevertsOnDoubleSubmit() (gas: 160913)
+[PASS] testSubmitVoucherRevertsOnInvalidIssuer() (gas: 37334)
+[PASS] testSubmitVoucherRevertsOnWalletMismatch() (gas: 37901)
+[PASS] testSubmitVoucherSucceeds() (gas: 160244)
+[PASS] testTransferOwnership() (gas: 36069)
+[PASS] testTransferOwnershipOnlyOwner() (gas: 19254)
+[PASS] testTransferReverts() (gas: 159397)
+[PASS] testUnpauseAllowsSubmissions() (gas: 164986)
+[PASS] testUpgradeOnlyOwner() (gas: 2656209)
+[PASS] testUriPadding() (gas: 46795)
+Suite result: ok. 27 passed; 0 failed; 0 skipped; finished in 3.37ms (46.66ms CPU time)
 
-Test result: ok. 24 passed; 0 failed; finished in 12.34ms
+Ran 1 test suite in 27.46ms (3.37ms CPU time): 27 tests passed, 0 failed, 0 skipped (27 total tests)
 ```
 
 **Much faster than Hardhat tests!** ⚡
-
-### Run Specific Tests
-
-```bash
-# Test only initialization
-forge test --match-test testInitialization
-
-# Test only voucher submission
-forge test --match-contract TrainingRegistryV1Test --match-test testSubmitVoucher
-
-# Test with verbosity (shows logs)
-forge test -vvv
-
-# Test with gas reporting
-forge test --gas-report
-```
 
 ### Test with Coverage
 
@@ -712,121 +697,33 @@ forge test --gas-report
 Before upgrading to V2, verify V1 storage layout:
 
 ```bash
-forge inspect TrainingRegistryV1 storage-layout --pretty
+forge inspect TrainingRegistryV1 storage-layout
 ```
 
 **Output:**
-```json
-{
-  "storage": [
-    {
-      "astId": 123,
-      "contract": "TrainingRegistryV1",
-      "label": "isIssuer",
-      "offset": 0,
-      "slot": "0",
-      "type": "mapping(address => bool)"
-    },
-    {
-      "label": "completed",
-      "offset": 0,
-      "slot": "1",
-      "type": "mapping(address => mapping(uint256 => bool))"
-    },
-    {
-      "label": "claimant",
-      "offset": 0,
-      "slot": "2",
-      "type": "address"
-    },
-    {
-      "label": "__gap",
-      "offset": 0,
-      "slot": "3",
-      "type": "uint256[38]"
-    }
-  ]
-}
+```bash
+╭-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------╮
+| Name              | Type                                         | Slot | Offset | Bytes | Contract                   
+                   |
+-------------------|
+| _walletTokenIds   | mapping(address => uint256[])                | 2    | 0      | 32    | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+|-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------|
+| _hasTokenId       | mapping(address => mapping(uint256 => bool)) | 3    | 0      | 32    | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+|-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------|
+| claimant          | address                                      | 4    | 0      | 20    | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+|-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------|
+| _baseDirectoryURI | string                                       | 5    | 0      | 32    | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+|-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------|
+| uriPadDigits      | uint8                                        | 6    | 0      | 1     | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+|-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------|
+| __gap             | uint256[38]                                  | 7    | 0      | 1216  | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+╰-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------╯
 ```
 
 **Critical for upgrades!**
 - Slot numbers must stay the same in V2
 - New variables must use __gap slots
 - Never reorder existing variables
-
-## Best Practices
-
-### Test Organization
-
-```solidity
-contract TrainingRegistryV1Test is Test {
-    // ============ DEPLOYMENT TESTS ============
-    function testInitialization() public { }
-    
-    // ============ VOUCHER SUBMISSION TESTS ============
-    function testSubmitVoucherSucceeds() public { }
-    
-    // ============ SOULBOUND TESTS ============
-    function testTransferReverts() public { }
-}
-```
-
-Group related tests with comments for easy navigation.
-
-### Descriptive Test Names
-
-```solidity
-// Good
-function testSubmitVoucherRevertsOnInvalidIssuer() public { }
-
-// Bad
-function test1() public { }
-```
-
-Test names should describe what they're testing.
-
-### Test Independence
-
-```solidity
-// Bad - tests depend on each other
-function testA() public {
-    registry.submit();  // State change
-}
-
-function testB() public {
-    // Assumes testA ran first
-    assertTrue(registry.completed());
-}
-
-// Good - each test is independent
-function testA() public {
-    registry.submit();
-    assertTrue(registry.completed());
-}
-
-function testB() public {
-    // Sets up its own state
-    registry.submit();
-    assertTrue(registry.completed());
-}
-```
-
-Each test should work in isolation (setUp() resets state).
-
-### Helper Functions
-
-```solidity
-// Extract common logic to helpers
-function _signVoucher(uint256 taskCode, address wallet) internal view returns (bytes memory) {
-    // Complex signature logic
-}
-
-// Use in tests
-function testSubmit() public {
-    bytes memory sig = _signVoucher(1, learner);
-    registry.submitVoucher(1, sig);
-}
-```
 
 ## Comparison to Your Previous Tests
 

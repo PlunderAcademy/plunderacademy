@@ -269,6 +269,7 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
               <li>Use Foundry with the provided deployment script</li>
               <li>Include the claimant address (shown above) in initialization</li>
               <li>Deploy to Zilliqa testnet or mainnet</li>
+              <li>Upgrade to TrainingRegistryV2 with UUPS proxy pattern</li>
               <li>Submit the deployment transaction hash below</li>
             </ul>
           </div>
@@ -422,4 +423,5 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
     </Card>
   );
 }
+
 

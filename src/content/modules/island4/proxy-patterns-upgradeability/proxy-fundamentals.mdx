@@ -337,4 +337,11 @@ Transparent and UUPS proxies both use delegatecall to separate storage from logi
 
 Choosing between them depends on your operational model and risk tolerance. Use Transparent proxies when upgrades are rare, managed by a governance process, and you want clear separation of concerns. Use UUPS when you need gas efficiency, self-contained implementations, and are confident in your upgrade testing discipline. In both cases, never grant upgrade authority to an EOA—use a multisig or timelock. Emit events, verify implementations, and test upgrades on forks before executing live.
 
-In the next lesson we'll dive deep into storage collision prevention: how to design append-only layouts, reserve gaps, and use CI checks to catch unsafe changes. Then in Island 4's practical, we'll deploy an upgradeable randomness coordinator with initializer guards, storage layout tests, and timelocked upgrade authority—integrating everything into a production-ready pattern. On Zilliqa EVM, proxy patterns work identically to Ethereum; use the same OpenZeppelin libraries and follow the same safety checklist for seamless deployment.
+**Ready for hands-on practice?** The **Upgradeable Contract Practical** module (Lessons 4.6.1-4.6.5) lets you deploy and upgrade the actual TrainingRegistry contract powering this portal:
+- Deploy TrainingRegistryV1 with UUPS pattern
+- Write Solidity tests with Foundry
+- Upgrade to V2 with batch submission feature
+- Verify state preservation across upgrades
+- Real production-grade contract!
+
+In the next lesson we'll dive deep into storage collision prevention: how to design append-only layouts, reserve gaps, and use CI checks to catch unsafe changes. On Zilliqa EVM, proxy patterns work identically to Ethereum; use the same OpenZeppelin libraries and follow the same safety checklist for seamless deployment.

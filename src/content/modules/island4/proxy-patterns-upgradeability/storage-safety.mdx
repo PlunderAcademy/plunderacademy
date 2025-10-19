@@ -367,4 +367,11 @@ Storage safety is the foundation of upgradeable contracts. The proxy's storage p
 
 Automation is critical. Manual slot tracking fails at scale; use compiler tools like `forge inspect storage` or Hardhat's `hardhat-storage-layout` to export and compare layouts between versions. Integrate layout diff checks into CI to fail builds when existing slots change. Test every upgrade against populated state—deploy V1, simulate real usage (deposits, withdrawals, config changes), upgrade to V2, and assert invariants (balances, supply, ownership). For mainnet upgrades, fork the chain at a recent block and test with live data to catch edge cases unit tests miss.
 
-In the next practical lesson we'll deploy an upgradeable randomness coordinator with initializer guards, storage gaps, and CI layout checks—putting these patterns into production. Storage safety isn't optional; it's the price of upgradeability. Treat storage layouts as immutable contracts: document them, version-control them, and never break them. On Zilliqa EVM, storage mechanics are identical to Ethereum—use the same tools, follow the same discipline, and ship upgradeable contracts with confidence that your users' funds stay safe across every version.
+**See it in action!** The **Upgradeable Contract Practical** module (Lessons 4.6.1-4.6.5) demonstrates all these storage safety patterns:
+- Append-only variable additions from V1 to V2
+- Storage gap management (`__gap` shrinking)
+- State preservation tests across upgrades
+- Using Foundry's `forge inspect storage` for validation
+- Real-world upgrade of production contract
+
+Storage safety isn't optional; it's the price of upgradeability. Treat storage layouts as immutable contracts: document them, version-control them, and never break them. On Zilliqa EVM, storage mechanics are identical to Ethereum—use the same tools, follow the same discipline, and ship upgradeable contracts with confidence that your users' funds stay safe across every version.
