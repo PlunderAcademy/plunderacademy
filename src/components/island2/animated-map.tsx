@@ -113,7 +113,7 @@ export function FrostAnimatedMap({ mode = "real", modules, highlightedModuleSlug
     }
 
     const isCompleted = walletAchievements.some(
-      wa => wa.tokenId === index + 6 && wa.isClaimed // Frost Peak uses IDs 6-10
+      wa => wa.tokenId === index + 21 && wa.isClaimed // Frost Peak uses IDs 21-25
     );
 
     if (isCompleted) return "completed";
@@ -122,7 +122,7 @@ export function FrostAnimatedMap({ mode = "real", modules, highlightedModuleSlug
     if (index === 0) return "next";
     
     const prevCompleted = walletAchievements.some(
-      wa => wa.tokenId === index + 5 && wa.isClaimed
+      wa => wa.tokenId === index + 20 && wa.isClaimed
     );
 
     return prevCompleted ? "next" : "locked";
@@ -143,8 +143,8 @@ export function FrostAnimatedMap({ mode = "real", modules, highlightedModuleSlug
 
     let maxCompletedIndex = -1;
     walletAchievements.forEach(achievement => {
-      if (achievement.isClaimed && achievement.tokenId >= 6 && achievement.tokenId <= 10) {
-        const moduleIndex = achievement.tokenId - 6; // Convert tokenId to module index
+      if (achievement.isClaimed && achievement.tokenId >= 21 && achievement.tokenId <= 25) {
+        const moduleIndex = achievement.tokenId - 21; // Convert tokenId to module index
         maxCompletedIndex = Math.max(maxCompletedIndex, moduleIndex);
       }
     });

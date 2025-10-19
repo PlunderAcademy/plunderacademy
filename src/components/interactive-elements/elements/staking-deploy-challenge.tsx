@@ -173,7 +173,7 @@ export function StakingDeployChallenge({ moduleSlug, missionData }: DeployElemen
             <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden px-2 py-4">
               <ModuleCompletionFeedback
                 moduleSlug={moduleSlug}
-                achievementCodes={[getAchievementNumber(moduleSlug) || "0010"]}
+                achievementCodes={[getAchievementNumber(moduleSlug) || "0025"]}
                 onComplete={() => {
                   achievementClaiming.feedbackPrompt.markFeedbackCompleted(moduleSlug);
                   setShowManualFeedback(false);
@@ -223,7 +223,7 @@ export function StakingDeployChallenge({ moduleSlug, missionData }: DeployElemen
             <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden px-2 py-4">
               <ModuleCompletionFeedback
                 moduleSlug={moduleSlug}
-                achievementCodes={[getAchievementNumber(moduleSlug) || "0010"]}
+                achievementCodes={[getAchievementNumber(moduleSlug) || "0025"]}
                 onComplete={() => {
                   achievementClaiming.feedbackPrompt.markFeedbackCompleted(moduleSlug);
                   setShowManualFeedback(false);

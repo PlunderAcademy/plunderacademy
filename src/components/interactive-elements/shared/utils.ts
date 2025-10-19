@@ -2,15 +2,47 @@ import { ApiResponse, ClaimedAchievement, ApiSubmissionPayload, NFTMetadata } fr
 
 // Module to achievement number mapping
 export const MODULE_TO_ACHIEVEMENT_MAP: Record<string, string> = {
+  // Island 1 - Jungle Island (0001-0005)
   'blockchain-fundamentals': '0001',
   'evm-fundamentals': '0002', 
   'intro-to-solidity': '0003',
   'zilliqa-evm-setup': '0004',
   'creating-erc20-tokens': '0005',
-  'staking-contract-practical': '0010',
-  'nft-collection-practical': '0030',
-  'random-number-generator-practical': '0050',
-  'upgradable-contract-practical': '0060'
+  
+  // Island 2 - Frost Peak (0021-0025)
+  'advanced-solidity-foundations': '0021',
+  'advanced-data-structures-error-handling': '0022',
+  'testing-fundamentals': '0023',
+  'staking-concepts-time-logic': '0024',
+  'staking-contract-practical': '0025',
+  
+  // Island 3 - Desert Bluff (0031-0033)
+  'erc721-standards-implementation': '0031',
+  'desert-alcazaba-kasbah': '0031', // Alias for mission slug
+  'advanced-nft-features': '0032',
+  'nft-collection-practical': '0033',
+  'desert-mound-of-morning': '0033', // Alias for mission slug
+  
+  // Island 4 - Gilded Bastion (0041-0046)
+  'defi-fundamentals-simple-swaps': '0041',
+  'fundamentals-simple-swaps': '0041', // Alias for mission slug
+  'oracles-randomness-airdrop-patterns': '0042',
+  'random-number-generator-practical': '0043',
+  'proxy-patterns-upgradeability': '0044',
+  'gas-optimization-security-patterns': '0045',
+  'upgradable-contract-practical': '0046',
+  
+  // Island 5 - Neon Haven (0051-0053)
+  'web3-frontend-basics': '0051',
+  'contract-interactions-error-handling': '0052',
+  'dapp-interface-practical': '0053',
+  
+  // Secret Achievements (1001-1005)
+  'secret-island1': '1001',
+  'secret-island2': '1002',
+  'secret-island3': '1003',
+  'secret-island4': '1004',
+  'secret-island5': '1005'
 };
 
 // Get achievement number for a module
@@ -20,11 +52,17 @@ export function getAchievementNumber(moduleSlug: string): string | undefined {
 
 // Check if a module uses transaction submission instead of quiz
 export function isTransactionSubmissionModule(moduleSlug: string): boolean {
-  return moduleSlug === 'creating-erc20-tokens' || 
-         moduleSlug === 'staking-contract-practical' || 
-         moduleSlug === 'nft-collection-practical' ||
-         moduleSlug === 'random-number-generator-practical' ||
-         moduleSlug === 'upgradable-contract-practical';
+  const transactionModules = [
+    'creating-erc20-tokens',
+    'staking-contract-practical',
+    'nft-collection-practical',
+    'desert-mound-of-morning', // Alias for nft-collection-practical
+    'random-number-generator-practical',
+    'upgradable-contract-practical',
+    'dapp-interface-practical'
+  ];
+  
+  return transactionModules.includes(moduleSlug);
 }
 
 // Format time in MM:SS format

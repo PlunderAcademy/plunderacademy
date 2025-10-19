@@ -27,14 +27,45 @@ export function AnimatedAchievementCard({
   // Achievement-specific animation mapping
   const getDefaultAnimation = (number: string): AnimatedAchievementCardProps["animation"] => {
     switch (number) {
+      // Island 1 - Jungle Island
       case "0001": return "wobble"; 
       case "0002": return "pulse";  
       case "0003": return "elastic";
       case "0004": return "flip";
       case "0005": return "tada";
+      
+      // Island 2 - Frost Peak
+      case "0021": return "shake";
+      case "0022": return "float";
+      case "0023": return "breathe";
+      case "0024": return "swing";
+      case "0025": return "heartbeat";
+      
+      // Island 3 - Desert Bluff
+      case "0031": return "pulse";
+      case "0032": return "glow";
+      case "0033": return "tada";
+      
+      // Island 4 - Gilded Bastion
+      case "0041": return "float";
+      case "0042": return "wobble";
+      case "0043": return "spin";
+      case "0044": return "elastic";
+      case "0045": return "pulse";
+      case "0046": return "breathe";
+      
+      // Island 5 - Neon Haven
+      case "0051": return "glow";
+      case "0052": return "pulse";
+      case "0053": return "tada";
+      
       // Secret achievements
       case "1001": return "glow";
       case "1002": return "heartbeat";
+      case "1003": return "tada";
+      case "1004": return "flip";
+      case "1005": return "spin";
+      
       default: return "wobble";
     }
   };

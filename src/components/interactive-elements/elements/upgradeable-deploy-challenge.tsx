@@ -173,7 +173,7 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
             <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden px-2 py-4">
               <ModuleCompletionFeedback
                 moduleSlug={moduleSlug}
-                achievementCodes={[getAchievementNumber(moduleSlug) || "0060"]}
+                achievementCodes={[getAchievementNumber(moduleSlug) || "0046"]}
                 onComplete={() => {
                   achievementClaiming.feedbackPrompt.markFeedbackCompleted(moduleSlug);
                   setShowManualFeedback(false);
@@ -223,7 +223,7 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
             <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden px-2 py-4">
               <ModuleCompletionFeedback
                 moduleSlug={moduleSlug}
-                achievementCodes={[getAchievementNumber(moduleSlug) || "0060"]}
+                achievementCodes={[getAchievementNumber(moduleSlug) || "0046"]}
                 onComplete={() => {
                   achievementClaiming.feedbackPrompt.markFeedbackCompleted(moduleSlug);
                   setShowManualFeedback(false);

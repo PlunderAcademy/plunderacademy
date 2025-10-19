@@ -115,8 +115,23 @@ export async function generateMetadata(
 }
 
 export async function generateStaticParams() {
-  // Generate static params for known achievement IDs
-  return ['0001', '0002', '0003', '0004', '0005'].map(achievementId => ({
+  // Generate static params for all achievement IDs
+  const achievementIds = [
+    // Island 1 - Jungle Island
+    '0001', '0002', '0003', '0004', '0005',
+    // Island 2 - Frost Peak
+    '0021', '0022', '0023', '0024', '0025',
+    // Island 3 - Desert Bluff
+    '0031', '0032', '0033',
+    // Island 4 - Gilded Bastion
+    '0041', '0042', '0043', '0044', '0045', '0046',
+    // Island 5 - Neon Haven
+    '0051', '0052', '0053',
+    // Secret Achievements
+    '1001', '1002', '1003', '1004', '1005'
+  ];
+  
+  return achievementIds.map(achievementId => ({
     achievementId
   }));
 }

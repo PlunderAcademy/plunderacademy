@@ -112,7 +112,7 @@ export function CastleAnimatedMap({ mode = "real", modules, highlightedModuleSlu
     }
 
     const isCompleted = walletAchievements.some(
-      wa => wa.tokenId === index + 14 && wa.isClaimed // Gilded Bastion uses IDs 14-19
+      wa => wa.tokenId === index + 41 && wa.isClaimed // Gilded Bastion uses IDs 41-46
     );
 
     if (isCompleted) return "completed";
@@ -120,7 +120,7 @@ export function CastleAnimatedMap({ mode = "real", modules, highlightedModuleSlu
     if (index === 0) return "next";
     
     const prevCompleted = walletAchievements.some(
-      wa => wa.tokenId === index + 13 && wa.isClaimed
+      wa => wa.tokenId === index + 40 && wa.isClaimed
     );
 
     return prevCompleted ? "next" : "locked";
@@ -141,8 +141,8 @@ export function CastleAnimatedMap({ mode = "real", modules, highlightedModuleSlu
 
     let maxCompletedIndex = -1;
     walletAchievements.forEach(achievement => {
-      if (achievement.isClaimed && achievement.tokenId >= 14 && achievement.tokenId <= 19) {
-        const moduleIndex = achievement.tokenId - 14;
+      if (achievement.isClaimed && achievement.tokenId >= 41 && achievement.tokenId <= 46) {
+        const moduleIndex = achievement.tokenId - 41;
         maxCompletedIndex = Math.max(maxCompletedIndex, moduleIndex);
       }
     });

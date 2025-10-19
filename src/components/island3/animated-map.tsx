@@ -109,7 +109,7 @@ export function DesertAnimatedMap({ mode = "real", modules, highlightedModuleSlu
     }
 
     const isCompleted = walletAchievements.some(
-      wa => wa.tokenId === index + 11 && wa.isClaimed // Desert Bluff uses IDs 11-13
+      wa => wa.tokenId === index + 31 && wa.isClaimed // Desert Bluff uses IDs 31-33
     );
 
     if (isCompleted) return "completed";
@@ -117,7 +117,7 @@ export function DesertAnimatedMap({ mode = "real", modules, highlightedModuleSlu
     if (index === 0) return "next";
     
     const prevCompleted = walletAchievements.some(
-      wa => wa.tokenId === index + 10 && wa.isClaimed
+      wa => wa.tokenId === index + 30 && wa.isClaimed
     );
 
     return prevCompleted ? "next" : "locked";
@@ -138,8 +138,8 @@ export function DesertAnimatedMap({ mode = "real", modules, highlightedModuleSlu
 
     let maxCompletedIndex = -1;
     walletAchievements.forEach(achievement => {
-      if (achievement.isClaimed && achievement.tokenId >= 11 && achievement.tokenId <= 13) {
-        const moduleIndex = achievement.tokenId - 11; // Convert tokenId to module index
+      if (achievement.isClaimed && achievement.tokenId >= 31 && achievement.tokenId <= 33) {
+        const moduleIndex = achievement.tokenId - 31; // Convert tokenId to module index
         maxCompletedIndex = Math.max(maxCompletedIndex, moduleIndex);
       }
     });

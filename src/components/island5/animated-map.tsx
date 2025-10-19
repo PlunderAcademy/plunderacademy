@@ -106,7 +106,7 @@ export function NeonAnimatedMap({ mode = "real", modules, highlightedModuleSlug 
     }
 
     const isCompleted = walletAchievements.some(
-      wa => wa.tokenId === index + 20 && wa.isClaimed // Neon Haven uses IDs 20-22
+      wa => wa.tokenId === index + 51 && wa.isClaimed // Neon Haven uses IDs 51-53
     );
 
     if (isCompleted) return "completed";
@@ -114,7 +114,7 @@ export function NeonAnimatedMap({ mode = "real", modules, highlightedModuleSlug 
     if (index === 0) return "next";
     
     const prevCompleted = walletAchievements.some(
-      wa => wa.tokenId === index + 19 && wa.isClaimed
+      wa => wa.tokenId === index + 50 && wa.isClaimed
     );
 
     return prevCompleted ? "next" : "locked";
@@ -135,8 +135,8 @@ export function NeonAnimatedMap({ mode = "real", modules, highlightedModuleSlug 
 
     let maxCompletedIndex = -1;
     walletAchievements.forEach(achievement => {
-      if (achievement.isClaimed && achievement.tokenId >= 20 && achievement.tokenId <= 22) {
-        const moduleIndex = achievement.tokenId - 20;
+      if (achievement.isClaimed && achievement.tokenId >= 51 && achievement.tokenId <= 53) {
+        const moduleIndex = achievement.tokenId - 51;
         maxCompletedIndex = Math.max(maxCompletedIndex, moduleIndex);
       }
     });
