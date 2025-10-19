@@ -44,24 +44,20 @@ Use `useWatchContractEvent` to reflect live changes (e.g., token `Transfer`). Ke
 
 ```tsx
 import { useWatchContractEvent } from "wagmi";
+import { erc20Abi } from "viem";
 
 export function TransfersWatcher({ token }: { token: `0x${string}` }) {
   useWatchContractEvent({
     address: token,
-    abi: [
-      { type: "event", name: "Transfer", inputs: [
-        { name: "from", type: "address", indexed: true },
-        { name: "to", type: "address", indexed: true },
-        { name: "value", type: "uint256", indexed: false }
-      ]}
-    ],
+    abi: erc20Abi,
     eventName: "Transfer",
     onLogs: (logs) => {
-      console.log("Live transfers", logs);
-      // setState(...) minimal updates
+      console.log("Live transfers detected:", logs);
+      // Minimal state updates here - avoid heavy computation
+      // Example: setState(prev => [...prev, ...logs]);
     },
   });
-  return null;
+  return null; // This component doesn't render UI, just listens
 }
 ```
 

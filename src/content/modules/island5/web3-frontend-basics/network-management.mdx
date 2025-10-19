@@ -14,7 +14,7 @@ practicalTakeaway: "Create dApps that work seamlessly across multiple blockchain
 
 Users will connect on the wrong chain. Your dApp must detect it, prompt a switch, and recover gracefully. With wagmi and RainbowKit, you can guide users to Zilliqa mainnet/testnet and keep your UI consistent and predictable.
 
-> Starter Template: Use `https://github.com/Plunderswap/sample-next-js` as the baseline. Ensure supported chains are limited to Zilliqa mainnet/testnet (per `src/lib/wagmi.ts`) and keep a visible wrong‑network guard.
+> For your dApp, you'll configure wagmi to support only Zilliqa testnet initially (matching the training portal setup). This keeps UX simple and avoids mainnet accidents during development.
 
 ## Conceptual foundations for Web3 frontend
 
@@ -30,9 +30,12 @@ Read the current chain and compare to your supported ids. Offer a button to swit
 
 ```tsx
 import { useAccount, useChainId, useSwitchChain } from "wagmi";
-import { zilliqa, zilliqaTestnet } from "viem/chains";
 
-const SUPPORTED = [zilliqa.id, zilliqaTestnet.id];
+// Zilliqa testnet chain ID (as configured in wagmi.ts)
+const ZILLIQA_TESTNET_ID = 33101;
+const ZILLIQA_MAINNET_ID = 32769;
+
+const SUPPORTED = [ZILLIQA_TESTNET_ID]; // Start with testnet only
 
 export function NetworkGuard({ children }: { children: React.ReactNode }) {
   const { isConnected } = useAccount();
@@ -43,12 +46,18 @@ export function NetworkGuard({ children }: { children: React.ReactNode }) {
   if (SUPPORTED.includes(chainId)) return <>{children}</>;
 
   return (
-    <div className="p-4 border rounded-md">
-      <p className="mb-2">Wrong network. Please switch to Zilliqa.</p>
-      <div className="flex gap-2">
-        <button disabled={isPending} onClick={() => switchChain({ chainId: zilliqa.id })}>Zilliqa Mainnet</button>
-        <button disabled={isPending} onClick={() => switchChain({ chainId: zilliqaTestnet.id })}>Zilliqa Testnet</button>
-      </div>
+    <div className="rounded-lg border border-border bg-muted/50 p-4">
+      <p className="mb-3 font-medium">Wrong network detected</p>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Please switch to Zilliqa testnet to use this dApp.
+      </p>
+      <button 
+        disabled={isPending} 
+        onClick={() => switchChain({ chainId: ZILLIQA_TESTNET_ID })}
+        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+      >
+        {isPending ? "Switching..." : "Switch to Zilliqa Testnet"}
+      </button>
     </div>
   );
 }
@@ -63,8 +72,16 @@ Disable features not available on the current chain (e.g., no staking on testnet
 ```tsx
 export function FeatureGate({ children }: { children: React.ReactNode }) {
   const chainId = useChainId();
-  const allowed = chainId === zilliqa.id; // example
-  return allowed ? <>{children}</> : <p>Feature available on Zilliqa mainnet only.</p>;
+  const ZILLIQA_MAINNET_ID = 32769;
+  const allowed = chainId === ZILLIQA_MAINNET_ID;
+  
+  return allowed ? (
+    <>{children}</>
+  ) : (
+    <p className="text-sm text-muted-foreground">
+      This feature is available on Zilliqa mainnet only.
+    </p>
+  );
 }
 ```
 

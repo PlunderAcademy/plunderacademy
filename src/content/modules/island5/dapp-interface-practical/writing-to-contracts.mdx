@@ -1,0 +1,685 @@
+---
+id: "dapp-practical-lesson-5"
+slug: "writing-to-contracts"
+module: "dapp-interface-practical"
+number: "5.10"
+title: "Writing to Contracts & Transaction Management"
+objective: "Build a complete token transfer interface with transaction tracking, status updates, and error handling."
+practicalTakeaway: "Implement write operations that guide users through the full transaction lifecycle with clear feedback."
+---
+
+# Writing to Contracts & Transaction Management
+
+## Why this matters now
+
+Reading data is passive—users see their balances. Writing data is **active**—users take action! Transfers, mints, swaps, stakes—every blockchain interaction requires a signed transaction. We'll build a transfer form that sends tokens, tracks the transaction from signature to confirmation, and handles every edge case (user rejects, insufficient gas, reverts).
+
+This is the most critical UX in Web3: **make transactions understandable and trustworthy**.
+
+## What we're building
+
+In this lesson, you'll create:
+1. **TransferForm component** (recipient + amount inputs)
+2. **Transaction lifecycle tracking** (signature → pending → confirmed)
+3. **Status display** (clear feedback at each step)
+4. **Error handling** (user rejections, insufficient funds, reverts)
+5. **Balance auto-refresh** (updates after transfer)
+
+**Time estimate:** 35-40 minutes
+
+## Understanding the transaction lifecycle
+
+Every write operation follows this flow:
+
+```
+1. User fills form
+   ↓
+2. User clicks "Transfer"
+   ↓
+3. MetaMask opens (user reviews transaction)
+   ↓
+4. User signs → transaction hash received
+   ↓
+5. Transaction pending (in mempool)
+   ↓
+6. Transaction mined (included in block)
+   ↓
+7. Transaction confirmed (receipt available)
+   ↓
+8. UI updates (balance refreshes)
+```
+
+**Three distinct states:**
+- **Awaiting signature**: MetaMask open, user deciding
+- **Pending confirmation**: Transaction sent, waiting for block
+- **Confirmed**: Transaction mined, receipt available
+
+We'll show clear feedback for each state!
+
+## Step 1: Create TransferForm component
+
+Create `src/components/transfer-form.tsx`:
+
+```bash
+touch src/components/transfer-form.tsx
+```
+
+**Add this code:**
+
+```tsx
+// src/components/transfer-form.tsx
+"use client";
+
+import { useState, useEffect } from "react";
+import { useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
+import { parseUnits, isAddress } from "viem";
+import { erc20Abi } from "viem";
+
+interface TransferFormProps {
+  tokenAddress: `0x${string}`;
+  tokenSymbol?: string;
+  decimals?: number;
+  onSuccess?: () => void;
+}
+
+export function TransferForm({ 
+  tokenAddress, 
+  tokenSymbol = "TOKEN", 
+  decimals = 18,
+  onSuccess 
+}: TransferFormProps) {
+  const { address: userAddress } = useAccount();
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [errors, setErrors] = useState<{ recipient?: string; amount?: string }>({});
+
+  // Write contract hook
+  const { 
+    data: hash, 
+    isPending: isWritePending, 
+    error: writeError, 
+    writeContract,
+    reset: resetWrite
+  } = useWriteContract();
+
+  // Wait for transaction receipt
+  const { 
+    isLoading: isConfirming, 
+    isSuccess, 
+    isError: isReceiptError,
+    error: receiptError
+  } = useWaitForTransactionReceipt({ 
+    hash,
+  });
+
+  // Reset form after successful transfer
+  useEffect(() => {
+    if (isSuccess) {
+      setRecipient("");
+      setAmount("");
+      setErrors({});
+      onSuccess?.();
+      // Auto-reset write state after 5 seconds
+      setTimeout(() => resetWrite(), 5000);
+    }
+  }, [isSuccess, onSuccess, resetWrite]);
+
+  // Validate form
+  function validateForm(): boolean {
+    const newErrors: { recipient?: string; amount?: string } = {};
+
+    if (!recipient) {
+      newErrors.recipient = "Recipient address is required";
+    } else if (!isAddress(recipient)) {
+      newErrors.recipient = "Invalid address format";
+    } else if (recipient.toLowerCase() === userAddress?.toLowerCase()) {
+      newErrors.recipient = "Cannot send to yourself";
+    }
+
+    if (!amount) {
+      newErrors.amount = "Amount is required";
+    } else if (Number.isNaN(Number(amount))) {
+      newErrors.amount = "Amount must be a number";
+    } else if (Number(amount) <= 0) {
+      newErrors.amount = "Amount must be greater than 0";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }
+
+  // Handle transfer
+  function handleTransfer(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    try {
+      const amountInWei = parseUnits(amount, decimals);
+      
+      writeContract({
+        address: tokenAddress,
+        abi: erc20Abi,
+        functionName: "transfer",
+        args: [recipient as `0x${string}`, amountInWei],
+      });
+    } catch (error) {
+      console.error("Transfer error:", error);
+    }
+  }
+
+  // Get user-friendly error message
+  function getFriendlyError(error: Error | null): string {
+    if (!error) return "";
+    const msg = error.message;
+    if (msg.includes("User rejected") || msg.includes("user rejected")) {
+      return "You rejected the transaction in your wallet.";
+    }
+    if (msg.includes("insufficient funds")) {
+      return "Insufficient funds for gas fees.";
+    }
+    if (msg.includes("ERC20InsufficientBalance")) {
+      return "Insufficient token balance for this transfer.";
+    }
+    if (msg.includes("ERC20InvalidReceiver")) {
+      return "Invalid recipient address.";
+    }
+    return "Transaction failed. Please try again.";
+  }
+
+  const isPending = isWritePending || isConfirming;
+  const showSuccess = isSuccess;
+  const showError = writeError || isReceiptError;
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-6">
+      <h2 className="text-xl font-semibold mb-4">Transfer Tokens</h2>
+      
+      <form onSubmit={handleTransfer} className="space-y-4">
+        {/* Recipient Input */}
+        <div>
+          <label htmlFor="recipient" className="block text-sm font-medium mb-2">
+            Recipient Address
+          </label>
+          <input
+            id="recipient"
+            type="text"
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
+            placeholder="0x..."
+            disabled={isPending}
+            className={`w-full rounded-md border px-3 py-2 text-sm font-mono ${
+              errors.recipient 
+                ? "border-destructive bg-destructive/10" 
+                : "border-border bg-background"
+            } disabled:opacity-50`}
+          />
+          {errors.recipient && (
+            <p className="text-sm text-destructive mt-1">{errors.recipient}</p>
+          )}
+        </div>
+
+        {/* Amount Input */}
+        <div>
+          <label htmlFor="amount" className="block text-sm font-medium mb-2">
+            Amount ({tokenSymbol})
+          </label>
+          <input
+            id="amount"
+            type="text"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.0"
+            disabled={isPending}
+            className={`w-full rounded-md border px-3 py-2 text-sm ${
+              errors.amount 
+                ? "border-destructive bg-destructive/10" 
+                : "border-border bg-background"
+            } disabled:opacity-50`}
+          />
+          {errors.amount && (
+            <p className="text-sm text-destructive mt-1">{errors.amount}</p>
+          )}
+        </div>
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={isPending || !recipient || !amount}
+          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isWritePending && "Awaiting signature..."}
+          {isConfirming && "Confirming transaction..."}
+          {!isPending && "Transfer"}
+        </button>
+      </form>
+
+      {/* Transaction Status */}
+      <div className="mt-6 space-y-3">
+        {/* Awaiting Signature */}
+        {isWritePending && (
+          <div className="flex items-start gap-3 rounded-md bg-blue-500/10 p-3 text-sm">
+            <div className="mt-0.5 animate-pulse">⏳</div>
+            <div>
+              <p className="font-medium text-blue-600 dark:text-blue-400">
+                Awaiting wallet signature
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Please check your wallet and approve the transaction
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Transaction Submitted */}
+        {hash && !isSuccess && !showError && (
+          <div className="flex items-start gap-3 rounded-md bg-yellow-500/10 p-3 text-sm">
+            <div className="mt-0.5">📝</div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-yellow-600 dark:text-yellow-400">
+                Transaction submitted
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 break-all">
+                Hash: {hash.slice(0, 10)}...{hash.slice(-8)}
+              </p>
+              <a
+                href={`https://testnet.zilliqa.blockscout.com/tx/${hash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs underline underline-offset-4 hover:text-foreground mt-1 inline-block"
+              >
+                View on explorer →
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Confirming */}
+        {isConfirming && (
+          <div className="flex items-start gap-3 rounded-md bg-blue-500/10 p-3 text-sm">
+            <div className="mt-0.5 animate-pulse">⏳</div>
+            <div>
+              <p className="font-medium text-blue-600 dark:text-blue-400">
+                Waiting for confirmation
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Transaction is being processed on-chain (~1-2 seconds)
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Success */}
+        {showSuccess && (
+          <div className="flex items-start gap-3 rounded-md bg-green-500/10 p-3 text-sm">
+            <div className="mt-0.5">✅</div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-green-600 dark:text-green-400">
+                Transfer successful!
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Your tokens have been sent. Balance will update shortly.
+              </p>
+              {hash && (
+                <a
+                  href={`https://testnet.zilliqa.blockscout.com/tx/${hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs underline underline-offset-4 hover:text-foreground mt-1 inline-block"
+                >
+                  View transaction →
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Error */}
+        {showError && (
+          <div className="flex items-start gap-3 rounded-md bg-red-500/10 p-3 text-sm">
+            <div className="mt-0.5">❌</div>
+            <div>
+              <p className="font-medium text-red-600 dark:text-red-400">
+                Transaction failed
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {getFriendlyError((writeError || receiptError) as Error)}
+              </p>
+              <button
+                onClick={() => {
+                  resetWrite();
+                  setErrors({});
+                }}
+                className="text-xs underline underline-offset-4 hover:text-foreground mt-2"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+**Key points:**
+- **Form validation**: Checks address format, non-zero amount
+- **parseUnits**: Converts "1.5" → `1500000000000000000n` (with 18 decimals)
+- **Three states**: Awaiting signature, confirming, confirmed
+- **Friendly errors**: Maps raw errors to user-understandable messages
+- **Transaction link**: Opens Blockscout for verification
+- **Auto-reset**: Clears form after success
+
+## Step 2: Update homepage to use TransferForm
+
+Open `src/app/page.tsx` and replace the transfer placeholder:
+
+```tsx
+// src/app/page.tsx
+"use client";
+
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { NetworkGuard } from "@/components/network-guard";
+import { TokenBalance } from "@/components/token-balance";
+import { TokenInfo } from "@/components/token-info";
+import { NFTGallery } from "@/components/nft-gallery";
+import { TransferForm } from "@/components/transfer-form";
+import { useAccount, useReadContract } from "wagmi";
+import { erc20Abi } from "viem";
+import { useState } from "react";
+
+const TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_TOKEN_ADDRESS || "0x0") as `0x${string}`;
+const NFT_ADDRESS = (process.env.NEXT_PUBLIC_NFT_ADDRESS || "0x0") as `0x${string}`;
+
+export default function Home() {
+  const { isConnected } = useAccount();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Read token symbol and decimals for transfer form
+  const { data: symbol } = useReadContract({
+    address: TOKEN_ADDRESS,
+    abi: erc20Abi,
+    functionName: "symbol",
+  });
+
+  const { data: decimals } = useReadContract({
+    address: TOKEN_ADDRESS,
+    abi: erc20Abi,
+    functionName: "decimals",
+  });
+
+  // Force balance refresh after transfer
+  function handleTransferSuccess() {
+    setRefreshKey(prev => prev + 1);
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      
+      <main className="flex-1 container mx-auto max-w-screen-2xl px-4 py-8">
+        <NetworkGuard>
+          <div className="space-y-8">
+            {/* Hero Section */}
+            <div className="text-center space-y-4">
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+                Welcome to Token dApp
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Transfer ERC20 tokens, view your NFT collection, and explore the Zilliqa testnet—all with a beautiful, modern interface.
+              </p>
+            </div>
+
+            {!isConnected ? (
+              <div className="rounded-lg border border-border bg-card p-8 text-center">
+                <p className="text-muted-foreground">
+                  Connect your wallet to get started
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Token Section */}
+                <div className="grid gap-6 md:grid-cols-2">
+                  <TokenBalance key={refreshKey} tokenAddress={TOKEN_ADDRESS} />
+                  <TokenInfo tokenAddress={TOKEN_ADDRESS} />
+                </div>
+
+                {/* Transfer Section */}
+                <TransferForm
+                  tokenAddress={TOKEN_ADDRESS}
+                  tokenSymbol={symbol as string}
+                  decimals={decimals as number}
+                  onSuccess={handleTransferSuccess}
+                />
+
+                {/* NFT Section */}
+                <NFTGallery nftAddress={NFT_ADDRESS} />
+              </div>
+            )}
+          </div>
+        </NetworkGuard>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+```
+
+**What's new:**
+- **TransferForm**: Replaces placeholder with working component
+- **Symbol + decimals**: Passed as props for display and parsing
+- **refreshKey**: Forces TokenBalance to refetch after successful transfer
+- **onSuccess callback**: Triggers balance refresh
+
+## Step 3: Test your transfer flow
+
+**Full test checklist:**
+
+### 1. Form validation
+- [ ] Empty recipient → shows error
+- [ ] Invalid address (e.g., "abc") → shows error
+- [ ] Your own address → shows "Cannot send to yourself"
+- [ ] Empty amount → shows error
+- [ ] Negative amount → shows error
+- [ ] Amount "0" → shows error
+
+### 2. Transaction flow (with testnet ZIL in wallet)
+- [ ] Enter valid recipient + amount
+- [ ] Click "Transfer"
+- [ ] **Awaiting signature**: MetaMask opens
+- [ ] **In MetaMask**: Review details (recipient, amount, gas)
+- [ ] Approve in MetaMask
+- [ ] **Transaction submitted**: Hash appears with explorer link
+- [ ] **Confirming**: Blue "waiting" message shows
+- [ ] **Success**: Green checkmark appears after ~1-2 seconds
+- [ ] Balance updates automatically
+
+### 3. User rejection
+- [ ] Click "Transfer"
+- [ ] **Reject** in MetaMask
+- [ ] Red error shows: "You rejected the transaction"
+- [ ] Click "Try again" → error clears
+- [ ] Can submit again
+
+### 4. Insufficient balance
+- [ ] Enter amount larger than your balance
+- [ ] Click "Transfer" → approve in MetaMask
+- [ ] Transaction reverts
+- [ ] Red error shows: "Insufficient token balance"
+
+### 5. Insufficient gas
+- [ ] Ensure wallet has almost no ZIL (for gas)
+- [ ] Try transfer
+- [ ] Error shows: "Insufficient funds for gas fees"
+
+### 6. Explorer link
+- [ ] After success, click "View transaction" link
+- [ ] Opens Blockscout in new tab
+- [ ] Shows transaction details, status "Success"
+
+### 7. Balance refresh
+- [ ] Note balance before transfer
+- [ ] Send tokens to another address
+- [ ] After success, balance decreases automatically
+- [ ] Recipient's balance increases (if you check on Blockscout)
+
+## Understanding transaction writes
+
+### useWriteContract hook
+
+```tsx
+const { data: hash, isPending, writeContract } = useWriteContract();
+
+writeContract({
+  address: tokenAddress,
+  abi: erc20Abi,
+  functionName: "transfer",
+  args: [recipient, amount],
+});
+```
+
+**What happens:**
+1. Creates transaction data (encodes function + args)
+2. Opens wallet for signature
+3. User approves → transaction broadcast to network
+4. Returns transaction hash immediately
+5. Transaction is pending (in mempool)
+
+**Important:** `writeContract` returns a hash **before** the transaction is confirmed. You need `useWaitForTransactionReceipt` to track confirmation.
+
+### useWaitForTransactionReceipt hook
+
+```tsx
+const { isLoading, isSuccess, isError } = useWaitForTransactionReceipt({ 
+  hash 
+});
+```
+
+**What happens:**
+1. Watches for transaction hash
+2. Polls RPC for receipt
+3. When mined, isSuccess becomes true
+4. Receipt includes: block number, gas used, logs (events)
+
+**Zilliqa timing:** ~1-2 seconds from submit to confirmation (1-second blocks).
+
+### Transaction lifecycle states
+
+| State | Hook | What it means | UI message |
+|-------|------|---------------|------------|
+| **Idle** | `!isPending && !hash` | Nothing happening | Show form |
+| **Awaiting signature** | `isWritePending` | MetaMask open, user deciding | "Check your wallet" |
+| **Submitted** | `hash && isLoading` | Tx sent, waiting for block | "Confirming..." |
+| **Confirmed** | `isSuccess` | Tx mined, receipt available | "Success!" |
+| **Reverted** | `isError` | Tx failed on-chain | "Transaction failed" |
+| **Rejected** | `writeError` (specific) | User clicked "Reject" | "You rejected" |
+
+## Common issues and fixes
+
+### Issue: "Insufficient funds" but I have tokens
+
+**Problem:** Not enough ZIL for gas fees (not token balance).
+
+**Fix:**
+- Get testnet ZIL from faucet: https://dev-wallet.zilliqa.com
+- Gas costs ~0.0001 ZIL per transfer on Zilliqa testnet
+
+### Issue: Transaction pending forever
+
+**Problem:** RPC endpoint delay or network congestion.
+
+**Fix:**
+- Check transaction on Blockscout directly
+- If showing "Pending" there too, just wait (rare on Zilliqa)
+- If not found, transaction wasn't broadcast → try again
+
+### Issue: "User rejected" but I approved
+
+**Problem:** MetaMask might have auto-rejected due to low gas estimate.
+
+**Fix:**
+- Increase gas limit manually in MetaMask (Advanced settings)
+- Or refresh page and try again
+
+### Issue: Balance doesn't update after success
+
+**Problem:** Cache not invalidated, or RPC lag.
+
+**Fix:**
+- Click "Refresh" button in TokenBalance
+- Or wait 5-10 seconds for auto-refresh
+- Check Blockscout to verify transfer succeeded
+
+### Issue: TypeScript error on parseUnits
+
+**Problem:** Amount might be empty string.
+
+**Fix:**
+```tsx
+const amountInWei = parseUnits(amount || "0", decimals);
+```
+
+## Advanced: Transaction simulation (optional)
+
+Before submitting, you can simulate the transaction to predict failure:
+
+```tsx
+import { simulateContract } from "viem/actions";
+
+// In component
+async function checkTransfer() {
+  try {
+    await simulateContract(wagmiConfig, {
+      address: tokenAddress,
+      abi: erc20Abi,
+      functionName: "transfer",
+      args: [recipient, amountInWei],
+    });
+    // Simulation succeeded → safe to submit
+  } catch (error) {
+    // Simulation failed → show error before MetaMask opens
+    console.error("Transfer would fail:", error);
+  }
+}
+```
+
+**Benefits:**
+- Catch errors before user signs
+- Better UX (no wasted gas on reverts)
+- Show specific error messages
+
+## Next steps
+
+You now have:
+- ✅ Complete transfer form with validation
+- ✅ Transaction lifecycle tracking
+- ✅ Clear status messages at each step
+- ✅ User-friendly error handling
+- ✅ Balance auto-refresh after transfer
+- ✅ Explorer links for verification
+
+**Next lesson (final):** We'll add polish—loading skeletons, success animations, comprehensive error mapping, and local testing strategies. We'll also discuss deployment options (Vercel, Netlify) and best practices for production.
+
+## Checklist
+
+Before moving on, verify:
+
+- [ ] Transfer form appears when connected
+- [ ] Form validation works (invalid address, amount)
+- [ ] "Transfer" button disabled when invalid
+- [ ] MetaMask opens on submit
+- [ ] "Awaiting signature" message shows
+- [ ] After approval, transaction hash appears
+- [ ] "Confirming" message shows
+- [ ] Success message after ~1-2 seconds
+- [ ] Balance decreases after successful transfer
+- [ ] Explorer link opens correct transaction
+- [ ] User rejection handled gracefully
+- [ ] Insufficient balance error shows correctly
+- [ ] Can submit multiple transfers in a row
+
+**All checked?** Let's add the final polish! 🎨
+

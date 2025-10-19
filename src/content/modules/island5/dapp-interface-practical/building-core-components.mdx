@@ -1,0 +1,593 @@
+---
+id: "dapp-practical-lesson-3"
+slug: "building-core-components"
+module: "dapp-interface-practical"
+number: "5.8"
+title: "Building Core Components"
+objective: "Create reusable components for wallet connection, network enforcement, and app layout."
+practicalTakeaway: "Build a professional dApp structure with header, network guard, and theme support."
+---
+
+# Building Core Components
+
+## Why this matters now
+
+Every dApp needs the same building blocks: a persistent header with wallet connection, network enforcement to prevent wrong-chain actions, and a clean layout. We'll build these once as reusable components, then compose them throughout the app. This lesson focuses on the foundation—components you'll use on every page.
+
+## What we're building
+
+In this lesson, you'll create:
+1. **NetworkGuard** component (blocks UI on wrong network)
+2. **Header** component (wallet connection + app branding)
+3. **Layout** structure (header + main content + footer)
+4. **Theme support** (optional dark mode with next-themes)
+
+**Time estimate:** 20-25 minutes
+
+## Step 1: Create NetworkGuard component
+
+This component enforces Zilliqa testnet. If the user is on the wrong network, it shows a switch prompt and hides the rest of the UI.
+
+Create `src/components/network-guard.tsx`:
+
+```bash
+touch src/components/network-guard.tsx
+```
+
+**Add this code:**
+
+```tsx
+// src/components/network-guard.tsx
+"use client";
+
+import { useAccount, useChainId, useSwitchChain } from "wagmi";
+import { ReactNode } from "react";
+
+const ZILLIQA_TESTNET_ID = 33101;
+const SUPPORTED_CHAINS = [ZILLIQA_TESTNET_ID];
+
+interface NetworkGuardProps {
+  children: ReactNode;
+}
+
+export function NetworkGuard({ children }: NetworkGuardProps) {
+  const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const { switchChain, isPending } = useSwitchChain();
+
+  // If not connected, show children (they'll see ConnectButton)
+  if (!isConnected) {
+    return <>{children}</>;
+  }
+
+  // If on correct network, show children
+  if (SUPPORTED_CHAINS.includes(chainId)) {
+    return <>{children}</>;
+  }
+
+  // Wrong network: show switch prompt
+  return (
+    <div className="flex min-h-[400px] items-center justify-center p-8">
+      <div className="max-w-md space-y-4 rounded-lg border border-border bg-card p-6 text-center">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Wrong Network Detected</h2>
+        <p className="text-sm text-muted-foreground">
+          This dApp only works on Zilliqa testnet. Please switch networks to continue.
+        </p>
+        <button
+          onClick={() => switchChain({ chainId: ZILLIQA_TESTNET_ID })}
+          disabled={isPending}
+          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          {isPending ? "Switching..." : "Switch to Zilliqa Testnet"}
+        </button>
+        <p className="text-xs text-muted-foreground">
+          If switching doesn't work, manually change networks in your wallet.
+        </p>
+      </div>
+    </div>
+  );
+}
+```
+
+**Key points:**
+- **useAccount**: Check if wallet is connected
+- **useChainId**: Get current chain ID
+- **useSwitchChain**: Trigger network switch
+- **Conditional rendering**: Show children only on correct network
+- **User guidance**: Clear message and one-click fix
+
+## Step 2: Create Header component
+
+A persistent header with app branding and wallet connection.
+
+Create `src/components/header.tsx`:
+
+```bash
+touch src/components/header.tsx
+```
+
+**Add this code:**
+
+```tsx
+// src/components/header.tsx
+"use client";
+
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import Link from "next/link";
+
+export function Header() {
+  return (
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4">
+        {/* Logo / Brand */}
+        <Link href="/" className="flex items-center space-x-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-sm">
+            T
+          </div>
+          <span className="font-semibold text-lg">Token dApp</span>
+        </Link>
+
+        {/* Navigation (optional, add later) */}
+        <nav className="flex items-center gap-6">
+          {/* Add links here later: <Link href="/transfer">Transfer</Link> */}
+        </nav>
+
+        {/* Wallet Connection */}
+        <div className="flex items-center gap-4">
+          <ConnectButton 
+            chainStatus="icon"
+            accountStatus="address"
+            showBalance={false}
+          />
+        </div>
+      </div>
+    </header>
+  );
+}
+```
+
+**Key points:**
+- **Sticky header**: Stays at top when scrolling
+- **ConnectButton customization**: Icon for chain, address (not full), no balance
+- **Container**: Max-width for large screens
+- **Future nav**: Placeholder for links (Transfer, NFTs, etc.)
+
+**RainbowKit ConnectButton props:**
+- `chainStatus="icon"` - Small chain icon (vs full name)
+- `accountStatus="address"` - Show abbreviated address
+- `showBalance={false}` - Hide balance for cleaner UI
+
+## Step 3: Create Footer component
+
+A simple footer with links and credits.
+
+Create `src/components/footer.tsx`:
+
+```bash
+touch src/components/footer.tsx
+```
+
+**Add this code:**
+
+```tsx
+// src/components/footer.tsx
+export function Footer() {
+  return (
+    <footer className="border-t border-border/40">
+      <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4 text-sm text-muted-foreground">
+        <p>
+          Built with{" "}
+          <a
+            href="https://wagmi.sh"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            wagmi
+          </a>{" "}
+          +{" "}
+          <a
+            href="https://rainbowkit.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            RainbowKit
+          </a>
+        </p>
+        <div className="flex gap-4">
+          <a
+            href="https://testnet.zilliqa.blockscout.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground"
+          >
+            Block Explorer
+          </a>
+          <a
+            href="https://dev-wallet.zilliqa.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground"
+          >
+            Faucet
+          </a>
+        </div>
+      </div>
+    </footer>
+  );
+}
+```
+
+**Key points:**
+- **Credits**: Link to wagmi and RainbowKit
+- **Useful links**: Block explorer and testnet faucet
+- **Minimal design**: Doesn't distract from main content
+
+## Step 4: Update homepage with new layout
+
+Open `src/app/page.tsx` and use the new components:
+
+```tsx
+// src/app/page.tsx
+"use client";
+
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { NetworkGuard } from "@/components/network-guard";
+import { useAccount } from "wagmi";
+
+export default function Home() {
+  const { address, isConnected } = useAccount();
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      
+      <main className="flex-1 container mx-auto max-w-screen-2xl px-4 py-8">
+        <NetworkGuard>
+          <div className="space-y-8">
+            {/* Hero Section */}
+            <div className="text-center space-y-4">
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+                Welcome to Token dApp
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Transfer ERC20 tokens, view your NFT collection, and explore the Zilliqa testnet—all with a beautiful, modern interface.
+              </p>
+            </div>
+
+            {/* Connection Status */}
+            {!isConnected ? (
+              <div className="rounded-lg border border-border bg-card p-8 text-center">
+                <p className="text-muted-foreground">
+                  Connect your wallet to get started
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border bg-card p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10 text-green-500">
+                    ✓
+                  </div>
+                  <div>
+                    <p className="font-medium">Connected</p>
+                    <p className="text-sm text-muted-foreground font-mono">
+                      {address}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Coming Soon Sections */}
+            {isConnected && (
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="rounded-lg border border-border bg-card p-6">
+                  <h2 className="text-xl font-semibold mb-2">Token Balance</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Coming in the next lesson...
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-6">
+                  <h2 className="text-xl font-semibold mb-2">Transfer Tokens</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Coming in the next lesson...
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </NetworkGuard>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+```
+
+**What's new:**
+- **Header + Footer**: Persistent across all pages
+- **NetworkGuard**: Wraps main content
+- **Better layout**: Flexbox structure (header → main → footer)
+- **Coming soon placeholders**: Shows what we'll build next
+
+## Step 5: Add theme support (optional but recommended)
+
+Let's add dark mode support using `next-themes`.
+
+**Install next-themes:**
+
+```bash
+npm install next-themes
+```
+
+**Update providers.tsx** to include ThemeProvider:
+
+```tsx
+// src/components/providers.tsx
+"use client";
+
+import * as React from "react";
+import { WagmiProvider } from "wagmi";
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "next-themes";
+import { wagmiConfig } from "@/lib/wagmi";
+
+const queryClient = new QueryClient();
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <RainbowKitProvider>
+            {children}
+          </RainbowKitProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
+}
+```
+
+**Create ThemeToggle component:**
+
+```bash
+touch src/components/theme-toggle.tsx
+```
+
+**Add this code:**
+
+```tsx
+// src/components/theme-toggle.tsx
+"use client";
+
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
+
+export function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="h-9 w-9" />; // Placeholder
+  }
+
+  return (
+    <button
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent hover:text-accent-foreground"
+      aria-label="Toggle theme"
+    >
+      {theme === "dark" ? (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ) : (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+```
+
+**Add theme toggle to Header:**
+
+```tsx
+// Update src/components/header.tsx
+"use client";
+
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import Link from "next/link";
+import { ThemeToggle } from "./theme-toggle";
+
+export function Header() {
+  return (
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4">
+        <Link href="/" className="flex items-center space-x-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-sm">
+            T
+          </div>
+          <span className="font-semibold text-lg">Token dApp</span>
+        </Link>
+
+        <nav className="flex items-center gap-6">
+          {/* Navigation links coming soon */}
+        </nav>
+
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <ConnectButton 
+            chainStatus="icon"
+            accountStatus="address"
+            showBalance={false}
+          />
+        </div>
+      </div>
+    </header>
+  );
+}
+```
+
+**Configure dark mode in Tailwind (globals.css):**
+
+Tailwind CSS v4 handles themes differently. Ensure your `src/app/globals.css` has theme variables:
+
+```css
+/* src/app/globals.css */
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: 0 0% 100%;
+  --color-foreground: 0 0% 3.9%;
+  --color-card: 0 0% 100%;
+  --color-card-foreground: 0 0% 3.9%;
+  --color-border: 0 0% 89.8%;
+  --color-muted: 0 0% 96.1%;
+  --color-muted-foreground: 0 0% 45.1%;
+  --color-primary: 262.1 83.3% 57.8%;
+  --color-primary-foreground: 210 40% 98%;
+  --color-accent: 0 0% 96.1%;
+  --color-accent-foreground: 0 0% 9%;
+  
+  .dark {
+    --color-background: 0 0% 3.9%;
+    --color-foreground: 0 0% 98%;
+    --color-card: 0 0% 3.9%;
+    --color-card-foreground: 0 0% 98%;
+    --color-border: 0 0% 14.9%;
+    --color-muted: 0 0% 14.9%;
+    --color-muted-foreground: 0 0% 63.9%;
+    --color-primary: 262.1 83.3% 57.8%;
+    --color-primary-foreground: 210 40% 98%;
+    --color-accent: 0 0% 14.9%;
+    --color-accent-foreground: 0 0% 98%;
+  }
+}
+```
+
+## Step 6: Test your components
+
+**Restart your dev server** (to pick up new dependencies):
+
+```bash
+npm run dev
+```
+
+**Test checklist:**
+
+1. **Header:**
+   - [ ] Appears at top of page
+   - [ ] Sticky (stays visible when scrolling)
+   - [ ] "Token dApp" branding visible
+   - [ ] Connect button in top-right
+
+2. **Footer:**
+   - [ ] Appears at bottom
+   - [ ] Links work (open in new tabs)
+   - [ ] Credits visible
+
+3. **Theme toggle:**
+   - [ ] Sun/moon icon in header
+   - [ ] Clicking toggles dark/light mode
+   - [ ] Colors change appropriately
+   - [ ] RainbowKit modal matches theme
+
+4. **NetworkGuard:**
+   - [ ] With wallet connected on Zilliqa testnet → content shows
+   - [ ] Switch MetaMask to Ethereum → warning appears
+   - [ ] Click "Switch to Zilliqa Testnet" → network changes
+   - [ ] Content appears after successful switch
+
+5. **Connection flow:**
+   - [ ] Disconnected → shows "Connect your wallet"
+   - [ ] Connected → shows address and green checkmark
+   - [ ] Placeholder cards visible when connected
+
+## Understanding the component architecture
+
+### Why NetworkGuard?
+
+**Problem:** Users connect on Ethereum, click "Transfer", transaction fails silently.
+
+**Solution:** Block all interactions until they're on the right network. One-click fix for users.
+
+**Pattern:**
+```tsx
+<NetworkGuard>
+  {/* Protected content */}
+</NetworkGuard>
+```
+
+Use this on every page that interacts with contracts.
+
+### Why sticky header?
+
+**UX benefit:** Wallet connection always accessible. Users can disconnect, check address, or switch networks anytime—even if they scroll down.
+
+### Why theme support?
+
+**Industry standard:** Most dApps support dark mode. RainbowKit automatically adapts to your theme, creating a cohesive experience.
+
+## Component reusability
+
+These components work on **any page**:
+
+```tsx
+// Any page structure
+export default function AnyPage() {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <main className="flex-1">
+        <NetworkGuard>
+          {/* Your page content */}
+        </NetworkGuard>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+```
+
+No need to rebuild these for every page—reuse and compose!
+
+## Next steps
+
+You now have:
+- ✅ Professional header with wallet connection
+- ✅ Network enforcement (Zilliqa testnet only)
+- ✅ Theme support (dark/light mode)
+- ✅ Clean layout structure
+- ✅ Reusable components
+
+**Next lesson:** We'll read contract data—display ERC20 balances, view owned NFTs, and make the UI react to on-chain state. This is where your dApp starts feeling alive!
+
+## Checklist
+
+Before moving on, verify:
+
+- [ ] Header appears on all pages (sticky behavior)
+- [ ] Footer appears at bottom
+- [ ] Theme toggle works (dark/light switch)
+- [ ] NetworkGuard blocks content on wrong network
+- [ ] "Switch to Zilliqa Testnet" button works
+- [ ] Content shows after successful network switch
+- [ ] No console errors
+- [ ] RainbowKit modal matches theme
+- [ ] Connection state (connected/disconnected) displays correctly
+
+**All checked?** Let's read some contract data! 📖
+

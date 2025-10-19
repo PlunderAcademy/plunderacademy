@@ -30,7 +30,7 @@ Fetch a user’s token balance using `useReadContract`. Gate the call behind con
 ```tsx
 import { useAccount, useReadContract } from "wagmi";
 import { formatUnits } from "viem";
-import erc20Abi from "@/lib/abis/erc20.json"; // typed ABI recommended
+import { erc20Abi } from "viem"; // Or import from a local file: import erc20Abi from "@/lib/abis/erc20.json";
 
 export function TokenBalance({ token, decimals }: { token: `0x${string}`; decimals: number }) {
   const { address, isConnected } = useAccount();
