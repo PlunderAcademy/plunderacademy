@@ -7,7 +7,7 @@ import { useAccount } from "wagmi";
 import { ModuleMeta } from "@/lib/mdx";
 import { Badge } from "@/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { CheckCircle2, BookOpen, Lock } from "lucide-react";
+import { CheckCircle2, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAchievements } from "@/hooks/use-achievements";
 
@@ -99,8 +99,8 @@ interface DesertAnimatedMapProps {
 
 export function DesertAnimatedMap({ mode = "real", modules, highlightedModuleSlug = null }: DesertAnimatedMapProps) {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
-  const { walletAchievements } = useAchievements();
+  const { isConnected } = useAccount();
+  const { walletAchievements, achievementMetadata } = useAchievements();
   const [progress, setProgress] = useState(0);
   
   const getLocationStatus = (index: number): MarkerState => {
@@ -314,36 +314,111 @@ export function DesertAnimatedMap({ mode = "real", modules, highlightedModuleSlu
                 </HoverCardTrigger>
                 <HoverCardContent className="w-96">
                   {isCompleted && mode === "real" ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Badge className="bg-orange-500/20 text-orange-700 dark:text-orange-300">
-                          <BookOpen className="mr-1 size-3" />
-                          <span className="capitalize">NFT Mastery</span>
-                        </Badge>
-                        <CheckCircle2 className="size-5 text-orange-500" />
-                      </div>
+                    // Completed - show achievement NFT
+                    (() => {
+                      const achievementNumber = (index + 31).toString().padStart(4, "0");
+                      const walletAchievement = walletAchievements.find(wa => wa.tokenId === index + 31 && wa.isClaimed);
+                      const metadata = achievementMetadata[achievementNumber];
                       
-                      <div className="flex justify-center">
-                        <div className="relative w-80 h-80 rounded-lg overflow-hidden bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-950 dark:to-orange-900 flex items-center justify-center border-2 border-orange-300 dark:border-orange-700">
-                          <div className="text-center space-y-2">
-                            <div className="text-6xl">🏜️</div>
-                            <p className="text-lg font-semibold text-orange-700 dark:text-orange-300">
-                              Achievement NFT
-                            </p>
-                            <p className="text-sm text-orange-600 dark:text-orange-400">
-                              Coming Soon
-                            </p>
+                      return metadata?.image ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Badge className="bg-orange-500/20 text-orange-700 dark:text-orange-300">
+                              <BookOpen className="mr-1 size-3" />
+                              <span className="capitalize">NFT Mastery</span>
+                            </Badge>
+                            <CheckCircle2 className="size-5 text-orange-500" />
+                          </div>
+                          
+                          {/* Full-size NFT Image with Hover Metadata */}
+                          <div className="flex justify-center">
+                            <div className="relative w-80 h-80 rounded-lg overflow-hidden bg-muted group">
+                              <Image
+                                src={metadata.image}
+                                alt={metadata.name || moduleData?.title || "Achievement"}
+                                fill
+                                className="object-contain"
+                                unoptimized
+                              />
+                              
+                              {/* Hover Overlay with Metadata */}
+                              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4 text-white">
+                                {/* Top Section */}
+                                <div className="space-y-2">
+                                  <div>
+                                    <h4 className="font-semibold text-lg">{metadata?.name || moduleData?.title}</h4>
+                                    <p className="text-sm text-gray-200 mt-1">
+                                      {metadata?.description || moduleData?.description}
+                                    </p>
+                                  </div>
+
+                                  {/* Attributes */}
+                                  {metadata?.attributes && metadata.attributes.length > 0 && (
+                                    <div className="space-y-1">
+                                      <div className="text-xs font-medium text-gray-300">Attributes:</div>
+                                      <div className="flex flex-wrap gap-1">
+                                        {metadata.attributes.slice(0, 4).map((attr: { trait_type: string; value: string | number }, attrIndex: number) => (
+                                          <span
+                                            key={attrIndex}
+                                            className="text-xs bg-white/20 px-2 py-1 rounded"
+                                          >
+                                            {attr.trait_type}: {attr.value}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Bottom Section */}
+                                <div className="space-y-1 text-xs text-gray-300">
+                                  <div>Achievement #{achievementNumber}</div>
+                                  {walletAchievement && (
+                                    <>
+                                      <div>Claimed: {new Date(walletAchievement.createdAt).toLocaleDateString()}</div>
+                                      <div>Token ID: #{walletAchievement.tokenId}</div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Title */}
+                          <div className="text-center">
+                            <h4 className="font-semibold text-lg">
+                              {metadata?.name || moduleData?.title}
+                            </h4>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="text-center space-y-1">
-                        <h4 className="font-semibold text-lg">{moduleData?.title || "Module Completed"}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {moduleData?.description || "Achievement unlocked!"}
-                        </p>
-                      </div>
-                    </div>
+                      ) : (
+                        // Fallback placeholder if image not loaded yet
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Badge className="bg-orange-500/20 text-orange-700 dark:text-orange-300">
+                              <BookOpen className="mr-1 size-3" />
+                              <span className="capitalize">NFT Mastery</span>
+                            </Badge>
+                            <CheckCircle2 className="size-5 text-orange-500" />
+                          </div>
+                          
+                          <div className="flex justify-center">
+                            <div className="relative w-80 h-80 rounded-lg overflow-hidden bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-950 dark:to-orange-900 flex items-center justify-center border-2 border-orange-300 dark:border-orange-700">
+                              <div className="text-center space-y-2">
+                                <div className="text-6xl">🏜️</div>
+                                <p className="text-lg font-semibold text-orange-700 dark:text-orange-300">
+                                  Loading Achievement...
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="text-center space-y-1">
+                            <h4 className="font-semibold text-lg">{moduleData?.title || "Module Completed"}</h4>
+                          </div>
+                        </div>
+                      );
+                    })()
                   ) : (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
