@@ -201,7 +201,7 @@ export function AchievementClaimSection({
               </div>
             </>
           )}
-          {isTransactionModule && (
+          {isTransactionModule && result?.passed && (
             <div className="text-3xl font-bold text-green-600">
               {getSuccessMessage()}
             </div>
@@ -211,8 +211,21 @@ export function AchievementClaimSection({
           </Badge>
         </div>
 
+        {/* Error display for failed transaction modules */}
+        {isTransactionModule && !result?.passed && apiResults?.error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
+            <div className="flex items-center gap-2 text-red-800 dark:text-red-200 mb-2">
+              <AlertCircle className="size-4" />
+              <h4 className="font-semibold">Deployment Failed</h4>
+            </div>
+            <p className="text-sm text-red-700 dark:text-red-300">
+              {apiResults.error}
+            </p>
+          </div>
+        )}
+
         {/* Deployment details for transaction submission modules */}
-        {isTransactionModule && apiResults && (
+        {isTransactionModule && apiResults && result?.passed && (
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
             <h4 className="font-semibold text-green-800 dark:text-green-200 mb-3">{getDetailsHeader()}</h4>
             <div className="space-y-2 text-sm">
