@@ -23,8 +23,8 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
   const { address } = useAccount();
   
   // Deploy challenge specific states
-  const [transactionId, setTransactionId] = useState('');
-  const [transactionError, setTransactionError] = useState<string | null>(null);
+  const [proxyAddress, setProxyAddress] = useState('');
+  const [proxyAddressError, setProxyAddressError] = useState<string | null>(null);
   const [selectedChain, setSelectedChain] = useState<'testnet' | 'mainnet'>('testnet');
   const [isStarted, setIsStarted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,19 +51,19 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
       return;
     }
     
-    // Validate transaction ID
-    if (!transactionId.trim()) {
-      setTransactionError('Please enter a transaction ID');
+    // Validate proxy address
+    if (!proxyAddress.trim()) {
+      setProxyAddressError('Please enter a proxy contract address');
       return;
     }
-    if (!/^0x[a-fA-F0-9]+$/.test(transactionId.trim()) || transactionId.trim().length < 10) {
-      setTransactionError('Please enter a valid transaction hash (0x followed by hex characters)');
+    if (!/^0x[a-fA-F0-9]{40}$/.test(proxyAddress.trim())) {
+      setProxyAddressError('Please enter a valid Ethereum address (0x followed by 40 hex characters)');
       return;
     }
     
     setIsSubmitting(true);
     setSubmitError(null);
-    setTransactionError(null);
+    setProxyAddressError(null);
     
     const achievementNumber = getAchievementNumber(moduleSlug);
     
@@ -74,16 +74,15 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
     }
     
     const submissionData = {
-      transactionHash: transactionId.trim(),
+      contractAddress: proxyAddress.trim(),
       chainId: selectedChain === 'testnet' ? 33101 : 32769,
-      claimantAddress: address,
       method: 'deployment' as const
     };
     
     const requestPayload = {
       walletAddress: address,
       achievementNumber,
-      submissionType: 'transaction' as const,
+      submissionType: 'contract' as const,
       submissionData,
       metadata: {
         timestamp: new Date().toISOString()
@@ -116,23 +115,23 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
         } else {
           // For failed submissions, show the specific error message
           if (!deployResult.passed && apiResult.results?.error) {
-            setTransactionError(apiResult.results.error);
+            setProxyAddressError(apiResult.results.error);
           }
         }
       } else {
         throw new Error(apiResult.error || 'Unexpected API response format');
       }
     } catch (error) {
-      console.error('Error submitting transaction:', error);
-      setSubmitError(error instanceof Error ? error.message : 'Failed to submit transaction');
+      console.error('Error submitting proxy address:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to submit proxy address');
     } finally {
       setIsSubmitting(false);
     }
-  }, [address, moduleSlug, transactionId, selectedChain, achievementClaiming]);
+  }, [address, moduleSlug, proxyAddress, selectedChain, achievementClaiming]);
 
   const handleRetake = () => {
-    setTransactionId('');
-    setTransactionError(null);
+    setProxyAddress('');
+    setProxyAddressError(null);
     setSelectedChain('testnet');
     setIsStarted(false);
     setIsSubmitting(false);
@@ -248,7 +247,7 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-muted-foreground">
-            Deploy your upgradeable TrainingRegistry contract using Foundry, then submit your deployment transaction ID to earn your achievement.
+            Deploy your upgradeable TrainingRegistry contract using Foundry, then submit your proxy contract address to earn your achievement.
           </p>
 
           {/* Connected Wallet Display */}
@@ -270,7 +269,7 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
               <li>Include the claimant address (shown above) in initialization</li>
               <li>Deploy to Zilliqa testnet or mainnet</li>
               <li>Upgrade to TrainingRegistryV2 with UUPS proxy pattern</li>
-              <li>Submit the deployment transaction hash below</li>
+              <li>Submit the proxy contract address below</li>
             </ul>
           </div>
 
@@ -286,7 +285,7 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
           </div>
 
           <Button onClick={() => setIsStarted(true)} className="w-full">
-            Submit Transaction ID
+            Submit Proxy Address
           </Button>
         </CardContent>
       </Card>
@@ -354,19 +353,19 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="transactionId" className="text-sm font-medium">
-              Transaction ID
+            <label htmlFor="proxyAddress" className="text-sm font-medium">
+              Proxy Contract Address
             </label>
             <input
-              id="transactionId"
+              id="proxyAddress"
               type="text"
-              value={transactionId}
-              onChange={(e) => setTransactionId(e.target.value)}
-              placeholder="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+              value={proxyAddress}
+              onChange={(e) => setProxyAddress(e.target.value)}
+              placeholder="0x1234567890123456789012345678901234567890"
               className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground font-mono text-sm"
             />
-            {transactionError && (
-              <p className="text-sm text-red-600 dark:text-red-400">{transactionError}</p>
+            {proxyAddressError && (
+              <p className="text-sm text-red-600 dark:text-red-400">{proxyAddressError}</p>
             )}
           </div>
 
@@ -377,19 +376,19 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
               <li>Use the Foundry setup from the lesson content above</li>
               <li>Run <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-950 rounded">forge script script/Deploy.s.sol --broadcast --legacy</code></li>
               <li>Make sure to set your training portal wallet address as claimant</li>
-              <li>Copy the deployment transaction hash from the output</li>
-              <li>The script deploys both implementation and proxy contracts</li>
+              <li>Copy the <strong>proxy contract address</strong> from the deployment output</li>
+              <li>The script deploys both implementation and proxy contracts - submit the proxy address</li>
             </ul>
           </div>
 
           <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
             <p className="font-medium mb-1">📋 Verification Process:</p>
             <ul className="space-y-1 list-disc list-inside">
-              <li>We&apos;ll verify this transaction deployed a valid upgradeable contract</li>
+              <li>We&apos;ll verify this is a valid upgradeable proxy contract</li>
               <li>The contract must use UUPS proxy pattern (ERC1967Proxy)</li>
-              <li>Transaction must be successful (not reverted)</li>
-              <li>Transaction must be on the selected network</li>
+              <li>Contract must be deployed on the selected network</li>
               <li>Contract must include the claimant tracking functionality</li>
+              <li>Your connected wallet address must match the claimant in the contract</li>
             </ul>
           </div>
         </div>
@@ -413,10 +412,10 @@ export function UpgradeableDeployChallenge({ moduleSlug, missionData }: DeployEl
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={isSubmitting || !transactionId.trim()}
-            className={!transactionId.trim() ? "opacity-50" : ""}
+            disabled={isSubmitting || !proxyAddress.trim()}
+            className={!proxyAddress.trim() ? "opacity-50" : ""}
           >
-            {isSubmitting ? "Verifying..." : "Submit Transaction"}
+            {isSubmitting ? "Verifying..." : "Submit Proxy Address"}
           </Button>
         </div>
       </CardContent>
