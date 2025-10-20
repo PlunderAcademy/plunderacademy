@@ -54,6 +54,37 @@ export function AchievementClaimSection({
 }: AchievementClaimSectionProps) {
   
   const isTransactionModule = isTransactionSubmissionModule(moduleSlug);
+  
+  // Get deployment type specific messaging
+  const getDeploymentTitle = () => {
+    if (moduleSlug === 'creating-erc20-tokens') return 'Token Creation Results';
+    if (moduleSlug === 'staking-contract-practical') return 'Staking Contract Deployment Results';
+    if (moduleSlug === 'nft-collection-practical') return 'NFT Collection Deployment Results';
+    if (moduleSlug === 'random-number-generator-practical') return 'RNG Contract Deployment Results';
+    if (moduleSlug === 'upgradable-contract-practical') return 'Upgradeable Contract Deployment Results';
+    if (moduleSlug === 'dapp-interface-practical') return 'dApp Interface Deployment Results';
+    return 'Deployment Results';
+  };
+  
+  const getSuccessMessage = () => {
+    if (moduleSlug === 'creating-erc20-tokens') return '🎉 Token Successfully Created!';
+    if (moduleSlug === 'staking-contract-practical') return '🎉 Staking Contract Successfully Deployed!';
+    if (moduleSlug === 'nft-collection-practical') return '🎉 NFT Collection Successfully Deployed!';
+    if (moduleSlug === 'random-number-generator-practical') return '🎉 RNG Contract Successfully Deployed!';
+    if (moduleSlug === 'upgradable-contract-practical') return '🎉 Upgradeable Contract Successfully Deployed!';
+    if (moduleSlug === 'dapp-interface-practical') return '🎉 dApp Interface Successfully Deployed!';
+    return '🎉 Contract Successfully Deployed!';
+  };
+  
+  const getDetailsHeader = () => {
+    if (moduleSlug === 'creating-erc20-tokens') return '🪙 Your Token Details:';
+    if (moduleSlug === 'staking-contract-practical') return '📊 Your Staking Contract Details:';
+    if (moduleSlug === 'nft-collection-practical') return '🖼️ Your NFT Collection Details:';
+    if (moduleSlug === 'random-number-generator-practical') return '🎲 Your RNG Contract Details:';
+    if (moduleSlug === 'upgradable-contract-practical') return '⬆️ Your Upgradeable Contract Details:';
+    if (moduleSlug === 'dapp-interface-practical') return '🌐 Your dApp Interface Details:';
+    return '📋 Your Deployment Details:';
+  };
 
   // Already claimed view
   if (alreadyClaimed) {
@@ -155,7 +186,7 @@ export function AchievementClaimSection({
           ) : (
             <XCircle className="size-5 text-red-500" />
           )}
-          {isTransactionModule ? 'Token Creation Results' : 'Quiz Results'}
+          {isTransactionModule ? getDeploymentTitle() : 'Quiz Results'}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -170,9 +201,9 @@ export function AchievementClaimSection({
               </div>
             </>
           )}
-          {isTransactionModule && (
+          {isTransactionModule && result?.passed && (
             <div className="text-3xl font-bold text-green-600">
-              🎉 Token Successfully Created!
+              {getSuccessMessage()}
             </div>
           )}
           <Badge variant={result?.passed ? "default" : "destructive"}>
@@ -180,10 +211,23 @@ export function AchievementClaimSection({
           </Badge>
         </div>
 
-        {/* Token creation details for Module 5 */}
-        {isTransactionModule && apiResults && (
+        {/* Error display for failed transaction modules */}
+        {isTransactionModule && !result?.passed && apiResults?.error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
+            <div className="flex items-center gap-2 text-red-800 dark:text-red-200 mb-2">
+              <AlertCircle className="size-4" />
+              <h4 className="font-semibold">Deployment Failed</h4>
+            </div>
+            <p className="text-sm text-red-700 dark:text-red-300">
+              {apiResults.error}
+            </p>
+          </div>
+        )}
+
+        {/* Deployment details for transaction submission modules */}
+        {isTransactionModule && apiResults && result?.passed && (
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
-            <h4 className="font-semibold text-green-800 dark:text-green-200 mb-3">🪙 Your Token Details:</h4>
+            <h4 className="font-semibold text-green-800 dark:text-green-200 mb-3">{getDetailsHeader()}</h4>
             <div className="space-y-2 text-sm">
               {apiResults.tokenName && (
                 <div className="flex justify-between">

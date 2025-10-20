@@ -469,6 +469,13 @@ export function TraditionalQuiz({ quiz, missionData, moduleSlug }: QuizElementPr
           
           <h3 className="text-lg font-semibold select-none">{question.question}</h3>
           
+          {/* Multiple-select instruction */}
+          {question.type === 'multiple-select' && (
+            <p className="text-sm text-muted-foreground italic">
+              Check all that apply
+            </p>
+          )}
+          
           {/* Interactive Question Types */}
           {question.type === 'word-jumble' && question.interactiveData?.scrambled && (
             <WordJumbleCompact

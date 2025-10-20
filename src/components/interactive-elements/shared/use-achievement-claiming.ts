@@ -100,12 +100,15 @@ export function useAchievementClaiming({ moduleSlug, missionData }: UseAchieveme
           const metadata = await loadNFTMetadata(achievementNumber);
           
           if (metadata) {
+            // Convert .png to .webp in metadata image URL
+            const metadataImageUrl = metadata.image ? metadata.image.replace(/\.png$/, '.webp') : imageUrl;
+            
             setCelebrationData({
               name: metadata.name || missionData.achievementReward?.name || "Achievement Unlocked",
               description: metadata.description || missionData.achievementReward?.description || "Congratulations!",
               achievementNumber,
               category: "fundamentals", // Could be mapped from module
-              image: metadata.image || imageUrl,
+              image: metadataImageUrl,
               attributes: metadata.attributes || []
             });
           } else {
