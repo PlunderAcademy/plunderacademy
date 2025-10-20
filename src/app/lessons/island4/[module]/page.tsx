@@ -1,20 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { 
   ChevronLeft, 
-  Crown,
-  BookOpen,
-  Trophy
+  Crown
 } from "lucide-react";
 import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from "@/lib/mdx";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
-import MDXContent from "@/components/mdx-content";
-import { InteractiveElement } from "@/components/interactive-elements";
+import { LessonTabsWithNavigation } from "@/components/lesson-tabs-with-navigation";
 
 // Import island4 module components
 import { Island4Module1Image } from "@/components/island4/island4-module1-image";
@@ -185,102 +181,20 @@ export default async function CastleModulePage({ params }: CastleModulePageProps
         </div>
 
         {/* Module Content Tabs */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="size-5" />
-              Module Content
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue={lessonContents[0]?.slug} className="space-y-4">
-              <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 p-2">
-                {lessonContents.map((lesson, index) => (
-                  <TabsTrigger 
-                    key={lesson.slug} 
-                    value={lesson.slug}
-                    className="text-xs md:text-sm px-3 py-2 whitespace-nowrap"
-                  >
-                    <span className="flex items-center gap-1">
-                      <span className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                        {index + 1}
-                      </span>
-                      <span className="text-foreground">{lesson.title.replace(/^\d+\.\d+\s*/, '')}</span>
-                    </span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {lessonContents.map((lesson, index) => {
-                const isLastLesson = index === lessonContents.length - 1;
-                return (
-                  <TabsContent key={lesson.slug} value={lesson.slug} className="space-y-4">
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-xl font-semibold mb-2">{lesson.title}</h3>
-                        <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                          <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">🎯 Learning Objective:</p>
-                          <p className="text-sm text-yellow-600 dark:text-yellow-400">{lesson.objective}</p>
-                        </div>
-                      </div>
-                      <Separator />
-                      <div className="prose dark:prose-invert max-w-none">
-                        {lesson.content ? (
-                          <MDXContent content={lesson.content} />
-                        ) : (
-                          <div className="text-center p-8 bg-yellow-50 dark:bg-yellow-950/30 border-2 border-dashed border-yellow-300 dark:border-yellow-700 rounded-lg">
-                            <p className="text-lg text-yellow-700 dark:text-yellow-300">Content Coming in Milestone 2</p>
-                            <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
-                              Lesson content for &ldquo;{lesson.title}&rdquo; will be added in the next milestone
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      {lesson.practicalTakeaway && (
-                        <>
-                          <Separator />
-                          <div className="p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
-                            <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">💡 Practical Takeaway:</p>
-                            <p className="text-sm text-yellow-600 dark:text-yellow-400">{lesson.practicalTakeaway}</p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Interactive Element - Only show on last lesson */}
-                    {isLastLesson && (
-                      <>
-                        <Separator />
-                        {(quizData || resolvedParams.module === 'random-number-generator-practical' || resolvedParams.module === 'upgradable-contract-practical') ? (
-                          <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
-                        ) : (
-                          <Card>
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2">
-                                <Trophy className="size-5" />
-                                Interactive Element
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="text-center p-8">
-                              <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg p-12 border-2 border-dashed border-yellow-300 dark:border-yellow-700 space-y-4">
-                                <p className="text-lg text-yellow-700 dark:text-yellow-300">Interactive Content TBA</p>
-                                <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                                  Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
-                                </p>
-                                <Button disabled className="mt-4">
-                                  Complete Interactive Element
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </>
-                    )}
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
-          </CardContent>
-        </Card>
+        <LessonTabsWithNavigation
+          lessonContents={lessonContents}
+          quizData={quizData}
+          missionData={missionData}
+          moduleSlug={resolvedParams.module}
+          islandTheme={{
+            badge: "🏰 Gilded Bastion",
+            bgColor: "bg-yellow-500/20",
+            borderColor: "border-yellow-200 dark:border-yellow-800",
+            textColor: "text-yellow-700 dark:text-yellow-300",
+            textColorSecondary: "text-yellow-600 dark:text-yellow-400"
+          }}
+          interactiveTitle="Interactive Element"
+        />
 
         <Separator />
 
