@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import MDXContent from "@/components/mdx-content";
 import { InteractiveElement, isTransactionSubmissionModule } from "@/components/interactive-elements";
+import { QuizMeta, MissionMeta } from "@/lib/mdx";
 
 interface LessonContent {
   slug: string;
@@ -19,8 +20,8 @@ interface LessonContent {
 
 interface LessonTabsWithNavigationProps {
   lessonContents: LessonContent[];
-  quizData: any;
-  missionData: any;
+  quizData: QuizMeta | null;
+  missionData: MissionMeta | null;
   moduleSlug: string;
   islandTheme: {
     badge: string;
@@ -30,7 +31,6 @@ interface LessonTabsWithNavigationProps {
     textColorSecondary: string;
   };
   interactiveTitle?: string;
-  showInteractiveInTabs?: boolean; // Whether to show interactive element in last tab
   beforeInteractive?: React.ReactNode; // Optional content to show before interactive element (e.g. Token Factory)
 }
 
@@ -41,7 +41,6 @@ export function LessonTabsWithNavigation({
   moduleSlug,
   islandTheme,
   interactiveTitle = "Interactive Element",
-  showInteractiveInTabs = true,
   beforeInteractive
 }: LessonTabsWithNavigationProps) {
   const [activeTab, setActiveTab] = useState(lessonContents[0]?.slug || "");
