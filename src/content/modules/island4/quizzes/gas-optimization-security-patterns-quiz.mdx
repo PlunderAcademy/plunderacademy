@@ -3,11 +3,177 @@ id: gas-optimization-security-patterns-quiz
 slug: gas-optimization-security-patterns-quiz
 module: gas-optimization-security-patterns
 title: "Gas Optimization & Security Patterns - Quiz"
-description: "CONTENT TO BE WRITTEN"
-totalQuestions: 10
+description: "Advanced gas optimizations (packing, calldata, unchecked), security patterns (CEI, reentrancy, access), and trade-offs."
+totalQuestions: 12
 passingScore: 80
 timeLimit: 15
 ---
 
-# CONTENT TO BE WRITTEN
+### Question 1
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.10 Advanced Gas Optimization
+
+Which change most directly reduces calldata copy costs?
+
+**Options:**
+- A) Switch function params from `memory` to `calldata` where possible
+- B) Use `public` instead of `external`
+- C) Emit fewer events
+- D) Replace `uint256` with `uint128` everywhere
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.10 Advanced Gas Optimization
+
+When is `unchecked { ... }` safe for arithmetic?
+
+**Options:**
+- A) Always; Solidity 0.8+ reverts on overflow anyway
+- B) When you proved inputs can’t overflow and saving gas is valuable
+- C) Only for division operations
+- D) Only for multiplication
+---
+
+### Question 3
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 4.10 Advanced Gas Optimization
+
+Which can reduce storage writes or reads?
+
+**Options:**
+- A) Pack tightly into a single storage slot (e.g., multiple `uint128`)
+- B) Cache storage reads in local variables
+- C) Prefer mappings over arrays in all cases
+- D) Emit events instead of storing on-chain when reads aren’t needed
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.11 Security Audit Prep
+
+Which pattern primarily prevents reentrancy in value‑moving functions?
+
+**Options:**
+- A) Use only view functions
+- B) Checks → Effects → Interactions and `nonReentrant`
+- C) Reuse old OpenZeppelin versions
+- D) Avoid events in critical paths
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.10 Advanced Gas Optimization
+
+How does event indexing affect gas?
+
+**Options:**
+- A) More indexed topics always cheaper
+- B) Each indexed topic increases cost; index only filterable fields
+- C) Indexing doesn’t change cost
+- D) Index all numeric fields for analytics
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.11 Security Audit Prep
+
+What’s a safe approach for external token interactions?
+
+**Options:**
+- A) Call `transfer` and ignore return value
+- B) Use `SafeERC20` wrappers and validate success
+- C) Assume all tokens conform fully to ERC‑20
+- D) Perform low‑level `call` without checks
+---
+
+### Question 7
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.10 Advanced Gas Optimization
+
+Why prefer `external` over `public` for functions not called internally?
+
+**Options:**
+- A) `external` compiles to smaller bytecode and uses calldata directly
+- B) `public` is deprecated
+- C) `external` disables reverts
+- D) `public` breaks tooling
+---
+
+### Question 8
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 4.11 Security Audit Prep
+
+Which are good access control practices?
+
+**Options:**
+- A) Use `Ownable` or `AccessControl` to gate sensitive functions
+- B) Hardcode privileged addresses in code
+- C) Emit events on role changes or ownership transfers
+- D) Allow anyone to call upgrade functions during testing
+---
+
+### Question 9
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.10 Advanced Gas Optimization
+
+What can reduce SSTORE gas when toggling boolean flags?
+
+**Options:**
+- A) Use `bool` per flag in separate slots
+- B) Pack flags into a `uint256` bitmask
+- C) Write the same value twice to warm the slot
+- D) Store flags in events only
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.11 Security Audit Prep
+
+Which statement is correct about audit preparation?
+
+**Options:**
+- A) Remove tests to reduce code size
+- B) Centralize invariants and add assertions; document assumptions
+- C) Avoid events to reduce surface area
+- D) Disable reverts to simplify execution paths
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.10 Advanced Gas Optimization
+
+How can you avoid unnecessary zero‑to‑nonzero SSTORE costs?
+
+**Options:**
+- A) Write zero first, then write the target value
+- B) Initialize variables lazily only when needed
+- C) Always pre‑initialize all mappings
+- D) Prefer arrays over mappings
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.11 Security Audit Prep
+
+Which logging helps post‑mortems for incidents?
+
+**Options:**
+- A) Only `Paused()`/`Unpaused()` events
+- B) Emit detailed events on configuration changes and critical actions
+- C) No events—store in storage only
+- D) Index all numerical values to reduce data size
+---
 

@@ -2,12 +2,215 @@
 id: contract-interactions-error-handling-quiz
 slug: contract-interactions-error-handling-quiz
 module: contract-interactions-error-handling
-title: "Contract Interactions & Error Handling - Quiz"
-description: "CONTENT TO BE WRITTEN"
-totalQuestions: 10
+title: "Module 5: Contract Interactions & Error Handling - Interactive Quiz"
+description: "Write to contracts with wagmi, monitor transactions, handle errors, and listen to events."
+totalQuestions: 12
 passingScore: 80
-timeLimit: 15
+timeLimit: 16
 ---
 
-# CONTENT TO BE WRITTEN
+### Question 1
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.4 Writing to Contracts and Transaction Management
 
+Which wagmi hook is used to call state‑changing contract functions?
+
+**Options:**
+- A) `useReadContract`
+- B) `useWaitForTransactionReceipt`
+- C) `useWriteContract`
+- D) `useWatchContractEvent`
+
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.4 Writing to Contracts and Transaction Management
+
+What does `useWaitForTransactionReceipt` help you do?
+
+**Options:**
+- A) Cache view function results between renders
+- B) Track on‑chain confirmation status for a submitted transaction hash
+- C) Estimate gas for a pending write call automatically
+- D) Subscribe to contract events in real time
+
+---
+
+### Question 3
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.4 Writing to Contracts and Transaction Management
+
+Which is the best UX pattern for pending states during writes?
+
+**Options:**
+- A) Allow multiple clicks and deduplicate on the backend
+- B) Hide the button to prevent interaction
+- C) Keep the button active but show a spinner only after success
+- D) Disable the action while pending and show explicit “signature pending” and “confirming” states
+
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.4 Writing to Contracts and Transaction Management
+
+Why estimate gas before sending a write transaction?
+
+**Options:**
+- A) To reduce bundle size of the app
+- B) To bypass user signature for small transactions
+- C) To surface expected costs and reduce the chance of immediate reverts
+- D) To guarantee inclusion in the next block
+
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.4 Writing to Contracts and Transaction Management
+
+What should the UI ideally do right after a write is submitted and a tx hash is available?
+
+**Options:**
+- A) Show the transaction hash immediately and link to a block explorer
+- B) Wait silently until the receipt arrives, then show everything
+- C) Invalidate all queries and refetch repeatedly every 200ms
+- D) Ask the user to re‑submit the transaction for redundancy
+
+---
+
+### Question 6
+**Type:** True/False Statements
+**Points:** 8
+**Lesson:** 5.5 Error Handling and Event Listening
+
+Classify each statement as True or False.
+
+**Interactive Data:**
+```json
+{
+  "statements": [
+    {"id": "s1", "text": "Always show raw error strings directly to users."},
+    {"id": "s2", "text": "Map common errors (rejected, insufficient funds, reverted) to friendly messages."},
+    {"id": "s3", "text": "Event logs can fully replace waiting for a transaction receipt."},
+    {"id": "s4", "text": "Keep event handlers minimal; schedule heavier work outside the handler."}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT for backend validation:
+{"type":"true-false-statements","userResponse":{"classifications":[{"id":"s1","answer":false},{"id":"s2","answer":true},{"id":"s3","answer":false},{"id":"s4","answer":true}]}}
+CORRECT CLASSIFICATIONS:
+s1: false
+s2: true
+s3: false
+s4: true
+-->
+
+---
+
+### Question 7
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.5 Error Handling and Event Listening
+
+Which hook subscribes to on‑chain events so the UI can update in real time?
+
+**Options:**
+- A) `useAccount`
+- B) `useWaitForTransactionReceipt`
+- C) `useReadContract`
+- D) `useWatchContractEvent`
+
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.5 Error Handling and Event Listening
+
+Which approach is best for communicating revert reasons to users?
+
+**Options:**
+- A) Display the raw stack trace for transparency
+- B) Map known errors to friendly copy and suggest next actions
+- C) Hide errors to avoid alarming users
+- D) Reload the page to clear errors
+
+---
+
+### Question 9
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.4 Writing to Contracts and Transaction Management
+
+Why separate “signature pending” from “confirming on‑chain” states?
+
+**Options:**
+- A) To reduce the number of React renders
+- B) To ensure the wallet signs twice for safety
+- C) To set accurate user expectations at each distinct step of the flow
+- D) To skip displaying the transaction hash
+
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.4 Writing to Contracts and Transaction Management
+
+Where and when should you display a transaction hash in the UI?
+
+**Options:**
+- A) As soon as it’s returned from the write call, with an explorer link
+- B) Only after at least 12 confirmations
+- C) Never; hashes are internal details
+- D) Only if the transaction fails
+
+---
+
+### Question 11
+**Type:** Drag & Drop Puzzle
+**Points:** 8
+**Lesson:** 5.4 Writing to Contracts and Transaction Management
+
+Arrange the write flow steps in the correct order.
+
+**Interactive Data:**
+```json
+{
+  "codeBlocks": [
+    {"id": "b1", "content": "Call writeContract({ address, abi, functionName, args })"},
+    {"id": "b2", "content": "Receive transaction hash (show to user)"},
+    {"id": "b3", "content": "Wait for receipt using useWaitForTransactionReceipt({ hash })"},
+    {"id": "b4", "content": "Display success or error to finalize the flow"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT for backend validation:
+{"type":"drag-drop-puzzle","userResponse":{"sequence":["b1","b2","b3","b4"]}}
+CORRECT SEQUENCE: ["b1","b2","b3","b4"]
+-->
+
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.5 Error Handling and Event Listening
+
+What’s a good guideline for event handler design when using `useWatchContractEvent`?
+
+**Options:**
+- A) Do heavy computations inside the handler for immediate accuracy
+- B) Trigger multiple writes directly from the event handler
+- C) Keep handlers fast and minimal; batch or schedule heavier work elsewhere
+- D) Ignore events and rely solely on polling

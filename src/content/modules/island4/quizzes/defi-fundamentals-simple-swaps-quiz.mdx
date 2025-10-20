@@ -3,11 +3,205 @@ id: defi-fundamentals-simple-swaps-quiz
 slug: defi-fundamentals-simple-swaps-quiz
 module: defi-fundamentals-simple-swaps
 title: "DeFi Fundamentals & Simple Swaps - Quiz"
-description: "CONTENT TO BE WRITTEN"
-totalQuestions: 10
+description: "Constant product AMMs, fees (bps), slippage controls, SafeERC20, CEI, deadlines, and swap observability."
+totalQuestions: 12
 passingScore: 80
-timeLimit: 15
+timeLimit: 18
 ---
 
-# CONTENT TO BE WRITTEN
+### Question 1
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.1 Token Economics and Liquidity Concepts
+
+Which statement best describes constant product AMMs (Uniswap v2 style)?
+
+**Options:**
+- A) Price changes linearly with trade size
+- B) The sum of reserves remains constant during swaps
+- C) The product of reserves stays approximately constant net of fees (x·y≈k)
+- D) Fees are deducted from the output after computing the swap
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.1 Token Economics and Liquidity Concepts
+
+What does “30 bps” (basis points) typically mean for a swap fee?
+
+**Options:**
+- A) 3.00% of the input amount
+- B) 0.30% of the input amount (applied before computing output)
+- C) 0.003% of the input amount
+- D) A fee applied only to the output amount after the swap
+---
+
+### Question 3
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 4.1 Token Economics and Liquidity Concepts
+
+Which are true about slippage protection and deadlines?
+
+**Options:**
+- A) `minOut` causes the transaction to revert if actual output is too low
+- B) `minOut` increases the output when price moves unfavorably
+- C) Deadlines automatically extend during network congestion
+- D) A deadline check should revert when `block.timestamp` exceeds the provided value
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.2 Simple Swap Mechanics and Security
+
+Which order reflects the CEI discipline for value‑moving functions?
+
+**Options:**
+- A) Interactions → Effects → Checks
+- B) Checks → Interactions → Effects
+- C) Effects → Checks → Interactions
+- D) Checks → Effects → Interactions
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.2 Simple Swap Mechanics and Security
+
+Why use OpenZeppelin’s `SafeERC20` in swap routers?
+
+**Options:**
+- A) It handles non‑standard ERC‑20 return values and reverts on failure
+- B) It allows transfers without prior approvals
+- C) It automatically refunds gas on token transfers
+- D) It disables revert conditions to maximize throughput
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.2 Simple Swap Mechanics and Security
+
+What is a good observability practice for swaps?
+
+**Options:**
+- A) Emit multiple small events per swap to minimize gas
+- B) Omit events—state queries are sufficient for analytics
+- C) Emit a single `Swapped` event with indexed trader and token addresses and numeric amounts
+- D) Index all numeric values to make logs smaller
+---
+
+### Question 7
+**Type:** Timeline Builder
+**Points:** 8
+**Lesson:** 4.2 Simple Swap Mechanics and Security
+
+Arrange the swap execution steps in the correct order.
+
+**Interactive Data:**
+```json
+{
+  "events": [
+    {"id": "evt-1", "text": "Read reserves from pair"},
+    {"id": "evt-2", "text": "Orient reserves based on tokenIn/token0"},
+    {"id": "evt-3", "text": "Compute amountOut with feeBps"},
+    {"id": "evt-4", "text": "Check minOut and (optional) deadline"},
+    {"id": "evt-5", "text": "Transfer tokenIn to pair (SafeERC20)"},
+    {"id": "evt-6", "text": "Call pair.swap(...) to send tokenOut"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT:
+{"type":"timeline-builder","userResponse":{"sequence":["evt-1","evt-2","evt-3","evt-4","evt-5","evt-6"]}}
+-->
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.1 Token Economics and Liquidity Concepts
+
+How should differing token decimals be handled when computing quotes?
+
+**Options:**
+- A) Assume all ERC‑20 tokens use 18 decimals
+- B) Only UIs need normalization; on‑chain math can ignore decimals
+- C) Chainlink prices always use 18 decimals, so normalization is unnecessary
+- D) Normalize values to a consistent internal scale before arithmetic
+---
+
+### Question 9
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 4.1 Token Economics and Liquidity Concepts
+
+Which statements are correct about constant product AMMs?
+
+**Options:**
+- A) Price impact grows non‑linearly with trade size
+- B) Using stale reserves is safe for batch swaps
+- C) Fees are taken from the input before computing output
+- D) Outputs can assume `tokenIn` is always `token0`
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.2 Simple Swap Mechanics and Security
+
+What is the purpose of a `deadline` parameter in swaps?
+
+**Options:**
+- A) Informational only; it doesn’t affect execution
+- B) Force a revert if the transaction executes after the specified time
+- C) Measure freshness in block numbers only
+- D) It harms composability and should be avoided
+---
+
+### Question 11
+**Type:** Concept Matching
+**Points:** 8
+**Lesson:** 4.1 Token Economics and Liquidity Concepts
+
+Match each concept to its description.
+
+**Interactive Data:**
+```json
+{
+  "concepts": [
+    {"id": "c1", "text": "constant product"},
+    {"id": "c2", "text": "minOut"},
+    {"id": "c3", "text": "fee (bps)"}
+  ],
+  "definitions": [
+    {"id": "d1", "text": "x·y=k pricing; impact grows with trade size"},
+    {"id": "d2", "text": "Caller’s minimum acceptable output to cap slippage"},
+    {"id": "d3", "text": "Per‑trade fee in parts per 10,000"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT:
+{"type":"concept-matching","userResponse":{"pairs":[{"conceptId":"c1","definitionId":"d1"},{"conceptId":"c2","definitionId":"d2"},{"conceptId":"c3","definitionId":"d3"}]}}
+-->
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.2 Simple Swap Mechanics and Security
+
+How do you orient input/output reserves when computing `amountOut`?
+
+**Options:**
+- A) Compare `tokenIn` to `pair.token0()`; map input/output reserves accordingly
+- B) Always treat `r0` as the input reserve
+- C) Orientation doesn’t matter; the math is symmetric
+- D) `token0` can change post‑deployment, so orientation is dynamic
+---
 

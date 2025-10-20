@@ -2,12 +2,228 @@
 id: advanced-solidity-foundations-quiz
 slug: advanced-solidity-foundations-quiz
 module: advanced-solidity-foundations
-title: "Advanced Solidity Foundations - Quiz"
-description: "CONTENT TO BE WRITTEN"
-totalQuestions: 10
+title: "Module 1: Advanced Solidity Foundations – Quiz"
+description: "Interfaces vs abstract contracts, events & libraries, inheritance & overrides, OpenZeppelin ecosystem, and contract interaction patterns."
+totalQuestions: 14
 passingScore: 80
-timeLimit: 15
+timeLimit: 18
 ---
 
-# CONTENT TO BE WRITTEN
+### Question 1
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1.2 Interface Design and Implementation
+
+Which is true about Solidity interfaces?
+
+**Options:**
+- A) Interfaces can only declare functions and cannot contain implementation
+- B) Interfaces may include function bodies for convenience
+- C) Interfaces can include state variables with initial values
+- D) Interfaces cannot inherit from other interfaces
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1.1 Inheritance Patterns and Abstract Contracts
+
+Which keyword set is required to override a function in a derived contract?
+
+**Options:**
+- A) `override` on base, `virtual` on derived
+- B) `public` and `virtual`
+- C) `internal` and `override`
+- D) `virtual` on base, `override` on derived
+---
+
+### Question 3
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 2.1.3 Events and Libraries: Clean APIs and Cheaper State
+
+Which statements about libraries are true?
+
+**Options:**
+- A) Libraries can define internal functions to be inlined by the compiler
+- B) Libraries can maintain mutable state variables like contracts
+- C) `using LibraryName for Type;` attaches library functions to the type
+- D) Libraries cannot be deployed; they are always linked inline
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1.3 Events and Libraries: Clean APIs and Cheaper State
+
+Why would you `indexed` an event parameter?
+
+**Options:**
+- A) To save gas by storing less data on-chain
+- B) To enable efficient filtering by that parameter in event logs
+- C) To prevent the parameter from appearing in logs
+- D) To make the event private to the contract
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1.2 Interface Design and Implementation
+
+What is a common pattern for external interaction boundaries?
+
+**Options:**
+- A) Avoid interfaces; call by raw `address.call`
+- B) Expose all functions as `public` for reuse
+- C) Prefer `external` for user-facing calls and keep internal helpers `internal`
+- D) Use only `private` functions to reduce attack surface
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1.4 Contract-to-Contract Interactions (Safely!)
+
+Which statement about `fallback` and `receive` is correct?
+
+**Options:**
+- A) `receive` is called for plain ETH transfers; `fallback` handles unknown function selectors
+- B) Both are called simultaneously on any transfer
+- C) `fallback` is only for delegatecalls
+- D) `receive` only runs for function calls with data
+---
+
+### Question 7
+**Type:** Concept Matching
+**Points:** 8
+**Lesson:** 2.1.1 Inheritance Patterns and Abstract Contracts
+
+Match the construct to its description.
+
+**Interactive Data:**
+```json
+{
+  "concepts": [
+    {"id": "c1", "text": "abstract"},
+    {"id": "c2", "text": "interface"},
+    {"id": "c3", "text": "library"}
+  ],
+  "definitions": [
+    {"id": "d1", "text": "No implementation required; cannot include state; declare external functions only"},
+    {"id": "d2", "text": "May omit some implementations; used as a base to share signatures"},
+    {"id": "d3", "text": "Collection of reusable functions; can be attached via 'using for'"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT:
+{"type":"concept-matching","userResponse":{"pairs":[{"conceptId":"c2","definitionId":"d1"},{"conceptId":"c1","definitionId":"d2"},{"conceptId":"c3","definitionId":"d3"}]}}
+-->
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1.1 Inheritance Patterns and Abstract Contracts
+
+Which linearization rule applies when multiple base contracts define the same function signature?
+
+**Options:**
+- A) The earliest base in the list always wins
+- B) Solidity randomly chooses one at compile time
+- C) The most distant base always wins
+- D) C3 linearization: the most derived override in the inheritance graph wins, using right-to-left order
+---
+
+### Question 9
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 2.1.1 Inheritance Patterns and Abstract Contracts
+
+Which practices help avoid override ambiguity?
+
+**Options:**
+- A) Mark base functions `virtual` intentionally
+- B) Use `override(Base1, Base2)` in derived contracts
+- C) Avoid multiple inheritance entirely in all cases
+- D) Keep function signatures consistent across bases
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1.5 OpenZeppelin Ecosystem Deep Dive
+
+Which OpenZeppelin extension adds snapshotting capabilities to ERC20 tokens?
+
+**Options:**
+- A) `ERC20Snapshot`
+- B) `ERC20Permit`
+- C) `ERC20Votes`
+- D) `ERC20Pausable`
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1.5 OpenZeppelin Ecosystem Deep Dive
+
+Which is a safe practice when integrating OZ contracts?
+
+**Options:**
+- A) Modify OZ source files directly for faster customization
+- B) Use outdated OZ versions to save gas
+- C) Extend OZ contracts and override behavior in your own contract files
+- D) Copy-paste OZ code into your project to avoid imports
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1.4 Contract-to-Contract Interactions (Safely!)
+
+Which statement about `delegatecall` is accurate?
+
+**Options:**
+- A) Executes code in the context of the callee's storage
+- B) Executes code of the target in the caller's storage/context
+- C) Always forwards `msg.value`
+- D) Preserves the callee's storage and `msg.sender`
+---
+
+### Question 13
+**Type:** Word Jumble
+**Points:** 8
+**Lesson:** 2.1.3 Events and Libraries: Clean APIs and Cheaper State
+
+Unscramble this common Solidity concept:
+
+**Interactive Data:**
+```json
+{
+  "hint": "Attach reusable functions to a type with 'using for'",
+  "scrambled": "RBLYAIR"
+}
+```
+
+<!--
+API ANSWER FORMAT:
+{"type":"word-jumble","userResponse":{"word":"LIBRARY","timeSpent":42}}
+-->
+---
+
+### Question 14
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 2.1.3 Events and Libraries: Clean APIs and Cheaper State
+
+What does `using SafeMath for uint256;` do in older codebases (pre 0.8)?
+
+**Options:**
+- A) Automatically inlines gas refunds
+- B) Replaces all arithmetic with assembly
+- C) Disables arithmetic reverts
+- D) Adds methods like `.add()` to `uint256` with overflow checks
+---
 

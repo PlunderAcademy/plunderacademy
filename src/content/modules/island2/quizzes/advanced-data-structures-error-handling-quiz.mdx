@@ -2,12 +2,224 @@
 id: advanced-data-structures-error-handling-quiz
 slug: advanced-data-structures-error-handling-quiz
 module: advanced-data-structures-error-handling
-title: "Advanced Data Structures & Error Handling - Quiz"
-description: "CONTENT TO BE WRITTEN"
-totalQuestions: 10
+title: "Module 2: Advanced Data Structures & Error Handling – Quiz"
+description: "Mappings, structs, storage optimization, revert/try-catch patterns, custom errors, and security best practices."
+totalQuestions: 14
 passingScore: 80
-timeLimit: 15
+timeLimit: 18
 ---
 
-# CONTENT TO BE WRITTEN
+### Question 1
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1 Complex Mappings & Structs
+
+Which statement about Solidity mappings is correct?
+
+**Options:**
+- A) Mappings can be iterated directly with `for` loops
+- B) Mappings return a default value for missing keys
+- C) Mapping keys must be `string` only
+- D) Mapping values cannot be structs
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1 Complex Mappings & Structs
+
+What is a recommended pattern for storing user profiles comprised of many optional fields?
+
+**Options:**
+- A) Multiple parallel arrays for each field
+- B) A mapping from address to a packed struct
+- C) A nested mapping of field names to values
+- D) A fixed-size array of structs indexed by `uint`
+---
+
+### Question 3
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 2.1 Complex Mappings & Structs
+
+Select all true statements about nested mappings (e.g., `mapping(address => mapping(uint => bool))`):
+
+**Options:**
+- A) They are useful for per-user, per-id flags
+- B) They can be enumerated natively with `length`
+- C) They default to `false` for any key pair not explicitly set
+- D) They can be cleared by assigning `{}` directly
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.5 Storage Optimization
+
+Which practice most directly reduces storage costs for state variables?
+
+**Options:**
+- A) Using `memory` instead of `calldata` in external functions
+- B) Packing smaller types into the same storage slot
+- C) Declaring variables without explicit visibility
+- D) Using `unchecked` for arithmetic in all cases
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.5 Storage Optimization
+
+When is it most beneficial to use `calldata` over `memory`?
+
+**Options:**
+- A) For internal functions returning arrays
+- B) For external functions receiving read-only arrays
+- C) For state variables that are frequently updated
+- D) For local variables inside `pure` functions
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.3 Revert Patterns
+
+Which is the best guidance for using `assert` vs `require` vs custom errors?
+
+**Options:**
+- A) Use `assert` for input validation; `require` for invariants
+- B) Use `require` for input checks; `assert` for internal invariants; prefer custom errors for gas-efficient messages
+- C) Use only `revert("msg")` everywhere for simplicity
+- D) Use events instead of reverts to indicate failure
+---
+
+### Question 7
+**Type:** Timeline Builder
+**Points:** 8
+**Lesson:** 2.3 Revert Patterns
+
+Arrange the execution flow when an external call reverts and the caller uses try/catch.
+
+**Interactive Data:**
+```json
+{
+  "events": [
+    {"id": "evt-1", "text": "External call executes"},
+    {"id": "evt-2", "text": "Revert is thrown"},
+    {"id": "evt-3", "text": "State changes are rolled back"},
+    {"id": "evt-4", "text": "Catch handler runs (if present)"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT:
+{"type":"timeline-builder","userResponse":{"sequence":["evt-1","evt-2","evt-3","evt-4"]}}
+-->
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.3 Revert Patterns
+
+Which operations are supported inside Solidity `try/catch` blocks?
+
+**Options:**
+- A) Calls to internal functions only
+- B) External function calls and contract creation
+- C) Any call including view/pure internal functions
+- D) Only low-level `call` with bytes data
+---
+
+### Question 9
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 2.2 Custom Errors & Security
+
+Which are advantages or properties of Solidity custom errors?
+
+**Options:**
+- A) They reduce gas by avoiding long revert strings
+- B) They can carry typed parameters for context
+- C) They are emitted as events for off-chain indexing
+- D) They can be defined in libraries and imported
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.4 Security Patterns
+
+Which is the safest pattern when updating state and making external calls?
+
+**Options:**
+- A) Checks-Effects-Interactions pattern
+- B) Interactions-Checks-Effects pattern
+- C) Effects-Interactions-Checks pattern
+- D) Interactions only; checks are unnecessary if using try/catch
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1 Complex Mappings & Structs
+
+What is returned when reading a mapping at a key that has not been written?
+
+**Options:**
+- A) The zero value for the mapped type
+- B) A runtime error
+- C) A special sentinel value `0xFF...FF`
+- D) The previous key’s value
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.4 Security Patterns
+
+Which statement about `unchecked` blocks is correct?
+
+**Options:**
+- A) They always reduce gas and should be used everywhere
+- B) They skip overflow/underflow checks, so use only when invariants guarantee safety
+- C) They disable reverts entirely inside the block
+- D) They enforce panic on any arithmetic operation
+---
+
+### Question 13
+**Type:** Word Jumble
+**Points:** 8
+**Lesson:** 2.4 Security Patterns
+
+Unscramble this common vulnerability related to external calls:
+
+**Interactive Data:**
+```json
+{
+  "hint": "External calls can re-enter before state updates if not guarded",
+  "scrambled": "RNYEACRTNE"
+}
+```
+
+<!--
+API ANSWER FORMAT:
+{"type":"word-jumble","userResponse":{"word":"REENTRANCY","timeSpent":45}}
+-->
+---
+
+### Question 14
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 2.3 Revert Patterns
+
+Which statement about `assert` is most accurate?
+
+**Options:**
+- A) It’s preferred for user input validation
+- B) It should be used to test internal invariants and triggers Panic on failure
+- C) It emits an event and continues execution
+- D) It is deprecated in favor of `require`
+---
 

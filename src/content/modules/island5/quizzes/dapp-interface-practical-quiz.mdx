@@ -2,12 +2,222 @@
 id: dapp-interface-practical-quiz
 slug: dapp-interface-practical-quiz
 module: dapp-interface-practical
-title: "DApp Interface Practical - Quiz"
-description: "CONTENT TO BE WRITTEN"
-totalQuestions: 10
+title: "Module 5: dApp Interface Practical - Interactive Quiz"
+description: "Plan, scaffold, and build a complete dApp UI: setup, core components, reads, writes, and polish."
+totalQuestions: 12
 passingScore: 80
-timeLimit: 15
+timeLimit: 16
 ---
 
-# CONTENT TO BE WRITTEN
+### Question 1
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.6 Introduction to dApp Interface Development
 
+Which statement best describes the Web3 dApp mental model?
+
+**Options:**
+- A) Server issues a session token and the blockchain is optional
+- B) Client talks only to a REST backend for writes; wallets are not used
+- C) Client ↔ Wallet ↔ Blockchain; wallet provides address/chain and signs actions
+- D) Store private keys in localStorage to enable auto‑login
+
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.7 Project Setup & Configuration
+
+Which environment variable name ensures availability in client‑side code?
+
+**Options:**
+- A) WALLETCONNECT_PROJECT_ID
+- B) NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+- C) PUBLIC_WALLETCONNECT_ID
+- D) NEXT_SERVER_WC_ID
+
+---
+
+### Question 3
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.8 Building Core Components
+
+What should `NetworkGuard` do when on an unsupported network?
+
+**Options:**
+- A) Block protected content and show a clear switch prompt (one‑click switch)
+- B) Silently hide the UI without message
+- C) Disconnect the wallet automatically without user input
+- D) Retry reads indefinitely until the network changes
+
+---
+
+### Question 4
+**Type:** Timeline Builder
+**Points:** 8
+**Lesson:** 5.6 Introduction to dApp Interface Development
+
+Arrange the dApp build sequence in the correct order.
+
+**Interactive Data:**
+```json
+{
+  "events": [
+    {"id": "evt-setup", "text": "Scaffold Next.js project and configure wagmi/RainbowKit"},
+    {"id": "evt-core", "text": "Build core layout with header and NetworkGuard"},
+    {"id": "evt-read", "text": "Read token/NFT data with wagmi"},
+    {"id": "evt-write", "text": "Implement transfers and manage tx lifecycle"},
+    {"id": "evt-polish", "text": "Polish UX & test locally"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT for backend validation:
+{"type":"timeline-builder","userResponse":{"sequence":["evt-setup","evt-core","evt-read","evt-write","evt-polish"]}}
+CORRECT ANSWER SEQUENCE: ["evt-setup","evt-core","evt-read","evt-write","evt-polish"]
+-->
+
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.7 Project Setup & Configuration
+
+Why set `ssr: true` in the wagmi configuration for the App Router?
+
+**Options:**
+- A) To disable client hydration entirely
+- B) To force Node‑only RPC requests
+- C) To skip React Server Components in production
+- D) To ensure SSR compatibility and avoid hydration mismatches
+
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.8 Building Core Components
+
+Where is the best place to render the RainbowKit `ConnectButton`?
+
+**Options:**
+- A) In a persistent header so the connection UI is always accessible
+- B) Inside every form that performs writes
+- C) Only on the transfer page to save space
+- D) Hidden by default, shown only after connection
+
+---
+
+### Question 7
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.9 Reading Contract Data
+
+Why use `query.enabled` with `useReadContract`?
+
+**Options:**
+- A) It reduces bundle size
+- B) It shares cache across unrelated components automatically
+- C) It avoids running reads before prerequisites (e.g., address/connection) are ready
+- D) It serializes `bigint` values for display
+
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.9 Reading Contract Data
+
+What does `formatUnits` (viem) help you do?
+
+**Options:**
+- A) Format addresses to ENS names automatically
+- B) Convert bigint token amounts to human‑readable decimals using token `decimals`
+- C) Validate ABI structure before reads
+- D) Trigger auto‑refresh on new blocks
+
+---
+
+### Question 9
+**Type:** Concept Matching
+**Points:** 8
+**Lesson:** 5.8 Building Core Components
+
+Match components to their primary responsibilities.
+
+**Interactive Data:**
+```json
+{
+  "concepts": [
+    {"id": "networkguard", "text": "NetworkGuard", "category": "components"},
+    {"id": "transferform", "text": "TransferForm", "category": "components"},
+    {"id": "tokenbalance", "text": "TokenBalance", "category": "components"},
+    {"id": "nftgallery", "text": "NFTGallery", "category": "components"}
+  ],
+  "definitions": [
+    {"id": "def-ng", "text": "Detects wrong network and guides switching"},
+    {"id": "def-tf", "text": "Signs writes and tracks transaction lifecycle"},
+    {"id": "def-tb", "text": "Reads ERC20 balance and formats for display"},
+    {"id": "def-nft", "text": "Shows owned NFTs using tokenURI metadata"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT for backend validation:
+{"type":"concept-matching","userResponse":{"pairs":[{"conceptId":"networkguard","definitionId":"def-ng"},{"conceptId":"transferform","definitionId":"def-tf"},{"conceptId":"tokenbalance","definitionId":"def-tb"},{"conceptId":"nftgallery","definitionId":"def-nft"}]}}
+CORRECT PAIRS:
+networkguard -> def-ng
+transferform -> def-tf
+tokenbalance -> def-tb
+nftgallery -> def-nft
+-->
+
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.10 Writing to Contracts & Transaction Management
+
+When should you display a transaction hash to the user?
+
+**Options:**
+- A) Only after 12 confirmations
+- B) Never; hashes are internal details
+- C) Only when a transaction fails
+- D) Immediately after submission, with a link to the block explorer
+
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.10 Writing to Contracts & Transaction Management
+
+Why separate “awaiting signature” from “confirming on‑chain” states?
+
+**Options:**
+- A) To set accurate expectations for two distinct steps in the flow
+- B) To ensure the wallet signs twice for safety
+- C) To automatically increase gas price
+- D) Because wagmi requires both states in every flow
+
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.11 Polish & Local Testing
+
+Which set of changes best improves accessibility and robustness?
+
+**Options:**
+- A) Switch dev server port to 8080
+- B) Remove skeletons to reduce CPU usage
+- C) Add ARIA attributes, use skeletons for loading, and map raw errors to friendly messages
+- D) Minify CSS during development

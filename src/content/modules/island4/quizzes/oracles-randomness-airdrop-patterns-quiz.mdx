@@ -3,11 +3,188 @@ id: oracles-randomness-airdrop-patterns-quiz
 slug: oracles-randomness-airdrop-patterns-quiz
 module: oracles-randomness-airdrop-patterns
 title: "Oracles, Randomness & Airdrop Patterns - Quiz"
-description: "CONTENT TO BE WRITTEN"
-totalQuestions: 10
+description: "Oracle freshness and decimals, deviation guards, commit–reveal vs VRF, Merkle airdrops, and replay protection."
+totalQuestions: 12
 passingScore: 80
-timeLimit: 15
+timeLimit: 18
 ---
 
-# CONTENT TO BE WRITTEN
+### Question 1
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.3 Oracle Problem and Chainlink Integration
+
+Which local validation should be performed when reading a price feed?
+
+**Options:**
+- A) Only check that `answer != 0`
+- B) Normalize decimals and ensure `answer > 0` and `updatedAt` within `maxAge`
+- C) Skip staleness checks for gas savings
+- D) Assume 18‑decimals for all feeds
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.3 Oracle Problem and Chainlink Integration
+
+What is the typical purpose of a deviation guard (e.g., `maxDeviationBps`)?
+
+**Options:**
+- A) Automatically average prices from two feeds
+- B) Reject updates that move too far from the last accepted price
+- C) Force prices to increase monotonically
+- D) Convert prices to 1e18 units
+---
+
+### Question 3
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 4.3 Oracle Problem and Chainlink Integration
+
+Which are recommended when integrating oracles?
+
+**Options:**
+- A) Emit events when pausing due to deviation
+- B) Fail open when stale to preserve UX
+- C) Expose `maxAge` and feed addresses for observability
+- D) Auto‑switch to any available backup feed silently
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.4 Commit-Reveal Sequences and Verifiable Randomness
+
+Why is `blockhash` alone insufficient for randomness?
+
+**Options:**
+- A) It is too random and expensive
+- B) Validators can influence or withhold blocks
+- C) It is unavailable in Solidity
+- D) It reveals private keys
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.4 Commit-Reveal Sequences and Verifiable Randomness
+
+What does binding commitments to `msg.sender` and a salt achieve?
+
+**Options:**
+- A) Prevents modulo bias
+- B) Prevents commitment theft and cross‑round replay
+- C) Ensures single‑transaction UX
+- D) Removes need for reveal phase
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.4 Commit-Reveal Sequences and Verifiable Randomness
+
+Which comparison between commit–reveal and VRF is accurate?
+
+**Options:**
+- A) Commit–reveal requires an oracle subscription; VRF does not
+- B) Commit–reveal is two‑phase and permissionless; VRF is single‑phase with oracle proofs
+- C) Both provide on‑chain proofs of randomness
+- D) VRF is permissionless and commit–reveal needs a coordinator
+---
+
+### Question 7
+**Type:** True/False Statements
+**Points:** 8
+**Lesson:** 4.4 Commit-Reveal Sequences and Verifiable Randomness
+
+Classify each statement as true or false.
+
+**Interactive Data:**
+```json
+{
+  "statements": [
+    {"id":"s1","text":"Using blockhash alone is secure entropy for lotteries"},
+    {"id":"s2","text":"Salting commitments with msg.sender reduces commit theft"},
+    {"id":"s3","text":"VRF provides a verifiable proof on-chain"},
+    {"id":"s4","text":"Modulo bias can be ignored for small ranges"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT:
+{"type":"true-false-statements","userResponse":{"classifications":[{"id":"s1","answer":false},{"id":"s2","answer":true},{"id":"s3","answer":true},{"id":"s4","answer":false}]}}
+-->
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.5 Efficient Airdrop and Distribution Mechanisms
+
+Why prefer Merkle proofs for large public airdrops?
+
+**Options:**
+- A) Proofs are generated on-chain for each claimant
+- B) Gas cost is centralized to the deployer
+- C) Users prove inclusion with logarithmic‑size proofs; deployer stores only a root
+- D) It eliminates the need for events
+---
+
+### Question 9
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 4.5 Efficient Airdrop and Distribution Mechanisms
+
+Which are benefits of bitmap replay protection?
+
+**Options:**
+- A) Packs 256 claim flags per storage slot
+- B) Requires per‑address boolean mappings
+- C) Prevents duplicate claims by index
+- D) Eliminates the need for proofs
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.3 Oracle Problem and Chainlink Integration
+
+How should feed decimals be handled?
+
+**Options:**
+- A) Assume 8 decimals for all USD pairs and skip normalization
+- B) Immediately normalize to 1e18 or a consistent internal unit
+- C) Normalize only for UI display; on‑chain math can mix units
+- D) Convert to 1e6 to match USDC
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.5 Efficient Airdrop and Distribution Mechanisms
+
+What should airdrop manifests include to enable independent verification?
+
+**Options:**
+- A) Only the Merkle root; details are optional
+- B) Full recipient list, leaf schema, tree generator version, and root
+- C) Contract bytecode
+- D) Private keys used for generation
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.4 Commit-Reveal Sequences and Verifiable Randomness
+
+How do you eliminate modulo bias when mapping randomness to `0..n-1`?
+
+**Options:**
+- A) Use `rnd % n` directly; bias is negligible
+- B) Round to nearest multiple of `n`
+- C) Rejection sampling: discard values in the biased zone, rehash, and retry
+- D) Use block.timestamp as a tiebreaker
+---
 

@@ -220,9 +220,9 @@ export default async function JungleModulePage({ params }: JungleModulePageProps
                     </div>
                   </div>
                   <Separator />
-                  <div className="prose dark:prose-invert max-w-none">
+                  <div key={`lesson-${lesson.slug}`} className="prose dark:prose-invert max-w-none">
                     {lesson.content ? (
-                      <MDXContent content={lesson.content} />
+                      <MDXContent content={lesson.content} contentId={`lesson-${lesson.slug}`} />
                     ) : (
                       <div className="text-center p-8 bg-muted/30 border-2 border-dashed border-muted-foreground/20 rounded-lg">
                         <p className="text-lg text-muted-foreground">Content Coming Soon</p>

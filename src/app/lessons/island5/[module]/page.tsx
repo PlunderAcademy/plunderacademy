@@ -199,69 +199,77 @@ export default async function NeonModulePage({ params }: NeonModulePageProps) {
                   </TabsTrigger>
                 ))}
               </TabsList>
-              {lessonContents.map((lesson) => (
-                <TabsContent key={lesson.slug} value={lesson.slug} className="space-y-4">
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-xl font-semibold mb-2">{lesson.title}</h3>
-                      <div className="p-3 bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-200 dark:border-cyan-800 rounded-lg">
-                        <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">🎯 Learning Objective:</p>
-                        <p className="text-sm text-cyan-600 dark:text-cyan-400">{lesson.objective}</p>
-                      </div>
-                    </div>
-                    <Separator />
-                    <div className="prose dark:prose-invert max-w-none">
-                      {lesson.content ? (
-                        <MDXContent content={lesson.content} />
-                      ) : (
-                        <div className="text-center p-8 bg-cyan-50 dark:bg-cyan-950/30 border-2 border-dashed border-cyan-300 dark:border-cyan-700 rounded-lg">
-                          <p className="text-lg text-cyan-700 dark:text-cyan-300">Content Coming in Milestone 2</p>
-                          <p className="text-sm text-cyan-600 dark:text-cyan-400 mt-2">
-                            Lesson content for &ldquo;{lesson.title}&rdquo; will be added in the next milestone
-                          </p>
+              {lessonContents.map((lesson, index) => {
+                const isLastLesson = index === lessonContents.length - 1;
+                return (
+                  <TabsContent key={lesson.slug} value={lesson.slug} className="space-y-4">
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-xl font-semibold mb-2">{lesson.title}</h3>
+                        <div className="p-3 bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-200 dark:border-cyan-800 rounded-lg">
+                          <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">🎯 Learning Objective:</p>
+                          <p className="text-sm text-cyan-600 dark:text-cyan-400">{lesson.objective}</p>
                         </div>
+                      </div>
+                      <Separator />
+                      <div key={`lesson-${lesson.slug}`} className="prose dark:prose-invert max-w-none">
+                        {lesson.content ? (
+                          <MDXContent content={lesson.content} contentId={`lesson-${lesson.slug}`} />
+                        ) : (
+                          <div className="text-center p-8 bg-cyan-50 dark:bg-cyan-950/30 border-2 border-dashed border-cyan-300 dark:border-cyan-700 rounded-lg">
+                            <p className="text-lg text-cyan-700 dark:text-cyan-300">Content Coming in Milestone 2</p>
+                            <p className="text-sm text-cyan-600 dark:text-cyan-400 mt-2">
+                              Lesson content for &ldquo;{lesson.title}&rdquo; will be added in the next milestone
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      {lesson.practicalTakeaway && (
+                        <>
+                          <Separator />
+                          <div className="p-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
+                            <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">💡 Practical Takeaway:</p>
+                            <p className="text-sm text-cyan-600 dark:text-cyan-400">{lesson.practicalTakeaway}</p>
+                          </div>
+                        </>
                       )}
                     </div>
-                    {lesson.practicalTakeaway && (
+
+                    {/* Interactive Element - Only show on last lesson */}
+                    {isLastLesson && (
                       <>
                         <Separator />
-                        <div className="p-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
-                          <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">💡 Practical Takeaway:</p>
-                          <p className="text-sm text-cyan-600 dark:text-cyan-400">{lesson.practicalTakeaway}</p>
-                        </div>
+                        {quizData ? (
+                          <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
+                        ) : (
+                          <Card>
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                                <Trophy className="size-5" />
+                                Interactive Element
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="text-center p-8">
+                              <div className="bg-cyan-50 dark:bg-cyan-950/30 rounded-lg p-12 border-2 border-dashed border-cyan-300 dark:border-cyan-700 space-y-4">
+                                <p className="text-lg text-cyan-700 dark:text-cyan-300">Interactive Content TBA</p>
+                                <p className="text-sm text-cyan-600 dark:text-cyan-400">
+                                  Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+                                </p>
+                                <Button disabled className="mt-4">
+                                  Complete Interactive Element
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
                       </>
                     )}
-                  </div>
-                </TabsContent>
-              ))}
+                  </TabsContent>
+                );
+              })}
             </Tabs>
           </CardContent>
         </Card>
-
-        {/* Interactive Element Section */}
-        {quizData ? (
-          <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="size-5" />
-                Interactive Element
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center p-8">
-              <div className="bg-cyan-50 dark:bg-cyan-950/30 rounded-lg p-12 border-2 border-dashed border-cyan-300 dark:border-cyan-700 space-y-4">
-                <p className="text-lg text-cyan-700 dark:text-cyan-300">Interactive Content TBA</p>
-                <p className="text-sm text-cyan-600 dark:text-cyan-400">
-                  Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
-                </p>
-                <Button disabled className="mt-4">
-                  Complete Interactive Element
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <Separator />
 

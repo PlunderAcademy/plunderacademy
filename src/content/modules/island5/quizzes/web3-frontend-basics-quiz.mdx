@@ -2,12 +2,222 @@
 id: web3-frontend-basics-quiz
 slug: web3-frontend-basics-quiz
 module: web3-frontend-basics
-title: "Web3 Frontend Basics - Quiz"
-description: "CONTENT TO BE WRITTEN"
-totalQuestions: 10
+title: "Module 5: Web3 Frontend Basics - Interactive Quiz"
+description: "Wallet connection with RainbowKit, use of wagmi/viem for reads, and network management."
+totalQuestions: 12
 passingScore: 80
-timeLimit: 15
+timeLimit: 16
 ---
 
-# CONTENT TO BE WRITTEN
+### Question 1
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.1 Wallet Connection with RainbowKit
 
+What is the primary benefit of using RainbowKit’s `ConnectButton`?
+
+**Options:**
+- A) It compiles Solidity contracts in the browser
+- B) It provides a polished wallet connection UI with wallet picker, address, and chain display
+- C) It auto‑signs transactions without user approval
+- D) It stores user accounts server‑side for login
+
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.1 Wallet Connection with RainbowKit
+
+Which pattern best gates UI and data fetching behind connection state?
+
+**Options:**
+- A) Render all data and hide with CSS when disconnected
+- B) Poll the chain every second regardless of connection
+- C) Use `useAccount` to branch UI and call reads only when `isConnected` is true
+- D) Call write functions to test if a wallet is connected
+
+---
+
+### Question 3
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.1 Wallet Connection with RainbowKit
+
+When a user connects a wallet, what does the dApp primarily gain?
+
+**Options:**
+- A) Address and current chain information, not a backend session
+- B) An authenticated session token issued by the server
+- C) Unlimited signing permissions for the dApp
+- D) Full access to the user’s private keys
+
+---
+
+### Question 4
+**Type:** Timeline Builder
+**Points:** 8
+**Lesson:** 5.1 Wallet Connection with RainbowKit
+
+Arrange the wallet connection flow in the correct order.
+
+**Interactive Data:**
+```json
+{
+  "events": [
+    {"id": "evt-1", "text": "User clicks Connect Wallet"},
+    {"id": "evt-2", "text": "Wallet modal opens"},
+    {"id": "evt-3", "text": "User selects wallet and approves"},
+    {"id": "evt-4", "text": "dApp receives address and chain"},
+    {"id": "evt-5", "text": "UI fetches user-specific data"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT for backend validation:
+{"type":"timeline-builder","userResponse":{"sequence":["evt-1","evt-2","evt-3","evt-4","evt-5"]}}
+CORRECT ANSWER SEQUENCE: ["evt-1","evt-2","evt-3","evt-4","evt-5"]
+-->
+
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.2 Reading Contract Data with Wagmi and Viem
+
+Which hook is used to call view/pure contract functions in a React component?
+
+**Options:**
+- A) `useAccount`
+- B) `useSwitchChain`
+- C) `useWriteContract`
+- D) `useReadContract`
+
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.2 Reading Contract Data with Wagmi and Viem
+
+What does `formatUnits` from viem do?
+
+**Options:**
+- A) Converts bigint token amounts to human‑readable decimal strings
+- B) Fetches ERC20 decimals from the blockchain automatically
+- C) Serializes ABI files for network transport
+- D) Caches read results across all components
+
+---
+
+### Question 7
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.2 Reading Contract Data with Wagmi and Viem
+
+Why use `query.enabled` with `useReadContract`?
+
+**Options:**
+- A) It reduces the bundle size
+- B) It auto‑signs calls when set to false
+- C) It prevents calling before prerequisites (e.g., `isConnected`) to avoid errors
+- D) It sorts returned arrays automatically
+
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.2 Reading Contract Data with Wagmi and Viem
+
+What is an ABI in this context?
+
+**Options:**
+- A) A transaction gas estimator
+- B) An interface describing functions, events, and errors for encoding/decoding
+- C) A wallet connection protocol
+- D) On‑chain storage of contract source code
+
+---
+
+### Question 9
+**Type:** Concept Matching
+**Points:** 8
+**Lesson:** 5.3 Network Switching and Chain Management
+
+Match each network management concept to its definition.
+
+**Interactive Data:**
+```json
+{
+  "concepts": [
+    {"id": "chainid", "text": "useChainId", "category": "wagmi"},
+    {"id": "switch", "text": "useSwitchChain", "category": "wagmi"},
+    {"id": "supported", "text": "Supported chains", "category": "config"},
+    {"id": "guard", "text": "Network guard UI", "category": "ux"}
+  ],
+  "definitions": [
+    {"id": "def-chainid", "text": "Read the current connected chain ID"},
+    {"id": "def-switch", "text": "Trigger a wallet network switch"},
+    {"id": "def-supported", "text": "Allow‑list of networks your dApp operates on"},
+    {"id": "def-guard", "text": "Component that detects wrong network and guides switching"}
+  ]
+}
+```
+
+<!--
+API ANSWER FORMAT for backend validation:
+{"type":"concept-matching","userResponse":{"pairs":[{"conceptId":"chainid","definitionId":"def-chainid"},{"conceptId":"switch","definitionId":"def-switch"},{"conceptId":"supported","definitionId":"def-supported"},{"conceptId":"guard","definitionId":"def-guard"}]}}
+CORRECT PAIRS:
+chainid -> def-chainid
+switch  -> def-switch
+supported -> def-supported
+guard -> def-guard
+-->
+
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.3 Network Switching and Chain Management
+
+Best UX when a user is on an unsupported network:
+
+**Options:**
+- A) Fail silently and hide UI
+- B) Log an error in the console only
+- C) Allow any chain and handle errors later
+- D) Detect the mismatch and offer a one‑click switch to a supported chain
+
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.3 Network Switching and Chain Management
+
+Why restrict your app to a list of supported chains?
+
+**Options:**
+- A) To avoid misbehavior and guide users to intended networks
+- B) Because wallets can’t switch chains
+- C) To automatically reduce gas costs on all chains
+- D) To block WalletConnect entirely
+
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 5.3 Network Switching and Chain Management
+
+How should you implement feature gating by chain?
+
+**Options:**
+- A) Always allow features and rely on on‑chain errors
+- B) Detect the network but still call writes, then show toasts on failure
+- C) Check `chainId` to conditionally enable features and show a clear message when unavailable
+- D) Throw an exception to prevent the app from loading

@@ -77,7 +77,9 @@ export async function submitToAPI(payload: ApiSubmissionPayload): Promise<ApiRes
   console.log('Submitting with payload:', payload);
   
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_PLUNDER_ACADEMY_API}/api/v1/vouchers/submit`, {
+    const endpoint = `${process.env.NEXT_PUBLIC_PLUNDER_ACADEMY_API}/api/v1/vouchers/submit`;
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

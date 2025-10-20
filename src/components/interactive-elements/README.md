@@ -100,6 +100,17 @@ interactive-elements/
 - **Retry**: ❌ Single submission with quiz
 - **Data Format**: No correct answers exposed in source code (security)
 
+## Assessment Rules for Quizzes
+
+- Interactive usage cap: keep interactive questions ≤ 20% of each quiz; the rest must be traditional (Multiple Choice/Multiple Select).
+- Quiz size: choose 10–15 questions per quiz based on module content depth; right-size to adequately assess key learning outcomes (no fixed count).
+- Mode: render interactive elements in quizzes strictly with `mode="assessment"` and `showFeedback={false}` (handled by `TraditionalQuiz`).
+- Answer distribution (anti-pattern rules) for traditional items:
+  - Balance A/B/C/D roughly equally per quiz (±1 of uniform), max run length per letter ≤ 2, avoid patterns (AAA…, ABAB…, staircases). Use "All/None of the above" sparingly.
+- Multiple-select formatting: correct answers as uppercase letters, comma-separated, alphabetical (e.g., `"A,C,D"`).
+- Placement: vary interactive question positions within a quiz (not fixed to the same indices across modules).
+- Security: keep correct answers for interactive items only in HTML comments; never include them in the visible `Interactive Data` JSON.
+
 ### Component Props
 
 ```typescript

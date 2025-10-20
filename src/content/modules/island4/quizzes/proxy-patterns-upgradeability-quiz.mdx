@@ -3,11 +3,177 @@ id: proxy-patterns-upgradeability-quiz
 slug: proxy-patterns-upgradeability-quiz
 module: proxy-patterns-upgradeability
 title: "Proxy Patterns & Upgradeability - Quiz"
-description: "CONTENT TO BE WRITTEN"
-totalQuestions: 10
+description: "Proxy types, storage layout safety, UUPS vs Transparent, initializer patterns, and upgrade risks."
+totalQuestions: 12
 passingScore: 80
 timeLimit: 15
 ---
 
-# CONTENT TO BE WRITTEN
+### Question 1
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.6 Proxy Fundamentals
+
+Which statement best describes a proxy contract?
+
+**Options:**
+- A) It stores user balances while delegating ownership to an EOA
+- B) It forwards calls to an implementation using `delegatecall`, sharing storage
+- C) It copies code from the implementation at deploy time
+- D) It executes calls in the implementation’s storage context
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.6 Proxy Fundamentals
+
+What problem does the Transparent Proxy pattern address?
+
+**Options:**
+- A) Preventing admin from bricking upgrades by calling proxied functions
+- B) Ensuring constructor runs through the proxy
+- C) Allowing anyone to upgrade the implementation
+- D) Disabling `delegatecall` in production
+---
+
+### Question 3
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 4.7 Storage Safety
+
+Which practices reduce storage layout corruption risk?
+
+**Options:**
+- A) Reserve storage gaps in base contracts for future variables
+- B) Reorder state variables between versions for better packing
+- C) Avoid changing types/ordering of existing variables
+- D) Use inherited base contracts with documented gaps
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.6 Proxy Fundamentals
+
+In UUPS, who owns the upgrade logic?
+
+**Options:**
+- A) The proxy; all logic lives in a separate admin contract
+- B) The implementation contract exposes `upgradeTo` guarded by access control
+- C) The EOA deployer via a constructor flag
+- D) The chain’s precompile for upgrades
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.8 Initialization Patterns
+
+Why are constructors discouraged for upgradeable implementations?
+
+**Options:**
+- A) Constructors consume excessive gas
+- B) Proxies call constructors on each upgrade automatically
+- C) Constructors run on the implementation, not the proxy; use `initialize()` instead
+- D) They conflict with `delegatecall` and disable events
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.8 Initialization Patterns
+
+What protects `initialize()` from being called twice?
+
+**Options:**
+- A) Using `onlyOwner`
+- B) Using an `initializer` modifier that sets an initialized flag
+- C) Relying on constructor side effects
+- D) Emitting an event during init
+---
+
+### Question 7
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.7 Storage Safety
+
+What happens if you insert a new state variable in the middle of the storage layout?
+
+**Options:**
+- A) The compiler remaps slots safely
+- B) Existing data shifts automatically without risk
+- C) You can corrupt storage, breaking previously deployed state
+- D) Only new deployments are affected
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.6 Proxy Fundamentals
+
+Which is a key difference between Transparent and UUPS patterns?
+
+**Options:**
+- A) Transparent keeps upgrade logic in the proxy; UUPS keeps it in the implementation
+- B) UUPS prohibits access control; Transparent requires none
+- C) Transparent doesn’t use `delegatecall`; UUPS does
+- D) Both store logic in an external admin contract
+---
+
+### Question 9
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 4.9 Upgrade Risks and Governance
+
+Which governance controls are recommended for production upgrades?
+
+**Options:**
+- A) Time‑lock and multi‑sig approval for upgrades
+- B) Emit upgrade events with implementation address
+- C) Allow direct EOA upgrades without delay
+- D) On‑chain verification of implementation bytecode hash
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.7 Storage Safety
+
+Why include `uint256[50] private __gap;` in base contracts?
+
+**Options:**
+- A) To pack events more efficiently
+- B) To reserve storage slots for future variables without shifting layout
+- C) To reduce deployment bytecode size
+- D) To enable constructor re‑runs during upgrades
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.8 Initialization Patterns
+
+How should you run initialization through a proxy deployment?
+
+**Options:**
+- A) Call the implementation constructor again
+- B) Use proxy admin to call `initialize()` via `delegatecall`
+- C) Upgrade first, then call constructor on implementation
+- D) Set state with a raw storage write
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.9 Upgrade Risks and Governance
+
+Which event instrumentation aids incident response after an upgrade?
+
+**Options:**
+- A) `Upgraded(address newImpl)` emitted by proxy or implementation
+- B) `ConstructorRan()` in implementation
+- C) `AdminChanged(address)` only
+- D) No events—rely on block explorers
+---
 

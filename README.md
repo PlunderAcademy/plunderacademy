@@ -74,8 +74,110 @@ src/
 
 - **Articles**: add MDX files with front matter (`title`, `excerpt`, `level`, `tags`, `slug`). They are surfaced on the landing page, `/articles`, and the learning order is controlled inside `getArticles`.
 - **Lessons**: each module folder (for example `src/content/modules/island1/creating-erc20-tokens`) contains numbered MDX lessons with objective metadata. Lessons render inside the module tab strip.
+- **Lesson ordering convention**: populate the front matter `number` field with dotted integers so the app can sort consistently (`island.module[.submodule]`). Use two segments for top-level module lessons (e.g. `1.2`) and three segments when you need to order nested sub-lessons (e.g. `2.5.3`). Update these values to control the sequence shown in navigation and breadcrumbs.
 - **Quizzes and missions**: place MDX definitions inside `missions/` and `quizzes/`. The parser in `src/lib/mdx.ts` converts headings like `### Question 1` into interactive elements (traditional quizzes, deploy challenges, etc.).
 - **Custom components**: interactive MDX blocks (animated maps, token factory UI, achievement celebration) live under `src/components`. Expose them through `MDXContent` if you want them inside markdown.
+
+## Quiz Authoring Guidelines
+
+- One quiz per module: place at `src/content/modules/{island}/quizzes/{moduleSlug}-quiz.mdx`.
+- Allowed types: Multiple Choice, Multiple Select, Word Jumble, Concept Matching, Timeline Builder, True/False Statements, Drag & Drop Puzzle.
+- Quiz size: choose 10–15 questions based on the module’s content depth; right-size to adequately assess coverage (no fixed count). Keep interactive ≤ 20% of the quiz.
+- Interactive usage cap: keep interactive questions ≤ 20% of each quiz. The rest should be traditional items.
+- Answer distribution (anti-pattern rules):
+  - Balance A/B/C/D roughly equally (±1 of uniform per quiz), max run length per letter ≤ 2, avoid obvious patterns (AAA…, ABAB…, staircases). Use "All/None of the above" sparingly.
+- Multiple-select formatting: answers as uppercase letters, comma-separated, alphabetical order (e.g., `"A,C,D"`).
+- Front matter template:
+```mdx
+---
+id: {moduleSlug}-quiz
+slug: {moduleSlug}-quiz
+module: {moduleSlug}
+title: "Module X: {Readable Title} – Quiz"
+description: "Short description of what’s assessed"
+totalQuestions: 10
+passingScore: 80
+timeLimit: 15
+---
+```
+- Set `totalQuestions` to your chosen value between 10 and 15 based on the module’s content.
+- Traditional question block:
+```mdx
+### Question 1
+**Type:** Multiple Choice
+**Points:** 5
+**Lesson:** X.Y Topic Title
+
+What is ...?
+
+**Options:**
+- A) ...
+- B) ...
+- C) ...
+- D) ...
+---
+```
+- Interactive question block (assessment-safe):
+```mdx
+### Question 3
+**Type:** Word Jumble
+**Points:** 6
+**Lesson:** X.Y Topic
+
+Unscramble this term:
+
+**Interactive Data:**
+```json
+{
+  "hint": "Distributed ledger technology",
+  "scrambled": "LKCOHBCANI"
+}
+```
+
+<!--
+API ANSWER FORMAT (for graders only; do NOT expose to clients):
+{"type":"word-jumble","userResponse":{"word":"BLOCKCHAIN","timeSpent":45}}
+-->
+---
+```
+- API submission format (answers map): interactive answers are stringified JSON:
+```json
+{
+  "walletAddress": "0x...",
+  "achievementNumber": "0031",
+  "submissionType": "quiz",
+  "submissionData": {
+    "answers": {
+      "q1": "B",
+      "q2": "A,C",
+      "q3": "{\"type\":\"word-jumble\",\"userResponse\":{\"word\":\"BLOCKCHAIN\",\"timeSpent\":45}}"
+    }
+  },
+  "metadata": { "timestamp": "2025-01-15T10:30:00Z", "timeSpent": 300 }
+}
+```
+- Achievement mapping (proposed; zero‑padded 4 digits in payloads):
+  - Island 2 (Frost Peak):
+    - `advanced-solidity-foundations` → `0021`
+    - `advanced-data-structures-error-handling` → `0022`
+    - `testing-fundamentals` → `0023`
+    - `staking-concepts-time-logic` → `0024`
+    - `staking-contract-practical` → `0025`
+  - Island 3 (Desert Bluff):
+    - `erc721-standards-implementation` → `0031`
+    - `advanced-nft-features` → `0032`
+    - `nft-collection-practical` → `0033`
+  - Island 4 (Gilded Bastion):
+    - `defi-fundamentals-simple-swaps` → `0041`
+    - `oracles-randomness-airdrop-patterns` → `0042`
+    - `random-number-generator-practical` → `0043`
+    - `proxy-patterns-upgradeability` → `0044`
+    - `gas-optimization-security-patterns` → `0045`
+    - `upgradable-contract-practical` → `0046`
+  - Island 5 (Neon Haven):
+    - `web3-frontend-basics` → `0051`
+    - `contract-interactions-error-handling` → `0052`
+    - `dapp-interface-practical` → `0053`
 
 ## Interactive Learning Elements
 

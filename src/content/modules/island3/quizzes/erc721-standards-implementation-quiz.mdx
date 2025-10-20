@@ -1,13 +1,242 @@
 ---
-id: erc721-standards-implementation-quiz
-slug: erc721-standards-implementation-quiz
-module: erc721-standards-implementation
-title: "ERC721 Standards & Implementation - Quiz"
-description: "CONTENT TO BE WRITTEN"
-totalQuestions: 10
+id: "erc721-standards-implementation-quiz"
+slug: "erc721-standards-implementation-quiz"
+module: "erc721-standards-implementation"
+title: "Module 1: ERC721 Standards & Implementation - Quiz"
+description: "Assess understanding of ERC721 core, gas optimization, and NFT security."
+totalQuestions: 14
 passingScore: 80
-timeLimit: 15
+timeLimit: 20
 ---
 
-# CONTENT TO BE WRITTEN
+# Module 1: ERC721 Standards & Implementation - Quiz
 
+## Questions
+
+### Question 1
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.1 ERC721 Core Implementation
+
+Which function should user-facing NFT transfers call to prevent tokens from being locked in non-receiver contracts?
+
+**Options:**
+- A) safeTransferFrom
+- B) transferFrom
+- C) _transfer
+- D) approve
+
+---
+
+### Question 2
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.1 ERC721 Core Implementation
+
+Which event is required by ERC721 and must be emitted on every mint, transfer, and burn?
+
+**Options:**
+- A) BaseURIUpdated
+- B) Transfer
+- C) RoleGranted
+- D) ApprovalForAllOnly
+
+---
+
+### Question 3
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.1 ERC721 Core Implementation
+
+Which call authorizes an operator to transfer any of your tokens from a collection until revoked?
+
+**Options:**
+- A) approve(spender, tokenId)
+- B) getApproved(tokenId)
+- C) setApprovalForAll(operator, true)
+- D) revokeApproval(operator)
+
+---
+
+### Question 4
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.1 ERC721 Core Implementation
+
+When using safe transfers to a contract, what value must the receiver return to signal acceptance?
+
+**Options:**
+- A) bytes4(0x0)
+- B) IERC721Receiver.supportsInterface.selector
+- C) IERC721Receiver.onERC721Received(…)
+- D) IERC721Receiver.onERC721Received.selector
+
+---
+
+### Question 5
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.2 Gas-Efficient Minting Strategies
+
+Why do many large collections skip ERC721Enumerable?
+
+**Options:**
+- A) It adds ~25–30k gas per mint; off-chain indexers can provide ownership lists
+- B) Wallets will not display NFTs without Enumerable
+- C) Enumerable reduces gas by precomputing URIs
+- D) Enumerable only applies to ERC1155, not ERC721
+
+---
+
+### Question 6
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.2 Gas-Efficient Minting Strategies
+
+What is a correct on-chain check to enforce a hard supply cap during batch mints?
+
+**Options:**
+- A) require(_nextId < MAX_SUPPLY)
+- B) require(_nextId + qty <= MAX_SUPPLY)
+- C) require(qty < MAX_SUPPLY)
+- D) require(totalSupply() == MAX_SUPPLY)
+
+---
+
+### Question 7
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.2 Gas-Efficient Minting Strategies
+
+Which approach minimizes per-mint call overhead when minting many tokens to one address?
+
+**Options:**
+- A) Client sends N individual mint transactions
+- B) Using ERC721Enumerable to index mints
+- C) Contract-side loop in a mintBatch(to, qty) function
+- D) Emitting custom events instead of Transfer
+
+---
+
+### Question 8
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.2 Gas-Efficient Minting Strategies
+
+When is using _mint over _safeMint acceptable?
+
+**Options:**
+- A) Always, to save gas on public mints
+- B) Only when minting to EOAs during public sales
+- C) When you want to skip emitting Transfer events
+- D) When the recipient is a known EOA or trusted contract you control
+
+---
+
+### Question 9
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.3 NFT Security Considerations and Access Control
+
+Why separate roles like MINTER_ROLE and PAUSER_ROLE in NFT contracts?
+
+**Options:**
+- A) To limit blast radius via least-privilege access control
+- B) To reduce bytecode size by combining logic
+- C) To disable event emissions for admin actions
+- D) To force all privileged calls through the owner only
+
+---
+
+### Question 10
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.3 NFT Security Considerations and Access Control
+
+Which action should never be paused to preserve user liquidity and trust?
+
+**Options:**
+- A) Minting
+- B) Transfers
+- C) BaseURI updates
+- D) Role grants
+
+---
+
+### Question 11
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.3 NFT Security Considerations and Access Control
+
+What is the best defense-in-depth pattern for payable mints that call external code?
+
+**Options:**
+- A) Use require strings instead of custom errors
+- B) Rely on _safeMint alone
+- C) Follow CEI (Checks-Effects-Interactions) and add nonReentrant
+- D) Skip events to reduce gas
+
+---
+
+### Question 12
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.3 NFT Security Considerations and Access Control
+
+Which design choice most strengthens the promise of scarce supply?
+
+**Options:**
+- A) Using a mutable maxSupply state variable
+- B) Emitting a BaseURIUpdated event
+- C) Allowing admins to increase cap post-deploy
+- D) Declaring MAX_SUPPLY as constant or immutable
+
+---
+
+### Question 13
+**Type:** Word Jumble  
+**Points:** 8  
+**Lesson:** 3.1 ERC721 Core Implementation
+
+Unscramble the ERC721 term:
+
+**Interactive Data:**
+```json
+{
+  "hint": "ERC721 user-facing transfer that verifies a receiving contract can handle NFTs",
+  "scrambled": "REFSANFROMSAETRF"
+}
+```
+
+<!-- CORRECT ANSWER: "SAFETRANSFERFROM" -->
+
+---
+
+### Question 14
+**Type:** Concept Matching  
+**Points:** 8  
+**Lesson:** 3.2 Gas-Efficient Minting Strategies
+
+Match each concept to its correct definition:
+
+**Interactive Data:**
+```json
+{
+  "concepts": [
+    { "id": "safe", "text": "safeTransferFrom" },
+    { "id": "opall", "text": "setApprovalForAll" },
+    { "id": "enum", "text": "ERC721Enumerable" },
+    { "id": "nre", "text": "nonReentrant" },
+    { "id": "base", "text": "baseURI" }
+  ],
+  "definitions": [
+    { "id": "def-safe", "text": "Prevents lost NFTs by checking IERC721Receiver on contracts" },
+    { "id": "def-opall", "text": "Grants operator permission over all tokens in a collection" },
+    { "id": "def-enum", "text": "On-chain iteration extension that adds gas cost per mint" },
+    { "id": "def-nre", "text": "Modifier that blocks re-entrant calls to a function" },
+    { "id": "def-base", "text": "Prefix used by tokenURI to build metadata location" }
+  ]
+}
+```
+
+<!-- CORRECT MATCHES: safe->def-safe, opall->def-opall, enum->def-enum, nre->def-nre, base->def-base -->
