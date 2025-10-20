@@ -3,18 +3,15 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { 
   ChevronLeft, 
   Snowflake,
-  BookOpen,
-  Trophy
+  BookOpen
 } from "lucide-react";
 import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from "@/lib/mdx";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
-import MDXContent from "@/components/mdx-content";
-import { InteractiveElement } from "@/components/interactive-elements";
+import { LessonTabsWithNavigation } from "@/components/lesson-tabs-with-navigation";
 
 // Import island2 module components
 import { Island2Module1Image } from "@/components/island2/island2-module1-image";
@@ -189,92 +186,19 @@ export default async function FrostModulePage({ params }: FrostModulePageProps) 
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue={lessonContents[0]?.slug} className="space-y-4">
-              <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 p-2">
-                {lessonContents.map((lesson, index) => (
-                  <TabsTrigger 
-                    key={lesson.slug} 
-                    value={lesson.slug}
-                    className="text-xs md:text-sm px-3 py-2 whitespace-nowrap"
-                  >
-                    <span className="flex items-center gap-1">
-                      <span className="bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                        {index + 1}
-                      </span>
-                      <span className="text-foreground">{lesson.title.replace(/^\d+\.\d+\s*/, '')}</span>
-                    </span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {lessonContents.map((lesson, index) => {
-                const isLastLesson = index === lessonContents.length - 1;
-                return (
-                  <TabsContent key={lesson.slug} value={lesson.slug} className="space-y-4">
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-xl font-semibold mb-2">{lesson.title}</h3>
-                        <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-                          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">🎯 Learning Objective:</p>
-                          <p className="text-sm text-blue-600 dark:text-blue-400">{lesson.objective}</p>
-                        </div>
-                      </div>
-                      <Separator />
-                      <div key={`lesson-${lesson.slug}`} className="prose dark:prose-invert max-w-none">
-                        {lesson.content ? (
-                          <MDXContent content={lesson.content} contentId={`lesson-${lesson.slug}`} />
-                        ) : (
-                          <div className="text-center p-8 bg-blue-50 dark:bg-blue-950/30 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg">
-                            <p className="text-lg text-blue-700 dark:text-blue-300">Content Coming in Milestone 2</p>
-                            <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
-                              Lesson content for &ldquo;{lesson.title}&rdquo; will be added in the next milestone
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      {lesson.practicalTakeaway && (
-                        <>
-                          <Separator />
-                          <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
-                            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">💡 Practical Takeaway:</p>
-                            <p className="text-sm text-blue-600 dark:text-blue-400">{lesson.practicalTakeaway}</p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Interactive Element - Only show on last lesson */}
-                    {isLastLesson && (
-                      <>
-                        <Separator />
-                        {(quizData || resolvedParams.module === 'staking-contract-practical') ? (
-                          <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
-                        ) : (
-                          <Card>
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2">
-                                <Trophy className="size-5" />
-                                Interactive Element
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="text-center p-8">
-                              <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-12 border-2 border-dashed border-blue-300 dark:border-blue-700 space-y-4">
-                                <p className="text-lg text-blue-700 dark:text-blue-300">Interactive Content TBA</p>
-                                <p className="text-sm text-blue-600 dark:text-blue-400">
-                                  Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
-                                </p>
-                                <Button disabled className="mt-4">
-                                  Complete Interactive Element
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </>
-                    )}
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
+            <LessonTabsWithNavigation
+              lessonContents={lessonContents}
+              quizData={quizData}
+              missionData={missionData}
+              moduleSlug={resolvedParams.module}
+              islandTheme={{
+                badge: "bg-blue-500/20",
+                bgColor: "bg-blue-50 dark:bg-blue-950/30",
+                borderColor: "border-blue-200 dark:border-blue-800",
+                textColor: "text-blue-700 dark:text-blue-300",
+                textColorSecondary: "text-blue-600 dark:text-blue-400"
+              }}
+            />
           </CardContent>
         </Card>
 

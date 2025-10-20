@@ -3,18 +3,15 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { 
   ChevronLeft, 
   Mountain,
-  BookOpen,
-  Trophy
+  BookOpen
 } from "lucide-react";
 import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from "@/lib/mdx";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
-import MDXContent from "@/components/mdx-content";
-import { InteractiveElement } from "@/components/interactive-elements";
+import { LessonTabsWithNavigation } from "@/components/lesson-tabs-with-navigation";
 
 // Import island3 module components
 import { Island3Module1Image } from "@/components/island3/island3-module1-image";
@@ -181,92 +178,19 @@ export default async function DesertModulePage({ params }: DesertModulePageProps
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue={lessonContents[0]?.slug} className="space-y-4">
-              <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 p-2">
-                {lessonContents.map((lesson, index) => (
-                  <TabsTrigger 
-                    key={lesson.slug} 
-                    value={lesson.slug}
-                    className="text-xs md:text-sm px-3 py-2 whitespace-nowrap"
-                  >
-                    <span className="flex items-center gap-1">
-                      <span className="bg-orange-500/20 text-orange-700 dark:text-orange-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                        {index + 1}
-                      </span>
-                      <span className="text-foreground">{lesson.title.replace(/^\d+\.\d+\s*/, '')}</span>
-                    </span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {lessonContents.map((lesson, index) => {
-                const isLastLesson = index === lessonContents.length - 1;
-                return (
-                  <TabsContent key={lesson.slug} value={lesson.slug} className="space-y-4">
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-xl font-semibold mb-2">{lesson.title}</h3>
-                        <div className="p-3 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg">
-                          <p className="text-sm font-medium text-orange-700 dark:text-orange-300">🎯 Learning Objective:</p>
-                          <p className="text-sm text-orange-600 dark:text-orange-400">{lesson.objective}</p>
-                        </div>
-                      </div>
-                      <Separator />
-                      <div key={`lesson-${lesson.slug}`} className="prose dark:prose-invert max-w-none">
-                        {lesson.content ? (
-                          <MDXContent content={lesson.content} contentId={`lesson-${lesson.slug}`} />
-                        ) : (
-                          <div className="text-center p-8 bg-orange-50 dark:bg-orange-950/30 border-2 border-dashed border-orange-300 dark:border-orange-700 rounded-lg">
-                            <p className="text-lg text-orange-700 dark:text-orange-300">Content Coming in Milestone 2</p>
-                            <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
-                              Lesson content for &ldquo;{lesson.title}&rdquo; will be added in the next milestone
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      {lesson.practicalTakeaway && (
-                        <>
-                          <Separator />
-                          <div className="p-3 bg-orange-500/5 border border-orange-500/20 rounded-lg">
-                            <p className="text-sm font-medium text-orange-700 dark:text-orange-300">💡 Practical Takeaway:</p>
-                            <p className="text-sm text-orange-600 dark:text-orange-400">{lesson.practicalTakeaway}</p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Interactive Element - Only show on last lesson */}
-                    {isLastLesson && (
-                      <>
-                        <Separator />
-                        {(quizData || resolvedParams.module === 'nft-collection-practical') ? (
-                          <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
-                        ) : (
-                          <Card>
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2">
-                                <Trophy className="size-5" />
-                                Interactive Element
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="text-center p-8">
-                              <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-12 border-2 border-dashed border-orange-300 dark:border-orange-700 space-y-4">
-                                <p className="text-lg text-orange-700 dark:text-orange-300">Interactive Content TBA</p>
-                                <p className="text-sm text-orange-600 dark:text-orange-400">
-                                  Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
-                                </p>
-                                <Button disabled className="mt-4">
-                                  Complete Interactive Element
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </>
-                    )}
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
+            <LessonTabsWithNavigation
+              lessonContents={lessonContents}
+              quizData={quizData}
+              missionData={missionData}
+              moduleSlug={resolvedParams.module}
+              islandTheme={{
+                badge: "bg-orange-500/20",
+                bgColor: "bg-orange-50 dark:bg-orange-950/30",
+                borderColor: "border-orange-200 dark:border-orange-800",
+                textColor: "text-orange-700 dark:text-orange-300",
+                textColorSecondary: "text-orange-600 dark:text-orange-400"
+              }}
+            />
           </CardContent>
         </Card>
 

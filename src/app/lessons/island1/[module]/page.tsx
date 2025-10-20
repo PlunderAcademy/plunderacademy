@@ -3,17 +3,15 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { 
   ChevronLeft, 
   TreePine,
-  BookOpen,
-  Trophy
+  BookOpen
 } from "lucide-react";
 import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from "@/lib/mdx";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
-import MDXContent from "@/components/mdx-content";
+import { LessonTabsWithNavigation } from "@/components/lesson-tabs-with-navigation";
 
 // Import jungle module components
 import { JungleModule1Image } from "@/components/island1/island1-module1-image";
@@ -22,7 +20,6 @@ import { JungleModule3Image } from "@/components/island1/island1-module3-image";
 import { JungleModule4Image } from "@/components/island1/island1-module4-image";
 import { JungleModule5Image } from "@/components/island1/island1-module5-image";
 import { JungleStory } from "@/components/island1/story";
-import { InteractiveElement } from "@/components/interactive-elements";
 import { TokenFactoryInterface } from "@/components/token-factory-interface";
 
 interface JungleModulePageProps {
@@ -192,91 +189,22 @@ export default async function JungleModulePage({ params }: JungleModulePageProps
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue={lessonContents[0]?.slug} className="space-y-4">
-            <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 p-2">
-              {lessonContents.map((lesson, index) => (
-                <TabsTrigger 
-                  key={lesson.slug} 
-                  value={lesson.slug}
-                  className="text-xs md:text-sm px-3 py-2 whitespace-nowrap"
-                >
-                  <span className="flex items-center gap-1">
-                    <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                      {index + 1}
-                    </span>
-                    {lesson.title.replace(/^\d+\.\d+\s*/, '')} {/* Remove lesson numbers */}
-                  </span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {lessonContents.map((lesson) => (
-              <TabsContent key={lesson.slug} value={lesson.slug} className="space-y-4">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">{lesson.title}</h3>
-                    <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <p className="text-sm font-medium text-blue-700 dark:text-blue-300">🎯 Learning Objective:</p>
-                      <p className="text-sm text-blue-600 dark:text-blue-400">{lesson.objective}</p>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div key={`lesson-${lesson.slug}`} className="prose dark:prose-invert max-w-none">
-                    {lesson.content ? (
-                      <MDXContent content={lesson.content} contentId={`lesson-${lesson.slug}`} />
-                    ) : (
-                      <div className="text-center p-8 bg-muted/30 border-2 border-dashed border-muted-foreground/20 rounded-lg">
-                        <p className="text-lg text-muted-foreground">Content Coming Soon</p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Lesson content for &ldquo;{lesson.title}&rdquo; will be added in future updates
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  {lesson.practicalTakeaway && (
-                    <>
-                      <Separator />
-                      <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                        <p className="text-sm font-medium text-primary">💡 Practical Takeaway:</p>
-                        <p className="text-sm">{lesson.practicalTakeaway}</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
+          <LessonTabsWithNavigation
+            lessonContents={lessonContents}
+            quizData={quizData}
+            missionData={missionData}
+            moduleSlug={resolvedParams.module}
+            islandTheme={{
+              badge: "bg-primary/20",
+              bgColor: "bg-muted/30",
+              borderColor: "border-muted-foreground/20",
+              textColor: "text-muted-foreground",
+              textColorSecondary: "text-muted-foreground"
+            }}
+            beforeInteractive={resolvedParams.module === 'creating-erc20-tokens' ? <TokenFactoryInterface /> : undefined}
+          />
         </CardContent>
       </Card>
-
-      {/* Token Factory Interface - Only for creating-erc20-tokens module */}
-      {resolvedParams.module === 'creating-erc20-tokens' && (
-        <TokenFactoryInterface />
-      )}
-
-      {/* Interactive Element Section */}
-      {(quizData || resolvedParams.module === 'creating-erc20-tokens') ? (
-        <InteractiveElement quiz={quizData} missionData={missionData} moduleSlug={resolvedParams.module} />
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="size-5" />
-              Interactive Element
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center p-8">
-            <div className="bg-muted/30 rounded-lg p-12 border-2 border-dashed border-muted-foreground/20 space-y-4">
-              <p className="text-lg text-muted-foreground">Interactive Content TBA</p>
-              <p className="text-sm text-muted-foreground">
-                Interactive element for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
-              </p>
-              <Button disabled className="mt-4">
-                Complete Interactive Element
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Separator />
 
