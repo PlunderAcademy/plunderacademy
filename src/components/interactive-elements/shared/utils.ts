@@ -182,5 +182,5 @@ export async function loadNFTMetadata(achievementNumber: string): Promise<NFTMet
 // Get NFT image URL for achievement
 export function getNFTImageUrl(achievementNumber: string): string {
   // Use external CDN for achievement images
-  return `https://static.plunderswap.com/training/${achievementNumber}.webp`;
+  return `https://static.plunderswap.com/training/images/${achievementNumber}.webp`;
 }

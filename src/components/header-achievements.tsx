@@ -178,12 +178,6 @@ export function HeaderAchievements({ onOpenModal }: HeaderAchievementsProps) {
                           alt={lastAchievementMetadata.name || "Achievement"}
                           fill
                           className="object-contain"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            if (target.src.includes('.webp')) {
-                              target.src = target.src.replace('.webp', '.png');
-                            }
-                          }}
                           unoptimized
                         />
                       ) : (

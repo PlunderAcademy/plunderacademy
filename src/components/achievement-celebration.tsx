@@ -228,13 +228,6 @@ export function AchievementCelebration({
                 alt={achievementData.name || "Achievement Badge"}
                 fill
                 className="object-contain"
-                onError={(e) => {
-                  // Fallback to .png if .webp fails
-                  const target = e.target as HTMLImageElement;
-                  if (target.src.includes('.webp')) {
-                    target.src = target.src.replace('.webp', '.png');
-                  }
-                }}
                 unoptimized
               />
             ) : (

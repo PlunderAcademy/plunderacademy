@@ -71,9 +71,7 @@ export function useAchievementClaiming({ moduleSlug, missionData }: UseAchieveme
             if (metadataResponse.ok) {
               const metadata = await metadataResponse.json();
               if (metadata.image) {
-                // Convert .png to .webp if needed
-                const imageUrl = metadata.image.replace(/\.png$/, '.webp');
-                setNftImageUrl(imageUrl);
+                setNftImageUrl(metadata.image);
               }
             }
           } catch (error) {
@@ -100,15 +98,12 @@ export function useAchievementClaiming({ moduleSlug, missionData }: UseAchieveme
           const metadata = await loadNFTMetadata(achievementNumber);
           
           if (metadata) {
-            // Convert .png to .webp in metadata image URL
-            const metadataImageUrl = metadata.image ? metadata.image.replace(/\.png$/, '.webp') : imageUrl;
-            
             setCelebrationData({
               name: metadata.name || missionData.achievementReward?.name || "Achievement Unlocked",
               description: metadata.description || missionData.achievementReward?.description || "Congratulations!",
               achievementNumber,
               category: "fundamentals", // Could be mapped from module
-              image: metadataImageUrl,
+              image: metadata.image || imageUrl,
               attributes: metadata.attributes || []
             });
           } else {

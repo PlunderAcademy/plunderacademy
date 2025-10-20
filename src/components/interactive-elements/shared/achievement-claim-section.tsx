@@ -123,13 +123,6 @@ export function AchievementClaimSection({
                   width={192}
                   height={256}
                   className="w-48 h-64 object-contain rounded"
-                  onError={(e) => {
-                    // Fallback to .png if .webp fails
-                    const target = e.target as HTMLImageElement;
-                    if (target.src.includes('.webp')) {
-                      target.src = target.src.replace('.webp', '.png');
-                    }
-                  }}
                   unoptimized
                 />
               </div>
@@ -311,18 +304,11 @@ export function AchievementClaimSection({
                 <p className="text-sm font-medium text-muted-foreground mb-3">Your Achievement NFT:</p>
                 <div className="inline-block border-2 border-yellow-400 rounded-lg p-2 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20">
                   <Image 
-                    src={nftImageUrl} 
+                    src={nftImageUrl}
                     alt={missionData?.achievementReward?.name || "Achievement NFT"} 
                     width={192}
                     height={256}
                     className="w-48 h-64 object-contain rounded"
-                    onError={(e) => {
-                      // Fallback to .png if .webp fails
-                      const target = e.target as HTMLImageElement;
-                      if (target.src.includes('.webp')) {
-                        target.src = target.src.replace('.webp', '.png');
-                      }
-                    }}
                     unoptimized
                   />
                 </div>

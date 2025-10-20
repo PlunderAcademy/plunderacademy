@@ -125,6 +125,7 @@ export function useAchievements(): UseAchievementsReturn {
       }
 
       const metadata: NFTMetadata = await response.json();
+      
       setAchievementMetadata(prev => ({
         ...prev,
         [achievementNumber]: metadata

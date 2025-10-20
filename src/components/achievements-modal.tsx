@@ -171,18 +171,12 @@ export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }:
                   <div className="flex items-center justify-center gap-4">
                     {inlineCelebrationData.image && (
                       <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                        <Image
+                        <Image 
                           src={inlineCelebrationData.image}
                           alt={inlineCelebrationData.name || "Achievement"}
                           width={80}
                           height={80}
                           className="w-full h-full object-contain"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            if (target.src.includes('.webp')) {
-                              target.src = target.src.replace('.webp', '.png');
-                            }
-                          }}
                           unoptimized
                         />
                       </div>
