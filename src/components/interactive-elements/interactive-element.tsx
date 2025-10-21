@@ -12,36 +12,10 @@ import { RngDeployChallenge } from "./elements/rng-deploy-challenge";
 import { UpgradeableDeployChallenge } from "./elements/upgradeable-deploy-challenge";
 import { isTransactionSubmissionModule } from "./shared/utils";
 
-// TODO: These will be added in future milestones
-// import { CodeCompletion } from "./code-completion/code-completion";
-// import { ConfigurationBuilder } from "./configuration-builder/configuration-builder";
-
-/**
- * InteractiveElement - Main orchestrator for different interactive element types
- * 
- * This component decides which interactive element to render based on:
- * - Module configuration (moduleSlug)
- * - Available data (quiz, mission, etc.)
- * - Interactive element type
- * 
- * Supported Interactive Element Types:
- * 1. Traditional Quiz - Multiple choice questions with automated scoring
- * 2. Deploy Challenge - Guided deployment exercises (currently: token factory)
- * 
- * Future Interactive Element Types (Milestone 2):
- * 3. Code Completion - Fill-in-the-blank style coding exercises
- * 4. Configuration Builder - Parameter setting with sliders and interactive inputs
- */
-
 export interface InteractiveElementProps {
   quiz?: QuizMeta | null;
   missionData?: MissionMeta | null;
   moduleSlug: string;
-  
-  // Future props for other interactive element types
-  // codeExercise?: CodeExerciseMeta | null;
-  // configurationChallenge?: ConfigurationMeta | null;
-  // interactiveType?: 'quiz' | 'deploy' | 'code-completion' | 'configuration-builder';
 }
 
 export function InteractiveElement({ 

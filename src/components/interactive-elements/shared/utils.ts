@@ -58,8 +58,7 @@ export function isTransactionSubmissionModule(moduleSlug: string): boolean {
     'nft-collection-practical',
     'desert-mound-of-morning', // Alias for nft-collection-practical
     'random-number-generator-practical',
-    'upgradable-contract-practical',
-    'dapp-interface-practical'
+    'upgradable-contract-practical'
   ];
   
   return transactionModules.includes(moduleSlug);
