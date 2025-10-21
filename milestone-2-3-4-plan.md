@@ -1,4 +1,4 @@
-# Plunder Academy Curriculum Plan: Extra Islands and Modules
+# Plunder Academy Curriculum Plan: Extra Islands and Modules (COMPLETED - Milestone 2)
 
 ## Overview
 
@@ -12,11 +12,11 @@ This document outlines the focused smart contract development curriculum for Plu
 
 ---
 
-## Island 2: Advanced Solidity (Modules 1-5)
+## Island 2: Advanced Solidity (Modules 1-5) (COMPLETED - Milestone 2)
 
 Building on the token from Island 1 (Jungle)
 
-### Module 1: Advanced Solidity Foundations
+### Module 1: Advanced Solidity Foundations (COMPLETED - Milestone 2)
 
 - Contract inheritance patterns & abstract contracts
 - Interface design and implementation
@@ -27,7 +27,7 @@ Building on the token from Island 1 (Jungle)
 
 **Interactive Element:** *Quiz* - Complete inheritance patterns, library imports, contract calls, and event indexing
 
-### Module 2: Advanced Data Structures & Error Handling
+### Module 2: Advanced Data Structures & Error Handling (COMPLETED - Milestone 2)
 
 - Complex mappings, structs, and arrays
 - Storage vs memory vs calldata optimization
@@ -38,7 +38,7 @@ Building on the token from Island 1 (Jungle)
 
 **Interactive Element:** *Quiz* - Multiple choice on gas optimization, error patterns, and security vulnerabilities
 
-### Module 3: Testing Fundamentals
+### Module 3: Testing Fundamentals (COMPLETED - Milestone 2)
 
 - Testing framework setup (Hardhat with Foundry)
 - Unit testing patterns and best practices
@@ -48,7 +48,7 @@ Building on the token from Island 1 (Jungle)
 
 **Interactive Element:** *Quiz* - Complete test functions and security tests
 
-### Module 4: Staking Concepts & Time-Based Logic
+### Module 4: Staking Concepts & Time-Based Logic (COMPLETED - Milestone 2)
 
 - Staking contract architecture and patterns
 - Time-based logic: block.timestamp, durations, locks
@@ -58,7 +58,7 @@ Building on the token from Island 1 (Jungle)
 
 **Interactive Element:** *Quiz* - Set staking parameters and reward rates
 
-### Module 5: PRACTICAL
+### Module 5: PRACTICAL (COMPLETED - Milestone 2)
 
 Deploy: Staking Contract
 
@@ -70,11 +70,11 @@ Deploy: Staking Contract
 
 ---
 
-## ISLAND 3: Token & NFT Launchpad (Modules 1-3)
+## ISLAND 3: Token & NFT Launchpad (Modules 1-3) (COMPLETED - Milestone 2)
 
 Focused NFT mastery anchored to deployables
 
-### Module 1: ERC721 Standards & Implementation
+### Module 1: ERC721 Standards & Implementation (COMPLETED - Milestone 2)
 
 - ERC721 core implementation
 - Enumerable and burnable extensions
@@ -84,7 +84,7 @@ Focused NFT mastery anchored to deployables
 
 **Interactive Element:** *Quiz* - Complete NFT contract functions and security checks
 
-### Module 2: Advanced NFT Features
+### Module 2: Advanced NFT Features (COMPLETED - Milestone 2)
 
 - Metadata standards and best practices
 - IPFS integration basics
@@ -94,7 +94,7 @@ Focused NFT mastery anchored to deployables
 
 **Interactive Element:** *Quiz* - Set up metadata URIs and minting phases
 
-### Module 3: PRACTICAL
+### Module 3: PRACTICAL (COMPLETED - Milestone 2)
 
 Deploy: NFT Collection
 
@@ -106,11 +106,11 @@ Deploy: NFT Collection
 
 ---
 
-## ISLAND 4: On-Chain Systems & Upgradeability (Modules 1-6)
+## ISLAND 4: On-Chain Systems & Upgradeability (Modules 1-6) (COMPLETED - Milestone 2)
 
 Consolidated blockchain concepts with double practicals using real contracts
 
-### Module 1: DeFi Fundamentals & Simple Swaps
+### Module 1: DeFi Fundamentals & Simple Swaps (COMPLETED - Milestone 2)
 
 - Token economics and liquidity concepts
 - Simple swap mechanics (deposit token A for token B at set rate)
@@ -120,7 +120,7 @@ Consolidated blockchain concepts with double practicals using real contracts
 
 **Interactive Element:** *Quiz* - Set swap parameters and exchange rates
 
-### Module 2: Oracles, Randomness & Airdrop Patterns
+### Module 2: Oracles, Randomness & Airdrop Patterns (COMPLETED - Milestone 2)
 
 - Oracle problem and decentralized solutions (Chainlink Price feeds)
 - Commit-reveal sequences and verifiable randomness inputs
@@ -131,7 +131,7 @@ Consolidated blockchain concepts with double practicals using real contracts
 
 **Interactive Element:** *Deploy: Airdropper Contract* - Build oracle-aware commit-reveal airdrop flows
 
-### Module 3: PRACTICAL
+### Module 3: PRACTICAL (COMPLETED - Milestone 2)
 
 Deploy: Random Number Generator with Commit/Reveal
 
@@ -141,7 +141,7 @@ Deploy: Random Number Generator with Commit/Reveal
 - Anti-manipulation safeguards
 - Integration with gaming or lottery mechanics
 
-### Module 4: Proxy Patterns & Upgradeability
+### Module 4: Proxy Patterns & Upgradeability (COMPLETED - Milestone 2)
 
 - Transparent vs UUPS proxy patterns
 - Storage collision prevention
@@ -149,7 +149,7 @@ Deploy: Random Number Generator with Commit/Reveal
 - OpenZeppelin upgrades framework
 **Interactive Element:** *Quiz* - Multiple choice on proxy patterns and upgrade safety
 
-### Module 5: Gas Optimization & Security Patterns
+### Module 5: Gas Optimization & Security Patterns (COMPLETED - Milestone 2)
 
 - Advanced gas optimization techniques
 - Storage packing and slot optimization
@@ -159,7 +159,7 @@ Deploy: Random Number Generator with Commit/Reveal
 
 **Interactive Element:** *Quiz* - Complete optimization patterns and security checks
 
-### Module 6: PRACTICAL
+### Module 6: PRACTICAL (COMPLETED - Milestone 2)
 
 Deploy: Upgradable Contract
 
@@ -171,11 +171,11 @@ Deploy: Upgradable Contract
 
 ---
 
-## ISLAND 5: Frontend Integration (Modules 1-3)
+## ISLAND 5: Frontend Integration (Modules 1-3) (COMPLETED - Milestone 2)
 
 Essential Web3 frontend skills for contract interaction
 
-### Module 1: Web3 Frontend Basics
+### Module 1: Web3 Frontend Basics (COMPLETED - Milestone 2)
 
 - Wallet connection with RainbowKit
 - Web3 libraries: viem and wagmi basics
@@ -185,7 +185,7 @@ Essential Web3 frontend skills for contract interaction
 
 **Interactive Element:** *Quiz* - Complete wallet connection and contract reading
 
-### Module 2: Contract Interactions & Error Handling
+### Module 2: Contract Interactions & Error Handling (COMPLETED - Milestone 2)
 
 - Writing to contracts (transactions)
 - Transaction status monitoring
@@ -195,7 +195,7 @@ Essential Web3 frontend skills for contract interaction
 
 **Interactive Element:** *Quiz* - Complete transaction handling and error management
 
-### Module 3: PRACTICAL
+### Module 3: PRACTICAL (COMPLETED - Milestone 2)
 
 Build: Simple dApp Interface
 
@@ -212,7 +212,7 @@ Build: Simple dApp Interface
 
 All 5 new interactive element types have been successfully implemented with dual-mode architecture for both learning and assessment use cases.
 
-### Implementation Status: COMPLETE
+### Implementation Status:  (COMPLETED - Milestone 2)
 
 **Completed Elements:**
 
@@ -224,7 +224,7 @@ All 5 new interactive element types have been successfully implemented with dual
 6. ✅ Deploy Challenge - Already implemented (Module 5)
 7. ✅ Traditional Quiz - Now supports mixed question types
 
-### Dual-Mode Architecture (IMPLEMENTED)
+### Dual-Mode Architecture  (COMPLETED - Milestone 2))
 
 All elements support both learning (with feedback) and assessment (quiz validation) modes:
 
@@ -284,7 +284,7 @@ All interactive element answers are submitted as stringified JSON within the qui
 
 Backend detects JSON-formatted answers and parses them for grading. See README for complete grading pseudocode.
 
-## Practical Deployment Summary
+## Practical Deployment Summary (COMPLETED - Milestone 2)
 
 1. Staking Contract (time-locked staking, rewards, withdrawal mechanisms)
 2. NFT Collection with Reveal Mechanics and Royalties
@@ -301,9 +301,9 @@ Backend detects JSON-formatted answers and parses them for grading. See README f
 
 - Feedback loops/analytics logging, for modules and ai tools. see (milestone-2-feedback-analytics-design.md) (COMPLETED - Milestone 2)
 
-- Enhancements to the AI Auditor and AI Chatbot to take them from Alpha level, to Beta level.  Likely 80% there just more more buildout on the prompt.
+- Enhancements to the AI Auditor and AI Chatbot to take them from Alpha level, to Beta level.  Likely 80% there just more more buildout on the prompt. (COMPLETED - Milestone 2)
 
-- AI Auditor
+- AI Auditor (COMPLETED - Milestone 2)
 Cross-function reentrancy patterns
 Storage collision vulnerabilities
 EIP-specific attack vectors
@@ -311,7 +311,7 @@ Add more code examples and fix demonstrations
 Include links to relevant training modules
 Severity scoring and risk assessment
 
-- AI Chatbot
+- AI Chatbot (COMPLETED - Milestone 2)
 Add specific code examples for common patterns
 Include troubleshooting guides for development issues
 Expand with real user questions from testing
@@ -321,7 +321,7 @@ Context-aware responses based on user progress
 
 ## Graphics needed
 
-- 4 new islands - note the sections have different amount of modules - not sure where module 23 fits in M3 but leave a feature on one of the islands.
+4 new islands - note the sections have different amount of modules - not sure where module 23 fits in M3 but leave a feature on one of the islands. (COMPLETED - Milestone 2)
 
 - 2nd island - 5 modules
 - 3rd island - 3 modules
@@ -332,7 +332,13 @@ Context-aware responses based on user progress
 - Top graphics for all of them - animate if time
 - Achievement cards for 18 modules
 
+
+
+
+
 ## Milestone 3 (2-3 weeks)
+
+### Putting the site live to the public and being able to do the first report within the first month of the report not done as part of M2 - ie NOT DONE - Report: Curriculum completion statistics, AI tool usage metrics, user engagement data, and feedback analysis. This also will be able to be viewed live at https://plunderacademy.vercel.app/system-analytics also
 
 ### MODULE: Advanced Security Patterns"'
 
@@ -352,70 +358,14 @@ Advanced security aligned with AI auditor
 
 *Note: This module will be developed as part of a future security-focused expansion.*
 
-## 🚀 Gamification Features: Rapid Fire Mode (maybe - M3 or M4)
-
-### Time Attack Challenge System
-
-**Concept:** Transform quiz experience with progressive time pressure and visual urgency to increase engagement and perceived fun through controlled stress response.
-
-### Core Features
-
-#### Progressive Countdown
-
-- **Level 1:** 45 seconds per question (comfortable pace)
-- **Level 2:** 30 seconds per question (moderate pressure)  
-- **Level 3:** 20 seconds per question (high intensity)
-- **Level 4:** 15 seconds per question (expert challenge)
-
-#### Visual & Audio Cues
-
-- **Pulsating timer** that intensifies as time runs low
-- **Color progression:** Green → Yellow → Orange → Red
-- **Heartbeat animation** when under 10 seconds
-- **Bonus points** for quick correct answers
-- **Speed multipliers** for consecutive fast answers
-
-#### Implementation Strategy
-
-- **Normal Mode:** Current quiz experience (default)
-- **Challenge Mode:** Rapid fire with time attack features
-- **Unlock system:** Challenge mode unlocks after completing normal mode
-- **Leaderboards:** Track fastest completion times per module
-
-#### Question Type Adaptations
-
-- **Multiple Choice:** Standard rapid fire (15-45 seconds)
-- **Word Jumble:** Shorter words, faster scrambling (20-30 seconds)
-- **Concept Matching:** Fewer pairs, simplified UI (25-35 seconds)
-- **Timeline Builder:** Fewer events, clearer visual cues (30-40 seconds)
-- **True/False Statements:** Multiple statements, batch scoring (20-30 seconds)
-
-#### Psychological Benefits
-
-- ✅ **Increased engagement** through controlled pressure
-- ✅ **Flow state induction** via time constraints
-- ✅ **Replay value** with personal best tracking
-- ✅ **Skill demonstration** for advanced learners
-- ✅ **Gamified learning** without losing educational value
-
-### Technical Notes
-
-- Build as **mode selector** in existing quiz framework
-- **Preserve all functionality:** scoring, achievements, wallet integration
-- **Add performance tracking:** completion time, accuracy under pressure
-- **Optional feature:** Users can choose normal or challenge mode per quiz
-
 ### Articles (Moved to Milestone 3)
 
 These will be articles we will write up for the portal also
 
 - Graphnode (inc https://basecamp.thegraph.com/)
 - Thirdweb (need to ensure it works on Zilliqa)
-- Scaffoldeth (https://scaffoldeth.io/)
 - Remix
-- Foundry
-- OpenZepplin
-- ERC1155 Multi-Token Standards & Use Cases
+
 
 - Reporting
 - User Feedback enhancements
