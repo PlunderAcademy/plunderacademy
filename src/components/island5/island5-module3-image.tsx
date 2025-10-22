@@ -21,23 +21,23 @@ export function Island5Module3Image() {
           {/* MASSIVE Central Portal/Reactor ENERGY - THE CENTERPIECE */}
           <div className="absolute inset-0">
             {/* Core quantum reactor - INSANE energy */}
-            <div className="absolute top-[31%] left-[43%] w-[180px] h-[180px] bg-cyan-400/40 rounded-full quantum-core animate-quantum-core-1"></div>
-            <div className="absolute top-[33%] left-[44%] w-[150px] h-[150px] bg-purple-400/38 rounded-full quantum-core animate-quantum-core-2"></div>
-            <div className="absolute top-[35%] left-[45%] w-[120px] h-[120px] bg-pink-400/42 rounded-full quantum-core animate-quantum-core-3"></div>
-            <div className="absolute top-[47%] left-[46%] w-[90px] h-[90px] bg-white/50 rounded-full quantum-core animate-quantum-core-4"></div>
+            <div className="absolute top-[31%] left-[35%] w-[180px] h-[180px] bg-cyan-400/40 rounded-full quantum-core animate-quantum-core-1"></div>
+            <div className="absolute top-[33%] left-[36%] w-[150px] h-[150px] bg-purple-400/38 rounded-full quantum-core animate-quantum-core-2"></div>
+            <div className="absolute top-[35%] left-[37%] w-[120px] h-[120px] bg-pink-400/42 rounded-full quantum-core animate-quantum-core-3"></div>
+            <div className="absolute top-[47%] left-[38%] w-[90px] h-[90px] bg-white/50 rounded-full quantum-core animate-quantum-core-4"></div>
             
             {/* Rotating energy rings around core */}
-            <div className="absolute top-[33%] left-[44.5%] w-[140px] h-[140px] border-4 border-cyan-400/45 rounded-full energy-ring animate-energy-ring-1"></div>
-            <div className="absolute top-[32%] left-[44%] w-[160px] h-[160px] border-3 border-purple-400/40 rounded-full energy-ring animate-energy-ring-2"></div>
-            <div className="absolute top-[31%] left-[43.5%] w-[180px] h-[180px] border-2 border-pink-400/35 rounded-full energy-ring animate-energy-ring-3"></div>
+            <div className="absolute top-[33%] left-[36.5%] w-[140px] h-[140px] border-4 border-cyan-400/45 rounded-full energy-ring animate-energy-ring-1"></div>
+            <div className="absolute top-[32%] left-[36%] w-[160px] h-[160px] border-3 border-purple-400/40 rounded-full energy-ring animate-energy-ring-2"></div>
+            <div className="absolute top-[31%] left-[35.5%] w-[180px] h-[180px] border-2 border-pink-400/35 rounded-full energy-ring animate-energy-ring-3"></div>
             
             {/* Core plasma sparkles - ULTRA BRIGHT */}
-            <div className="absolute top-[42%] left-[52%] w-[6px] h-[6px] bg-white/98 rounded-full plasma-spark animate-plasma-spark-1"></div>
+            <div className="absolute top-[42%] left-[38%] w-[6px] h-[6px] bg-white/98 rounded-full plasma-spark animate-plasma-spark-1"></div>
             <div className="absolute top-[44%] left-[54%] w-[7px] h-[7px] bg-cyan-200/96 rounded-full plasma-spark animate-plasma-spark-2"></div>
-            <div className="absolute top-[46%] left-[53%] w-[6px] h-[6px] bg-pink-200/98 rounded-full plasma-spark animate-plasma-spark-3"></div>
-            <div className="absolute top-[48%] left-[51%] w-[7px] h-[7px] bg-purple-200/96 rounded-full plasma-spark animate-plasma-spark-4"></div>
-            <div className="absolute top-[44%] left-[50%] w-[6px] h-[6px] bg-white/98 rounded-full plasma-spark animate-plasma-spark-5"></div>
-            <div className="absolute top-[46%] left-[56%] w-[7px] h-[7px] bg-cyan-200/96 rounded-full plasma-spark animate-plasma-spark-6"></div>
+            <div className="absolute top-[46%] left-[39%] w-[6px] h-[6px] bg-pink-200/98 rounded-full plasma-spark animate-plasma-spark-3"></div>
+            <div className="absolute top-[48%] left-[37%] w-[7px] h-[7px] bg-purple-200/96 rounded-full plasma-spark animate-plasma-spark-4"></div>
+            <div className="absolute top-[44%] left-[36%] w-[6px] h-[6px] bg-white/98 rounded-full plasma-spark animate-plasma-spark-5"></div>
+            <div className="absolute top-[46%] left-[42%] w-[7px] h-[7px] bg-cyan-200/96 rounded-full plasma-spark animate-plasma-spark-6"></div>
           </div>
 
           {/* Energy Beams SHOOTING from Core */}

@@ -16,736 +16,671 @@ export function Island5Module2Image() {
           priority
         />
         
-        {/* EPIC Animated overlay effects - CYBERPUNK NEON CITY */}
+        {/* BOLD Animated overlay effects - CYBERPUNK SUSHI RESTAURANT */}
         <div className="absolute inset-0 animate-effects">
-          {/* LEGENDARY "BUTTON BUTTON" Neon Sign - TOP LEFT */}
+          {/* Ceiling Neon Tube Lights - BOLD */}
           <div className="absolute inset-0">
-            {/* Epic neon glow */}
-            <div className="absolute top-[8%] left-[18%] w-[120px] h-[40px] bg-cyan-400/35 rounded-full neon-sign-glow animate-neon-sign-1"></div>
-            <div className="absolute top-[9%] left-[19%] w-[100px] h-[30px] bg-cyan-300/40 rounded-full neon-sign-glow animate-neon-sign-2"></div>
+            {/* Left ceiling light */}
+            <div className="absolute top-[3%] left-[12%] w-[140px] h-[12px] bg-cyan-300/65 rounded-full ceiling-light animate-ceiling-light-1"></div>
+            <div className="absolute top-[3.5%] left-[13%] w-[120px] h-[8px] bg-white/75 rounded-full ceiling-light animate-ceiling-light-2"></div>
             
-            {/* Neon sparkles on sign */}
-            <div className="absolute top-[9%] left-[22%] w-[4px] h-[4px] bg-cyan-200/95 rounded-full neon-sparkle animate-sign-sparkle-1"></div>
-            <div className="absolute top-[10%] left-[26%] w-[5px] h-[5px] bg-white/98 rounded-full neon-sparkle animate-sign-sparkle-2"></div>
-            <div className="absolute top-[9.5%] left-[30%] w-[4px] h-[4px] bg-cyan-300/96 rounded-full neon-sparkle animate-sign-sparkle-3"></div>
+            {/* Center ceiling lights */}
+            <div className="absolute top-[3%] left-[42%] w-[160px] h-[14px] bg-cyan-400/70 rounded-full ceiling-light animate-ceiling-light-3"></div>
+            <div className="absolute top-[3.5%] left-[43%] w-[140px] h-[10px] bg-white/80 rounded-full ceiling-light animate-ceiling-light-4"></div>
+            
+            {/* Right ceiling light */}
+            <div className="absolute top-[3%] right-[8%] w-[150px] h-[13px] bg-cyan-300/68 rounded-full ceiling-light animate-ceiling-light-5"></div>
+            <div className="absolute top-[3.5%] right-[9%] w-[130px] h-[9px] bg-white/78 rounded-full ceiling-light animate-ceiling-light-6"></div>
           </div>
 
-          {/* Neon Signs - LEFT SIDE */}
+          {/* Sushi Conveyor Belt Glow - BOLD */}
           <div className="absolute inset-0">
-            {/* Purple vertical sign */}
-            <div className="absolute top-[32%] left-[8%] w-[15px] h-[60px] bg-purple-400/30 rounded-full neon-glow animate-neon-glow-1"></div>
+            {/* Conveyor belt cyan underglow */}
+            <div className="absolute top-[64%] left-[8%] w-[350px] h-[8px] bg-cyan-400/55 rounded-full conveyor-glow animate-conveyor-glow"></div>
             
-            {/* Orange/peach sign */}
-            <div className="absolute top-[35%] left-[14%] w-[30px] h-[20px] bg-orange-300/28 rounded-full neon-glow animate-neon-glow-2"></div>
-            
-            {/* Bottom purple sign */}
-            <div className="absolute top-[72%] left-[17%] w-[35px] h-[18px] bg-purple-400/32 rounded-full neon-glow animate-neon-glow-3"></div>
+            {/* Individual sushi plate glows - scattered across belt */}
+            <div className="absolute top-[63%] left-[10%] w-[25px] h-[25px] bg-orange-400/60 rounded-full sushi-glow animate-sushi-glow-1"></div>
+            <div className="absolute top-[63%] left-[18%] w-[28px] h-[28px] bg-red-400/65 rounded-full sushi-glow animate-sushi-glow-2"></div>
+            <div className="absolute top-[63%] left-[28%] w-[26px] h-[26px] bg-pink-400/62 rounded-full sushi-glow animate-sushi-glow-3"></div>
+            <div className="absolute top-[63%] left-[38%] w-[27px] h-[27px] bg-orange-300/58 rounded-full sushi-glow animate-sushi-glow-4"></div>
+            <div className="absolute top-[63%] left-[48%] w-[29px] h-[29px] bg-red-300/67 rounded-full sushi-glow animate-sushi-glow-5"></div>
+            <div className="absolute top-[63%] left-[58%] w-[26px] h-[26px] bg-pink-300/60 rounded-full sushi-glow animate-sushi-glow-6"></div>
           </div>
 
-          {/* Neon Signs - CENTER AREA */}
+          {/* Digital Menu Screens - BOLD Pulsing */}
           <div className="absolute inset-0">
-            {/* Big pink "ブラ" sign */}
-            <div className="absolute top-[42%] left-[42%] w-[50px] h-[30px] bg-pink-400/35 rounded-full neon-glow animate-neon-glow-4"></div>
+            {/* Left digital menu */}
+            <div className="absolute top-[62%] left-[26%] w-[45px] h-[55px] bg-cyan-400/58 rounded menu-screen animate-menu-screen-1"></div>
+            <div className="absolute top-[63%] left-[27%] w-[40px] h-[50px] bg-white/45 rounded menu-screen animate-menu-screen-2"></div>
             
-            {/* Cyan hologram screens */}
-            <div className="absolute top-[52%] left-[28%] w-[35px] h-[40px] bg-cyan-300/25 rounded hologram-glow animate-hologram-1"></div>
-            <div className="absolute top-[58%] left-[38%] w-[40px] h-[45px] bg-cyan-400/28 rounded hologram-glow animate-hologram-2"></div>
+            {/* Center digital menu */}
+            <div className="absolute top-[62%] left-[48%] w-[50px] h-[60px] bg-cyan-300/60 rounded menu-screen animate-menu-screen-3"></div>
+            <div className="absolute top-[63%] left-[49%] w-[45px] h-[55px] bg-white/48 rounded menu-screen animate-menu-screen-4"></div>
+            
+            {/* Right digital menu */}
+            <div className="absolute top-[62%] right-[28%] w-[48px] h-[58px] bg-cyan-400/55 rounded menu-screen animate-menu-screen-5"></div>
+            <div className="absolute top-[63%] right-[29%] w-[43px] h-[53px] bg-white/42 rounded menu-screen animate-menu-screen-6"></div>
           </div>
 
-          {/* Neon Signs - RIGHT SIDE */}
+          {/* Neon City Signs Through Window - BOLD */}
           <div className="absolute inset-0">
-            {/* Top cyan vertical signs */}
-            <div className="absolute top-[15%] left-[52%] w-[12px] h-[55px] bg-cyan-300/30 rounded-full neon-glow animate-neon-glow-5"></div>
-            <div className="absolute top-[20%] left-[58%] w-[14px] h-[50px] bg-pink-400/28 rounded-full neon-glow animate-neon-glow-6"></div>
+            {/* Large pink/magenta signs */}
+            <div className="absolute top-[28%] left-[38%] w-[55px] h-[35px] bg-pink-400/70 rounded-full city-sign animate-city-sign-1"></div>
+            <div className="absolute top-[18%] left-[48%] w-[45px] h-[50px] bg-magenta-400/65 rounded-full city-sign animate-city-sign-2"></div>
             
-            {/* Orange building sign */}
-            <div className="absolute top-[38%] left-[78%] w-[30px] h-[22px] bg-orange-300/32 rounded-full neon-glow animate-neon-glow-7"></div>
+            {/* Orange/red signs */}
+            <div className="absolute top-[32%] left-[68%] w-[48px] h-[32px] bg-orange-400/68 rounded-full city-sign animate-city-sign-3"></div>
+            <div className="absolute top-[38%] left-[78%] w-[40px] h-[28px] bg-red-400/62 rounded-full city-sign animate-city-sign-4"></div>
             
-            {/* Bottom orange sign */}
-            <div className="absolute top-[56%] left-[88%] w-[25px] h-[20px] bg-orange-400/30 rounded-full neon-glow animate-neon-glow-8"></div>
-            
-            {/* Far right purple signs */}
-            <div className="absolute top-[28%] left-[92%] w-[18px] h-[45px] bg-purple-400/28 rounded-full neon-glow animate-neon-glow-9"></div>
+            {/* Cyan/blue signs */}
+            <div className="absolute top-[25%] left-[58%] w-[35px] h-[40px] bg-cyan-400/72 rounded-full city-sign animate-city-sign-5"></div>
+            <div className="absolute top-[15%] left-[72%] w-[42px] h-[38px] bg-blue-400/68 rounded-full city-sign animate-city-sign-6"></div>
           </div>
 
-          {/* Building Window Lights - LEFT BUILDINGS */}
+          {/* City Building Windows - BOLD Twinkling */}
           <div className="absolute inset-0">
-            {/* Far left building */}
-            <div className="absolute top-[14%] left-[6%] w-[3px] h-[4px] bg-yellow-300/85 rounded window-light animate-window-light-1"></div>
-            <div className="absolute top-[16%] left-[7%] w-[3px] h-[4px] bg-orange-300/82 rounded window-light animate-window-light-2"></div>
-            <div className="absolute top-[18%] left-[6.5%] w-[3px] h-[4px] bg-yellow-300/88 rounded window-light animate-window-light-3"></div>
-            <div className="absolute top-[20%] left-[7.5%] w-[3px] h-[4px] bg-orange-300/85 rounded window-light animate-window-light-4"></div>
+            {/* Left building cluster */}
+            <div className="absolute top-[22%] left-[32%] w-[6px] h-[7px] bg-cyan-300 rounded window-light animate-window-twinkle-1"></div>
+            <div className="absolute top-[26%] left-[34%] w-[6px] h-[7px] bg-yellow-300 rounded window-light animate-window-twinkle-2"></div>
+            <div className="absolute top-[30%] left-[33%] w-[6px] h-[7px] bg-orange-300 rounded window-light animate-window-twinkle-3"></div>
             
-            {/* Left center buildings */}
-            <div className="absolute top-[48%] left-[8%] w-[3px] h-[4px] bg-orange-300/86 rounded window-light animate-window-light-5"></div>
-            <div className="absolute top-[50%] left-[10%] w-[3px] h-[4px] bg-yellow-300/84 rounded window-light animate-window-light-6"></div>
-            <div className="absolute top-[52%] left-[12%] w-[3px] h-[4px] bg-orange-300/88 rounded window-light animate-window-light-7"></div>
+            {/* Center building cluster */}
+            <div className="absolute top-[18%] left-[50%] w-[7px] h-[8px] bg-pink-300 rounded window-light animate-window-twinkle-4"></div>
+            <div className="absolute top-[22%] left-[52%] w-[6px] h-[7px] bg-cyan-300 rounded window-light animate-window-twinkle-5"></div>
+            <div className="absolute top-[26%] left-[54%] w-[6px] h-[7px] bg-yellow-300 rounded window-light animate-window-twinkle-6"></div>
+            <div className="absolute top-[30%] left-[51%] w-[7px] h-[8px] bg-orange-300 rounded window-light animate-window-twinkle-7"></div>
+            
+            {/* Right building cluster */}
+            <div className="absolute top-[24%] left-[70%] w-[6px] h-[7px] bg-cyan-300 rounded window-light animate-window-twinkle-8"></div>
+            <div className="absolute top-[28%] left-[72%] w-[6px] h-[7px] bg-pink-300 rounded window-light animate-window-twinkle-9"></div>
+            <div className="absolute top-[32%] left-[74%] w-[7px] h-[8px] bg-yellow-300 rounded window-light animate-window-twinkle-10"></div>
+            <div className="absolute top-[36%] left-[76%] w-[6px] h-[7px] bg-orange-300 rounded window-light animate-window-twinkle-11"></div>
+            <div className="absolute top-[40%] left-[78%] w-[6px] h-[7px] bg-cyan-300 rounded window-light animate-window-twinkle-12"></div>
           </div>
 
-          {/* Building Window Lights - CENTER */}
+          {/* Flying Vehicle Lights - BOLD */}
           <div className="absolute inset-0">
-            <div className="absolute top-[30%] left-[32%] w-[3px] h-[4px] bg-cyan-300/88 rounded window-light animate-window-light-8"></div>
-            <div className="absolute top-[32%] left-[34%] w-[3px] h-[4px] bg-cyan-300/85 rounded window-light animate-window-light-9"></div>
-            <div className="absolute top-[34%] left-[36%] w-[3px] h-[4px] bg-yellow-300/86 rounded window-light animate-window-light-10"></div>
-            <div className="absolute top-[38%] left-[48%] w-[3px] h-[4px] bg-yellow-300/88 rounded window-light animate-window-light-11"></div>
-            <div className="absolute top-[40%] left-[50%] w-[3px] h-[4px] bg-orange-300/85 rounded window-light animate-window-light-12"></div>
+            {/* Top left vehicle */}
+            <div className="absolute top-[15%] left-[35%] w-[12px] h-[10px] bg-red-400 rounded-full vehicle-light animate-vehicle-fly-1"></div>
+            <div className="absolute top-[15.5%] left-[36%] w-[8px] h-[6px] bg-white rounded-full vehicle-light animate-vehicle-fly-1"></div>
+            
+            {/* Center vehicle */}
+            <div className="absolute top-[20%] left-[62%] w-[14px] h-[11px] bg-cyan-400 rounded-full vehicle-light animate-vehicle-fly-2"></div>
+            <div className="absolute top-[20.5%] left-[63%] w-[10px] h-[7px] bg-white rounded-full vehicle-light animate-vehicle-fly-2"></div>
+            
+            {/* Right vehicle */}
+            <div className="absolute top-[28%] left-[82%] w-[11px] h-[9px] bg-purple-400 rounded-full vehicle-light animate-vehicle-fly-3"></div>
+            <div className="absolute top-[28.5%] left-[82.5%] w-[7px] h-[5px] bg-white rounded-full vehicle-light animate-vehicle-fly-3"></div>
           </div>
 
-          {/* Building Window Lights - RIGHT BUILDINGS */}
+          {/* Holographic Rain/Particles - BOLD */}
           <div className="absolute inset-0">
-            <div className="absolute top-[48%] left-[68%] w-[3px] h-[4px] bg-cyan-300/87 rounded window-light animate-window-light-13"></div>
-            <div className="absolute top-[50%] left-[70%] w-[3px] h-[4px] bg-cyan-300/84 rounded window-light animate-window-light-14"></div>
-            <div className="absolute top-[52%] left-[72%] w-[3px] h-[4px] bg-cyan-300/89 rounded window-light animate-window-light-15"></div>
-            
-            {/* Far right building */}
-            <div className="absolute top-[60%] left-[88%] w-[3px] h-[4px] bg-cyan-300/86 rounded window-light animate-window-light-16"></div>
-            <div className="absolute top-[62%] left-[90%] w-[3px] h-[4px] bg-orange-300/85 rounded window-light animate-window-light-17"></div>
-            <div className="absolute top-[64%] left-[92%] w-[3px] h-[4px] bg-cyan-300/88 rounded window-light animate-window-light-18"></div>
+            {/* Cyan holo particles */}
+            <div className="absolute top-[25%] left-[42%] w-[5px] h-[5px] bg-cyan-300 rounded-full holo-particle animate-holo-rain-1"></div>
+            <div className="absolute top-[30%] left-[55%] w-[6px] h-[6px] bg-cyan-400 rounded-full holo-particle animate-holo-rain-2"></div>
+            <div className="absolute top-[35%] left-[48%] w-[5px] h-[5px] bg-pink-300 rounded-full holo-particle animate-holo-rain-3"></div>
+            <div className="absolute top-[40%] left-[65%] w-[6px] h-[6px] bg-purple-300 rounded-full holo-particle animate-holo-rain-4"></div>
+            <div className="absolute top-[32%] left-[72%] w-[5px] h-[5px] bg-cyan-400 rounded-full holo-particle animate-holo-rain-5"></div>
+            <div className="absolute top-[38%] left-[60%] w-[6px] h-[6px] bg-pink-400 rounded-full holo-particle animate-holo-rain-6"></div>
           </div>
 
-          {/* Floating Vehicle Lights - EPIC */}
+          {/* Restaurant Table Lights - BOLD */}
           <div className="absolute inset-0">
-            {/* Top left flying vehicle */}
-            <div className="absolute top-[14%] left-[42%] w-[8px] h-[6px] bg-red-400/80 rounded-full vehicle-light animate-vehicle-1"></div>
-            <div className="absolute top-[14.5%] left-[42.5%] w-[6px] h-[4px] bg-white/90 rounded-full vehicle-light animate-vehicle-1"></div>
-            
-            {/* Top right flying vehicle */}
-            <div className="absolute top-[18%] left-[68%] w-[7px] h-[5px] bg-cyan-400/85 rounded-full vehicle-light animate-vehicle-2"></div>
-            <div className="absolute top-[18.5%] left-[68.5%] w-[5px] h-[4px] bg-white/92 rounded-full vehicle-light animate-vehicle-2"></div>
-            
-            {/* Right side larger vehicle */}
-            <div className="absolute top-[72%] left-[82%] w-[12px] h-[8px] bg-blue-400/75 rounded-full vehicle-light animate-vehicle-3"></div>
-            <div className="absolute top-[72.5%] left-[83%] w-[8px] h-[5px] bg-cyan-300/88 rounded-full vehicle-light animate-vehicle-3"></div>
-            
-            {/* Small flying vehicle center */}
-            <div className="absolute top-[65%] left-[74%] w-[6px] h-[5px] bg-red-300/80 rounded-full vehicle-light animate-vehicle-4"></div>
+            {/* Under-table cyan glow */}
+            <div className="absolute top-[68%] left-[8%] w-[80px] h-[35px] bg-cyan-400/45 rounded-full table-glow animate-table-glow-1"></div>
+            <div className="absolute top-[68%] left-[28%] w-[85px] h-[38px] bg-cyan-300/48 rounded-full table-glow animate-table-glow-2"></div>
+            <div className="absolute top-[68%] left-[48%] w-[82px] h-[36px] bg-cyan-400/50 rounded-full table-glow animate-table-glow-3"></div>
           </div>
 
-          {/* Holographic Projection Lines - CYBERPUNK */}
+          {/* Purple Edge Lighting - LEFT SIDE BOLD */}
           <div className="absolute inset-0">
-            {/* Cyan hologram beams */}
-            <div className="absolute top-[54%] left-[29%] w-[30px] h-[2px] bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent holo-line animate-holo-line-1"></div>
-            <div className="absolute top-[61%] left-[39%] w-[35px] h-[2px] bg-gradient-to-r from-transparent via-cyan-400/55 to-transparent holo-line animate-holo-line-2"></div>
-            
-            {/* Data stream particles */}
-            <div className="absolute top-[56%] left-[30%] w-[2px] h-[2px] bg-cyan-300/85 rounded-full data-particle animate-data-1"></div>
-            <div className="absolute top-[58%] left-[33%] w-[2px] h-[2px] bg-cyan-400/80 rounded-full data-particle animate-data-2"></div>
-            <div className="absolute top-[62%] left-[41%] w-[2px] h-[2px] bg-cyan-300/82 rounded-full data-particle animate-data-3"></div>
+            {/* Left wall purple neon strips */}
+            <div className="absolute top-[35%] left-[2%] w-[12px] h-[85px] bg-purple-400/68 rounded-full edge-light animate-edge-light-1"></div>
+            <div className="absolute top-[48%] left-[8%] w-[15px] h-[70px] bg-magenta-400/72 rounded-full edge-light animate-edge-light-2"></div>
           </div>
 
-          {/* Atmospheric Neon Particles Floating */}
+          {/* Purple Edge Lighting - RIGHT SIDE BOLD */}
           <div className="absolute inset-0">
-            {/* Large neon particles */}
-            <div className="absolute top-[22%] left-[35%] w-[3px] h-[3px] bg-cyan-300/70 rounded-full neon-particle animate-neon-float-1"></div>
-            <div className="absolute top-[28%] left-[45%] w-[3px] h-[3px] bg-pink-300/68 rounded-full neon-particle animate-neon-float-2"></div>
-            <div className="absolute top-[35%] left-[55%] w-[4px] h-[4px] bg-purple-300/75 rounded-full neon-particle animate-neon-float-3"></div>
-            <div className="absolute top-[42%] left-[65%] w-[3px] h-[3px] bg-cyan-400/72 rounded-full neon-particle animate-neon-float-4"></div>
-            <div className="absolute top-[48%] left-[40%] w-[4px] h-[4px] bg-orange-300/70 rounded-full neon-particle animate-neon-float-5"></div>
-            
-            {/* Medium particles */}
-            <div className="absolute top-[25%] left-[38%] w-[2px] h-[2px] bg-cyan-300/65 rounded-full neon-particle animate-neon-float-6"></div>
-            <div className="absolute top-[32%] left-[48%] w-[2px] h-[2px] bg-pink-300/63 rounded-full neon-particle animate-neon-float-7"></div>
-            <div className="absolute top-[38%] left-[58%] w-[2px] h-[2px] bg-purple-300/68 rounded-full neon-particle animate-neon-float-8"></div>
-            <div className="absolute top-[44%] left-[43%] w-[2px] h-[2px] bg-cyan-400/66 rounded-full neon-particle animate-neon-float-9"></div>
-            <div className="absolute top-[50%] left-[53%] w-[2px] h-[2px] bg-orange-300/64 rounded-full neon-particle animate-neon-float-10"></div>
+            {/* Right edge purple neon */}
+            <div className="absolute top-[32%] right-[2%] w-[14px] h-[90px] bg-purple-400/70 rounded-full edge-light animate-edge-light-3"></div>
+            <div className="absolute top-[45%] right-[8%] w-[16px] h-[75px] bg-magenta-400/75 rounded-full edge-light animate-edge-light-4"></div>
           </div>
 
-          {/* Cyan Water Canal Glow */}
-          <div className="absolute inset-0">
-            {/* Water surface shimmer */}
-            <div className="absolute top-[78%] left-[35%] w-[45px] h-[20px] bg-cyan-400/18 rounded-full water-shimmer animate-water-shimmer-1"></div>
-            <div className="absolute top-[82%] left-[45%] w-[50px] h-[22px] bg-cyan-300/16 rounded-full water-shimmer animate-water-shimmer-2"></div>
-            <div className="absolute top-[85%] left-[55%] w-[48px] h-[20px] bg-cyan-400/20 rounded-full water-shimmer animate-water-shimmer-3"></div>
-          </div>
-
-          {/* Pipe/Tube Glow Lines */}
-          <div className="absolute inset-0">
-            {/* Cyan pipe in water */}
-            <div className="absolute top-[68%] left-[38%] w-[80px] h-[4px] bg-cyan-300/35 rounded-full pipe-glow animate-pipe-glow-1"></div>
-            
-            {/* Vertical pipe glow points */}
-            <div className="absolute top-[70%] left-[40%] w-[3px] h-[3px] bg-cyan-400/80 rounded-full pipe-light animate-pipe-light-1"></div>
-            <div className="absolute top-[70%] left-[48%] w-[3px] h-[3px] bg-cyan-300/78 rounded-full pipe-light animate-pipe-light-2"></div>
-            <div className="absolute top-[70%] left-[56%] w-[3px] h-[3px] bg-cyan-400/82 rounded-full pipe-light animate-pipe-light-3"></div>
-          </div>
-
-          {/* Plant Foliage Bioluminescence */}
+          {/* Plant Bioluminescence - FOREGROUND BOLD */}
           <div className="absolute inset-0">
             {/* Left foreground plants */}
-            <div className="absolute top-[42%] left-[8%] w-[30px] h-[28px] bg-green-400/14 rounded-full bio-glow animate-bio-glow-1"></div>
-            <div className="absolute top-[48%] left-[12%] w-[28px] h-[26px] bg-cyan-400/12 rounded-full bio-glow animate-bio-glow-2"></div>
+            <div className="absolute top-[55%] left-[8%] w-[50px] h-[55px] bg-green-400/38 rounded-full plant-glow animate-plant-glow-1"></div>
+            <div className="absolute top-[62%] left-[12%] w-[45px] h-[50px] bg-cyan-400/35 rounded-full plant-glow animate-plant-glow-2"></div>
             
-            {/* Center plants */}
-            <div className="absolute top-[36%] left-[36%] w-[25px] h-[24px] bg-green-400/13 rounded-full bio-glow animate-bio-glow-3"></div>
-            
-            {/* Right plants */}
-            <div className="absolute top-[72%] left-[82%] w-[30px] h-[28px] bg-green-400/15 rounded-full bio-glow animate-bio-glow-4"></div>
-            <div className="absolute top-[78%] left-[88%] w-[28px] h-[26px] bg-cyan-400/13 rounded-full bio-glow animate-bio-glow-5"></div>
+            {/* Right foreground plants */}
+            <div className="absolute top-[58%] right-[8%] w-[52px] h-[58px] bg-green-400/40 rounded-full plant-glow animate-plant-glow-3"></div>
+            <div className="absolute top-[65%] right-[12%] w-[48px] h-[53px] bg-cyan-400/37 rounded-full plant-glow animate-plant-glow-4"></div>
           </div>
 
-          {/* Antenna/Tower Blink Lights */}
+          {/* Reflection Shimmer on Glass/Table - BOLD */}
           <div className="absolute inset-0">
-            {/* Top center antenna */}
-            <div className="absolute top-[8%] left-[48%] w-[4px] h-[4px] bg-red-400/90 rounded-full antenna-light animate-antenna-blink-1"></div>
-            
-            {/* Right side antennas */}
-            <div className="absolute top-[10%] left-[90%] w-[3px] h-[3px] bg-red-400/88 rounded-full antenna-light animate-antenna-blink-2"></div>
-            <div className="absolute top-[24%] left-[94%] w-[3px] h-[3px] bg-purple-400/85 rounded-full antenna-light animate-antenna-blink-3"></div>
+            {/* Window reflection glints */}
+            <div className="absolute top-[45%] left-[40%] w-[8px] h-[8px] bg-white/85 rounded-full reflection-glint animate-reflection-1"></div>
+            <div className="absolute top-[50%] left-[55%] w-[9px] h-[9px] bg-cyan-200/90 rounded-full reflection-glint animate-reflection-2"></div>
+            <div className="absolute top-[48%] left-[70%] w-[8px] h-[8px] bg-white/88 rounded-full reflection-glint animate-reflection-3"></div>
+          </div>
+
+          {/* Steam Rising from Food - BOLD */}
+          <div className="absolute inset-0">
+            {/* Steam wisps */}
+            <div className="absolute top-[62%] left-[15%] w-[22px] h-[30px] bg-white/35 rounded-full steam animate-steam-rise-1"></div>
+            <div className="absolute top-[62%] left-[35%] w-[20px] h-[28px] bg-cyan-100/32 rounded-full steam animate-steam-rise-2"></div>
+            <div className="absolute top-[62%] left-[52%] w-[24px] h-[32px] bg-white/38 rounded-full steam animate-steam-rise-3"></div>
           </div>
         </div>
         
         <style jsx>{`
-          .neon-sign-glow {
-            filter: blur(25px);
+          /* BOLD Effect Styles */
+          .ceiling-light {
+            filter: blur(35px);
           }
           
-          .neon-sparkle {
-            box-shadow: 0 0 25px currentColor, 0 0 50px currentColor, 0 0 75px currentColor;
-            filter: blur(0.3px);
+          .conveyor-glow {
+            filter: blur(30px);
           }
           
-          .neon-glow {
-            filter: blur(18px);
+          .sushi-glow {
+            filter: blur(28px);
+            box-shadow: 0 0 40px currentColor, 0 0 80px currentColor;
           }
           
-          .hologram-glow {
-            filter: blur(20px);
+          .menu-screen {
+            filter: blur(32px);
+          }
+          
+          .city-sign {
+            filter: blur(38px);
           }
           
           .window-light {
-            filter: blur(3px);
-            box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
+            box-shadow: 0 0 45px currentColor, 0 0 90px currentColor, 0 0 135px currentColor;
+            filter: blur(1.5px);
           }
           
           .vehicle-light {
-            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+            box-shadow: 0 0 50px currentColor, 0 0 100px currentColor, 0 0 150px currentColor;
+            filter: blur(2px);
+          }
+          
+          .holo-particle {
+            box-shadow: 0 0 55px currentColor, 0 0 110px currentColor, 0 0 165px currentColor;
             filter: blur(1px);
           }
           
-          .holo-line {
-            filter: blur(3px);
+          .table-glow {
+            filter: blur(42px);
           }
           
-          .data-particle {
-            box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
-            filter: blur(0.5px);
+          .edge-light {
+            filter: blur(45px);
           }
           
-          .neon-particle {
-            box-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
-            filter: blur(0.5px);
+          .plant-glow {
+            filter: blur(40px);
           }
           
-          .water-shimmer {
-            filter: blur(22px);
+          .reflection-glint {
+            box-shadow: 0 0 60px currentColor, 0 0 120px currentColor, 0 0 180px currentColor;
+            filter: blur(0.8px);
           }
           
-          .pipe-glow {
-            filter: blur(12px);
+          .steam {
+            filter: blur(35px);
           }
           
-          .pipe-light {
-            box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
-            filter: blur(0.5px);
-          }
-          
-          .bio-glow {
-            filter: blur(20px);
-          }
-          
-          .antenna-light {
-            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
-            filter: blur(1px);
-          }
-          
-          .animate-effects .neon-sign-glow {
+          .animate-effects .ceiling-light,
+          .animate-effects .conveyor-glow,
+          .animate-effects .sushi-glow,
+          .animate-effects .menu-screen,
+          .animate-effects .city-sign,
+          .animate-effects .window-light,
+          .animate-effects .vehicle-light,
+          .animate-effects .holo-particle,
+          .animate-effects .table-glow,
+          .animate-effects .edge-light,
+          .animate-effects .plant-glow,
+          .animate-effects .reflection-glint,
+          .animate-effects .steam {
             animation-play-state: running;
           }
           
-          .animate-effects .neon-sparkle {
-            animation-play-state: running;
+          /* Ceiling Light Animations - BOLD */
+          @keyframes ceiling-light-1 {
+            0%, 100% { opacity: 0.65; transform: scaleX(1); }
+            50% { opacity: 0.88; transform: scaleX(1.08); }
           }
           
-          .animate-effects .neon-glow {
-            animation-play-state: running;
+          @keyframes ceiling-light-2 {
+            0%, 100% { opacity: 0.75; transform: scaleX(1); }
+            50% { opacity: 0.95; transform: scaleX(1.10); }
           }
           
-          .animate-effects .hologram-glow {
-            animation-play-state: running;
+          @keyframes ceiling-light-3 {
+            0%, 100% { opacity: 0.70; transform: scaleX(1); }
+            50% { opacity: 0.92; transform: scaleX(1.12); }
           }
           
-          .animate-effects .window-light {
-            animation-play-state: running;
+          @keyframes ceiling-light-4 {
+            0%, 100% { opacity: 0.80; transform: scaleX(1); }
+            50% { opacity: 1; transform: scaleX(1.14); }
           }
           
-          .animate-effects .vehicle-light {
-            animation-play-state: running;
+          @keyframes ceiling-light-5 {
+            0%, 100% { opacity: 0.68; transform: scaleX(1); }
+            50% { opacity: 0.90; transform: scaleX(1.09); }
           }
           
-          .animate-effects .holo-line {
-            animation-play-state: running;
+          @keyframes ceiling-light-6 {
+            0%, 100% { opacity: 0.78; transform: scaleX(1); }
+            50% { opacity: 0.98; transform: scaleX(1.11); }
           }
           
-          .animate-effects .data-particle {
-            animation-play-state: running;
+          /* Conveyor Belt Glow - BOLD Pulse */
+          @keyframes conveyor-glow {
+            0%, 100% { opacity: 0.55; transform: scaleX(1) scaleY(1); }
+            50% { opacity: 0.80; transform: scaleX(1.05) scaleY(1.15); }
           }
           
-          .animate-effects .neon-particle {
-            animation-play-state: running;
+          /* Sushi Plate Glows - BOLD Pulsing */
+          @keyframes sushi-glow-1 {
+            0%, 100% { opacity: 0.60; transform: scale(1); }
+            50% { opacity: 0.90; transform: scale(1.35); }
           }
           
-          .animate-effects .water-shimmer {
-            animation-play-state: running;
+          @keyframes sushi-glow-2 {
+            0%, 100% { opacity: 0.65; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0.95; transform: scale(1.40) rotate(180deg); }
           }
           
-          .animate-effects .pipe-glow {
-            animation-play-state: running;
+          @keyframes sushi-glow-3 {
+            0%, 100% { opacity: 0.62; transform: scale(1); }
+            50% { opacity: 0.92; transform: scale(1.37); }
           }
           
-          .animate-effects .pipe-light {
-            animation-play-state: running;
+          @keyframes sushi-glow-4 {
+            0%, 100% { opacity: 0.58; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0.88; transform: scale(1.33) rotate(-180deg); }
           }
           
-          .animate-effects .bio-glow {
-            animation-play-state: running;
+          @keyframes sushi-glow-5 {
+            0%, 100% { opacity: 0.67; transform: scale(1); }
+            50% { opacity: 0.97; transform: scale(1.42); }
           }
           
-          .animate-effects .antenna-light {
-            animation-play-state: running;
+          @keyframes sushi-glow-6 {
+            0%, 100% { opacity: 0.60; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0.90; transform: scale(1.36) rotate(180deg); }
           }
           
-          @keyframes neon-sign-1 {
-            0%, 100% { opacity: 0.35; transform: scale(1); }
-            50% { opacity: 0.65; transform: scale(1.15); }
+          /* Menu Screen Animations - BOLD */
+          @keyframes menu-screen-1 {
+            0%, 100% { opacity: 0.58; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.08); }
           }
           
-          @keyframes neon-sign-2 {
-            0%, 100% { opacity: 0.4; transform: scale(1) rotate(0deg); }
-            60% { opacity: 0.7; transform: scale(1.18) rotate(5deg); }
+          @keyframes menu-screen-2 {
+            0%, 100% { opacity: 0.45; transform: scale(1); }
+            50% { opacity: 0.72; transform: scale(1.10); }
           }
           
-          @keyframes sign-sparkle-1 {
-            0%, 70%, 100% { opacity: 0; transform: scale(1); }
-            75%, 85% { opacity: 1; transform: scale(2.8); }
-            80% { opacity: 0.6; transform: scale(2.2); }
+          @keyframes menu-screen-3 {
+            0%, 100% { opacity: 0.60; transform: scale(1); }
+            50% { opacity: 0.88; transform: scale(1.12); }
           }
           
-          @keyframes sign-sparkle-2 {
-            0%, 65%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            70%, 80% { opacity: 0.98; transform: scale(3) rotate(360deg); }
-            75% { opacity: 0.65; transform: scale(2.4) rotate(180deg); }
+          @keyframes menu-screen-4 {
+            0%, 100% { opacity: 0.48; transform: scale(1); }
+            50% { opacity: 0.75; transform: scale(1.14); }
           }
           
-          @keyframes sign-sparkle-3 {
-            0%, 72%, 100% { opacity: 0; transform: scale(1); }
-            77%, 87% { opacity: 0.96; transform: scale(2.9); }
-            82% { opacity: 0.62; transform: scale(2.3); }
+          @keyframes menu-screen-5 {
+            0%, 100% { opacity: 0.55; transform: scale(1); }
+            50% { opacity: 0.82; transform: scale(1.09); }
           }
           
-          @keyframes neon-glow-1 {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 0.55; transform: scale(1.12); }
+          @keyframes menu-screen-6 {
+            0%, 100% { opacity: 0.42; transform: scale(1); }
+            50% { opacity: 0.68; transform: scale(1.11); }
           }
           
-          @keyframes neon-glow-2 {
-            0%, 100% { opacity: 0.28; transform: scale(1); }
-            60% { opacity: 0.52; transform: scale(1.1); }
+          /* City Sign Animations - BOLD */
+          @keyframes city-sign-1 {
+            0%, 100% { opacity: 0.70; transform: scale(1); }
+            50% { opacity: 0.95; transform: scale(1.22); }
           }
           
-          @keyframes neon-glow-3 {
-            0%, 100% { opacity: 0.32; transform: scale(1); }
-            55% { opacity: 0.58; transform: scale(1.14); }
+          @keyframes city-sign-2 {
+            0%, 100% { opacity: 0.65; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0.90; transform: scale(1.20) rotate(5deg); }
           }
           
-          @keyframes neon-glow-4 {
-            0%, 100% { opacity: 0.35; transform: scale(1); }
-            52% { opacity: 0.6; transform: scale(1.16); }
+          @keyframes city-sign-3 {
+            0%, 100% { opacity: 0.68; transform: scale(1); }
+            50% { opacity: 0.93; transform: scale(1.24); }
           }
           
-          @keyframes neon-glow-5 {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            58% { opacity: 0.54; transform: scale(1.11); }
+          @keyframes city-sign-4 {
+            0%, 100% { opacity: 0.62; transform: scale(1); }
+            50% { opacity: 0.87; transform: scale(1.18); }
           }
           
-          @keyframes neon-glow-6 {
-            0%, 100% { opacity: 0.28; transform: scale(1); }
-            54% { opacity: 0.5; transform: scale(1.13); }
+          @keyframes city-sign-5 {
+            0%, 100% { opacity: 0.72; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0.97; transform: scale(1.26) rotate(-5deg); }
           }
           
-          @keyframes neon-glow-7 {
-            0%, 100% { opacity: 0.32; transform: scale(1); }
-            50% { opacity: 0.56; transform: scale(1.15); }
+          @keyframes city-sign-6 {
+            0%, 100% { opacity: 0.68; transform: scale(1); }
+            50% { opacity: 0.93; transform: scale(1.21); }
           }
           
-          @keyframes neon-glow-8 {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            56% { opacity: 0.53; transform: scale(1.12); }
+          /* Window Twinkle Animations - BOLD */
+          @keyframes window-twinkle-1 {
+            0%, 60%, 100% { opacity: 0; transform: scale(0.5); }
+            65%, 75% { opacity: 1; transform: scale(5); }
+            70% { opacity: 0.6; transform: scale(4); }
           }
           
-          @keyframes neon-glow-9 {
-            0%, 100% { opacity: 0.28; transform: scale(1); }
-            52% { opacity: 0.51; transform: scale(1.1); }
+          @keyframes window-twinkle-2 {
+            0%, 65%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            70%, 80% { opacity: 1; transform: scale(4.8) rotate(360deg); }
+            75% { opacity: 0.6; transform: scale(3.8) rotate(180deg); }
           }
           
-          @keyframes hologram-1 {
-            0%, 100% { opacity: 0.25; transform: scale(1) translateY(0px); }
-            50% { opacity: 0.45; transform: scale(1.08) translateY(-3px); }
+          @keyframes window-twinkle-3 {
+            0%, 68%, 100% { opacity: 0; transform: scale(0.5); }
+            73%, 83% { opacity: 1; transform: scale(5.2); }
+            78% { opacity: 0.6; transform: scale(4.2); }
           }
           
-          @keyframes hologram-2 {
-            0%, 100% { opacity: 0.28; transform: scale(1) translateY(0px); }
-            60% { opacity: 0.48; transform: scale(1.1) translateY(-4px); }
+          @keyframes window-twinkle-4 {
+            0%, 62%, 100% { opacity: 0; transform: scale(0.5); }
+            67%, 77% { opacity: 1; transform: scale(5.5); }
+            72% { opacity: 0.6; transform: scale(4.5); }
           }
           
-          @keyframes window-light-1 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.4); }
+          @keyframes window-twinkle-5 {
+            0%, 70%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            75%, 85% { opacity: 1; transform: scale(4.9) rotate(360deg); }
+            80% { opacity: 0.6; transform: scale(3.9) rotate(180deg); }
           }
           
-          @keyframes window-light-2 {
-            0%, 100% { opacity: 0.82; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.38); }
+          @keyframes window-twinkle-6 {
+            0%, 64%, 100% { opacity: 0; transform: scale(0.5); }
+            69%, 79% { opacity: 1; transform: scale(5.1); }
+            74% { opacity: 0.6; transform: scale(4.1); }
           }
           
-          @keyframes window-light-3 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.42); }
+          @keyframes window-twinkle-7 {
+            0%, 72%, 100% { opacity: 0; transform: scale(0.5); }
+            77%, 87% { opacity: 1; transform: scale(5.3); }
+            82% { opacity: 0.6; transform: scale(4.3); }
           }
           
-          @keyframes window-light-4 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.4); }
+          @keyframes window-twinkle-8 {
+            0%, 66%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            71%, 81% { opacity: 1; transform: scale(4.7) rotate(360deg); }
+            76% { opacity: 0.6; transform: scale(3.7) rotate(180deg); }
           }
           
-          @keyframes window-light-5 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.38); }
+          @keyframes window-twinkle-9 {
+            0%, 74%, 100% { opacity: 0; transform: scale(0.5); }
+            79%, 89% { opacity: 1; transform: scale(5.4); }
+            84% { opacity: 0.6; transform: scale(4.4); }
           }
           
-          @keyframes window-light-6 {
-            0%, 100% { opacity: 0.84; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.42); }
+          @keyframes window-twinkle-10 {
+            0%, 58%, 100% { opacity: 0; transform: scale(0.5); }
+            63%, 73% { opacity: 1; transform: scale(5.6); }
+            68% { opacity: 0.6; transform: scale(4.6); }
           }
           
-          @keyframes window-light-7 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.44); }
+          @keyframes window-twinkle-11 {
+            0%, 76%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            81%, 91% { opacity: 1; transform: scale(4.8) rotate(360deg); }
+            86% { opacity: 0.6; transform: scale(3.8) rotate(180deg); }
           }
           
-          @keyframes window-light-8 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.4); }
+          @keyframes window-twinkle-12 {
+            0%, 69%, 100% { opacity: 0; transform: scale(0.5); }
+            74%, 84% { opacity: 1; transform: scale(5); }
+            79% { opacity: 0.6; transform: scale(4); }
           }
           
-          @keyframes window-light-9 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.38); }
+          /* Vehicle Flying Animations - BOLD */
+          @keyframes vehicle-fly-1 {
+            0% { opacity: 0; transform: translateX(0) translateY(0) scale(0.8); }
+            20% { opacity: 1; transform: translateX(-50px) translateY(15px) scale(1); }
+            100% { opacity: 0; transform: translateX(-250px) translateY(45px) scale(0.7); }
           }
           
-          @keyframes window-light-10 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.42); }
+          @keyframes vehicle-fly-2 {
+            0% { opacity: 1; transform: translateX(0) translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateX(280px) translateY(-30px) scale(0.6); }
           }
           
-          @keyframes window-light-11 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.44); }
+          @keyframes vehicle-fly-3 {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.15); }
           }
           
-          @keyframes window-light-12 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.4); }
+          /* Holo Rain Particle Animations - BOLD */
+          @keyframes holo-rain-1 {
+            0% { opacity: 0; transform: translateY(0) scale(1); }
+            50% { opacity: 1; transform: translateY(80px) scale(1.3); }
+            100% { opacity: 0; transform: translateY(160px) scale(0.8); }
           }
           
-          @keyframes window-light-13 {
-            0%, 100% { opacity: 0.87; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.42); }
+          @keyframes holo-rain-2 {
+            0% { opacity: 0; transform: translateY(0) scale(1) rotate(0deg); }
+            50% { opacity: 1; transform: translateY(90px) scale(1.4) rotate(180deg); }
+            100% { opacity: 0; transform: translateY(180px) scale(0.7) rotate(360deg); }
           }
           
-          @keyframes window-light-14 {
-            0%, 100% { opacity: 0.84; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.38); }
+          @keyframes holo-rain-3 {
+            0% { opacity: 0; transform: translateY(0) scale(1); }
+            50% { opacity: 1; transform: translateY(75px) scale(1.2); }
+            100% { opacity: 0; transform: translateY(150px) scale(0.9); }
           }
           
-          @keyframes window-light-15 {
-            0%, 100% { opacity: 0.89; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.44); }
+          @keyframes holo-rain-4 {
+            0% { opacity: 0; transform: translateY(0) scale(1) rotate(0deg); }
+            50% { opacity: 1; transform: translateY(95px) scale(1.5) rotate(180deg); }
+            100% { opacity: 0; transform: translateY(190px) scale(0.6) rotate(360deg); }
           }
           
-          @keyframes window-light-16 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.4); }
+          @keyframes holo-rain-5 {
+            0% { opacity: 0; transform: translateY(0) scale(1); }
+            50% { opacity: 1; transform: translateY(85px) scale(1.35); }
+            100% { opacity: 0; transform: translateY(170px) scale(0.75); }
           }
           
-          @keyframes window-light-17 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.42); }
+          @keyframes holo-rain-6 {
+            0% { opacity: 0; transform: translateY(0) scale(1) rotate(0deg); }
+            50% { opacity: 1; transform: translateY(78px) scale(1.25) rotate(180deg); }
+            100% { opacity: 0; transform: translateY(156px) scale(0.85) rotate(360deg); }
           }
           
-          @keyframes window-light-18 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.44); }
+          /* Table Glow Animations - BOLD */
+          @keyframes table-glow-1 {
+            0%, 100% { opacity: 0.45; transform: scale(1); }
+            50% { opacity: 0.72; transform: scale(1.18); }
           }
           
-          @keyframes vehicle-1 {
-            0% { opacity: 0.8; transform: translateX(0px) translateY(0px); }
-            100% { opacity: 0; transform: translateX(150px) translateY(20px); }
+          @keyframes table-glow-2 {
+            0%, 100% { opacity: 0.48; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0.75; transform: scale(1.20) rotate(10deg); }
           }
           
-          @keyframes vehicle-2 {
-            0% { opacity: 0; transform: translateX(0px) translateY(0px); }
-            20% { opacity: 0.85; transform: translateX(-30px) translateY(10px); }
-            100% { opacity: 0; transform: translateX(-180px) translateY(30px); }
+          @keyframes table-glow-3 {
+            0%, 100% { opacity: 0.50; transform: scale(1); }
+            50% { opacity: 0.78; transform: scale(1.22); }
           }
           
-          @keyframes vehicle-3 {
-            0%, 100% { opacity: 0.75; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.15); }
+          /* Edge Light Animations - BOLD */
+          @keyframes edge-light-1 {
+            0%, 100% { opacity: 0.68; transform: scaleY(1); }
+            50% { opacity: 0.92; transform: scaleY(1.12); }
           }
           
-          @keyframes vehicle-4 {
-            0% { opacity: 0; transform: translateX(0px) translateY(0px) scale(0.8); }
-            30% { opacity: 0.8; transform: translateX(20px) translateY(-15px) scale(1); }
-            100% { opacity: 0; transform: translateX(80px) translateY(-45px) scale(0.6); }
+          @keyframes edge-light-2 {
+            0%, 100% { opacity: 0.72; transform: scaleY(1); }
+            50% { opacity: 0.96; transform: scaleY(1.15); }
           }
           
-          @keyframes holo-line-1 {
-            0%, 100% { opacity: 0.6; transform: scaleX(1); }
-            50% { opacity: 1; transform: scaleX(1.1); }
+          @keyframes edge-light-3 {
+            0%, 100% { opacity: 0.70; transform: scaleY(1); }
+            50% { opacity: 0.94; transform: scaleY(1.14); }
           }
           
-          @keyframes holo-line-2 {
-            0%, 100% { opacity: 0.55; transform: scaleX(1); }
-            60% { opacity: 0.95; transform: scaleX(1.08); }
+          @keyframes edge-light-4 {
+            0%, 100% { opacity: 0.75; transform: scaleY(1); }
+            50% { opacity: 0.98; transform: scaleY(1.18); }
           }
           
-          @keyframes data-1 {
-            0% { opacity: 0; transform: translateX(0px) translateY(0px); }
-            100% { opacity: 0; transform: translateX(25px) translateY(-20px); }
-            50% { opacity: 0.85; transform: translateX(12px) translateY(-10px); }
+          /* Plant Glow Animations - BOLD */
+          @keyframes plant-glow-1 {
+            0%, 100% { opacity: 0.38; transform: scale(1); }
+            50% { opacity: 0.62; transform: scale(1.20); }
           }
           
-          @keyframes data-2 {
-            0% { opacity: 0; transform: translateX(0px) translateY(0px); }
-            100% { opacity: 0; transform: translateX(30px) translateY(-15px); }
-            50% { opacity: 0.8; transform: translateX(15px) translateY(-8px); }
+          @keyframes plant-glow-2 {
+            0%, 100% { opacity: 0.35; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0.58; transform: scale(1.18) rotate(8deg); }
           }
           
-          @keyframes data-3 {
-            0% { opacity: 0; transform: translateX(0px) translateY(0px); }
-            100% { opacity: 0; transform: translateX(28px) translateY(-18px); }
-            50% { opacity: 0.82; transform: translateX(14px) translateY(-9px); }
+          @keyframes plant-glow-3 {
+            0%, 100% { opacity: 0.40; transform: scale(1); }
+            50% { opacity: 0.65; transform: scale(1.22); }
           }
           
-          @keyframes neon-float-1 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.7; transform: translateY(-70px) translateX(25px) rotate(180deg); }
+          @keyframes plant-glow-4 {
+            0%, 100% { opacity: 0.37; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0.60; transform: scale(1.19) rotate(-8deg); }
           }
           
-          @keyframes neon-float-2 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.68; transform: translateY(-65px) translateX(-22px) rotate(200deg); }
+          /* Reflection Glint Animations - BOLD */
+          @keyframes reflection-1 {
+            0%, 70%, 100% { opacity: 0; transform: scale(0.5); }
+            75%, 90% { opacity: 1; transform: scale(6); }
+            82% { opacity: 0.5; transform: scale(5); }
           }
           
-          @keyframes neon-float-3 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.75; transform: translateY(-75px) translateX(28px) rotate(190deg); }
+          @keyframes reflection-2 {
+            0%, 65%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            70%, 85% { opacity: 1; transform: scale(6.5) rotate(360deg); }
+            77% { opacity: 0.5; transform: scale(5.5) rotate(180deg); }
           }
           
-          @keyframes neon-float-4 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.72; transform: translateY(-68px) translateX(-24px) rotate(210deg); }
+          @keyframes reflection-3 {
+            0%, 72%, 100% { opacity: 0; transform: scale(0.5); }
+            77%, 92% { opacity: 1; transform: scale(5.8); }
+            84% { opacity: 0.5; transform: scale(4.8); }
           }
           
-          @keyframes neon-float-5 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.7; transform: translateY(-72px) translateX(26px) rotate(195deg); }
+          /* Steam Rising Animations - BOLD */
+          @keyframes steam-rise-1 {
+            0% { opacity: 0; transform: translateY(0) scale(0.8); }
+            30% { opacity: 0.40; transform: translateY(-30px) scale(1.2); }
+            70% { opacity: 0.20; transform: translateY(-70px) scale(1.5); }
+            100% { opacity: 0; transform: translateY(-110px) scale(1.8); }
           }
           
-          @keyframes neon-float-6 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.65; transform: translateY(-55px) translateX(18px); }
+          @keyframes steam-rise-2 {
+            0% { opacity: 0; transform: translateY(0) scale(0.7) rotate(0deg); }
+            30% { opacity: 0.38; transform: translateY(-28px) scale(1.15) rotate(20deg); }
+            70% { opacity: 0.18; transform: translateY(-68px) scale(1.45) rotate(40deg); }
+            100% { opacity: 0; transform: translateY(-108px) scale(1.75) rotate(60deg); }
           }
           
-          @keyframes neon-float-7 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.63; transform: translateY(-58px) translateX(-16px); }
+          @keyframes steam-rise-3 {
+            0% { opacity: 0; transform: translateY(0) scale(0.9); }
+            30% { opacity: 0.42; transform: translateY(-32px) scale(1.25); }
+            70% { opacity: 0.22; transform: translateY(-72px) scale(1.55); }
+            100% { opacity: 0; transform: translateY(-112px) scale(1.85); }
           }
           
-          @keyframes neon-float-8 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.68; transform: translateY(-62px) translateX(20px); }
-          }
-          
-          @keyframes neon-float-9 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.66; transform: translateY(-60px) translateX(-17px); }
-          }
-          
-          @keyframes neon-float-10 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.64; transform: translateY(-56px) translateX(19px); }
-          }
-          
-          @keyframes water-shimmer-1 {
-            0%, 100% { opacity: 0.18; transform: scale(1); }
-            50% { opacity: 0.32; transform: scale(1.15); }
-          }
-          
-          @keyframes water-shimmer-2 {
-            0%, 100% { opacity: 0.16; transform: scale(1) rotate(0deg); }
-            60% { opacity: 0.3; transform: scale(1.12) rotate(5deg); }
-          }
-          
-          @keyframes water-shimmer-3 {
-            0%, 100% { opacity: 0.2; transform: scale(1); }
-            55% { opacity: 0.35; transform: scale(1.18); }
-          }
-          
-          @keyframes pipe-glow-1 {
-            0%, 100% { opacity: 0.35; transform: scaleX(1); }
-            50% { opacity: 0.6; transform: scaleX(1.05); }
-          }
-          
-          @keyframes pipe-light-1 {
-            0%, 100% { opacity: 0.8; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.5); }
-          }
-          
-          @keyframes pipe-light-2 {
-            0%, 100% { opacity: 0.78; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.48); }
-          }
-          
-          @keyframes pipe-light-3 {
-            0%, 100% { opacity: 0.82; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.52); }
-          }
-          
-          @keyframes bio-glow-1 {
-            0%, 100% { opacity: 0.14; transform: scale(1); }
-            50% { opacity: 0.28; transform: scale(1.18); }
-          }
-          
-          @keyframes bio-glow-2 {
-            0%, 100% { opacity: 0.12; transform: scale(1); }
-            60% { opacity: 0.26; transform: scale(1.15); }
-          }
-          
-          @keyframes bio-glow-3 {
-            0%, 100% { opacity: 0.13; transform: scale(1); }
-            55% { opacity: 0.27; transform: scale(1.16); }
-          }
-          
-          @keyframes bio-glow-4 {
-            0%, 100% { opacity: 0.15; transform: scale(1); }
-            58% { opacity: 0.3; transform: scale(1.2); }
-          }
-          
-          @keyframes bio-glow-5 {
-            0%, 100% { opacity: 0.13; transform: scale(1); }
-            52% { opacity: 0.28; transform: scale(1.17); }
-          }
-          
-          @keyframes antenna-blink-1 {
-            0%, 40%, 100% { opacity: 0; transform: scale(1); }
-            45%, 55% { opacity: 1; transform: scale(1.8); }
-            50% { opacity: 0.5; transform: scale(1.4); }
-          }
-          
-          @keyframes antenna-blink-2 {
-            0%, 50%, 100% { opacity: 0; transform: scale(1); }
-            55%, 65% { opacity: 0.88; transform: scale(1.7); }
-            60% { opacity: 0.45; transform: scale(1.3); }
-          }
-          
-          @keyframes antenna-blink-3 {
-            0%, 35%, 100% { opacity: 0; transform: scale(1); }
-            40%, 50% { opacity: 0.85; transform: scale(1.6); }
-            45% { opacity: 0.42; transform: scale(1.25); }
-          }
-          
-          .animate-neon-sign-1 { animation: neon-sign-1 4s ease-in-out infinite; }
-          .animate-neon-sign-2 { animation: neon-sign-2 5s ease-in-out infinite 0.5s; }
-          
-          .animate-sign-sparkle-1 { animation: sign-sparkle-1 8s linear infinite; }
-          .animate-sign-sparkle-2 { animation: sign-sparkle-2 9s linear infinite 2s; }
-          .animate-sign-sparkle-3 { animation: sign-sparkle-3 8.5s linear infinite 4s; }
+          /* Animation Class Assignments */
+          .animate-ceiling-light-1 { animation: ceiling-light-1 6s ease-in-out infinite; }
+          .animate-ceiling-light-2 { animation: ceiling-light-2 6s ease-in-out infinite 0.3s; }
+          .animate-ceiling-light-3 { animation: ceiling-light-3 6.5s ease-in-out infinite 1s; }
+          .animate-ceiling-light-4 { animation: ceiling-light-4 6.5s ease-in-out infinite 1.3s; }
+          .animate-ceiling-light-5 { animation: ceiling-light-5 6.2s ease-in-out infinite 2s; }
+          .animate-ceiling-light-6 { animation: ceiling-light-6 6.2s ease-in-out infinite 2.3s; }
           
-          .animate-neon-glow-1 { animation: neon-glow-1 5s ease-in-out infinite; }
-          .animate-neon-glow-2 { animation: neon-glow-2 5.5s ease-in-out infinite 0.8s; }
-          .animate-neon-glow-3 { animation: neon-glow-3 5.2s ease-in-out infinite 1.6s; }
-          .animate-neon-glow-4 { animation: neon-glow-4 5.8s ease-in-out infinite 2.4s; }
-          .animate-neon-glow-5 { animation: neon-glow-5 5.3s ease-in-out infinite 0.4s; }
-          .animate-neon-glow-6 { animation: neon-glow-6 5.6s ease-in-out infinite 1.2s; }
-          .animate-neon-glow-7 { animation: neon-glow-7 5.4s ease-in-out infinite 2s; }
-          .animate-neon-glow-8 { animation: neon-glow-8 5.7s ease-in-out infinite 2.8s; }
-          .animate-neon-glow-9 { animation: neon-glow-9 5.1s ease-in-out infinite 3.6s; }
+          .animate-conveyor-glow { animation: conveyor-glow 5s ease-in-out infinite; }
           
-          .animate-hologram-1 { animation: hologram-1 6s ease-in-out infinite; }
-          .animate-hologram-2 { animation: hologram-2 7s ease-in-out infinite 1.5s; }
+          .animate-sushi-glow-1 { animation: sushi-glow-1 4s ease-in-out infinite; }
+          .animate-sushi-glow-2 { animation: sushi-glow-2 4.5s ease-in-out infinite 0.5s; }
+          .animate-sushi-glow-3 { animation: sushi-glow-3 4.2s ease-in-out infinite 1s; }
+          .animate-sushi-glow-4 { animation: sushi-glow-4 4.8s ease-in-out infinite 1.5s; }
+          .animate-sushi-glow-5 { animation: sushi-glow-5 4.3s ease-in-out infinite 2s; }
+          .animate-sushi-glow-6 { animation: sushi-glow-6 4.6s ease-in-out infinite 2.5s; }
           
-          .animate-window-light-1 { animation: window-light-1 5s ease-in-out infinite; }
-          .animate-window-light-2 { animation: window-light-2 5.5s ease-in-out infinite 0.5s; }
-          .animate-window-light-3 { animation: window-light-3 5.2s ease-in-out infinite 1s; }
-          .animate-window-light-4 { animation: window-light-4 5.8s ease-in-out infinite 1.5s; }
-          .animate-window-light-5 { animation: window-light-5 5.3s ease-in-out infinite 2s; }
-          .animate-window-light-6 { animation: window-light-6 5.6s ease-in-out infinite 2.5s; }
-          .animate-window-light-7 { animation: window-light-7 5.4s ease-in-out infinite 3s; }
-          .animate-window-light-8 { animation: window-light-8 5.7s ease-in-out infinite 3.5s; }
-          .animate-window-light-9 { animation: window-light-9 5.1s ease-in-out infinite 4s; }
-          .animate-window-light-10 { animation: window-light-10 5.9s ease-in-out infinite 0.8s; }
-          .animate-window-light-11 { animation: window-light-11 5.5s ease-in-out infinite 1.3s; }
-          .animate-window-light-12 { animation: window-light-12 5.3s ease-in-out infinite 1.8s; }
-          .animate-window-light-13 { animation: window-light-13 5.6s ease-in-out infinite 2.3s; }
-          .animate-window-light-14 { animation: window-light-14 5.2s ease-in-out infinite 2.8s; }
-          .animate-window-light-15 { animation: window-light-15 5.4s ease-in-out infinite 3.3s; }
-          .animate-window-light-16 { animation: window-light-16 5.7s ease-in-out infinite 3.8s; }
-          .animate-window-light-17 { animation: window-light-17 5.1s ease-in-out infinite 4.3s; }
-          .animate-window-light-18 { animation: window-light-18 5.8s ease-in-out infinite 0.6s; }
+          .animate-menu-screen-1 { animation: menu-screen-1 7s ease-in-out infinite; }
+          .animate-menu-screen-2 { animation: menu-screen-2 7s ease-in-out infinite 0.5s; }
+          .animate-menu-screen-3 { animation: menu-screen-3 7.5s ease-in-out infinite 1.5s; }
+          .animate-menu-screen-4 { animation: menu-screen-4 7.5s ease-in-out infinite 2s; }
+          .animate-menu-screen-5 { animation: menu-screen-5 7.2s ease-in-out infinite 3s; }
+          .animate-menu-screen-6 { animation: menu-screen-6 7.2s ease-in-out infinite 3.5s; }
           
-          .animate-vehicle-1 { animation: vehicle-1 12s linear infinite; }
-          .animate-vehicle-2 { animation: vehicle-2 15s linear infinite 3s; }
-          .animate-vehicle-3 { animation: vehicle-3 3s ease-in-out infinite; }
-          .animate-vehicle-4 { animation: vehicle-4 10s linear infinite 5s; }
+          .animate-city-sign-1 { animation: city-sign-1 5s ease-in-out infinite; }
+          .animate-city-sign-2 { animation: city-sign-2 5.5s ease-in-out infinite 1s; }
+          .animate-city-sign-3 { animation: city-sign-3 5.2s ease-in-out infinite 2s; }
+          .animate-city-sign-4 { animation: city-sign-4 5.8s ease-in-out infinite 0.5s; }
+          .animate-city-sign-5 { animation: city-sign-5 5.4s ease-in-out infinite 1.5s; }
+          .animate-city-sign-6 { animation: city-sign-6 5.6s ease-in-out infinite 2.5s; }
           
-          .animate-holo-line-1 { animation: holo-line-1 4s ease-in-out infinite; }
-          .animate-holo-line-2 { animation: holo-line-2 5s ease-in-out infinite 1s; }
+          .animate-window-twinkle-1 { animation: window-twinkle-1 8s linear infinite; }
+          .animate-window-twinkle-2 { animation: window-twinkle-2 8.5s linear infinite 1.5s; }
+          .animate-window-twinkle-3 { animation: window-twinkle-3 8.2s linear infinite 3s; }
+          .animate-window-twinkle-4 { animation: window-twinkle-4 8.8s linear infinite 4.5s; }
+          .animate-window-twinkle-5 { animation: window-twinkle-5 8.3s linear infinite 2s; }
+          .animate-window-twinkle-6 { animation: window-twinkle-6 8.6s linear infinite 6s; }
+          .animate-window-twinkle-7 { animation: window-twinkle-7 8.4s linear infinite 1s; }
+          .animate-window-twinkle-8 { animation: window-twinkle-8 8.7s linear infinite 5s; }
+          .animate-window-twinkle-9 { animation: window-twinkle-9 8.1s linear infinite 3.5s; }
+          .animate-window-twinkle-10 { animation: window-twinkle-10 9s linear infinite 7s; }
+          .animate-window-twinkle-11 { animation: window-twinkle-11 8.9s linear infinite 2.5s; }
+          .animate-window-twinkle-12 { animation: window-twinkle-12 8.5s linear infinite 4s; }
           
-          .animate-data-1 { animation: data-1 3s linear infinite; }
-          .animate-data-2 { animation: data-2 3.5s linear infinite 0.8s; }
-          .animate-data-3 { animation: data-3 3.2s linear infinite 1.6s; }
+          .animate-vehicle-fly-1 { animation: vehicle-fly-1 14s linear infinite; }
+          .animate-vehicle-fly-2 { animation: vehicle-fly-2 16s linear infinite 4s; }
+          .animate-vehicle-fly-3 { animation: vehicle-fly-3 4s ease-in-out infinite; }
           
-          .animate-neon-float-1 { animation: neon-float-1 16s ease-in-out infinite; }
-          .animate-neon-float-2 { animation: neon-float-2 18s ease-in-out infinite 3s; }
-          .animate-neon-float-3 { animation: neon-float-3 17s ease-in-out infinite 6s; }
-          .animate-neon-float-4 { animation: neon-float-4 19s ease-in-out infinite 2s; }
-          .animate-neon-float-5 { animation: neon-float-5 16.5s ease-in-out infinite 8s; }
-          .animate-neon-float-6 { animation: neon-float-6 20s ease-in-out infinite 4s; }
-          .animate-neon-float-7 { animation: neon-float-7 18.5s ease-in-out infinite 7s; }
-          .animate-neon-float-8 { animation: neon-float-8 17.5s ease-in-out infinite 10s; }
-          .animate-neon-float-9 { animation: neon-float-9 19.5s ease-in-out infinite 5s; }
-          .animate-neon-float-10 { animation: neon-float-10 21s ease-in-out infinite 9s; }
+          .animate-holo-rain-1 { animation: holo-rain-1 10s linear infinite; }
+          .animate-holo-rain-2 { animation: holo-rain-2 11s linear infinite 2s; }
+          .animate-holo-rain-3 { animation: holo-rain-3 10.5s linear infinite 4s; }
+          .animate-holo-rain-4 { animation: holo-rain-4 12s linear infinite 1s; }
+          .animate-holo-rain-5 { animation: holo-rain-5 11.5s linear infinite 6s; }
+          .animate-holo-rain-6 { animation: holo-rain-6 10.8s linear infinite 3s; }
           
-          .animate-water-shimmer-1 { animation: water-shimmer-1 6s ease-in-out infinite; }
-          .animate-water-shimmer-2 { animation: water-shimmer-2 7s ease-in-out infinite 2s; }
-          .animate-water-shimmer-3 { animation: water-shimmer-3 6.5s ease-in-out infinite 4s; }
+          .animate-table-glow-1 { animation: table-glow-1 8s ease-in-out infinite; }
+          .animate-table-glow-2 { animation: table-glow-2 8.5s ease-in-out infinite 2s; }
+          .animate-table-glow-3 { animation: table-glow-3 8.2s ease-in-out infinite 4s; }
           
-          .animate-pipe-glow-1 { animation: pipe-glow-1 5s ease-in-out infinite; }
+          .animate-edge-light-1 { animation: edge-light-1 7s ease-in-out infinite; }
+          .animate-edge-light-2 { animation: edge-light-2 7.5s ease-in-out infinite 1.5s; }
+          .animate-edge-light-3 { animation: edge-light-3 7.2s ease-in-out infinite 3s; }
+          .animate-edge-light-4 { animation: edge-light-4 7.8s ease-in-out infinite 0.8s; }
           
-          .animate-pipe-light-1 { animation: pipe-light-1 3s ease-in-out infinite; }
-          .animate-pipe-light-2 { animation: pipe-light-2 3.5s ease-in-out infinite 0.8s; }
-          .animate-pipe-light-3 { animation: pipe-light-3 3.2s ease-in-out infinite 1.6s; }
+          .animate-plant-glow-1 { animation: plant-glow-1 12s ease-in-out infinite; }
+          .animate-plant-glow-2 { animation: plant-glow-2 13s ease-in-out infinite 3s; }
+          .animate-plant-glow-3 { animation: plant-glow-3 12.5s ease-in-out infinite 6s; }
+          .animate-plant-glow-4 { animation: plant-glow-4 13.5s ease-in-out infinite 2s; }
           
-          .animate-bio-glow-1 { animation: bio-glow-1 10s ease-in-out infinite; }
-          .animate-bio-glow-2 { animation: bio-glow-2 11s ease-in-out infinite 2s; }
-          .animate-bio-glow-3 { animation: bio-glow-3 10.5s ease-in-out infinite 4s; }
-          .animate-bio-glow-4 { animation: bio-glow-4 11.5s ease-in-out infinite 1s; }
-          .animate-bio-glow-5 { animation: bio-glow-5 10.2s ease-in-out infinite 5s; }
+          .animate-reflection-1 { animation: reflection-1 10s linear infinite; }
+          .animate-reflection-2 { animation: reflection-2 11s linear infinite 3s; }
+          .animate-reflection-3 { animation: reflection-3 10.5s linear infinite 6s; }
           
-          .animate-antenna-blink-1 { animation: antenna-blink-1 4s linear infinite; }
-          .animate-antenna-blink-2 { animation: antenna-blink-2 5s linear infinite 1.5s; }
-          .animate-antenna-blink-3 { animation: antenna-blink-3 4.5s linear infinite 3s; }
+          .animate-steam-rise-1 { animation: steam-rise-1 8s ease-out infinite; }
+          .animate-steam-rise-2 { animation: steam-rise-2 8.5s ease-out infinite 2.5s; }
+          .animate-steam-rise-3 { animation: steam-rise-3 9s ease-out infinite 5s; }
         `}</style>
       </div>
     </Card>
