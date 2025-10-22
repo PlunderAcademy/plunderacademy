@@ -16,734 +16,730 @@ export function Island4Module3Image() {
           priority
         />
         
-        {/* EPIC Animated overlay effects */}
+        {/* BOLD Animated overlay effects */}
         <div className="absolute inset-0 animate-effects">
-          {/* LEGENDARY Golden Dome Glow */}
+          {/* CHANDELIER LANTERNS - Main focal point! */}
           <div className="absolute inset-0">
-            {/* Epic dome divine glow */}
-            <div className="absolute top-[38%] left-[47%] w-[120px] h-[100px] bg-yellow-300/35 rounded-full dome-glow animate-dome-divine-1"></div>
-            <div className="absolute top-[40%] left-[48%] w-[90px] h-[75px] bg-amber-300/40 rounded-full dome-glow animate-dome-divine-2"></div>
-            <div className="absolute top-[41%] left-[48.5%] w-[60px] h-[50px] bg-yellow-200/45 rounded-full dome-glow animate-dome-divine-3"></div>
+            {/* Top ring of lanterns */}
+            <div className="absolute top-[8%] left-[45%] w-[12px] h-[16px] bg-yellow-300/75 lantern animate-lantern-flicker-1"></div>
+            <div className="absolute top-[8%] left-[45%] w-[24px] h-[32px] bg-orange-300/45 lantern-glow animate-lantern-glow-1"></div>
             
-            {/* Dome top sparkle */}
-            <div className="absolute top-[39%] left-[50%] w-[5px] h-[5px] bg-white/95 rounded-full dome-sparkle animate-dome-sparkle-1"></div>
-            <div className="absolute top-[40%] left-[49%] w-[4px] h-[4px] bg-yellow-200/90 rounded-full dome-sparkle animate-dome-sparkle-2"></div>
-            <div className="absolute top-[40%] left-[51%] w-[4px] h-[4px] bg-amber-200/92 rounded-full dome-sparkle animate-dome-sparkle-3"></div>
-          </div>
-
-          {/* Central Building Column Sparkles */}
-          <div className="absolute inset-0">
-            {/* White columns glints */}
-            <div className="absolute top-[56%] left-[45%] w-[3px] h-[3px] bg-white/88 rounded-full column-sparkle animate-column-sparkle-1"></div>
-            <div className="absolute top-[58%] left-[47%] w-[3px] h-[3px] bg-cyan-100/85 rounded-full column-sparkle animate-column-sparkle-2"></div>
-            <div className="absolute top-[60%] left-[49%] w-[4px] h-[4px] bg-white/90 rounded-full column-sparkle animate-column-sparkle-3"></div>
-            <div className="absolute top-[58%] left-[51%] w-[3px] h-[3px] bg-cyan-100/87 rounded-full column-sparkle animate-column-sparkle-4"></div>
-            <div className="absolute top-[56%] left-[53%] w-[3px] h-[3px] bg-white/88 rounded-full column-sparkle animate-column-sparkle-5"></div>
-            <div className="absolute top-[60%] left-[55%] w-[3px] h-[3px] bg-cyan-100/86 rounded-full column-sparkle animate-column-sparkle-6"></div>
-          </div>
-
-          {/* Building Window Lights - LEFT SIDE TOP */}
-          <div className="absolute inset-0">
-            {/* Far left upper buildings */}
-            <div className="absolute top-[32%] left-[8%] w-[3px] h-[4px] bg-orange-300/85 rounded window-light animate-window-light-1"></div>
-            <div className="absolute top-[35%] left-[6%] w-[3px] h-[4px] bg-yellow-300/82 rounded window-light animate-window-light-2"></div>
-            <div className="absolute top-[38%] left-[10%] w-[3px] h-[4px] bg-orange-300/88 rounded window-light animate-window-light-3"></div>
-            <div className="absolute top-[42%] left-[7%] w-[3px] h-[4px] bg-yellow-300/84 rounded window-light animate-window-light-4"></div>
+            <div className="absolute top-[9%] left-[45%] w-[12px] h-[16px] bg-yellow-300/78 lantern animate-lantern-flicker-2"></div>
+            <div className="absolute top-[9%] left-[45%] w-[24px] h-[32px] bg-orange-300/48 lantern-glow animate-lantern-glow-2"></div>
             
-            {/* Left mid-upper buildings */}
-            <div className="absolute top-[28%] left-[15%] w-[3px] h-[4px] bg-orange-300/86 rounded window-light animate-window-light-5"></div>
-            <div className="absolute top-[32%] left-[18%] w-[3px] h-[4px] bg-yellow-300/85 rounded window-light animate-window-light-6"></div>
-            <div className="absolute top-[36%] left-[14%] w-[3px] h-[4px] bg-orange-300/87 rounded window-light animate-window-light-7"></div>
-            <div className="absolute top-[40%] left-[20%] w-[3px] h-[4px] bg-yellow-300/83 rounded window-light animate-window-light-8"></div>
-          </div>
-
-          {/* Building Window Lights - LEFT SIDE BOTTOM */}
-          <div className="absolute inset-0">
-            {/* Far left lower buildings */}
-            <div className="absolute top-[52%] left-[8%] w-[3px] h-[4px] bg-yellow-300/86 rounded window-light animate-window-light-9"></div>
-            <div className="absolute top-[56%] left-[6%] w-[3px] h-[4px] bg-orange-300/84 rounded window-light animate-window-light-10"></div>
-            <div className="absolute top-[60%] left-[10%] w-[3px] h-[4px] bg-yellow-300/88 rounded window-light animate-window-light-11"></div>
+            <div className="absolute top-[8%] left-[50%] w-[14px] h-[18px] bg-yellow-300/80 lantern animate-lantern-flicker-3"></div>
+            <div className="absolute top-[8%] left-[50%] w-[28px] h-[36px] bg-orange-300/50 lantern-glow animate-lantern-glow-3"></div>
             
-            {/* Left-center lower buildings */}
-            <div className="absolute top-[50%] left-[16%] w-[3px] h-[4px] bg-orange-300/85 rounded window-light animate-window-light-12"></div>
-            <div className="absolute top-[54%] left-[20%] w-[3px] h-[4px] bg-yellow-300/87 rounded window-light animate-window-light-13"></div>
-            <div className="absolute top-[58%] left-[25%] w-[3px] h-[4px] bg-orange-300/83 rounded window-light animate-window-light-14"></div>
-            <div className="absolute top-[62%] left-[28%] w-[3px] h-[4px] bg-yellow-300/86 rounded window-light animate-window-light-15"></div>
-          </div>
-
-          {/* Building Window Lights - RIGHT SIDE TOP */}
-          <div className="absolute inset-0">
-            {/* Right mid-upper buildings */}
-            <div className="absolute top-[28%] left-[82%] w-[3px] h-[4px] bg-yellow-300/85 rounded window-light animate-window-light-16"></div>
-            <div className="absolute top-[32%] left-[85%] w-[3px] h-[4px] bg-orange-300/86 rounded window-light animate-window-light-17"></div>
-            <div className="absolute top-[36%] left-[88%] w-[3px] h-[4px] bg-yellow-300/84 rounded window-light animate-window-light-18"></div>
-            <div className="absolute top-[40%] left-[90%] w-[3px] h-[4px] bg-orange-300/87 rounded window-light animate-window-light-19"></div>
+            <div className="absolute top-[9%] left-[55%] w-[12px] h-[16px] bg-yellow-300/77 lantern animate-lantern-flicker-4"></div>
+            <div className="absolute top-[9%] left-[55%] w-[24px] h-[32px] bg-orange-300/47 lantern-glow animate-lantern-glow-4"></div>
             
-            {/* Far right upper buildings */}
-            <div className="absolute top-[32%] left-[92%] w-[3px] h-[4px] bg-yellow-300/83 rounded window-light animate-window-light-20"></div>
-            <div className="absolute top-[35%] left-[94%] w-[3px] h-[4px] bg-orange-300/85 rounded window-light animate-window-light-21"></div>
-            <div className="absolute top-[38%] left-[90%] w-[3px] h-[4px] bg-yellow-300/88 rounded window-light animate-window-light-22"></div>
-          </div>
-
-          {/* Building Window Lights - RIGHT SIDE BOTTOM */}
-          <div className="absolute inset-0">
-            {/* Right-center lower buildings */}
-            <div className="absolute top-[50%] left-[70%] w-[3px] h-[4px] bg-orange-300/86 rounded window-light animate-window-light-23"></div>
-            <div className="absolute top-[54%] left-[75%] w-[3px] h-[4px] bg-yellow-300/84 rounded window-light animate-window-light-24"></div>
-            <div className="absolute top-[58%] left-[72%] w-[3px] h-[4px] bg-orange-300/88 rounded window-light animate-window-light-25"></div>
+            <div className="absolute top-[8%] left-[60%] w-[13px] h-[17px] bg-yellow-300/79 lantern animate-lantern-flicker-5"></div>
+            <div className="absolute top-[8%] left-[60%] w-[26px] h-[34px] bg-orange-300/49 lantern-glow animate-lantern-glow-5"></div>
             
-            {/* Far right lower buildings */}
-            <div className="absolute top-[52%] left-[82%] w-[3px] h-[4px] bg-yellow-300/85 rounded window-light animate-window-light-26"></div>
-            <div className="absolute top-[56%] left-[88%] w-[3px] h-[4px] bg-orange-300/87 rounded window-light animate-window-light-27"></div>
-            <div className="absolute top-[60%] left-[85%] w-[3px] h-[4px] bg-yellow-300/83 rounded window-light animate-window-light-28"></div>
-            <div className="absolute top-[64%] left-[92%] w-[3px] h-[4px] bg-orange-300/86 rounded window-light animate-window-light-29"></div>
-            <div className="absolute top-[68%] left-[94%] w-[3px] h-[4px] bg-yellow-300/84 rounded window-light animate-window-light-30"></div>
-          </div>
-
-          {/* Street Lamp Glows */}
-          <div className="absolute inset-0">
-            {/* Left side lamps */}
-            <div className="absolute top-[64%] left-[38%] w-[8px] h-[10px] bg-yellow-300/70 rounded-full lamp-glow animate-lamp-glow-1"></div>
-            <div className="absolute top-[64%] left-[42%] w-[8px] h-[10px] bg-amber-300/68 rounded-full lamp-glow animate-lamp-glow-2"></div>
+            <div className="absolute top-[9%] left-[65%] w-[12px] h-[16px] bg-yellow-300/76 lantern animate-lantern-flicker-6"></div>
+            <div className="absolute top-[9%] left-[65%] w-[24px] h-[32px] bg-orange-300/46 lantern-glow animate-lantern-glow-6"></div>
             
-            {/* Right side lamps */}
-            <div className="absolute top-[64%] left-[58%] w-[8px] h-[10px] bg-yellow-300/72 rounded-full lamp-glow animate-lamp-glow-3"></div>
-            <div className="absolute top-[64%] left-[62%] w-[8px] h-[10px] bg-amber-300/70 rounded-full lamp-glow animate-lamp-glow-4"></div>
+            <div className="absolute top-[8%] left-[70%] w-[12px] h-[16px] bg-yellow-300/75 lantern animate-lantern-flicker-7"></div>
+            <div className="absolute top-[8%] left-[70%] w-[24px] h-[32px] bg-orange-300/45 lantern-glow animate-lantern-glow-7"></div>
           </div>
 
-          {/* Foreground Building Window Lights - Left */}
+          {/* CHANDELIER - Bottom ring lanterns */}
           <div className="absolute inset-0">
-            <div className="absolute top-[58%] left-[12%] w-[4px] h-[5px] bg-yellow-300/90 rounded window-light animate-window-light-fg-1"></div>
-            <div className="absolute top-[62%] left-[10%] w-[4px] h-[5px] bg-orange-300/88 rounded window-light animate-window-light-fg-2"></div>
-            <div className="absolute top-[66%] left-[14%] w-[4px] h-[5px] bg-yellow-300/92 rounded window-light animate-window-light-fg-3"></div>
-            <div className="absolute top-[70%] left-[11%] w-[4px] h-[5px] bg-orange-300/90 rounded window-light animate-window-light-fg-4"></div>
-          </div>
-
-          {/* Foreground Building Window Lights - Right */}
-          <div className="absolute inset-0">
-            <div className="absolute top-[58%] left-[82%] w-[4px] h-[5px] bg-orange-300/90 rounded window-light animate-window-light-fg-5"></div>
-            <div className="absolute top-[62%] left-[85%] w-[4px] h-[5px] bg-yellow-300/88 rounded window-light animate-window-light-fg-6"></div>
-            <div className="absolute top-[66%] left-[88%] w-[4px] h-[5px] bg-orange-300/92 rounded window-light animate-window-light-fg-7"></div>
-            <div className="absolute top-[70%] left-[86%] w-[4px] h-[5px] bg-yellow-300/90 rounded window-light animate-window-light-fg-8"></div>
-          </div>
-
-          {/* Chimney Smoke Plumes */}
-          <div className="absolute inset-0">
-            {/* Left side chimneys */}
-            <div className="absolute top-[26%] left-[8%] w-[20px] h-[26px] bg-gray-300/18 rounded-full smoke animate-smoke-rise-1"></div>
-            <div className="absolute top-[28%] left-[14%] w-[22px] h-[28px] bg-gray-400/16 rounded-full smoke animate-smoke-rise-2"></div>
-            <div className="absolute top-[24%] left-[20%] w-[20px] h-[25px] bg-gray-300/19 rounded-full smoke animate-smoke-rise-3"></div>
+            <div className="absolute top-[19%] left-[43%] w-[11px] h-[15px] bg-yellow-300/72 lantern animate-lantern-flicker-8"></div>
+            <div className="absolute top-[19%] left-[43%] w-[22px] h-[30px] bg-orange-300/42 lantern-glow animate-lantern-glow-8"></div>
             
-            {/* Right side chimneys */}
-            <div className="absolute top-[26%] left-[78%] w-[21px] h-[27px] bg-gray-300/17 rounded-full smoke animate-smoke-rise-4"></div>
-            <div className="absolute top-[28%] left-[85%] w-[22px] h-[28px] bg-gray-400/18 rounded-full smoke animate-smoke-rise-5"></div>
-            <div className="absolute top-[24%] left-[92%] w-[20px] h-[26px] bg-gray-300/19 rounded-full smoke animate-smoke-rise-6"></div>
+            <div className="absolute top-[20%] left-[48%] w-[12px] h-[16px] bg-yellow-300/75 lantern animate-lantern-flicker-9"></div>
+            <div className="absolute top-[20%] left-[48%] w-[24px] h-[32px] bg-orange-300/45 lantern-glow animate-lantern-glow-9"></div>
+            
+            <div className="absolute top-[19%] left-[53%] w-[13px] h-[17px] bg-yellow-300/78 lantern animate-lantern-flicker-10"></div>
+            <div className="absolute top-[19%] left-[53%] w-[26px] h-[34px] bg-orange-300/48 lantern-glow animate-lantern-glow-10"></div>
+            
+            <div className="absolute top-[20%] left-[58%] w-[12px] h-[16px] bg-yellow-300/74 lantern animate-lantern-flicker-11"></div>
+            <div className="absolute top-[20%] left-[58%] w-[24px] h-[32px] bg-orange-300/44 lantern-glow animate-lantern-glow-11"></div>
+            
+            <div className="absolute top-[19%] left-[63%] w-[11px] h-[15px] bg-yellow-300/73 lantern animate-lantern-flicker-12"></div>
+            <div className="absolute top-[19%] left-[63%] w-[22px] h-[30px] bg-orange-300/43 lantern-glow animate-lantern-glow-12"></div>
           </div>
 
-          {/* Foliage Shimmer */}
+          {/* WALL LANTERNS - Left side */}
           <div className="absolute inset-0">
-            {/* Foreground tree foliage - left */}
-            <div className="absolute top-[8%] left-[2%] w-[60px] h-[55px] bg-green-300/14 rounded-full foliage-glow animate-foliage-glow-1"></div>
-            <div className="absolute top-[15%] left-[5%] w-[55px] h-[50px] bg-emerald-300/12 rounded-full foliage-glow animate-foliage-glow-2"></div>
+            <div className="absolute top-[30%] left-[13%] w-[10px] h-[14px] bg-yellow-300/70 lantern animate-wall-lantern-1"></div>
+            <div className="absolute top-[30%] left-[13%] w-[20px] h-[28px] bg-orange-300/40 lantern-glow animate-wall-lantern-glow-1"></div>
             
-            {/* Foreground tree foliage - right */}
-            <div className="absolute top-[8%] right-[2%] w-[65px] h-[58px] bg-green-300/15 rounded-full foliage-glow animate-foliage-glow-3"></div>
-            <div className="absolute top-[15%] right-[5%] w-[58px] h-[52px] bg-emerald-300/13 rounded-full foliage-glow animate-foliage-glow-4"></div>
+            <div className="absolute top-[40%] left-[11%] w-[10px] h-[14px] bg-yellow-300/72 lantern animate-wall-lantern-2"></div>
+            <div className="absolute top-[40%] left-[11%] w-[20px] h-[28px] bg-orange-300/42 lantern-glow animate-wall-lantern-glow-2"></div>
             
-            {/* Background trees */}
-            <div className="absolute top-[18%] left-[25%] w-[40px] h-[38px] bg-green-300/10 rounded-full foliage-glow animate-foliage-glow-5"></div>
-            <div className="absolute top-[20%] left-[65%] w-[42px] h-[40px] bg-emerald-300/11 rounded-full foliage-glow animate-foliage-glow-6"></div>
+            <div className="absolute top-[50%] left-[13%] w-[10px] h-[14px] bg-yellow-300/71 lantern animate-wall-lantern-3"></div>
+            <div className="absolute top-[50%] left-[13%] w-[20px] h-[28px] bg-orange-300/41 lantern-glow animate-wall-lantern-glow-3"></div>
           </div>
 
-          {/* Floating Golden Particles */}
+          {/* WALL LANTERNS - Right side */}
           <div className="absolute inset-0">
-            {/* Around dome area */}
-            <div className="absolute top-[42%] left-[42%] w-[3px] h-[3px] bg-yellow-300/75 rounded-full dust-particle animate-golden-dust-1"></div>
-            <div className="absolute top-[45%] left-[46%] w-[3px] h-[3px] bg-amber-300/70 rounded-full dust-particle animate-golden-dust-2"></div>
-            <div className="absolute top-[48%] left-[50%] w-[4px] h-[4px] bg-yellow-300/80 rounded-full dust-particle animate-golden-dust-3"></div>
-            <div className="absolute top-[45%] left-[54%] w-[3px] h-[3px] bg-amber-300/72 rounded-full dust-particle animate-golden-dust-4"></div>
-            <div className="absolute top-[42%] left-[58%] w-[3px] h-[3px] bg-yellow-300/75 rounded-full dust-particle animate-golden-dust-5"></div>
+            <div className="absolute top-[30%] right-[3%] w-[10px] h-[14px] bg-yellow-300/70 lantern animate-wall-lantern-4"></div>
+            <div className="absolute top-[30%] right-[3%] w-[20px] h-[28px] bg-orange-300/40 lantern-glow animate-wall-lantern-glow-4"></div>
             
-            {/* Lower area particles */}
-            <div className="absolute top-[65%] left-[30%] w-[2px] h-[2px] bg-amber-300/60 rounded-full dust-particle animate-golden-dust-6"></div>
-            <div className="absolute top-[68%] left-[50%] w-[2px] h-[2px] bg-yellow-300/65 rounded-full dust-particle animate-golden-dust-7"></div>
-            <div className="absolute top-[66%] left-[70%] w-[2px] h-[2px] bg-amber-300/62 rounded-full dust-particle animate-golden-dust-8"></div>
+            <div className="absolute top-[40%] right-[1%] w-[10px] h-[14px] bg-yellow-300/72 lantern animate-wall-lantern-5"></div>
+            <div className="absolute top-[40%] right-[1%] w-[20px] h-[28px] bg-orange-300/42 lantern-glow animate-wall-lantern-glow-5"></div>
+            
+            <div className="absolute top-[50%] right-[3%] w-[10px] h-[14px] bg-yellow-300/71 lantern animate-wall-lantern-6"></div>
+            <div className="absolute top-[50%] right-[3%] w-[20px] h-[28px] bg-orange-300/41 lantern-glow animate-wall-lantern-glow-6"></div>
           </div>
 
-          {/* Localized Sun Rays */}
+          {/* STAINED GLASS WINDOW GLOW - Right side */}
           <div className="absolute inset-0">
-            {/* Focused beams on dome */}
-            <div className="absolute top-[0%] left-[42%] w-[80px] h-[45%] bg-gradient-to-b from-yellow-200/18 via-amber-100/10 to-transparent sun-ray animate-sun-ray-1"></div>
-            <div className="absolute top-[0%] left-[52%] w-[90px] h-[48%] bg-gradient-to-b from-amber-200/20 via-yellow-100/12 to-transparent sun-ray animate-sun-ray-2"></div>
+            <div className="absolute top-[33%] right-[7%] w-[35px] h-[55px] bg-green-400/45 stained-glass animate-stained-glass-1"></div>
+            <div className="absolute top-[33%] right-[11%] w-[35px] h-[55px] bg-emerald-400/42 stained-glass animate-stained-glass-2"></div>
+            <div className="absolute top-[35%] right-[9%] w-[30px] h-[45px] bg-teal-400/40 stained-glass animate-stained-glass-3"></div>
+          </div>
+
+          {/* MIHRAB (Prayer niche) CENTER GLOW */}
+          <div className="absolute inset-0">
+            <div className="absolute top-[53%] left-[47%] w-[80px] h-[120px] bg-yellow-200/30 mihrab-glow animate-mihrab-glow"></div>
+            <div className="absolute top-[55%] left-[49%] w-[60px] h-[100px] bg-amber-200/35 mihrab-inner animate-mihrab-inner"></div>
+          </div>
+
+          {/* BOOK LECTERNS - Sacred texts glowing */}
+          <div className="absolute inset-0">
+            {/* Left lectern */}
+            <div className="absolute top-[73%] left-[33%] w-[25px] h-[20px] bg-yellow-200/60 book-glow animate-book-glow-1"></div>
+            <div className="absolute top-[73%] left-[33%] w-[35px] h-[30px] bg-amber-200/35 book-outer animate-book-outer-1"></div>
+            
+            {/* Center lectern */}
+            <div className="absolute top-[71%] left-[52%] w-[28px] h-[22px] bg-yellow-200/65 book-glow animate-book-glow-2"></div>
+            <div className="absolute top-[71%] left-[52%] w-[38px] h-[32px] bg-amber-200/38 book-outer animate-book-outer-2"></div>
+            
+            {/* Right lectern */}
+            <div className="absolute top-[73%] right-[23%] w-[25px] h-[20px] bg-yellow-200/60 book-glow animate-book-glow-3"></div>
+            <div className="absolute top-[73%] right-[23%] w-[35px] h-[30px] bg-amber-200/35 book-outer animate-book-outer-3"></div>
+          </div>
+
+          {/* ORNATE CALLIGRAPHY GLOW - Wall decorations */}
+          <div className="absolute inset-0">
+            {/* Top calligraphy bands */}
+            <div className="absolute top-[20%] left-[25%] w-[80px] h-[15px] bg-yellow-300/20 calligraphy animate-calligraphy-glow-1"></div>
+            <div className="absolute top-[20%] right-[15%] w-[80px] h-[15px] bg-yellow-300/20 calligraphy animate-calligraphy-glow-2"></div>
+            
+            {/* Side calligraphy */}
+            <div className="absolute top-[40%] left-[17%] w-[50px] h-[12px] bg-amber-300/18 calligraphy animate-calligraphy-glow-3"></div>
+            <div className="absolute top-[40%] right-[7%] w-[50px] h-[12px] bg-amber-300/18 calligraphy animate-calligraphy-glow-4"></div>
+          </div>
+
+          {/* PRAYER CARPET PATTERN SHIMMER */}
+          <div className="absolute inset-0">
+            {/* Center carpet glow */}
+            <div className="absolute bottom-[3%] left-[43%] w-[60px] h-[40px] bg-red-400/15 carpet-shimmer animate-carpet-shimmer-1"></div>
+            <div className="absolute bottom-[5%] left-[50%] w-[55px] h-[35px] bg-orange-400/14 carpet-shimmer animate-carpet-shimmer-2"></div>
+            <div className="absolute bottom-[7%] left-[57%] w-[50px] h-[38px] bg-red-400/13 carpet-shimmer animate-carpet-shimmer-3"></div>
+          </div>
+
+          {/* CANDLELIGHT - Pulpit/Lectern */}
+          <div className="absolute inset-0">
+            <div className="absolute top-[63%] left-[51%] w-[8px] h-[12px] bg-yellow-200/85 candle-flame animate-candle-flicker-1"></div>
+            <div className="absolute top-[63%] left-[51%] w-[16px] h-[24px] bg-orange-200/50 candle-glow animate-candle-glow-1"></div>
+            
+            <div className="absolute top-[65%] left-[55%] w-[8px] h-[12px] bg-yellow-200/82 candle-flame animate-candle-flicker-2"></div>
+            <div className="absolute top-[65%] left-[55%] w-[16px] h-[24px] bg-orange-200/48 candle-glow animate-candle-glow-2"></div>
+          </div>
+
+          {/* ARCHITECTURAL GOLD ACCENTS */}
+          <div className="absolute inset-0">
+            {/* Column capital sparkles */}
+            <div className="absolute top-[47%] left-[30%] w-[5px] h-[5px] bg-yellow-300/80 gold-sparkle animate-gold-sparkle-1"></div>
+            <div className="absolute top-[49%] left-[35%] w-[5px] h-[5px] bg-amber-300/78 gold-sparkle animate-gold-sparkle-2"></div>
+            <div className="absolute top-[47%] right-[20%] w-[5px] h-[5px] bg-yellow-300/80 gold-sparkle animate-gold-sparkle-3"></div>
+            <div className="absolute top-[49%] right-[25%] w-[5px] h-[5px] bg-amber-300/78 gold-sparkle animate-gold-sparkle-4"></div>
+          </div>
+
+          {/* AMBIENT DUST PARTICLES - Floating in light beams */}
+          <div className="absolute inset-0">
+            <div className="absolute top-[30%] left-[40%] w-[2px] h-[2px] bg-amber-200/60 dust-mote animate-dust-float-1"></div>
+            <div className="absolute top-[35%] left-[50%] w-[2px] h-[2px] bg-yellow-200/65 dust-mote animate-dust-float-2"></div>
+            <div className="absolute top-[40%] left-[55%] w-[2px] h-[2px] bg-amber-200/62 dust-mote animate-dust-float-3"></div>
+            <div className="absolute top-[33%] left-[60%] w-[2px] h-[2px] bg-yellow-200/63 dust-mote animate-dust-float-4"></div>
+            <div className="absolute top-[37%] left-[65%] w-[2px] h-[2px] bg-amber-200/61 dust-mote animate-dust-float-5"></div>
+            <div className="absolute top-[45%] left-[45%] w-[2px] h-[2px] bg-yellow-200/64 dust-mote animate-dust-float-6"></div>
+          </div>
+
+          {/* MOONLIGHT THROUGH WINDOWS - Subtle beams */}
+          <div className="absolute inset-0">
+            <div className="absolute top-[25%] right-[5%] w-[60px] h-[180px] bg-gradient-to-b from-cyan-200/15 via-blue-200/8 to-transparent moon-beam animate-moon-beam-1"></div>
+            <div className="absolute top-[27%] right-[13%] w-[50px] h-[160px] bg-gradient-to-b from-blue-200/12 via-cyan-200/6 to-transparent moon-beam animate-moon-beam-2"></div>
           </div>
         </div>
         
         <style jsx>{`
-          .dome-glow {
-            filter: blur(38px);
+          /* LANTERN EFFECTS */
+          .lantern {
+            filter: blur(3px);
+            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
           }
           
-          .dome-sparkle {
-            box-shadow: 0 0 35px currentColor, 0 0 70px currentColor, 0 0 105px currentColor;
-            filter: blur(0.3px);
+          .lantern-glow {
+            filter: blur(18px);
           }
           
-          .column-sparkle {
-            box-shadow: 0 0 25px currentColor, 0 0 50px currentColor, 0 0 75px currentColor;
-            filter: blur(0.3px);
-          }
-          
-          .window-light {
-            filter: blur(4px);
-            box-shadow: 0 0 18px currentColor, 0 0 36px currentColor, 0 0 54px currentColor;
-          }
-          
-          .lamp-glow {
-            filter: blur(8px);
-            box-shadow: 0 0 25px currentColor, 0 0 50px currentColor;
-          }
-          
-          .smoke {
+          /* STAINED GLASS */
+          .stained-glass {
             filter: blur(15px);
-            opacity: 0;
           }
           
-          .foliage-glow {
+          /* MIHRAB GLOW */
+          .mihrab-glow {
+            filter: blur(35px);
+          }
+          
+          .mihrab-inner {
             filter: blur(25px);
           }
           
-          .dust-particle {
-            box-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
+          /* BOOK GLOW */
+          .book-glow {
+            filter: blur(10px);
+            box-shadow: 0 0 25px currentColor, 0 0 50px currentColor;
+          }
+          
+          .book-outer {
+            filter: blur(20px);
+          }
+          
+          /* CALLIGRAPHY */
+          .calligraphy {
+            filter: blur(15px);
+          }
+          
+          /* CARPET SHIMMER */
+          .carpet-shimmer {
+            filter: blur(25px);
+          }
+          
+          /* CANDLE EFFECTS */
+          .candle-flame {
+            filter: blur(2px);
+            box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
+          }
+          
+          .candle-glow {
+            filter: blur(16px);
+          }
+          
+          /* GOLD SPARKLES */
+          .gold-sparkle {
+            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
+            filter: blur(0.6px);
+          }
+          
+          /* DUST MOTES */
+          .dust-mote {
+            box-shadow: 0 0 8px currentColor, 0 0 16px currentColor;
             filter: blur(0.5px);
           }
           
-          .sun-ray {
-            filter: blur(35px);
-            opacity: 0;
+          /* MOON BEAMS */
+          .moon-beam {
+            filter: blur(25px);
           }
           
-          .animate-effects .dome-glow {
+          /* ANIMATION STATES */
+          .animate-effects .lantern,
+          .animate-effects .lantern-glow,
+          .animate-effects .stained-glass,
+          .animate-effects .mihrab-glow,
+          .animate-effects .mihrab-inner,
+          .animate-effects .book-glow,
+          .animate-effects .book-outer,
+          .animate-effects .calligraphy,
+          .animate-effects .carpet-shimmer,
+          .animate-effects .candle-flame,
+          .animate-effects .candle-glow,
+          .animate-effects .gold-sparkle,
+          .animate-effects .dust-mote,
+          .animate-effects .moon-beam {
             animation-play-state: running;
           }
           
-          .animate-effects .dome-sparkle {
-            animation-play-state: running;
+          /* CHANDELIER LANTERN FLICKER ANIMATIONS */
+          @keyframes lantern-flicker-1 {
+            0%, 100% { opacity: 0.75; transform: scale(1); }
+            25% { opacity: 0.68; transform: scale(0.96); }
+            50% { opacity: 0.82; transform: scale(1.04); }
+            75% { opacity: 0.72; transform: scale(0.98); }
           }
           
-          .animate-effects .column-sparkle {
-            animation-play-state: running;
+          @keyframes lantern-flicker-2 {
+            0%, 100% { opacity: 0.78; transform: scale(1); }
+            22% { opacity: 0.7; transform: scale(0.97); }
+            48% { opacity: 0.85; transform: scale(1.05); }
+            72% { opacity: 0.74; transform: scale(0.99); }
           }
           
-          .animate-effects .window-light {
-            animation-play-state: running;
+          @keyframes lantern-flicker-3 {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            28% { opacity: 0.72; transform: scale(0.95); }
+            54% { opacity: 0.88; transform: scale(1.06); }
+            78% { opacity: 0.76; transform: scale(0.98); }
           }
           
-          .animate-effects .lamp-glow {
-            animation-play-state: running;
+          @keyframes lantern-flicker-4 {
+            0%, 100% { opacity: 0.77; transform: scale(1); }
+            24% { opacity: 0.69; transform: scale(0.96); }
+            52% { opacity: 0.84; transform: scale(1.04); }
+            76% { opacity: 0.73; transform: scale(0.99); }
           }
           
-          .animate-effects .smoke {
-            animation-play-state: running;
+          @keyframes lantern-flicker-5 {
+            0%, 100% { opacity: 0.79; transform: scale(1); }
+            26% { opacity: 0.71; transform: scale(0.97); }
+            50% { opacity: 0.86; transform: scale(1.05); }
+            74% { opacity: 0.75; transform: scale(0.98); }
           }
           
-          .animate-effects .foliage-glow {
-            animation-play-state: running;
+          @keyframes lantern-flicker-6 {
+            0%, 100% { opacity: 0.76; transform: scale(1); }
+            23% { opacity: 0.68; transform: scale(0.96); }
+            49% { opacity: 0.83; transform: scale(1.04); }
+            71% { opacity: 0.72; transform: scale(0.99); }
           }
           
-          .animate-effects .dust-particle {
-            animation-play-state: running;
+          @keyframes lantern-flicker-7 {
+            0%, 100% { opacity: 0.75; transform: scale(1); }
+            27% { opacity: 0.67; transform: scale(0.95); }
+            53% { opacity: 0.82; transform: scale(1.06); }
+            77% { opacity: 0.71; transform: scale(0.98); }
           }
           
-          .animate-effects .sun-ray {
-            animation-play-state: running;
-          }
-          
-          @keyframes dome-divine-1 {
-            0%, 100% { opacity: 0.35; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.25); }
-          }
-          
-          @keyframes dome-divine-2 {
-            0%, 100% { opacity: 0.4; transform: scale(1) rotate(0deg); }
-            60% { opacity: 0.65; transform: scale(1.3) rotate(180deg); }
-          }
-          
-          @keyframes dome-divine-3 {
-            0%, 100% { opacity: 0.45; transform: scale(1); }
-            55% { opacity: 0.7; transform: scale(1.35); }
-          }
-          
-          @keyframes dome-sparkle-1 {
-            0%, 60%, 100% { opacity: 0; transform: scale(1); }
-            65%, 75% { opacity: 1; transform: scale(2.8); }
-            70% { opacity: 0.65; transform: scale(2.3); }
-          }
-          
-          @keyframes dome-sparkle-2 {
-            0%, 65%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            70%, 80% { opacity: 0.95; transform: scale(2.6) rotate(360deg); }
-            75% { opacity: 0.6; transform: scale(2.1) rotate(180deg); }
-          }
-          
-          @keyframes dome-sparkle-3 {
-            0%, 68%, 100% { opacity: 0; transform: scale(1); }
-            73%, 83% { opacity: 0.98; transform: scale(2.7); }
-            78% { opacity: 0.62; transform: scale(2.2); }
-          }
-          
-          @keyframes column-sparkle-1 {
-            0%, 70%, 100% { opacity: 0; transform: scale(1); }
-            75%, 85% { opacity: 0.88; transform: scale(2.2); }
-            80% { opacity: 0.52; transform: scale(1.8); }
-          }
-          
-          @keyframes column-sparkle-2 {
-            0%, 72%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            77%, 87% { opacity: 0.85; transform: scale(2.1) rotate(360deg); }
-            82% { opacity: 0.5; transform: scale(1.7) rotate(180deg); }
-          }
-          
-          @keyframes column-sparkle-3 {
-            0%, 65%, 100% { opacity: 0; transform: scale(1); }
-            70%, 80% { opacity: 0.9; transform: scale(2.3); }
-            75% { opacity: 0.55; transform: scale(1.9); }
-          }
-          
-          @keyframes column-sparkle-4 {
-            0%, 74%, 100% { opacity: 0; transform: scale(1); }
-            79%, 89% { opacity: 0.87; transform: scale(2.15); }
-            84% { opacity: 0.52; transform: scale(1.75); }
-          }
-          
-          @keyframes column-sparkle-5 {
-            0%, 68%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            73%, 83% { opacity: 0.88; transform: scale(2.2) rotate(360deg); }
-            78% { opacity: 0.53; transform: scale(1.8) rotate(180deg); }
-          }
-          
-          @keyframes column-sparkle-6 {
-            0%, 76%, 100% { opacity: 0; transform: scale(1); }
-            81%, 91% { opacity: 0.86; transform: scale(2.18); }
-            86% { opacity: 0.51; transform: scale(1.78); }
-          }
-          
-          @keyframes window-light-1 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-2 {
-            0%, 100% { opacity: 0.82; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-3 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-4 {
-            0%, 100% { opacity: 0.84; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-5 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-6 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-7 {
-            0%, 100% { opacity: 0.87; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-8 {
-            0%, 100% { opacity: 0.83; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-9 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-10 {
-            0%, 100% { opacity: 0.84; transform: scale(1); }
-            62% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-11 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-12 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-13 {
-            0%, 100% { opacity: 0.87; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-14 {
-            0%, 100% { opacity: 0.83; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-15 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-16 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            57% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-17 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-18 {
-            0%, 100% { opacity: 0.84; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-19 {
-            0%, 100% { opacity: 0.87; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-20 {
-            0%, 100% { opacity: 0.83; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-21 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-22 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-23 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-24 {
-            0%, 100% { opacity: 0.84; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-25 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-26 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-27 {
-            0%, 100% { opacity: 0.87; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-28 {
-            0%, 100% { opacity: 0.83; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-29 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-30 {
-            0%, 100% { opacity: 0.84; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-fg-1 {
-            0%, 100% { opacity: 0.9; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.45); }
-          }
-          
-          @keyframes window-light-fg-2 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-fg-3 {
-            0%, 100% { opacity: 0.92; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.48); }
-          }
-          
-          @keyframes window-light-fg-4 {
-            0%, 100% { opacity: 0.9; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.44); }
-          }
-          
-          @keyframes window-light-fg-5 {
-            0%, 100% { opacity: 0.9; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.46); }
-          }
-          
-          @keyframes window-light-fg-6 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.43); }
-          }
-          
-          @keyframes window-light-fg-7 {
-            0%, 100% { opacity: 0.92; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.48); }
-          }
-          
-          @keyframes window-light-fg-8 {
-            0%, 100% { opacity: 0.9; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.45); }
-          }
-          
-          @keyframes lamp-glow-1 {
-            0%, 100% { opacity: 0.7; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.35); }
-          }
-          
-          @keyframes lamp-glow-2 {
-            0%, 100% { opacity: 0.68; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.32); }
-          }
-          
-          @keyframes lamp-glow-3 {
+          @keyframes lantern-flicker-8 {
             0%, 100% { opacity: 0.72; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.38); }
+            25% { opacity: 0.65; transform: scale(0.97); }
+            51% { opacity: 0.79; transform: scale(1.04); }
+            75% { opacity: 0.69; transform: scale(0.99); }
           }
           
-          @keyframes lamp-glow-4 {
+          @keyframes lantern-flicker-9 {
+            0%, 100% { opacity: 0.75; transform: scale(1); }
+            29% { opacity: 0.68; transform: scale(0.96); }
+            55% { opacity: 0.82; transform: scale(1.05); }
+            79% { opacity: 0.72; transform: scale(0.98); }
+          }
+          
+          @keyframes lantern-flicker-10 {
+            0%, 100% { opacity: 0.78; transform: scale(1); }
+            24% { opacity: 0.7; transform: scale(0.97); }
+            52% { opacity: 0.85; transform: scale(1.04); }
+            76% { opacity: 0.74; transform: scale(0.99); }
+          }
+          
+          @keyframes lantern-flicker-11 {
+            0%, 100% { opacity: 0.74; transform: scale(1); }
+            26% { opacity: 0.67; transform: scale(0.96); }
+            50% { opacity: 0.81; transform: scale(1.05); }
+            74% { opacity: 0.71; transform: scale(0.98); }
+          }
+          
+          @keyframes lantern-flicker-12 {
+            0%, 100% { opacity: 0.73; transform: scale(1); }
+            28% { opacity: 0.66; transform: scale(0.97); }
+            54% { opacity: 0.8; transform: scale(1.04); }
+            78% { opacity: 0.7; transform: scale(0.99); }
+          }
+          
+          /* LANTERN GLOW ANIMATIONS */
+          @keyframes lantern-glow-1 {
+            0%, 100% { opacity: 0.45; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+          }
+          
+          @keyframes lantern-glow-2 {
+            0%, 100% { opacity: 0.48; transform: scale(1); }
+            50% { opacity: 0.75; transform: scale(1.25); }
+          }
+          
+          @keyframes lantern-glow-3 {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.78; transform: scale(1.22); }
+          }
+          
+          @keyframes lantern-glow-4 {
+            0%, 100% { opacity: 0.47; transform: scale(1); }
+            50% { opacity: 0.72; transform: scale(1.23); }
+          }
+          
+          @keyframes lantern-glow-5 {
+            0%, 100% { opacity: 0.49; transform: scale(1); }
+            50% { opacity: 0.76; transform: scale(1.24); }
+          }
+          
+          @keyframes lantern-glow-6 {
+            0%, 100% { opacity: 0.46; transform: scale(1); }
+            50% { opacity: 0.71; transform: scale(1.21); }
+          }
+          
+          @keyframes lantern-glow-7 {
+            0%, 100% { opacity: 0.45; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+          }
+          
+          @keyframes lantern-glow-8 {
+            0%, 100% { opacity: 0.42; transform: scale(1); }
+            50% { opacity: 0.68; transform: scale(1.18); }
+          }
+          
+          @keyframes lantern-glow-9 {
+            0%, 100% { opacity: 0.45; transform: scale(1); }
+            50% { opacity: 0.72; transform: scale(1.22); }
+          }
+          
+          @keyframes lantern-glow-10 {
+            0%, 100% { opacity: 0.48; transform: scale(1); }
+            50% { opacity: 0.75; transform: scale(1.24); }
+          }
+          
+          @keyframes lantern-glow-11 {
+            0%, 100% { opacity: 0.44; transform: scale(1); }
+            50% { opacity: 0.69; transform: scale(1.19); }
+          }
+          
+          @keyframes lantern-glow-12 {
+            0%, 100% { opacity: 0.43; transform: scale(1); }
+            50% { opacity: 0.67; transform: scale(1.18); }
+          }
+          
+          /* WALL LANTERN ANIMATIONS */
+          @keyframes wall-lantern-1 {
             0%, 100% { opacity: 0.7; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.34); }
+            50% { opacity: 0.92; transform: scale(1.08); }
           }
           
-          @keyframes smoke-rise-1 {
-            0% { opacity: 0; transform: translateY(0px) translateX(0px) scale(0.8); }
-            30% { opacity: 0.28; transform: translateY(-32px) translateX(6px) scale(1.15); }
-            60% { opacity: 0.14; transform: translateY(-64px) translateX(12px) scale(1.48); }
-            100% { opacity: 0; transform: translateY(-96px) translateX(18px) scale(1.88); }
+          @keyframes wall-lantern-2 {
+            0%, 100% { opacity: 0.72; transform: scale(1); }
+            50% { opacity: 0.95; transform: scale(1.1); }
           }
           
-          @keyframes smoke-rise-2 {
-            0% { opacity: 0; transform: translateY(0px) translateX(0px) scale(0.8); }
-            30% { opacity: 0.3; transform: translateY(-35px) translateX(-5px) scale(1.18); }
-            60% { opacity: 0.15; transform: translateY(-70px) translateX(-10px) scale(1.52); }
-            100% { opacity: 0; transform: translateY(-105px) translateX(-15px) scale(1.92); }
+          @keyframes wall-lantern-3 {
+            0%, 100% { opacity: 0.71; transform: scale(1); }
+            50% { opacity: 0.93; transform: scale(1.09); }
           }
           
-          @keyframes smoke-rise-3 {
-            0% { opacity: 0; transform: translateY(0px) translateX(0px) scale(0.8); }
-            30% { opacity: 0.27; transform: translateY(-30px) translateX(7px) scale(1.12); }
-            60% { opacity: 0.14; transform: translateY(-60px) translateX(13px) scale(1.45); }
-            100% { opacity: 0; transform: translateY(-90px) translateX(19px) scale(1.85); }
+          @keyframes wall-lantern-4 {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 0.92; transform: scale(1.08); }
           }
           
-          @keyframes smoke-rise-4 {
-            0% { opacity: 0; transform: translateY(0px) translateX(0px) scale(0.8); }
-            30% { opacity: 0.27; transform: translateY(-33px) translateX(-6px) scale(1.16); }
-            60% { opacity: 0.14; transform: translateY(-66px) translateX(-11px) scale(1.5); }
-            100% { opacity: 0; transform: translateY(-99px) translateX(-16px) scale(1.9); }
+          @keyframes wall-lantern-5 {
+            0%, 100% { opacity: 0.72; transform: scale(1); }
+            50% { opacity: 0.95; transform: scale(1.1); }
           }
           
-          @keyframes smoke-rise-5 {
-            0% { opacity: 0; transform: translateY(0px) translateX(0px) scale(0.8); }
-            30% { opacity: 0.29; transform: translateY(-36px) translateX(8px) scale(1.19); }
-            60% { opacity: 0.15; transform: translateY(-72px) translateX(14px) scale(1.53); }
-            100% { opacity: 0; transform: translateY(-108px) translateX(20px) scale(1.93); }
+          @keyframes wall-lantern-6 {
+            0%, 100% { opacity: 0.71; transform: scale(1); }
+            50% { opacity: 0.93; transform: scale(1.09); }
           }
           
-          @keyframes smoke-rise-6 {
-            0% { opacity: 0; transform: translateY(0px) translateX(0px) scale(0.8); }
-            30% { opacity: 0.28; transform: translateY(-31px) translateX(-7px) scale(1.14); }
-            60% { opacity: 0.14; transform: translateY(-62px) translateX(-13px) scale(1.47); }
-            100% { opacity: 0; transform: translateY(-93px) translateX(-19px) scale(1.87); }
+          @keyframes wall-lantern-glow-1 {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.65; transform: scale(1.3); }
           }
           
-          @keyframes foliage-glow-1 {
-            0%, 100% { opacity: 0.14; transform: scale(1); }
-            50% { opacity: 0.28; transform: scale(1.18); }
+          @keyframes wall-lantern-glow-2 {
+            0%, 100% { opacity: 0.42; transform: scale(1); }
+            50% { opacity: 0.68; transform: scale(1.32); }
           }
           
-          @keyframes foliage-glow-2 {
-            0%, 100% { opacity: 0.12; transform: scale(1); }
-            60% { opacity: 0.26; transform: scale(1.15); }
+          @keyframes wall-lantern-glow-3 {
+            0%, 100% { opacity: 0.41; transform: scale(1); }
+            50% { opacity: 0.66; transform: scale(1.31); }
           }
           
-          @keyframes foliage-glow-3 {
+          @keyframes wall-lantern-glow-4 {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.65; transform: scale(1.3); }
+          }
+          
+          @keyframes wall-lantern-glow-5 {
+            0%, 100% { opacity: 0.42; transform: scale(1); }
+            50% { opacity: 0.68; transform: scale(1.32); }
+          }
+          
+          @keyframes wall-lantern-glow-6 {
+            0%, 100% { opacity: 0.41; transform: scale(1); }
+            50% { opacity: 0.66; transform: scale(1.31); }
+          }
+          
+          /* STAINED GLASS ANIMATIONS */
+          @keyframes stained-glass-1 {
+            0%, 100% { opacity: 0.45; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.08); }
+          }
+          
+          @keyframes stained-glass-2 {
+            0%, 100% { opacity: 0.42; transform: scale(1); }
+            50% { opacity: 0.68; transform: scale(1.06); }
+          }
+          
+          @keyframes stained-glass-3 {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.65; transform: scale(1.07); }
+          }
+          
+          /* MIHRAB ANIMATIONS */
+          @keyframes mihrab-glow {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.15); }
+          }
+          
+          @keyframes mihrab-inner {
+            0%, 100% { opacity: 0.35; transform: scale(1); }
+            50% { opacity: 0.58; transform: scale(1.12); }
+          }
+          
+          /* BOOK GLOW ANIMATIONS */
+          @keyframes book-glow-1 {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 0.88; transform: scale(1.12); }
+          }
+          
+          @keyframes book-glow-2 {
+            0%, 100% { opacity: 0.65; transform: scale(1); }
+            50% { opacity: 0.92; transform: scale(1.15); }
+          }
+          
+          @keyframes book-glow-3 {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 0.88; transform: scale(1.12); }
+          }
+          
+          @keyframes book-outer-1 {
+            0%, 100% { opacity: 0.35; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+          }
+          
+          @keyframes book-outer-2 {
+            0%, 100% { opacity: 0.38; transform: scale(1); }
+            50% { opacity: 0.65; transform: scale(1.22); }
+          }
+          
+          @keyframes book-outer-3 {
+            0%, 100% { opacity: 0.35; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+          }
+          
+          /* CALLIGRAPHY GLOW ANIMATIONS */
+          @keyframes calligraphy-glow-1 {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 0.38; transform: scale(1.08); }
+          }
+          
+          @keyframes calligraphy-glow-2 {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 0.38; transform: scale(1.08); }
+          }
+          
+          @keyframes calligraphy-glow-3 {
+            0%, 100% { opacity: 0.18; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(1.06); }
+          }
+          
+          @keyframes calligraphy-glow-4 {
+            0%, 100% { opacity: 0.18; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(1.06); }
+          }
+          
+          /* CARPET SHIMMER ANIMATIONS */
+          @keyframes carpet-shimmer-1 {
             0%, 100% { opacity: 0.15; transform: scale(1); }
-            55% { opacity: 0.3; transform: scale(1.2); }
+            50% { opacity: 0.28; transform: scale(1.1); }
           }
           
-          @keyframes foliage-glow-4 {
+          @keyframes carpet-shimmer-2 {
+            0%, 100% { opacity: 0.14; transform: scale(1); }
+            50% { opacity: 0.26; transform: scale(1.08); }
+          }
+          
+          @keyframes carpet-shimmer-3 {
             0%, 100% { opacity: 0.13; transform: scale(1); }
-            58% { opacity: 0.28; transform: scale(1.17); }
+            50% { opacity: 0.25; transform: scale(1.09); }
           }
           
-          @keyframes foliage-glow-5 {
-            0%, 100% { opacity: 0.1; transform: scale(1); }
-            52% { opacity: 0.22; transform: scale(1.14); }
+          /* CANDLE FLICKER ANIMATIONS */
+          @keyframes candle-flicker-1 {
+            0%, 100% { opacity: 0.85; transform: scale(1) translateY(0); }
+            15% { opacity: 0.78; transform: scale(0.95) translateY(-2px); }
+            30% { opacity: 0.92; transform: scale(1.05) translateY(1px); }
+            45% { opacity: 0.82; transform: scale(0.98) translateY(-1px); }
+            60% { opacity: 0.88; transform: scale(1.02) translateY(0.5px); }
+            75% { opacity: 0.8; transform: scale(0.96) translateY(-1.5px); }
           }
           
-          @keyframes foliage-glow-6 {
-            0%, 100% { opacity: 0.11; transform: scale(1); }
-            56% { opacity: 0.24; transform: scale(1.16); }
+          @keyframes candle-flicker-2 {
+            0%, 100% { opacity: 0.82; transform: scale(1) translateY(0); }
+            18% { opacity: 0.75; transform: scale(0.94) translateY(-2px); }
+            33% { opacity: 0.9; transform: scale(1.06) translateY(1px); }
+            48% { opacity: 0.79; transform: scale(0.97) translateY(-1px); }
+            63% { opacity: 0.86; transform: scale(1.03) translateY(0.5px); }
+            78% { opacity: 0.77; transform: scale(0.95) translateY(-1.5px); }
           }
           
-          @keyframes golden-dust-1 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.75; transform: translateY(-60px) translateX(25px) rotate(180deg); }
+          @keyframes candle-glow-1 {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.75; transform: scale(1.15); }
           }
           
-          @keyframes golden-dust-2 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.7; transform: translateY(-55px) translateX(-22px) rotate(200deg); }
+          @keyframes candle-glow-2 {
+            0%, 100% { opacity: 0.48; transform: scale(1); }
+            50% { opacity: 0.72; transform: scale(1.12); }
           }
           
-          @keyframes golden-dust-3 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.8; transform: translateY(-65px) translateX(28px) rotate(190deg); }
+          /* GOLD SPARKLE ANIMATIONS */
+          @keyframes gold-sparkle-1 {
+            0%, 60%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            65%, 75% { opacity: 0.8; transform: scale(2) rotate(360deg); }
+            70% { opacity: 0.5; transform: scale(1.6) rotate(180deg); }
           }
           
-          @keyframes golden-dust-4 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.72; transform: translateY(-58px) translateX(-24px) rotate(210deg); }
+          @keyframes gold-sparkle-2 {
+            0%, 65%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            70%, 80% { opacity: 0.78; transform: scale(1.9) rotate(360deg); }
+            75% { opacity: 0.48; transform: scale(1.5) rotate(180deg); }
           }
           
-          @keyframes golden-dust-5 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.75; transform: translateY(-62px) translateX(26px) rotate(195deg); }
+          @keyframes gold-sparkle-3 {
+            0%, 62%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            67%, 77% { opacity: 0.8; transform: scale(2) rotate(360deg); }
+            72% { opacity: 0.5; transform: scale(1.6) rotate(180deg); }
           }
           
-          @keyframes golden-dust-6 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.6; transform: translateY(-48px) translateX(18px); }
+          @keyframes gold-sparkle-4 {
+            0%, 68%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            73%, 83% { opacity: 0.78; transform: scale(1.9) rotate(360deg); }
+            78% { opacity: 0.48; transform: scale(1.5) rotate(180deg); }
           }
           
-          @keyframes golden-dust-7 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.65; transform: translateY(-50px) translateX(-16px); }
+          /* DUST FLOAT ANIMATIONS */
+          @keyframes dust-float-1 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.6; transform: translateY(-50px) translateX(15px); }
           }
           
-          @keyframes golden-dust-8 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.62; transform: translateY(-52px) translateX(20px); }
+          @keyframes dust-float-2 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.65; transform: translateY(-45px) translateX(-12px); }
           }
           
-          @keyframes sun-ray-1 {
-            0%, 100% { opacity: 0; transform: translateY(0px); }
-            50% { opacity: 0.28; transform: translateY(-15px); }
+          @keyframes dust-float-3 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.62; transform: translateY(-55px) translateX(18px); }
           }
           
-          @keyframes sun-ray-2 {
-            0%, 100% { opacity: 0; transform: translateY(0px); }
-            60% { opacity: 0.32; transform: translateY(-18px); }
+          @keyframes dust-float-4 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.63; transform: translateY(-48px) translateX(-14px); }
           }
           
-          .animate-dome-divine-1 { animation: dome-divine-1 5s ease-in-out infinite; }
-          .animate-dome-divine-2 { animation: dome-divine-2 6s ease-in-out infinite 1s; }
-          .animate-dome-divine-3 { animation: dome-divine-3 7s ease-in-out infinite 2s; }
+          @keyframes dust-float-5 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.61; transform: translateY(-52px) translateX(16px); }
+          }
           
-          .animate-dome-sparkle-1 { animation: dome-sparkle-1 9s linear infinite; }
-          .animate-dome-sparkle-2 { animation: dome-sparkle-2 10s linear infinite 2s; }
-          .animate-dome-sparkle-3 { animation: dome-sparkle-3 9.5s linear infinite 4s; }
+          @keyframes dust-float-6 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.64; transform: translateY(-50px) translateX(-13px); }
+          }
           
-          .animate-column-sparkle-1 { animation: column-sparkle-1 8s linear infinite; }
-          .animate-column-sparkle-2 { animation: column-sparkle-2 9s linear infinite 1.5s; }
-          .animate-column-sparkle-3 { animation: column-sparkle-3 7.5s linear infinite 3s; }
-          .animate-column-sparkle-4 { animation: column-sparkle-4 8.5s linear infinite 4.5s; }
-          .animate-column-sparkle-5 { animation: column-sparkle-5 10s linear infinite 2s; }
-          .animate-column-sparkle-6 { animation: column-sparkle-6 8.8s linear infinite 5.5s; }
+          /* MOON BEAM ANIMATIONS */
+          @keyframes moon-beam-1 {
+            0%, 100% { opacity: 0.15; transform: scaleY(1); }
+            50% { opacity: 0.28; transform: scaleY(1.05); }
+          }
           
-          .animate-window-light-1 { animation: window-light-1 5s ease-in-out infinite; }
-          .animate-window-light-2 { animation: window-light-2 5.5s ease-in-out infinite 0.5s; }
-          .animate-window-light-3 { animation: window-light-3 5.2s ease-in-out infinite 1s; }
-          .animate-window-light-4 { animation: window-light-4 5.8s ease-in-out infinite 1.5s; }
-          .animate-window-light-5 { animation: window-light-5 5.3s ease-in-out infinite 2s; }
-          .animate-window-light-6 { animation: window-light-6 5.6s ease-in-out infinite 2.5s; }
-          .animate-window-light-7 { animation: window-light-7 5.4s ease-in-out infinite 3s; }
-          .animate-window-light-8 { animation: window-light-8 5.7s ease-in-out infinite 3.5s; }
-          .animate-window-light-9 { animation: window-light-9 5.1s ease-in-out infinite 4s; }
-          .animate-window-light-10 { animation: window-light-10 5.9s ease-in-out infinite 0.8s; }
-          .animate-window-light-11 { animation: window-light-11 5.5s ease-in-out infinite 1.3s; }
-          .animate-window-light-12 { animation: window-light-12 5.3s ease-in-out infinite 1.8s; }
-          .animate-window-light-13 { animation: window-light-13 5.8s ease-in-out infinite 2.3s; }
-          .animate-window-light-14 { animation: window-light-14 5.2s ease-in-out infinite 2.8s; }
-          .animate-window-light-15 { animation: window-light-15 5.6s ease-in-out infinite 3.3s; }
-          .animate-window-light-16 { animation: window-light-16 5.4s ease-in-out infinite 3.8s; }
-          .animate-window-light-17 { animation: window-light-17 5.7s ease-in-out infinite 0.6s; }
-          .animate-window-light-18 { animation: window-light-18 5.1s ease-in-out infinite 1.2s; }
-          .animate-window-light-19 { animation: window-light-19 5.9s ease-in-out infinite 1.7s; }
-          .animate-window-light-20 { animation: window-light-20 5.3s ease-in-out infinite 2.2s; }
-          .animate-window-light-21 { animation: window-light-21 5.5s ease-in-out infinite 2.7s; }
-          .animate-window-light-22 { animation: window-light-22 5.8s ease-in-out infinite 3.2s; }
-          .animate-window-light-23 { animation: window-light-23 5.2s ease-in-out infinite 3.7s; }
-          .animate-window-light-24 { animation: window-light-24 5.6s ease-in-out infinite 4.2s; }
-          .animate-window-light-25 { animation: window-light-25 5.4s ease-in-out infinite 0.9s; }
-          .animate-window-light-26 { animation: window-light-26 5.7s ease-in-out infinite 1.4s; }
-          .animate-window-light-27 { animation: window-light-27 5.1s ease-in-out infinite 1.9s; }
-          .animate-window-light-28 { animation: window-light-28 5.9s ease-in-out infinite 2.4s; }
-          .animate-window-light-29 { animation: window-light-29 5.3s ease-in-out infinite 2.9s; }
-          .animate-window-light-30 { animation: window-light-30 5.5s ease-in-out infinite 3.4s; }
+          @keyframes moon-beam-2 {
+            0%, 100% { opacity: 0.12; transform: scaleY(1); }
+            50% { opacity: 0.24; transform: scaleY(1.04); }
+          }
           
-          .animate-window-light-fg-1 { animation: window-light-fg-1 4.8s ease-in-out infinite; }
-          .animate-window-light-fg-2 { animation: window-light-fg-2 5.2s ease-in-out infinite 0.8s; }
-          .animate-window-light-fg-3 { animation: window-light-fg-3 4.9s ease-in-out infinite 1.6s; }
-          .animate-window-light-fg-4 { animation: window-light-fg-4 5.3s ease-in-out infinite 2.4s; }
-          .animate-window-light-fg-5 { animation: window-light-fg-5 5s ease-in-out infinite 3.2s; }
-          .animate-window-light-fg-6 { animation: window-light-fg-6 5.1s ease-in-out infinite 4s; }
-          .animate-window-light-fg-7 { animation: window-light-fg-7 4.8s ease-in-out infinite 0.4s; }
-          .animate-window-light-fg-8 { animation: window-light-fg-8 5.2s ease-in-out infinite 1.2s; }
+          /* ANIMATION CLASS ASSIGNMENTS */
+          .animate-lantern-flicker-1 { animation: lantern-flicker-1 3s ease-in-out infinite; }
+          .animate-lantern-flicker-2 { animation: lantern-flicker-2 3.2s ease-in-out infinite 0.2s; }
+          .animate-lantern-flicker-3 { animation: lantern-flicker-3 3.5s ease-in-out infinite 0.4s; }
+          .animate-lantern-flicker-4 { animation: lantern-flicker-4 3.3s ease-in-out infinite 0.6s; }
+          .animate-lantern-flicker-5 { animation: lantern-flicker-5 3.1s ease-in-out infinite 0.8s; }
+          .animate-lantern-flicker-6 { animation: lantern-flicker-6 3.4s ease-in-out infinite 1s; }
+          .animate-lantern-flicker-7 { animation: lantern-flicker-7 3.6s ease-in-out infinite 0.3s; }
+          .animate-lantern-flicker-8 { animation: lantern-flicker-8 3.2s ease-in-out infinite 0.5s; }
+          .animate-lantern-flicker-9 { animation: lantern-flicker-9 3.7s ease-in-out infinite 0.7s; }
+          .animate-lantern-flicker-10 { animation: lantern-flicker-10 3.3s ease-in-out infinite 0.9s; }
+          .animate-lantern-flicker-11 { animation: lantern-flicker-11 3.5s ease-in-out infinite 0.4s; }
+          .animate-lantern-flicker-12 { animation: lantern-flicker-12 3.4s ease-in-out infinite 0.6s; }
           
-          .animate-lamp-glow-1 { animation: lamp-glow-1 4s ease-in-out infinite; }
-          .animate-lamp-glow-2 { animation: lamp-glow-2 4.5s ease-in-out infinite 1s; }
-          .animate-lamp-glow-3 { animation: lamp-glow-3 4.2s ease-in-out infinite 2s; }
-          .animate-lamp-glow-4 { animation: lamp-glow-4 4.7s ease-in-out infinite 0.5s; }
+          .animate-lantern-glow-1 { animation: lantern-glow-1 4s ease-in-out infinite; }
+          .animate-lantern-glow-2 { animation: lantern-glow-2 4.2s ease-in-out infinite 0.3s; }
+          .animate-lantern-glow-3 { animation: lantern-glow-3 4.5s ease-in-out infinite 0.6s; }
+          .animate-lantern-glow-4 { animation: lantern-glow-4 4.3s ease-in-out infinite 0.9s; }
+          .animate-lantern-glow-5 { animation: lantern-glow-5 4.1s ease-in-out infinite 1.2s; }
+          .animate-lantern-glow-6 { animation: lantern-glow-6 4.4s ease-in-out infinite 0.5s; }
+          .animate-lantern-glow-7 { animation: lantern-glow-7 4.6s ease-in-out infinite 0.8s; }
+          .animate-lantern-glow-8 { animation: lantern-glow-8 4.2s ease-in-out infinite 0.4s; }
+          .animate-lantern-glow-9 { animation: lantern-glow-9 4.7s ease-in-out infinite 0.7s; }
+          .animate-lantern-glow-10 { animation: lantern-glow-10 4.3s ease-in-out infinite 1s; }
+          .animate-lantern-glow-11 { animation: lantern-glow-11 4.5s ease-in-out infinite 0.6s; }
+          .animate-lantern-glow-12 { animation: lantern-glow-12 4.4s ease-in-out infinite 0.9s; }
           
-          .animate-smoke-rise-1 { animation: smoke-rise-1 7s ease-out infinite; }
-          .animate-smoke-rise-2 { animation: smoke-rise-2 8s ease-out infinite 1.5s; }
-          .animate-smoke-rise-3 { animation: smoke-rise-3 7.5s ease-out infinite 3s; }
-          .animate-smoke-rise-4 { animation: smoke-rise-4 8.5s ease-out infinite 0.8s; }
-          .animate-smoke-rise-5 { animation: smoke-rise-5 7.8s ease-out infinite 4s; }
-          .animate-smoke-rise-6 { animation: smoke-rise-6 8.2s ease-out infinite 2s; }
+          .animate-wall-lantern-1 { animation: wall-lantern-1 3.5s ease-in-out infinite; }
+          .animate-wall-lantern-2 { animation: wall-lantern-2 3.8s ease-in-out infinite 0.5s; }
+          .animate-wall-lantern-3 { animation: wall-lantern-3 3.6s ease-in-out infinite 1s; }
+          .animate-wall-lantern-4 { animation: wall-lantern-4 3.7s ease-in-out infinite 0.3s; }
+          .animate-wall-lantern-5 { animation: wall-lantern-5 3.9s ease-in-out infinite 0.8s; }
+          .animate-wall-lantern-6 { animation: wall-lantern-6 3.6s ease-in-out infinite 1.2s; }
           
-          .animate-foliage-glow-1 { animation: foliage-glow-1 10s ease-in-out infinite; }
-          .animate-foliage-glow-2 { animation: foliage-glow-2 11s ease-in-out infinite 2s; }
-          .animate-foliage-glow-3 { animation: foliage-glow-3 10.5s ease-in-out infinite 4s; }
-          .animate-foliage-glow-4 { animation: foliage-glow-4 11.5s ease-in-out infinite 1s; }
-          .animate-foliage-glow-5 { animation: foliage-glow-5 9.5s ease-in-out infinite 3s; }
-          .animate-foliage-glow-6 { animation: foliage-glow-6 12s ease-in-out infinite 5s; }
+          .animate-wall-lantern-glow-1 { animation: wall-lantern-glow-1 4.5s ease-in-out infinite; }
+          .animate-wall-lantern-glow-2 { animation: wall-lantern-glow-2 4.8s ease-in-out infinite 0.5s; }
+          .animate-wall-lantern-glow-3 { animation: wall-lantern-glow-3 4.6s ease-in-out infinite 1s; }
+          .animate-wall-lantern-glow-4 { animation: wall-lantern-glow-4 4.7s ease-in-out infinite 0.3s; }
+          .animate-wall-lantern-glow-5 { animation: wall-lantern-glow-5 4.9s ease-in-out infinite 0.8s; }
+          .animate-wall-lantern-glow-6 { animation: wall-lantern-glow-6 4.6s ease-in-out infinite 1.2s; }
           
-          .animate-golden-dust-1 { animation: golden-dust-1 15s ease-in-out infinite; }
-          .animate-golden-dust-2 { animation: golden-dust-2 17s ease-in-out infinite 3s; }
-          .animate-golden-dust-3 { animation: golden-dust-3 16s ease-in-out infinite 6s; }
-          .animate-golden-dust-4 { animation: golden-dust-4 18s ease-in-out infinite 2s; }
-          .animate-golden-dust-5 { animation: golden-dust-5 15.5s ease-in-out infinite 8s; }
-          .animate-golden-dust-6 { animation: golden-dust-6 19s ease-in-out infinite 4s; }
-          .animate-golden-dust-7 { animation: golden-dust-7 17.5s ease-in-out infinite 7s; }
-          .animate-golden-dust-8 { animation: golden-dust-8 16.5s ease-in-out infinite 9s; }
+          .animate-stained-glass-1 { animation: stained-glass-1 6s ease-in-out infinite; }
+          .animate-stained-glass-2 { animation: stained-glass-2 6.5s ease-in-out infinite 1s; }
+          .animate-stained-glass-3 { animation: stained-glass-3 6.2s ease-in-out infinite 2s; }
           
-          .animate-sun-ray-1 { animation: sun-ray-1 16s ease-in-out infinite; }
-          .animate-sun-ray-2 { animation: sun-ray-2 18s ease-in-out infinite 5s; }
+          .animate-mihrab-glow { animation: mihrab-glow 8s ease-in-out infinite; }
+          .animate-mihrab-inner { animation: mihrab-inner 7s ease-in-out infinite 1s; }
+          
+          .animate-book-glow-1 { animation: book-glow-1 5s ease-in-out infinite; }
+          .animate-book-glow-2 { animation: book-glow-2 5.5s ease-in-out infinite 0.5s; }
+          .animate-book-glow-3 { animation: book-glow-3 5.2s ease-in-out infinite 1s; }
+          
+          .animate-book-outer-1 { animation: book-outer-1 6s ease-in-out infinite; }
+          .animate-book-outer-2 { animation: book-outer-2 6.5s ease-in-out infinite 0.5s; }
+          .animate-book-outer-3 { animation: book-outer-3 6.2s ease-in-out infinite 1s; }
+          
+          .animate-calligraphy-glow-1 { animation: calligraphy-glow-1 8s ease-in-out infinite; }
+          .animate-calligraphy-glow-2 { animation: calligraphy-glow-2 8.5s ease-in-out infinite 1s; }
+          .animate-calligraphy-glow-3 { animation: calligraphy-glow-3 8.2s ease-in-out infinite 2s; }
+          .animate-calligraphy-glow-4 { animation: calligraphy-glow-4 8.7s ease-in-out infinite 3s; }
+          
+          .animate-carpet-shimmer-1 { animation: carpet-shimmer-1 10s ease-in-out infinite; }
+          .animate-carpet-shimmer-2 { animation: carpet-shimmer-2 11s ease-in-out infinite 2s; }
+          .animate-carpet-shimmer-3 { animation: carpet-shimmer-3 10.5s ease-in-out infinite 4s; }
+          
+          .animate-candle-flicker-1 { animation: candle-flicker-1 2.5s ease-in-out infinite; }
+          .animate-candle-flicker-2 { animation: candle-flicker-2 2.8s ease-in-out infinite 0.5s; }
+          
+          .animate-candle-glow-1 { animation: candle-glow-1 3s ease-in-out infinite; }
+          .animate-candle-glow-2 { animation: candle-glow-2 3.3s ease-in-out infinite 0.5s; }
+          
+          .animate-gold-sparkle-1 { animation: gold-sparkle-1 8s linear infinite; }
+          .animate-gold-sparkle-2 { animation: gold-sparkle-2 9s linear infinite 2s; }
+          .animate-gold-sparkle-3 { animation: gold-sparkle-3 8.5s linear infinite 4s; }
+          .animate-gold-sparkle-4 { animation: gold-sparkle-4 9.5s linear infinite 6s; }
+          
+          .animate-dust-float-1 { animation: dust-float-1 15s ease-in-out infinite; }
+          .animate-dust-float-2 { animation: dust-float-2 17s ease-in-out infinite 2s; }
+          .animate-dust-float-3 { animation: dust-float-3 16s ease-in-out infinite 4s; }
+          .animate-dust-float-4 { animation: dust-float-4 18s ease-in-out infinite 1s; }
+          .animate-dust-float-5 { animation: dust-float-5 15.5s ease-in-out infinite 6s; }
+          .animate-dust-float-6 { animation: dust-float-6 17.5s ease-in-out infinite 3s; }
+          
+          .animate-moon-beam-1 { animation: moon-beam-1 12s ease-in-out infinite; }
+          .animate-moon-beam-2 { animation: moon-beam-2 14s ease-in-out infinite 3s; }
         `}</style>
       </div>
     </Card>

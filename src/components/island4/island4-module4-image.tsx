@@ -16,656 +16,677 @@ export function Island4Module4Image() {
           priority
         />
         
-        {/* EPIC Animated overlay effects */}
+        {/* BOLD Animated overlay effects */}
         <div className="absolute inset-0 animate-effects">
-          {/* LEGENDARY Rose Window Divine Light */}
+          {/* ROSE WINDOW - Central focal point with divine glow */}
           <div className="absolute inset-0">
-            {/* Epic rose window glow */}
-            <div className="absolute top-[40%] left-[42.5%] w-[60px] h-[60px] bg-yellow-200/35 rounded-full rose-window-glow animate-rose-glow-1"></div>
-            <div className="absolute top-[41%] left-[43%] w-[45px] h-[45px] bg-amber-200/40 rounded-full rose-window-glow animate-rose-glow-2"></div>
-            <div className="absolute top-[41.5%] left-[43.5%] w-[30px] h-[30px] bg-yellow-100/45 rounded-full rose-window-core animate-rose-glow-3"></div>
-            
-            {/* Rose window stained glass sparkles */}
-            <div className="absolute top-[40%] left-[43%] w-[5px] h-[5px] bg-white/98 rounded-full glass-sparkle animate-glass-sparkle-1"></div>
-            <div className="absolute top-[41%] left-[42%] w-[4px] h-[4px] bg-blue-300/95 rounded-full glass-sparkle animate-glass-sparkle-2"></div>
-            <div className="absolute top-[41%] left-[45%] w-[4px] h-[4px] bg-red-300/93 rounded-full glass-sparkle animate-glass-sparkle-3"></div>
-            <div className="absolute top-[42%] left-[42%] w-[4px] h-[4px] bg-yellow-300/95 rounded-full glass-sparkle animate-glass-sparkle-4"></div>
-            <div className="absolute top-[42%] left-[44%] w-[4px] h-[4px] bg-purple-300/92 rounded-full glass-sparkle animate-glass-sparkle-5"></div>
+            <div className="absolute top-[18%] left-[48%] w-[90px] h-[90px] bg-yellow-300/35 rounded-full rose-glow animate-rose-glow-1"></div>
+            <div className="absolute top-[19%] left-[48.5%] w-[70px] h-[70px] bg-red-300/30 rounded-full rose-glow animate-rose-glow-2"></div>
+            <div className="absolute top-[19.5%] left-[49%] w-[55px] h-[55px] bg-green-300/28 rounded-full rose-glow animate-rose-glow-3"></div>
+            <div className="absolute top-[20%] left-[49.5%] w-[40px] h-[40px] bg-blue-300/32 rounded-full rose-glow animate-rose-glow-4"></div>
+            <div className="absolute top-[20.5%] left-[50%] w-[25px] h-[25px] bg-yellow-200/45 rounded-full rose-core animate-rose-core"></div>
           </div>
 
-          {/* Cathedral Spire Cross Sparkles - DIVINE */}
+          {/* STAINED GLASS WINDOWS - Left side glowing */}
           <div className="absolute inset-0">
-            {/* Main center cross top */}
-            <div className="absolute top-[10%] left-[46%] w-[6px] h-[6px] bg-white/98 rounded-full cross-sparkle animate-cross-sparkle-1"></div>
-            <div className="absolute top-[11%] left-[46.5%] w-[5px] h-[5px] bg-yellow-200/95 rounded-full cross-sparkle animate-cross-sparkle-2"></div>
-            
-            {/* Left spire crosses */}
-            <div className="absolute top-[12%] left-[40%] w-[4px] h-[4px] bg-white/95 rounded-full cross-sparkle animate-cross-sparkle-3"></div>
-            <div className="absolute top-[14%] left-[36%] w-[4px] h-[4px] bg-yellow-200/92 rounded-full cross-sparkle animate-cross-sparkle-4"></div>
-            
-            {/* Right spire crosses */}
-            <div className="absolute top-[12%] left-[52%] w-[4px] h-[4px] bg-white/93 rounded-full cross-sparkle animate-cross-sparkle-5"></div>
-            <div className="absolute top-[14%] left-[56%] w-[4px] h-[4px] bg-yellow-200/90 rounded-full cross-sparkle animate-cross-sparkle-6"></div>
+            {/* Left tall windows */}
+            <div className="absolute top-[20%] left-[2%] w-[50px] h-[90px] bg-blue-400/35 stained-glass animate-stained-left-1"></div>
+            <div className="absolute top-[22%] left-[4%] w-[45px] h-[80px] bg-red-400/32 stained-glass animate-stained-left-2"></div>
+            <div className="absolute top-[24%] left-[6%] w-[40px] h-[70px] bg-green-400/30 stained-glass animate-stained-left-3"></div>
+            <div className="absolute top-[26%] left-[8%] w-[38px] h-[65px] bg-yellow-400/33 stained-glass animate-stained-left-4"></div>
           </div>
 
-          {/* Cathedral Stone Edge Sparkles - INTENSE */}
+          {/* STAINED GLASS WINDOWS - Right side glowing */}
           <div className="absolute inset-0">
-            {/* Main facade edges */}
-            <div className="absolute top-[36%] left-[40%] w-[3px] h-[3px] bg-white/90 rounded-full stone-sparkle animate-stone-sparkle-1"></div>
-            <div className="absolute top-[38%] left-[52%] w-[3px] h-[3px] bg-cyan-100/88 rounded-full stone-sparkle animate-stone-sparkle-2"></div>
-            <div className="absolute top-[46%] left-[38%] w-[3px] h-[3px] bg-white/92 rounded-full stone-sparkle animate-stone-sparkle-3"></div>
-            <div className="absolute top-[48%] left-[54%] w-[3px] h-[3px] bg-cyan-100/90 rounded-full stone-sparkle animate-stone-sparkle-4"></div>
-            
-            {/* Spire edges */}
-            <div className="absolute top-[22%] left-[42%] w-[3px] h-[3px] bg-white/88 rounded-full stone-sparkle animate-stone-sparkle-5"></div>
-            <div className="absolute top-[24%] left-[50%] w-[3px] h-[3px] bg-cyan-100/86 rounded-full stone-sparkle animate-stone-sparkle-6"></div>
-            <div className="absolute top-[26%] left-[46%] w-[3px] h-[3px] bg-white/90 rounded-full stone-sparkle animate-stone-sparkle-7"></div>
-            
-            {/* Buttress edges */}
-            <div className="absolute top-[53%] left-[36%] w-[3px] h-[3px] bg-cyan-100/88 rounded-full stone-sparkle animate-stone-sparkle-8"></div>
-            <div className="absolute top-[56%] left-[56%] w-[3px] h-[3px] bg-white/89 rounded-full stone-sparkle animate-stone-sparkle-9"></div>
+            {/* Right tall windows */}
+            <div className="absolute top-[20%] right-[2%] w-[50px] h-[90px] bg-red-400/35 stained-glass animate-stained-right-1"></div>
+            <div className="absolute top-[22%] right-[4%] w-[45px] h-[80px] bg-blue-400/32 stained-glass animate-stained-right-2"></div>
+            <div className="absolute top-[24%] right-[6%] w-[40px] h-[70px] bg-yellow-400/30 stained-glass animate-stained-right-3"></div>
+            <div className="absolute top-[26%] right-[8%] w-[38px] h-[65px] bg-green-400/33 stained-glass animate-stained-right-4"></div>
           </div>
 
-          {/* Gothic Window Lights */}
+          {/* ALTAR WINDOWS - Behind priest */}
           <div className="absolute inset-0">
-            {/* Upper cathedral windows */}
-            <div className="absolute top-[28%] left-[44%] w-[3px] h-[4px] bg-yellow-300/88 rounded window-light animate-window-light-1"></div>
-            <div className="absolute top-[28%] left-[48%] w-[3px] h-[4px] bg-amber-300/86 rounded window-light animate-window-light-2"></div>
-            <div className="absolute top-[32%] left-[42%] w-[3px] h-[4px] bg-yellow-300/90 rounded window-light animate-window-light-3"></div>
-            <div className="absolute top-[32%] left-[50%] w-[3px] h-[4px] bg-amber-300/88 rounded window-light animate-window-light-4"></div>
-            
-            {/* Mid-level windows */}
-            <div className="absolute top-[46%] left-[40%] w-[3px] h-[5px] bg-yellow-300/92 rounded window-light animate-window-light-5"></div>
-            <div className="absolute top-[46%] left-[46%] w-[3px] h-[5px] bg-amber-300/90 rounded window-light animate-window-light-6"></div>
-            <div className="absolute top-[46%] left-[52%] w-[3px] h-[5px] bg-yellow-300/88 rounded window-light animate-window-light-7"></div>
-            
-            {/* Lower side windows */}
-            <div className="absolute top-[56%] left-[38%] w-[3px] h-[4px] bg-amber-300/85 rounded window-light animate-window-light-8"></div>
-            <div className="absolute top-[56%] left-[54%] w-[3px] h-[4px] bg-yellow-300/87 rounded window-light animate-window-light-9"></div>
+            {/* Three arched windows behind altar */}
+            <div className="absolute top-[35%] left-[44%] w-[35px] h-[55px] bg-green-400/40 altar-window animate-altar-window-1"></div>
+            <div className="absolute top-[35%] left-[49%] w-[35px] h-[55px] bg-blue-400/42 altar-window animate-altar-window-2"></div>
+            <div className="absolute top-[35%] left-[54%] w-[35px] h-[55px] bg-red-400/38 altar-window animate-altar-window-3"></div>
           </div>
 
-          {/* Street Lamp Glows - WARM */}
+          {/* LIGHT BEAMS - From windows to floor (most dramatic effect!) */}
           <div className="absolute inset-0">
-            {/* Left lamps */}
-            <div className="absolute top-[50%] left-[18%] w-[12px] h-[14px] bg-yellow-300/75 rounded-full lamp-glow animate-lamp-glow-1"></div>
-            <div className="absolute top-[58%] left-[22%] w-[12px] h-[14px] bg-amber-300/72 rounded-full lamp-glow animate-lamp-glow-2"></div>
+            {/* Left side beams */}
+            <div className="absolute top-[20%] left-[5%] w-[80px] h-[400px] bg-gradient-to-b from-blue-300/20 via-blue-200/10 to-transparent light-beam animate-light-beam-1"></div>
+            <div className="absolute top-[22%] left-[9%] w-[70px] h-[380px] bg-gradient-to-b from-red-300/18 via-red-200/9 to-transparent light-beam animate-light-beam-2"></div>
             
-            {/* Right lamps */}
-            <div className="absolute top-[50%] left-[82%] w-[12px] h-[14px] bg-yellow-300/73 rounded-full lamp-glow animate-lamp-glow-3"></div>
-            <div className="absolute top-[58%] left-[78%] w-[12px] h-[14px] bg-amber-300/70 rounded-full lamp-glow animate-lamp-glow-4"></div>
+            {/* Right side beams */}
+            <div className="absolute top-[20%] right-[5%] w-[80px] h-[400px] bg-gradient-to-b from-red-300/20 via-red-200/10 to-transparent light-beam animate-light-beam-3"></div>
+            <div className="absolute top-[22%] right-[9%] w-[70px] h-[380px] bg-gradient-to-b from-blue-300/18 via-blue-200/9 to-transparent light-beam animate-light-beam-4"></div>
           </div>
 
-          {/* Background Tower Window Lights */}
+          {/* COLORFUL FLOOR TILES - Light reflections */}
           <div className="absolute inset-0">
-            {/* Left tower */}
-            <div className="absolute top-[32%] left-[8%] w-[3px] h-[4px] bg-yellow-300/85 rounded window-light animate-tower-light-1"></div>
-            <div className="absolute top-[36%] left-[6%] w-[3px] h-[4px] bg-orange-300/82 rounded window-light animate-tower-light-2"></div>
-            <div className="absolute top-[40%] left-[10%] w-[3px] h-[4px] bg-yellow-300/88 rounded window-light animate-tower-light-3"></div>
-            
-            {/* Right tower */}
-            <div className="absolute top-[32%] left-[92%] w-[3px] h-[4px] bg-orange-300/86 rounded window-light animate-tower-light-4"></div>
-            <div className="absolute top-[36%] left-[94%] w-[3px] h-[4px] bg-yellow-300/84 rounded window-light animate-tower-light-5"></div>
-            <div className="absolute top-[40%] left-[90%] w-[3px] h-[4px] bg-orange-300/88 rounded window-light animate-tower-light-6"></div>
+            {/* Center aisle - colorful reflections */}
+            <div className="absolute bottom-[8%] left-[46%] w-[35px] h-[25px] bg-yellow-300/35 floor-glow animate-floor-glow-1"></div>
+            <div className="absolute bottom-[10%] left-[48%] w-[32px] h-[23px] bg-red-300/32 floor-glow animate-floor-glow-2"></div>
+            <div className="absolute bottom-[12%] left-[50%] w-[35px] h-[26px] bg-blue-300/34 floor-glow animate-floor-glow-3"></div>
+            <div className="absolute bottom-[14%] left-[47%] w-[33px] h-[24px] bg-green-300/30 floor-glow animate-floor-glow-4"></div>
+            <div className="absolute bottom-[16%] left-[49%] w-[36px] h-[27px] bg-purple-300/33 floor-glow animate-floor-glow-5"></div>
+            <div className="absolute bottom-[18%] left-[51%] w-[34px] h-[25px] bg-cyan-300/31 floor-glow animate-floor-glow-6"></div>
           </div>
 
-          {/* Foliage Shimmer - Trees & Bushes */}
+          {/* PRIEST HALO/GLOW - Divine presence */}
           <div className="absolute inset-0">
-            {/* Left tree foliage */}
-            <div className="absolute top-[52%] left-[8%] w-[55px] h-[48px] bg-green-300/14 rounded-full foliage-glow animate-foliage-glow-1"></div>
-            <div className="absolute top-[60%] left-[12%] w-[50px] h-[45px] bg-emerald-300/12 rounded-full foliage-glow animate-foliage-glow-2"></div>
-            <div className="absolute top-[68%] left-[6%] w-[48px] h-[42px] bg-green-300/13 rounded-full foliage-glow animate-foliage-glow-3"></div>
-            
-            {/* Right tree foliage */}
-            <div className="absolute top-[52%] right-[8%] w-[58px] h-[50px] bg-green-300/15 rounded-full foliage-glow animate-foliage-glow-4"></div>
-            <div className="absolute top-[60%] right-[12%] w-[52px] h-[46px] bg-emerald-300/13 rounded-full foliage-glow animate-foliage-glow-5"></div>
-            <div className="absolute top-[68%] right-[6%] w-[50px] h-[44px] bg-green-300/14 rounded-full foliage-glow animate-foliage-glow-6"></div>
-            
-            {/* Foreground bushes */}
-            <div className="absolute top-[78%] left-[25%] w-[45px] h-[38px] bg-green-300/16 rounded-full foliage-glow animate-foliage-glow-7"></div>
-            <div className="absolute top-[78%] right-[25%] w-[46px] h-[40px] bg-emerald-300/15 rounded-full foliage-glow animate-foliage-glow-8"></div>
+            <div className="absolute top-[42%] left-[49%] w-[60px] h-[80px] bg-yellow-200/25 priest-glow animate-priest-glow-1"></div>
+            <div className="absolute top-[44%] left-[49.5%] w-[45px] h-[65px] bg-amber-200/30 priest-glow animate-priest-glow-2"></div>
           </div>
 
-          {/* Floating Divine Particles */}
+          {/* CEILING LIGHTS - Small hanging lights */}
           <div className="absolute inset-0">
-            {/* Around cathedral area */}
-            <div className="absolute top-[33%] left-[34%] w-[3px] h-[3px] bg-yellow-200/70 rounded-full dust-particle animate-divine-dust-1"></div>
-            <div className="absolute top-[36%] left-[41%] w-[3px] h-[3px] bg-cyan-200/68 rounded-full dust-particle animate-divine-dust-2"></div>
-            <div className="absolute top-[38%] left-[48%] w-[4px] h-[4px] bg-yellow-200/75 rounded-full dust-particle animate-divine-dust-3"></div>
-            <div className="absolute top-[40%] left-[54%] w-[3px] h-[3px] bg-cyan-200/70 rounded-full dust-particle animate-divine-dust-4"></div>
-            <div className="absolute top-[43%] left-[58%] w-[3px] h-[3px] bg-yellow-200/72 rounded-full dust-particle animate-divine-dust-5"></div>
+            <div className="absolute top-[10%] left-[20%] w-[5px] h-[5px] bg-yellow-300/80 ceiling-light animate-ceiling-light-1"></div>
+            <div className="absolute top-[10%] left-[30%] w-[5px] h-[5px] bg-amber-300/78 ceiling-light animate-ceiling-light-2"></div>
+            <div className="absolute top-[10%] left-[40%] w-[5px] h-[5px] bg-yellow-300/82 ceiling-light animate-ceiling-light-3"></div>
+            <div className="absolute top-[10%] left-[60%] w-[5px] h-[5px] bg-amber-300/80 ceiling-light animate-ceiling-light-4"></div>
+            <div className="absolute top-[10%] left-[70%] w-[5px] h-[5px] bg-yellow-300/79 ceiling-light animate-ceiling-light-5"></div>
+            <div className="absolute top-[10%] left-[80%] w-[5px] h-[5px] bg-amber-300/81 ceiling-light animate-ceiling-light-6"></div>
+          </div>
+
+          {/* ALTAR CANDLES - Warm glow */}
+          <div className="absolute inset-0">
+            <div className="absolute top-[52%] left-[47%] w-[8px] h-[10px] bg-yellow-200/75 candle-flame animate-candle-flicker-1"></div>
+            <div className="absolute top-[52%] left-[47%] w-[16px] h-[20px] bg-orange-200/40 candle-glow animate-candle-glow-1"></div>
             
-            {/* Mid-air particles */}
-            <div className="absolute top-[50%] left-[31%] w-[2px] h-[2px] bg-cyan-200/65 rounded-full dust-particle animate-divine-dust-6"></div>
-            <div className="absolute top-[53%] left-[46%] w-[2px] h-[2px] bg-yellow-200/68 rounded-full dust-particle animate-divine-dust-7"></div>
-            <div className="absolute top-[56%] left-[61%] w-[2px] h-[2px] bg-cyan-200/62 rounded-full dust-particle animate-divine-dust-8"></div>
+            <div className="absolute top-[52%] left-[51%] w-[8px] h-[10px] bg-yellow-200/78 candle-flame animate-candle-flicker-2"></div>
+            <div className="absolute top-[52%] left-[51%] w-[16px] h-[20px] bg-orange-200/42 candle-glow animate-candle-glow-2"></div>
           </div>
 
-          {/* Cobblestone Path Shimmer */}
+          {/* PEWS WOOD GLEAM - Subtle shine */}
           <div className="absolute inset-0">
-            <div className="absolute top-[80%] left-[38%] w-[35px] h-[18px] bg-yellow-200/16 rounded-full path-shimmer animate-path-shimmer-1"></div>
-            <div className="absolute top-[84%] left-[44%] w-[38px] h-[20px] bg-amber-200/14 rounded-full path-shimmer animate-path-shimmer-2"></div>
-            <div className="absolute top-[88%] left-[48%] w-[36px] h-[19px] bg-yellow-200/18 rounded-full path-shimmer animate-path-shimmer-3"></div>
-            <div className="absolute top-[92%] left-[42%] w-[32px] h-[16px] bg-amber-200/15 rounded-full path-shimmer animate-path-shimmer-4"></div>
+            {/* Left pews */}
+            <div className="absolute top-[58%] left-[12%] w-[40px] h-[15px] bg-amber-300/12 wood-gleam animate-wood-gleam-1"></div>
+            <div className="absolute top-[62%] left-[10%] w-[38px] h-[14px] bg-yellow-300/10 wood-gleam animate-wood-gleam-2"></div>
+            <div className="absolute top-[66%] left-[8%] w-[42px] h-[16px] bg-amber-300/11 wood-gleam animate-wood-gleam-3"></div>
+            
+            {/* Right pews */}
+            <div className="absolute top-[58%] right-[12%] w-[40px] h-[15px] bg-amber-300/12 wood-gleam animate-wood-gleam-4"></div>
+            <div className="absolute top-[62%] right-[10%] w-[38px] h-[14px] bg-yellow-300/10 wood-gleam animate-wood-gleam-5"></div>
+            <div className="absolute top-[66%] right-[8%] w-[42px] h-[16px] bg-amber-300/11 wood-gleam animate-wood-gleam-6"></div>
           </div>
 
-          {/* Localized Sun Rays through Clouds */}
+          {/* DUST MOTES - Floating in light beams */}
           <div className="absolute inset-0">
-            <div className="absolute top-[0%] left-[31%] w-[100px] h-[45%] bg-gradient-to-b from-yellow-200/16 via-amber-100/9 to-transparent sun-ray animate-sun-ray-1"></div>
-            <div className="absolute top-[0%] left-[51%] w-[110px] h-[48%] bg-gradient-to-b from-amber-200/18 via-yellow-100/10 to-transparent sun-ray animate-sun-ray-2"></div>
+            <div className="absolute top-[35%] left-[8%] w-[2px] h-[2px] bg-white/70 dust-mote animate-dust-float-1"></div>
+            <div className="absolute top-[40%] left-[6%] w-[2px] h-[2px] bg-yellow-200/65 dust-mote animate-dust-float-2"></div>
+            <div className="absolute top-[45%] left-[10%] w-[2px] h-[2px] bg-white/68 dust-mote animate-dust-float-3"></div>
+            <div className="absolute top-[35%] right-[8%] w-[2px] h-[2px] bg-white/70 dust-mote animate-dust-float-4"></div>
+            <div className="absolute top-[40%] right-[6%] w-[2px] h-[2px] bg-yellow-200/65 dust-mote animate-dust-float-5"></div>
+            <div className="absolute top-[45%] right-[10%] w-[2px] h-[2px] bg-white/68 dust-mote animate-dust-float-6"></div>
+            <div className="absolute top-[50%] left-[30%] w-[2px] h-[2px] bg-white/66 dust-mote animate-dust-float-7"></div>
+            <div className="absolute top-[50%] right-[30%] w-[2px] h-[2px] bg-yellow-200/64 dust-mote animate-dust-float-8"></div>
+          </div>
+
+          {/* COLUMN HIGHLIGHTS - Gothic architecture */}
+          <div className="absolute inset-0">
+            <div className="absolute top-[30%] left-[18%] w-[4px] h-[4px] bg-white/75 column-sparkle animate-column-sparkle-1"></div>
+            <div className="absolute top-[35%] left-[15%] w-[4px] h-[4px] bg-cyan-100/72 column-sparkle animate-column-sparkle-2"></div>
+            <div className="absolute top-[30%] right-[18%] w-[4px] h-[4px] bg-white/75 column-sparkle animate-column-sparkle-3"></div>
+            <div className="absolute top-[35%] right-[15%] w-[4px] h-[4px] bg-cyan-100/72 column-sparkle animate-column-sparkle-4"></div>
+          </div>
+
+          {/* CROSS/ALTAR DIVINE LIGHT */}
+          <div className="absolute inset-0">
+            <div className="absolute top-[48%] left-[49.5%] w-[15px] h-[15px] bg-white/60 cross-glow animate-cross-glow"></div>
+            <div className="absolute top-[48%] left-[49.5%] w-[30px] h-[30px] bg-yellow-200/35 cross-glow-outer animate-cross-glow-outer"></div>
+            <div className="absolute top-[48%] left-[49.5%] w-[50px] h-[50px] bg-amber-300/20 cross-glow-far animate-cross-glow-far"></div>
+          </div>
+
+          {/* PEOPLE SILHOUETTES SOFT GLOW - Congregation */}
+          <div className="absolute inset-0">
+            <div className="absolute bottom-[15%] left-[20%] w-[25px] h-[35px] bg-blue-200/8 person-glow animate-person-glow-1"></div>
+            <div className="absolute bottom-[15%] left-[25%] w-[25px] h-[35px] bg-red-200/7 person-glow animate-person-glow-2"></div>
+            <div className="absolute bottom-[15%] left-[30%] w-[25px] h-[35px] bg-yellow-200/8 person-glow animate-person-glow-3"></div>
+            <div className="absolute bottom-[15%] right-[20%] w-[25px] h-[35px] bg-blue-200/8 person-glow animate-person-glow-4"></div>
+            <div className="absolute bottom-[15%] right-[25%] w-[25px] h-[35px] bg-red-200/7 person-glow animate-person-glow-5"></div>
+            <div className="absolute bottom-[15%] right-[30%] w-[25px] h-[35px] bg-yellow-200/8 person-glow animate-person-glow-6"></div>
           </div>
         </div>
         
         <style jsx>{`
-          .rose-window-glow {
-            filter: blur(25px);
+          /* ROSE WINDOW EFFECTS */
+          .rose-glow {
+            filter: blur(30px);
           }
           
-          .rose-window-core {
-            filter: blur(12px);
-            box-shadow: 0 0 50px currentColor, 0 0 100px currentColor;
+          .rose-core {
+            filter: blur(15px);
+            box-shadow: 0 0 40px currentColor, 0 0 80px currentColor;
           }
           
-          .glass-sparkle {
-            box-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 0 90px currentColor;
-            filter: blur(0.3px);
+          /* STAINED GLASS */
+          .stained-glass {
+            filter: blur(20px);
           }
           
-          .cross-sparkle {
-            box-shadow: 0 0 35px currentColor, 0 0 70px currentColor, 0 0 105px currentColor;
-            filter: blur(0.3px);
+          .altar-window {
+            filter: blur(18px);
           }
           
-          .stone-sparkle {
-            box-shadow: 0 0 22px currentColor, 0 0 44px currentColor, 0 0 66px currentColor;
-            filter: blur(0.3px);
+          /* LIGHT BEAMS */
+          .light-beam {
+            filter: blur(28px);
           }
           
-          .window-light {
-            filter: blur(4px);
-            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
-          }
-          
-          .lamp-glow {
-            filter: blur(10px);
-            box-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
-          }
-          
-          .foliage-glow {
-            filter: blur(25px);
-          }
-          
-          .dust-particle {
-            box-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
-            filter: blur(0.5px);
-          }
-          
-          .path-shimmer {
+          /* FLOOR REFLECTIONS */
+          .floor-glow {
             filter: blur(16px);
           }
           
-          .sun-ray {
-            filter: blur(35px);
-            opacity: 0;
+          /* PRIEST GLOW */
+          .priest-glow {
+            filter: blur(25px);
           }
           
-          .animate-effects .rose-window-glow {
+          /* CEILING LIGHTS */
+          .ceiling-light {
+            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
+            filter: blur(0.5px);
+          }
+          
+          /* CANDLE EFFECTS */
+          .candle-flame {
+            filter: blur(2px);
+            box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
+          }
+          
+          .candle-glow {
+            filter: blur(14px);
+          }
+          
+          /* WOOD GLEAM */
+          .wood-gleam {
+            filter: blur(18px);
+          }
+          
+          /* DUST MOTES */
+          .dust-mote {
+            box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+            filter: blur(0.5px);
+          }
+          
+          /* COLUMN SPARKLES */
+          .column-sparkle {
+            box-shadow: 0 0 18px currentColor, 0 0 36px currentColor, 0 0 54px currentColor;
+            filter: blur(0.4px);
+          }
+          
+          /* CROSS GLOW */
+          .cross-glow {
+            box-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
+            filter: blur(1px);
+          }
+          
+          .cross-glow-outer {
+            filter: blur(20px);
+          }
+          
+          .cross-glow-far {
+            filter: blur(30px);
+          }
+          
+          /* PERSON GLOW */
+          .person-glow {
+            filter: blur(22px);
+          }
+          
+          /* ANIMATION STATES */
+          .animate-effects .rose-glow,
+          .animate-effects .rose-core,
+          .animate-effects .stained-glass,
+          .animate-effects .altar-window,
+          .animate-effects .light-beam,
+          .animate-effects .floor-glow,
+          .animate-effects .priest-glow,
+          .animate-effects .ceiling-light,
+          .animate-effects .candle-flame,
+          .animate-effects .candle-glow,
+          .animate-effects .wood-gleam,
+          .animate-effects .dust-mote,
+          .animate-effects .column-sparkle,
+          .animate-effects .cross-glow,
+          .animate-effects .cross-glow-outer,
+          .animate-effects .cross-glow-far,
+          .animate-effects .person-glow {
             animation-play-state: running;
           }
           
-          .animate-effects .rose-window-core {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .glass-sparkle {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .cross-sparkle {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .stone-sparkle {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .window-light {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .lamp-glow {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .foliage-glow {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .dust-particle {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .path-shimmer {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .sun-ray {
-            animation-play-state: running;
-          }
-          
+          /* ROSE WINDOW ANIMATIONS */
           @keyframes rose-glow-1 {
             0%, 100% { opacity: 0.35; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.3); }
+            50% { opacity: 0.6; transform: scale(1.15); }
           }
           
           @keyframes rose-glow-2 {
-            0%, 100% { opacity: 0.4; transform: scale(1) rotate(0deg); }
-            60% { opacity: 0.65; transform: scale(1.35) rotate(180deg); }
+            0%, 100% { opacity: 0.3; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0.55; transform: scale(1.12) rotate(180deg); }
           }
           
           @keyframes rose-glow-3 {
+            0%, 100% { opacity: 0.28; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0.52; transform: scale(1.1) rotate(-180deg); }
+          }
+          
+          @keyframes rose-glow-4 {
+            0%, 100% { opacity: 0.32; transform: scale(1); }
+            50% { opacity: 0.58; transform: scale(1.14); }
+          }
+          
+          @keyframes rose-core {
             0%, 100% { opacity: 0.45; transform: scale(1); }
-            55% { opacity: 0.75; transform: scale(1.4); }
+            50% { opacity: 0.75; transform: scale(1.2); }
           }
           
-          @keyframes glass-sparkle-1 {
-            0%, 58%, 100% { opacity: 0; transform: scale(1); }
-            63%, 73% { opacity: 1; transform: scale(2.8); }
-            68% { opacity: 0.65; transform: scale(2.3); }
+          /* STAINED GLASS ANIMATIONS */
+          @keyframes stained-left-1 {
+            0%, 100% { opacity: 0.35; transform: scaleY(1); }
+            50% { opacity: 0.58; transform: scaleY(1.05); }
           }
           
-          @keyframes glass-sparkle-2 {
-            0%, 62%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            67%, 77% { opacity: 0.95; transform: scale(2.6) rotate(360deg); }
-            72% { opacity: 0.6; transform: scale(2.1) rotate(180deg); }
+          @keyframes stained-left-2 {
+            0%, 100% { opacity: 0.32; transform: scaleY(1); }
+            50% { opacity: 0.55; transform: scaleY(1.04); }
           }
           
-          @keyframes glass-sparkle-3 {
-            0%, 65%, 100% { opacity: 0; transform: scale(1); }
-            70%, 80% { opacity: 0.93; transform: scale(2.7); }
-            75% { opacity: 0.62; transform: scale(2.2); }
+          @keyframes stained-left-3 {
+            0%, 100% { opacity: 0.3; transform: scaleY(1); }
+            50% { opacity: 0.52; transform: scaleY(1.03); }
           }
           
-          @keyframes glass-sparkle-4 {
-            0%, 68%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            73%, 83% { opacity: 0.95; transform: scale(2.65) rotate(360deg); }
-            78% { opacity: 0.64; transform: scale(2.15) rotate(180deg); }
+          @keyframes stained-left-4 {
+            0%, 100% { opacity: 0.33; transform: scaleY(1); }
+            50% { opacity: 0.56; transform: scaleY(1.04); }
           }
           
-          @keyframes glass-sparkle-5 {
-            0%, 60%, 100% { opacity: 0; transform: scale(1); }
-            65%, 75% { opacity: 0.92; transform: scale(2.5); }
-            70% { opacity: 0.58; transform: scale(2.05); }
+          @keyframes stained-right-1 {
+            0%, 100% { opacity: 0.35; transform: scaleY(1); }
+            50% { opacity: 0.58; transform: scaleY(1.05); }
           }
           
-          @keyframes cross-sparkle-1 {
-            0%, 55%, 100% { opacity: 0; transform: scale(1); }
-            60%, 70% { opacity: 1; transform: scale(3); }
-            65% { opacity: 0.7; transform: scale(2.5); }
+          @keyframes stained-right-2 {
+            0%, 100% { opacity: 0.32; transform: scaleY(1); }
+            50% { opacity: 0.55; transform: scaleY(1.04); }
           }
           
-          @keyframes cross-sparkle-2 {
-            0%, 58%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            63%, 73% { opacity: 0.95; transform: scale(2.8) rotate(360deg); }
-            68% { opacity: 0.65; transform: scale(2.3) rotate(180deg); }
+          @keyframes stained-right-3 {
+            0%, 100% { opacity: 0.3; transform: scaleY(1); }
+            50% { opacity: 0.52; transform: scaleY(1.03); }
           }
           
-          @keyframes cross-sparkle-3 {
-            0%, 62%, 100% { opacity: 0; transform: scale(1); }
-            67%, 77% { opacity: 0.95; transform: scale(2.6); }
-            72% { opacity: 0.62; transform: scale(2.1); }
+          @keyframes stained-right-4 {
+            0%, 100% { opacity: 0.33; transform: scaleY(1); }
+            50% { opacity: 0.56; transform: scaleY(1.04); }
           }
           
-          @keyframes cross-sparkle-4 {
-            0%, 65%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            70%, 80% { opacity: 0.92; transform: scale(2.7) rotate(360deg); }
-            75% { opacity: 0.6; transform: scale(2.2) rotate(180deg); }
+          @keyframes altar-window-1 {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.65; transform: scale(1.08); }
           }
           
-          @keyframes cross-sparkle-5 {
-            0%, 60%, 100% { opacity: 0; transform: scale(1); }
-            65%, 75% { opacity: 0.93; transform: scale(2.5); }
-            70% { opacity: 0.58; transform: scale(2); }
+          @keyframes altar-window-2 {
+            0%, 100% { opacity: 0.42; transform: scale(1); }
+            50% { opacity: 0.68; transform: scale(1.1); }
           }
           
-          @keyframes cross-sparkle-6 {
-            0%, 68%, 100% { opacity: 0; transform: scale(1); }
-            73%, 83% { opacity: 0.9; transform: scale(2.4); }
-            78% { opacity: 0.56; transform: scale(1.95); }
+          @keyframes altar-window-3 {
+            0%, 100% { opacity: 0.38; transform: scale(1); }
+            50% { opacity: 0.63; transform: scale(1.07); }
           }
           
-          @keyframes stone-sparkle-1 {
-            0%, 70%, 100% { opacity: 0; transform: scale(1); }
-            75%, 85% { opacity: 0.9; transform: scale(2.2); }
-            80% { opacity: 0.55; transform: scale(1.8); }
+          /* LIGHT BEAM ANIMATIONS */
+          @keyframes light-beam-1 {
+            0%, 100% { opacity: 0.2; transform: scaleX(1); }
+            50% { opacity: 0.35; transform: scaleX(1.08); }
           }
           
-          @keyframes stone-sparkle-2 {
-            0%, 72%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            77%, 87% { opacity: 0.88; transform: scale(2.1) rotate(360deg); }
-            82% { opacity: 0.52; transform: scale(1.7) rotate(180deg); }
+          @keyframes light-beam-2 {
+            0%, 100% { opacity: 0.18; transform: scaleX(1); }
+            50% { opacity: 0.32; transform: scaleX(1.06); }
           }
           
-          @keyframes stone-sparkle-3 {
-            0%, 68%, 100% { opacity: 0; transform: scale(1); }
-            73%, 83% { opacity: 0.92; transform: scale(2.3); }
-            78% { opacity: 0.58; transform: scale(1.9); }
+          @keyframes light-beam-3 {
+            0%, 100% { opacity: 0.2; transform: scaleX(1); }
+            50% { opacity: 0.35; transform: scaleX(1.08); }
           }
           
-          @keyframes stone-sparkle-4 {
-            0%, 74%, 100% { opacity: 0; transform: scale(1); }
-            79%, 89% { opacity: 0.9; transform: scale(2.2); }
-            84% { opacity: 0.56; transform: scale(1.8); }
+          @keyframes light-beam-4 {
+            0%, 100% { opacity: 0.18; transform: scaleX(1); }
+            50% { opacity: 0.32; transform: scaleX(1.06); }
           }
           
-          @keyframes stone-sparkle-5 {
-            0%, 66%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            71%, 81% { opacity: 0.88; transform: scale(2.15) rotate(360deg); }
-            76% { opacity: 0.54; transform: scale(1.75) rotate(180deg); }
+          /* FLOOR GLOW ANIMATIONS */
+          @keyframes floor-glow-1 {
+            0%, 100% { opacity: 0.35; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.15); }
           }
           
-          @keyframes stone-sparkle-6 {
-            0%, 76%, 100% { opacity: 0; transform: scale(1); }
-            81%, 91% { opacity: 0.86; transform: scale(2.1); }
-            86% { opacity: 0.52; transform: scale(1.7); }
+          @keyframes floor-glow-2 {
+            0%, 100% { opacity: 0.32; transform: scale(1); }
+            50% { opacity: 0.58; transform: scale(1.12); }
           }
           
-          @keyframes stone-sparkle-7 {
-            0%, 64%, 100% { opacity: 0; transform: scale(1); }
-            69%, 79% { opacity: 0.9; transform: scale(2.25); }
-            74% { opacity: 0.58; transform: scale(1.85); }
+          @keyframes floor-glow-3 {
+            0%, 100% { opacity: 0.34; transform: scale(1); }
+            50% { opacity: 0.62; transform: scale(1.14); }
           }
           
-          @keyframes stone-sparkle-8 {
-            0%, 78%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            83%, 93% { opacity: 0.88; transform: scale(2.12) rotate(360deg); }
-            88% { opacity: 0.54; transform: scale(1.72) rotate(180deg); }
+          @keyframes floor-glow-4 {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.55; transform: scale(1.1); }
           }
           
-          @keyframes stone-sparkle-9 {
-            0%, 70%, 100% { opacity: 0; transform: scale(1); }
-            75%, 85% { opacity: 0.89; transform: scale(2.18); }
-            80% { opacity: 0.56; transform: scale(1.78); }
+          @keyframes floor-glow-5 {
+            0%, 100% { opacity: 0.33; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.13); }
           }
           
-          @keyframes window-light-1 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.45); }
+          @keyframes floor-glow-6 {
+            0%, 100% { opacity: 0.31; transform: scale(1); }
+            50% { opacity: 0.57; transform: scale(1.11); }
           }
           
-          @keyframes window-light-2 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.42); }
+          /* PRIEST GLOW ANIMATIONS */
+          @keyframes priest-glow-1 {
+            0%, 100% { opacity: 0.25; transform: scale(1); }
+            50% { opacity: 0.45; transform: scale(1.12); }
           }
           
-          @keyframes window-light-3 {
-            0%, 100% { opacity: 0.9; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.48); }
+          @keyframes priest-glow-2 {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.52; transform: scale(1.1); }
           }
           
-          @keyframes window-light-4 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.44); }
+          /* CEILING LIGHT ANIMATIONS */
+          @keyframes ceiling-light-1 {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.3); }
           }
           
-          @keyframes window-light-5 {
-            0%, 100% { opacity: 0.92; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.5); }
+          @keyframes ceiling-light-2 {
+            0%, 100% { opacity: 0.78; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.28); }
           }
           
-          @keyframes window-light-6 {
-            0%, 100% { opacity: 0.9; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.46); }
-          }
-          
-          @keyframes window-light-7 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-8 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-9 {
-            0%, 100% { opacity: 0.87; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.43); }
-          }
-          
-          @keyframes tower-light-1 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes tower-light-2 {
+          @keyframes ceiling-light-3 {
             0%, 100% { opacity: 0.82; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.38); }
+            50% { opacity: 1; transform: scale(1.32); }
           }
           
-          @keyframes tower-light-3 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.42); }
+          @keyframes ceiling-light-4 {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.3); }
           }
           
-          @keyframes tower-light-4 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.4); }
+          @keyframes ceiling-light-5 {
+            0%, 100% { opacity: 0.79; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.29); }
           }
           
-          @keyframes tower-light-5 {
-            0%, 100% { opacity: 0.84; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.38); }
+          @keyframes ceiling-light-6 {
+            0%, 100% { opacity: 0.81; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.31); }
           }
           
-          @keyframes tower-light-6 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.42); }
+          /* CANDLE ANIMATIONS */
+          @keyframes candle-flicker-1 {
+            0%, 100% { opacity: 0.75; transform: scale(1) translateY(0); }
+            15% { opacity: 0.68; transform: scale(0.94) translateY(-2px); }
+            30% { opacity: 0.82; transform: scale(1.06) translateY(1px); }
+            45% { opacity: 0.72; transform: scale(0.97) translateY(-1px); }
+            60% { opacity: 0.78; transform: scale(1.03) translateY(0.5px); }
+            75% { opacity: 0.7; transform: scale(0.95) translateY(-1.5px); }
           }
           
-          @keyframes lamp-glow-1 {
-            0%, 100% { opacity: 0.75; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.4); }
+          @keyframes candle-flicker-2 {
+            0%, 100% { opacity: 0.78; transform: scale(1) translateY(0); }
+            18% { opacity: 0.7; transform: scale(0.95) translateY(-2px); }
+            33% { opacity: 0.85; transform: scale(1.05) translateY(1px); }
+            48% { opacity: 0.74; transform: scale(0.98) translateY(-1px); }
+            63% { opacity: 0.8; transform: scale(1.02) translateY(0.5px); }
+            78% { opacity: 0.72; transform: scale(0.96) translateY(-1.5px); }
           }
           
-          @keyframes lamp-glow-2 {
-            0%, 100% { opacity: 0.72; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.38); }
+          @keyframes candle-glow-1 {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.65; transform: scale(1.2); }
           }
           
-          @keyframes lamp-glow-3 {
-            0%, 100% { opacity: 0.73; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.42); }
+          @keyframes candle-glow-2 {
+            0%, 100% { opacity: 0.42; transform: scale(1); }
+            50% { opacity: 0.68; transform: scale(1.18); }
           }
           
-          @keyframes lamp-glow-4 {
-            0%, 100% { opacity: 0.7; transform: scale(1); }
-            58% { opacity: 0.98; transform: scale(1.36); }
+          /* WOOD GLEAM ANIMATIONS */
+          @keyframes wood-gleam-1 {
+            0%, 100% { opacity: 0.12; transform: scaleX(1); }
+            50% { opacity: 0.24; transform: scaleX(1.1); }
           }
           
-          @keyframes foliage-glow-1 {
-            0%, 100% { opacity: 0.14; transform: scale(1); }
-            50% { opacity: 0.28; transform: scale(1.18); }
+          @keyframes wood-gleam-2 {
+            0%, 100% { opacity: 0.1; transform: scaleX(1); }
+            50% { opacity: 0.22; transform: scaleX(1.08); }
           }
           
-          @keyframes foliage-glow-2 {
-            0%, 100% { opacity: 0.12; transform: scale(1); }
-            60% { opacity: 0.26; transform: scale(1.15); }
+          @keyframes wood-gleam-3 {
+            0%, 100% { opacity: 0.11; transform: scaleX(1); }
+            50% { opacity: 0.23; transform: scaleX(1.09); }
           }
           
-          @keyframes foliage-glow-3 {
-            0%, 100% { opacity: 0.13; transform: scale(1); }
-            55% { opacity: 0.27; transform: scale(1.17); }
+          @keyframes wood-gleam-4 {
+            0%, 100% { opacity: 0.12; transform: scaleX(1); }
+            50% { opacity: 0.24; transform: scaleX(1.1); }
           }
           
-          @keyframes foliage-glow-4 {
-            0%, 100% { opacity: 0.15; transform: scale(1); }
-            58% { opacity: 0.3; transform: scale(1.2); }
+          @keyframes wood-gleam-5 {
+            0%, 100% { opacity: 0.1; transform: scaleX(1); }
+            50% { opacity: 0.22; transform: scaleX(1.08); }
           }
           
-          @keyframes foliage-glow-5 {
-            0%, 100% { opacity: 0.13; transform: scale(1); }
-            52% { opacity: 0.28; transform: scale(1.17); }
+          @keyframes wood-gleam-6 {
+            0%, 100% { opacity: 0.11; transform: scaleX(1); }
+            50% { opacity: 0.23; transform: scaleX(1.09); }
           }
           
-          @keyframes foliage-glow-6 {
-            0%, 100% { opacity: 0.14; transform: scale(1); }
-            56% { opacity: 0.29; transform: scale(1.19); }
+          /* DUST FLOAT ANIMATIONS */
+          @keyframes dust-float-1 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.7; transform: translateY(-60px) translateX(12px); }
           }
           
-          @keyframes foliage-glow-7 {
-            0%, 100% { opacity: 0.16; transform: scale(1); }
-            50% { opacity: 0.32; transform: scale(1.22); }
+          @keyframes dust-float-2 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.65; transform: translateY(-55px) translateX(-10px); }
           }
           
-          @keyframes foliage-glow-8 {
-            0%, 100% { opacity: 0.15; transform: scale(1); }
-            54% { opacity: 0.31; transform: scale(1.2); }
+          @keyframes dust-float-3 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.68; transform: translateY(-58px) translateX(14px); }
           }
           
-          @keyframes divine-dust-1 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.7; transform: translateY(-65px) translateX(28px) rotate(180deg); }
+          @keyframes dust-float-4 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.7; transform: translateY(-60px) translateX(-12px); }
           }
           
-          @keyframes divine-dust-2 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.68; transform: translateY(-60px) translateX(-25px) rotate(200deg); }
+          @keyframes dust-float-5 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.65; transform: translateY(-55px) translateX(10px); }
           }
           
-          @keyframes divine-dust-3 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.75; transform: translateY(-70px) translateX(30px) rotate(190deg); }
+          @keyframes dust-float-6 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.68; transform: translateY(-58px) translateX(-14px); }
           }
           
-          @keyframes divine-dust-4 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.7; transform: translateY(-62px) translateX(-27px) rotate(210deg); }
+          @keyframes dust-float-7 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.66; transform: translateY(-52px) translateX(8px); }
           }
           
-          @keyframes divine-dust-5 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.72; transform: translateY(-68px) translateX(26px) rotate(195deg); }
+          @keyframes dust-float-8 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.64; transform: translateY(-54px) translateX(-9px); }
           }
           
-          @keyframes divine-dust-6 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.65; transform: translateY(-52px) translateX(20px); }
+          /* COLUMN SPARKLE ANIMATIONS */
+          @keyframes column-sparkle-1 {
+            0%, 65%, 100% { opacity: 0; transform: scale(1); }
+            70%, 80% { opacity: 0.75; transform: scale(2.2); }
+            75% { opacity: 0.45; transform: scale(1.8); }
           }
           
-          @keyframes divine-dust-7 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.68; transform: translateY(-55px) translateX(-18px); }
+          @keyframes column-sparkle-2 {
+            0%, 68%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
+            73%, 83% { opacity: 0.72; transform: scale(2.1) rotate(360deg); }
+            78% { opacity: 0.42; transform: scale(1.7) rotate(180deg); }
           }
           
-          @keyframes divine-dust-8 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.62; transform: translateY(-58px) translateX(22px); }
+          @keyframes column-sparkle-3 {
+            0%, 62%, 100% { opacity: 0; transform: scale(1); }
+            67%, 77% { opacity: 0.75; transform: scale(2.2); }
+            72% { opacity: 0.45; transform: scale(1.8); }
           }
           
-          @keyframes path-shimmer-1 {
-            0%, 100% { opacity: 0.16; transform: scale(1); }
-            50% { opacity: 0.32; transform: scale(1.2); }
+          @keyframes column-sparkle-4 {
+            0%, 70%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
+            75%, 85% { opacity: 0.72; transform: scale(2.1) rotate(360deg); }
+            80% { opacity: 0.42; transform: scale(1.7) rotate(180deg); }
           }
           
-          @keyframes path-shimmer-2 {
-            0%, 100% { opacity: 0.14; transform: scale(1) rotate(0deg); }
-            60% { opacity: 0.3; transform: scale(1.18) rotate(10deg); }
+          /* CROSS GLOW ANIMATIONS */
+          @keyframes cross-glow {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 0.9; transform: scale(1.3); }
           }
           
-          @keyframes path-shimmer-3 {
-            0%, 100% { opacity: 0.18; transform: scale(1); }
-            55% { opacity: 0.35; transform: scale(1.22); }
+          @keyframes cross-glow-outer {
+            0%, 100% { opacity: 0.35; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.25); }
           }
           
-          @keyframes path-shimmer-4 {
-            0%, 100% { opacity: 0.15; transform: scale(1) rotate(0deg); }
-            58% { opacity: 0.31; transform: scale(1.15) rotate(-10deg); }
+          @keyframes cross-glow-far {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.2); }
           }
           
-          @keyframes sun-ray-1 {
-            0%, 100% { opacity: 0; transform: translateY(0px); }
-            50% { opacity: 0.26; transform: translateY(-12px); }
+          /* PERSON GLOW ANIMATIONS */
+          @keyframes person-glow-1 {
+            0%, 100% { opacity: 0.08; transform: scale(1); }
+            50% { opacity: 0.15; transform: scale(1.05); }
           }
           
-          @keyframes sun-ray-2 {
-            0%, 100% { opacity: 0; transform: translateY(0px); }
-            60% { opacity: 0.3; transform: translateY(-15px); }
+          @keyframes person-glow-2 {
+            0%, 100% { opacity: 0.07; transform: scale(1); }
+            50% { opacity: 0.14; transform: scale(1.04); }
           }
           
-          .animate-rose-glow-1 { animation: rose-glow-1 5s ease-in-out infinite; }
-          .animate-rose-glow-2 { animation: rose-glow-2 6s ease-in-out infinite 1s; }
-          .animate-rose-glow-3 { animation: rose-glow-3 4.5s ease-in-out infinite 0.5s; }
+          @keyframes person-glow-3 {
+            0%, 100% { opacity: 0.08; transform: scale(1); }
+            50% { opacity: 0.15; transform: scale(1.05); }
+          }
           
-          .animate-glass-sparkle-1 { animation: glass-sparkle-1 9s linear infinite; }
-          .animate-glass-sparkle-2 { animation: glass-sparkle-2 10s linear infinite 2s; }
-          .animate-glass-sparkle-3 { animation: glass-sparkle-3 9.5s linear infinite 4s; }
-          .animate-glass-sparkle-4 { animation: glass-sparkle-4 10.5s linear infinite 1s; }
-          .animate-glass-sparkle-5 { animation: glass-sparkle-5 9.2s linear infinite 6s; }
+          @keyframes person-glow-4 {
+            0%, 100% { opacity: 0.08; transform: scale(1); }
+            50% { opacity: 0.15; transform: scale(1.05); }
+          }
           
-          .animate-cross-sparkle-1 { animation: cross-sparkle-1 10s linear infinite; }
-          .animate-cross-sparkle-2 { animation: cross-sparkle-2 11s linear infinite 2.5s; }
-          .animate-cross-sparkle-3 { animation: cross-sparkle-3 10.5s linear infinite 5s; }
-          .animate-cross-sparkle-4 { animation: cross-sparkle-4 11.5s linear infinite 1.5s; }
-          .animate-cross-sparkle-5 { animation: cross-sparkle-5 10.2s linear infinite 7s; }
-          .animate-cross-sparkle-6 { animation: cross-sparkle-6 10.8s linear infinite 3.5s; }
+          @keyframes person-glow-5 {
+            0%, 100% { opacity: 0.07; transform: scale(1); }
+            50% { opacity: 0.14; transform: scale(1.04); }
+          }
           
-          .animate-stone-sparkle-1 { animation: stone-sparkle-1 8s linear infinite; }
-          .animate-stone-sparkle-2 { animation: stone-sparkle-2 9s linear infinite 1.5s; }
-          .animate-stone-sparkle-3 { animation: stone-sparkle-3 8.5s linear infinite 3s; }
-          .animate-stone-sparkle-4 { animation: stone-sparkle-4 9.5s linear infinite 4.5s; }
-          .animate-stone-sparkle-5 { animation: stone-sparkle-5 8.2s linear infinite 2s; }
-          .animate-stone-sparkle-6 { animation: stone-sparkle-6 9.2s linear infinite 6s; }
-          .animate-stone-sparkle-7 { animation: stone-sparkle-7 8.8s linear infinite 1s; }
-          .animate-stone-sparkle-8 { animation: stone-sparkle-8 9.8s linear infinite 5s; }
-          .animate-stone-sparkle-9 { animation: stone-sparkle-9 8.3s linear infinite 7s; }
+          @keyframes person-glow-6 {
+            0%, 100% { opacity: 0.08; transform: scale(1); }
+            50% { opacity: 0.15; transform: scale(1.05); }
+          }
           
-          .animate-window-light-1 { animation: window-light-1 5s ease-in-out infinite; }
-          .animate-window-light-2 { animation: window-light-2 5.5s ease-in-out infinite 0.5s; }
-          .animate-window-light-3 { animation: window-light-3 5.2s ease-in-out infinite 1s; }
-          .animate-window-light-4 { animation: window-light-4 5.8s ease-in-out infinite 1.5s; }
-          .animate-window-light-5 { animation: window-light-5 5.3s ease-in-out infinite 2s; }
-          .animate-window-light-6 { animation: window-light-6 5.6s ease-in-out infinite 2.5s; }
-          .animate-window-light-7 { animation: window-light-7 5.4s ease-in-out infinite 3s; }
-          .animate-window-light-8 { animation: window-light-8 5.7s ease-in-out infinite 3.5s; }
-          .animate-window-light-9 { animation: window-light-9 5.1s ease-in-out infinite 4s; }
+          /* ANIMATION CLASS ASSIGNMENTS */
+          .animate-rose-glow-1 { animation: rose-glow-1 8s ease-in-out infinite; }
+          .animate-rose-glow-2 { animation: rose-glow-2 9s ease-in-out infinite 1s; }
+          .animate-rose-glow-3 { animation: rose-glow-3 10s ease-in-out infinite 2s; }
+          .animate-rose-glow-4 { animation: rose-glow-4 7s ease-in-out infinite 0.5s; }
+          .animate-rose-core { animation: rose-core 6s ease-in-out infinite 1.5s; }
           
-          .animate-tower-light-1 { animation: tower-light-1 5.5s ease-in-out infinite; }
-          .animate-tower-light-2 { animation: tower-light-2 5.8s ease-in-out infinite 0.8s; }
-          .animate-tower-light-3 { animation: tower-light-3 5.3s ease-in-out infinite 1.6s; }
-          .animate-tower-light-4 { animation: tower-light-4 5.6s ease-in-out infinite 2.4s; }
-          .animate-tower-light-5 { animation: tower-light-5 5.9s ease-in-out infinite 3.2s; }
-          .animate-tower-light-6 { animation: tower-light-6 5.2s ease-in-out infinite 4s; }
+          .animate-stained-left-1 { animation: stained-left-1 7s ease-in-out infinite; }
+          .animate-stained-left-2 { animation: stained-left-2 7.5s ease-in-out infinite 1s; }
+          .animate-stained-left-3 { animation: stained-left-3 8s ease-in-out infinite 2s; }
+          .animate-stained-left-4 { animation: stained-left-4 7.2s ease-in-out infinite 0.5s; }
           
-          .animate-lamp-glow-1 { animation: lamp-glow-1 4s ease-in-out infinite; }
-          .animate-lamp-glow-2 { animation: lamp-glow-2 4.5s ease-in-out infinite 1s; }
-          .animate-lamp-glow-3 { animation: lamp-glow-3 4.2s ease-in-out infinite 2s; }
-          .animate-lamp-glow-4 { animation: lamp-glow-4 4.7s ease-in-out infinite 0.5s; }
+          .animate-stained-right-1 { animation: stained-right-1 7s ease-in-out infinite 0.5s; }
+          .animate-stained-right-2 { animation: stained-right-2 7.5s ease-in-out infinite 1.5s; }
+          .animate-stained-right-3 { animation: stained-right-3 8s ease-in-out infinite 2.5s; }
+          .animate-stained-right-4 { animation: stained-right-4 7.2s ease-in-out infinite 1s; }
           
-          .animate-foliage-glow-1 { animation: foliage-glow-1 10s ease-in-out infinite; }
-          .animate-foliage-glow-2 { animation: foliage-glow-2 11s ease-in-out infinite 2s; }
-          .animate-foliage-glow-3 { animation: foliage-glow-3 10.5s ease-in-out infinite 4s; }
-          .animate-foliage-glow-4 { animation: foliage-glow-4 11.5s ease-in-out infinite 1s; }
-          .animate-foliage-glow-5 { animation: foliage-glow-5 10.2s ease-in-out infinite 5s; }
-          .animate-foliage-glow-6 { animation: foliage-glow-6 11.2s ease-in-out infinite 3s; }
-          .animate-foliage-glow-7 { animation: foliage-glow-7 9.8s ease-in-out infinite 6s; }
-          .animate-foliage-glow-8 { animation: foliage-glow-8 10.8s ease-in-out infinite 7s; }
+          .animate-altar-window-1 { animation: altar-window-1 6s ease-in-out infinite; }
+          .animate-altar-window-2 { animation: altar-window-2 6.5s ease-in-out infinite 1s; }
+          .animate-altar-window-3 { animation: altar-window-3 6.2s ease-in-out infinite 2s; }
           
-          .animate-divine-dust-1 { animation: divine-dust-1 16s ease-in-out infinite; }
-          .animate-divine-dust-2 { animation: divine-dust-2 18s ease-in-out infinite 3s; }
-          .animate-divine-dust-3 { animation: divine-dust-3 17s ease-in-out infinite 6s; }
-          .animate-divine-dust-4 { animation: divine-dust-4 19s ease-in-out infinite 2s; }
-          .animate-divine-dust-5 { animation: divine-dust-5 16.5s ease-in-out infinite 8s; }
-          .animate-divine-dust-6 { animation: divine-dust-6 20s ease-in-out infinite 4s; }
-          .animate-divine-dust-7 { animation: divine-dust-7 18.5s ease-in-out infinite 7s; }
-          .animate-divine-dust-8 { animation: divine-dust-8 17.5s ease-in-out infinite 9s; }
+          .animate-light-beam-1 { animation: light-beam-1 10s ease-in-out infinite; }
+          .animate-light-beam-2 { animation: light-beam-2 11s ease-in-out infinite 2s; }
+          .animate-light-beam-3 { animation: light-beam-3 10.5s ease-in-out infinite 1s; }
+          .animate-light-beam-4 { animation: light-beam-4 11.5s ease-in-out infinite 3s; }
           
-          .animate-path-shimmer-1 { animation: path-shimmer-1 7s ease-in-out infinite; }
-          .animate-path-shimmer-2 { animation: path-shimmer-2 8s ease-in-out infinite 2s; }
-          .animate-path-shimmer-3 { animation: path-shimmer-3 7.5s ease-in-out infinite 4s; }
-          .animate-path-shimmer-4 { animation: path-shimmer-4 8.5s ease-in-out infinite 1s; }
+          .animate-floor-glow-1 { animation: floor-glow-1 5s ease-in-out infinite; }
+          .animate-floor-glow-2 { animation: floor-glow-2 5.5s ease-in-out infinite 0.5s; }
+          .animate-floor-glow-3 { animation: floor-glow-3 5.2s ease-in-out infinite 1s; }
+          .animate-floor-glow-4 { animation: floor-glow-4 5.8s ease-in-out infinite 1.5s; }
+          .animate-floor-glow-5 { animation: floor-glow-5 5.3s ease-in-out infinite 2s; }
+          .animate-floor-glow-6 { animation: floor-glow-6 5.6s ease-in-out infinite 2.5s; }
           
-          .animate-sun-ray-1 { animation: sun-ray-1 16s ease-in-out infinite; }
-          .animate-sun-ray-2 { animation: sun-ray-2 18s ease-in-out infinite 5s; }
+          .animate-priest-glow-1 { animation: priest-glow-1 7s ease-in-out infinite; }
+          .animate-priest-glow-2 { animation: priest-glow-2 6s ease-in-out infinite 1s; }
+          
+          .animate-ceiling-light-1 { animation: ceiling-light-1 4s ease-in-out infinite; }
+          .animate-ceiling-light-2 { animation: ceiling-light-2 4.3s ease-in-out infinite 0.5s; }
+          .animate-ceiling-light-3 { animation: ceiling-light-3 4.6s ease-in-out infinite 1s; }
+          .animate-ceiling-light-4 { animation: ceiling-light-4 4.2s ease-in-out infinite 1.5s; }
+          .animate-ceiling-light-5 { animation: ceiling-light-5 4.4s ease-in-out infinite 2s; }
+          .animate-ceiling-light-6 { animation: ceiling-light-6 4.5s ease-in-out infinite 0.8s; }
+          
+          .animate-candle-flicker-1 { animation: candle-flicker-1 2.5s ease-in-out infinite; }
+          .animate-candle-flicker-2 { animation: candle-flicker-2 2.8s ease-in-out infinite 0.5s; }
+          .animate-candle-glow-1 { animation: candle-glow-1 3s ease-in-out infinite; }
+          .animate-candle-glow-2 { animation: candle-glow-2 3.3s ease-in-out infinite 0.5s; }
+          
+          .animate-wood-gleam-1 { animation: wood-gleam-1 8s ease-in-out infinite; }
+          .animate-wood-gleam-2 { animation: wood-gleam-2 8.5s ease-in-out infinite 1s; }
+          .animate-wood-gleam-3 { animation: wood-gleam-3 9s ease-in-out infinite 2s; }
+          .animate-wood-gleam-4 { animation: wood-gleam-4 8.2s ease-in-out infinite 0.5s; }
+          .animate-wood-gleam-5 { animation: wood-gleam-5 8.7s ease-in-out infinite 1.5s; }
+          .animate-wood-gleam-6 { animation: wood-gleam-6 9.2s ease-in-out infinite 2.5s; }
+          
+          .animate-dust-float-1 { animation: dust-float-1 16s ease-in-out infinite; }
+          .animate-dust-float-2 { animation: dust-float-2 17s ease-in-out infinite 2s; }
+          .animate-dust-float-3 { animation: dust-float-3 18s ease-in-out infinite 4s; }
+          .animate-dust-float-4 { animation: dust-float-4 16.5s ease-in-out infinite 1s; }
+          .animate-dust-float-5 { animation: dust-float-5 17.5s ease-in-out infinite 3s; }
+          .animate-dust-float-6 { animation: dust-float-6 18.5s ease-in-out infinite 5s; }
+          .animate-dust-float-7 { animation: dust-float-7 19s ease-in-out infinite 6s; }
+          .animate-dust-float-8 { animation: dust-float-8 15.5s ease-in-out infinite 7s; }
+          
+          .animate-column-sparkle-1 { animation: column-sparkle-1 9s linear infinite; }
+          .animate-column-sparkle-2 { animation: column-sparkle-2 10s linear infinite 2s; }
+          .animate-column-sparkle-3 { animation: column-sparkle-3 9.5s linear infinite 4s; }
+          .animate-column-sparkle-4 { animation: column-sparkle-4 10.5s linear infinite 6s; }
+          
+          .animate-cross-glow { animation: cross-glow 5s ease-in-out infinite; }
+          .animate-cross-glow-outer { animation: cross-glow-outer 6s ease-in-out infinite 1s; }
+          .animate-cross-glow-far { animation: cross-glow-far 7s ease-in-out infinite 2s; }
+          
+          .animate-person-glow-1 { animation: person-glow-1 6s ease-in-out infinite; }
+          .animate-person-glow-2 { animation: person-glow-2 6.5s ease-in-out infinite 1s; }
+          .animate-person-glow-3 { animation: person-glow-3 7s ease-in-out infinite 2s; }
+          .animate-person-glow-4 { animation: person-glow-4 6.2s ease-in-out infinite 0.5s; }
+          .animate-person-glow-5 { animation: person-glow-5 6.7s ease-in-out infinite 1.5s; }
+          .animate-person-glow-6 { animation: person-glow-6 7.2s ease-in-out infinite 2.5s; }
         `}</style>
       </div>
     </Card>

@@ -16,182 +16,153 @@ export function Island4Module5Image() {
           priority
         />
         
-        {/* EPIC Animated overlay effects */}
+        {/* BOLD Animated overlay effects */}
         <div className="absolute inset-0 animate-effects">
-          {/* LEGENDARY Lighthouse Beacon - ROTATING */}
+          {/* LIGHTHOUSE BEACON - Main focal point! (moved 7% right) */}
           <div className="absolute inset-0">
             {/* Epic lighthouse top glow */}
-            <div className="absolute top-[18%] left-[49%] w-[90px] h-[90px] bg-yellow-300/45 rounded-full lighthouse-beacon animate-lighthouse-beacon-1"></div>
-            <div className="absolute top-[19%] left-[49.5%] w-[70px] h-[70px] bg-amber-300/50 rounded-full lighthouse-beacon animate-lighthouse-beacon-2"></div>
-            <div className="absolute top-[20%] left-[50%] w-[50px] h-[50px] bg-yellow-100/55 rounded-full lighthouse-core animate-lighthouse-core"></div>
+            <div className="absolute top-[18%] left-[69%] w-[90px] h-[90px] bg-yellow-300/45 rounded-full lighthouse-beacon animate-lighthouse-beacon-1"></div>
+            <div className="absolute top-[19%] left-[69.5%] w-[70px] h-[70px] bg-amber-300/50 rounded-full lighthouse-beacon animate-lighthouse-beacon-2"></div>
+            <div className="absolute top-[20%] left-[69%] w-[50px] h-[50px] bg-yellow-100/55 rounded-full lighthouse-core animate-lighthouse-core"></div>
             
-            {/* Rotating lighthouse beam rays - EPIC */}
-            <div className="absolute top-[20%] left-[50.5%] w-[350px] h-[5px] bg-gradient-to-r from-transparent via-yellow-300/70 to-transparent lighthouse-beam animate-lighthouse-beam-rotate"></div>
-            <div className="absolute top-[20%] left-[50.5%] w-[320px] h-[4px] bg-gradient-to-r from-transparent via-amber-200/60 to-transparent lighthouse-beam animate-lighthouse-beam-rotate-2"></div>
+            {/* Rotating lighthouse beam rays - DRAMATIC */}
+            <div className="absolute top-[20%] left-[69.5%] w-[350px] h-[5px] bg-gradient-to-r from-transparent via-yellow-300/70 to-transparent lighthouse-beam animate-lighthouse-beam-rotate"></div>
+            <div className="absolute top-[20%] left-[69.5%] w-[320px] h-[4px] bg-gradient-to-r from-transparent via-amber-200/60 to-transparent lighthouse-beam animate-lighthouse-beam-rotate-2"></div>
             
             {/* Lighthouse dome sparkles */}
-            <div className="absolute top-[18%] left-[50.5%] w-[5px] h-[5px] bg-white/98 rounded-full dome-sparkle animate-dome-sparkle-1"></div>
-            <div className="absolute top-[19%] left-[49.5%] w-[4px] h-[4px] bg-yellow-200/95 rounded-full dome-sparkle animate-dome-sparkle-2"></div>
-            <div className="absolute top-[19%] left-[51.5%] w-[4px] h-[4px] bg-amber-200/93 rounded-full dome-sparkle animate-dome-sparkle-3"></div>
+            <div className="absolute top-[18%] left-[69.5%] w-[5px] h-[5px] bg-white/98 rounded-full dome-sparkle animate-dome-sparkle-1"></div>
+            <div className="absolute top-[19%] left-[69.5%] w-[4px] h-[4px] bg-yellow-200/95 rounded-full dome-sparkle animate-dome-sparkle-2"></div>
+            <div className="absolute top-[19%] left-[69.5%] w-[4px] h-[4px] bg-amber-200/93 rounded-full dome-sparkle animate-dome-sparkle-3"></div>
           </div>
 
-          {/* Lighthouse Tower Windows - GLOWING */}
+          {/* LIGHTHOUSE TOWER WINDOW GLOW */}
           <div className="absolute inset-0">
-            {/* Top observation windows */}
-            <div className="absolute top-[24%] left-[49%] w-[4px] h-[5px] bg-yellow-300/92 rounded window-glow animate-lighthouse-window-1"></div>
-            <div className="absolute top-[24%] left-[51%] w-[4px] h-[5px] bg-amber-300/90 rounded window-glow animate-lighthouse-window-2"></div>
-            
-            {/* Mid-tower windows */}
-            <div className="absolute top-[32%] left-[49%] w-[4px] h-[5px] bg-yellow-300/90 rounded window-glow animate-lighthouse-window-3"></div>
-            <div className="absolute top-[32%] left-[51%] w-[4px] h-[5px] bg-amber-300/88 rounded window-glow animate-lighthouse-window-4"></div>
-            
-            {/* Lower tower windows */}
-            <div className="absolute top-[40%] left-[49%] w-[4px] h-[5px] bg-yellow-300/88 rounded window-glow animate-lighthouse-window-5"></div>
-            <div className="absolute top-[40%] left-[51%] w-[4px] h-[5px] bg-amber-300/86 rounded window-glow animate-lighthouse-window-6"></div>
+            <div className="absolute top-[24%] left-[72.5%] w-[5px] h-[6px] bg-yellow-300/90 rounded window-glow animate-lighthouse-window-1"></div>
+            <div className="absolute top-[24%] left-[72.5%] w-[10px] h-[12px] bg-orange-300/45 window-glow-outer animate-lighthouse-window-glow"></div>
           </div>
 
-          {/* Building Window Lights - LEFT SIDE */}
+          {/* STARS - Twinkling night sky */}
           <div className="absolute inset-0">
-            {/* Far left upper buildings */}
-            <div className="absolute top-[28%] left-[8%] w-[3px] h-[4px] bg-orange-300/85 rounded window-light animate-window-light-1"></div>
-            <div className="absolute top-[32%] left-[6%] w-[3px] h-[4px] bg-yellow-300/82 rounded window-light animate-window-light-2"></div>
-            <div className="absolute top-[36%] left-[10%] w-[3px] h-[4px] bg-orange-300/88 rounded window-light animate-window-light-3"></div>
+            {/* Large bright stars */}
+            <div className="absolute top-[8%] left-[28%] w-[4px] h-[4px] bg-white/95 rounded-full star-large animate-star-twinkle-1"></div>
+            <div className="absolute top-[12%] left-[35%] w-[4px] h-[4px] bg-yellow-200/92 rounded-full star-large animate-star-twinkle-2"></div>
+            <div className="absolute top-[6%] left-[42%] w-[5px] h-[5px] bg-white/98 rounded-full star-large animate-star-twinkle-3"></div>
+            <div className="absolute top-[10%] left-[52%] w-[4px] h-[4px] bg-yellow-200/90 rounded-full star-large animate-star-twinkle-4"></div>
+            <div className="absolute top-[14%] left-[60%] w-[4px] h-[4px] bg-white/93 rounded-full star-large animate-star-twinkle-5"></div>
             
-            {/* Left mid buildings */}
-            <div className="absolute top-[30%] left-[18%] w-[3px] h-[4px] bg-yellow-300/86 rounded window-light animate-window-light-4"></div>
-            <div className="absolute top-[34%] left-[15%] w-[3px] h-[4px] bg-orange-300/84 rounded window-light animate-window-light-5"></div>
-            <div className="absolute top-[38%] left-[20%] w-[3px] h-[4px] bg-yellow-300/88 rounded window-light animate-window-light-6"></div>
-            <div className="absolute top-[42%] left-[17%] w-[3px] h-[4px] bg-orange-300/86 rounded window-light animate-window-light-7"></div>
+            {/* Medium stars */}
+            <div className="absolute top-[7%] left-[15%] w-[3px] h-[3px] bg-white/85 rounded-full star-medium animate-star-twinkle-6"></div>
+            <div className="absolute top-[11%] left-[22%] w-[3px] h-[3px] bg-yellow-200/82 rounded-full star-medium animate-star-twinkle-7"></div>
+            <div className="absolute top-[15%] left-[45%] w-[3px] h-[3px] bg-white/88 rounded-full star-medium animate-star-twinkle-8"></div>
+            <div className="absolute top-[9%] left-[68%] w-[3px] h-[3px] bg-yellow-200/84 rounded-full star-medium animate-star-twinkle-9"></div>
+            <div className="absolute top-[13%] left-[78%] w-[3px] h-[3px] bg-white/86 rounded-full star-medium animate-star-twinkle-10"></div>
             
-            {/* Center-left near lighthouse */}
-            <div className="absolute top-[32%] left-[28%] w-[3px] h-[4px] bg-yellow-300/85 rounded window-light animate-window-light-8"></div>
-            <div className="absolute top-[36%] left-[32%] w-[3px] h-[4px] bg-orange-300/87 rounded window-light animate-window-light-9"></div>
-            <div className="absolute top-[40%] left-[35%] w-[3px] h-[4px] bg-yellow-300/83 rounded window-light animate-window-light-10"></div>
+            {/* Small stars */}
+            <div className="absolute top-[6%] left-[10%] w-[2px] h-[2px] bg-white/75 rounded-full star-small animate-star-twinkle-11"></div>
+            <div className="absolute top-[8%] left-[20%] w-[2px] h-[2px] bg-yellow-200/72 rounded-full star-small animate-star-twinkle-12"></div>
+            <div className="absolute top-[10%] left-[38%] w-[2px] h-[2px] bg-white/78 rounded-full star-small animate-star-twinkle-13"></div>
+            <div className="absolute top-[12%] left-[48%] w-[2px] h-[2px] bg-yellow-200/74 rounded-full star-small animate-star-twinkle-14"></div>
+            <div className="absolute top-[14%] left-[56%] w-[2px] h-[2px] bg-white/76 rounded-full star-small animate-star-twinkle-15"></div>
+            <div className="absolute top-[7%] left-[64%] w-[2px] h-[2px] bg-yellow-200/73 rounded-full star-small animate-star-twinkle-16"></div>
+            <div className="absolute top-[9%] left-[82%] w-[2px] h-[2px] bg-white/77 rounded-full star-small animate-star-twinkle-17"></div>
+            <div className="absolute top-[11%] left-[92%] w-[2px] h-[2px] bg-yellow-200/75 rounded-full star-small animate-star-twinkle-18"></div>
           </div>
 
-          {/* Building Window Lights - RIGHT SIDE */}
+          {/* CLOUDS - Gentle floating */}
           <div className="absolute inset-0">
-            {/* Center-right near lighthouse */}
-            <div className="absolute top-[32%] left-[65%] w-[3px] h-[4px] bg-orange-300/86 rounded window-light animate-window-light-11"></div>
-            <div className="absolute top-[36%] left-[68%] w-[3px] h-[4px] bg-yellow-300/84 rounded window-light animate-window-light-12"></div>
-            <div className="absolute top-[40%] left-[70%] w-[3px] h-[4px] bg-orange-300/88 rounded window-light animate-window-light-13"></div>
+            {/* Left side clouds */}
+            <div className="absolute top-[8%] left-[5%] w-[80px] h-[40px] bg-blue-300/12 rounded-full cloud animate-cloud-float-1"></div>
+            <div className="absolute top-[12%] left-[8%] w-[70px] h-[35px] bg-cyan-300/10 rounded-full cloud animate-cloud-float-2"></div>
             
-            {/* Right mid buildings */}
-            <div className="absolute top-[30%] left-[78%] w-[3px] h-[4px] bg-yellow-300/85 rounded window-light animate-window-light-14"></div>
-            <div className="absolute top-[34%] left-[82%] w-[3px] h-[4px] bg-orange-300/83 rounded window-light animate-window-light-15"></div>
-            <div className="absolute top-[38%] left-[85%] w-[3px] h-[4px] bg-yellow-300/87 rounded window-light animate-window-light-16"></div>
-            <div className="absolute top-[42%] left-[88%] w-[3px] h-[4px] bg-orange-300/85 rounded window-light animate-window-light-17"></div>
+            {/* Center clouds */}
+            <div className="absolute top-[15%] left-[25%] w-[90px] h-[45px] bg-blue-300/14 rounded-full cloud animate-cloud-float-3"></div>
+            <div className="absolute top-[18%] left-[38%] w-[75px] h-[38px] bg-cyan-300/11 rounded-full cloud animate-cloud-float-4"></div>
             
-            {/* Far right upper buildings */}
-            <div className="absolute top-[28%] left-[92%] w-[3px] h-[4px] bg-yellow-300/82 rounded window-light animate-window-light-18"></div>
-            <div className="absolute top-[32%] left-[94%] w-[3px] h-[4px] bg-orange-300/86 rounded window-light animate-window-light-19"></div>
-            <div className="absolute top-[36%] left-[90%] w-[3px] h-[4px] bg-yellow-300/84 rounded window-light animate-window-light-20"></div>
+            {/* Right side clouds */}
+            <div className="absolute top-[10%] right-[8%] w-[85px] h-[42px] bg-blue-300/13 rounded-full cloud animate-cloud-float-5"></div>
+            <div className="absolute top-[16%] right-[18%] w-[78px] h-[39px] bg-cyan-300/12 rounded-full cloud animate-cloud-float-6"></div>
           </div>
 
-          {/* Foreground Building Window Lights - LARGER */}
+          {/* OCEAN WAVES - Bottom edge shimmer */}
           <div className="absolute inset-0">
-            {/* Left foreground building */}
-            <div className="absolute top-[52%] left-[12%] w-[4px] h-[5px] bg-yellow-300/92 rounded window-light animate-window-light-fg-1"></div>
-            <div className="absolute top-[56%] left-[10%] w-[4px] h-[5px] bg-orange-300/90 rounded window-light animate-window-light-fg-2"></div>
-            <div className="absolute top-[60%] left-[14%] w-[4px] h-[5px] bg-yellow-300/94 rounded window-light animate-window-light-fg-3"></div>
-            
-            {/* Right foreground building */}
-            <div className="absolute top-[52%] left-[85%] w-[4px] h-[5px] bg-orange-300/92 rounded window-light animate-window-light-fg-4"></div>
-            <div className="absolute top-[56%] left-[88%] w-[4px] h-[5px] bg-yellow-300/90 rounded window-light animate-window-light-fg-5"></div>
-            <div className="absolute top-[60%] left-[86%] w-[4px] h-[5px] bg-orange-300/94 rounded window-light animate-window-light-fg-6"></div>
+            <div className="absolute bottom-[28%] left-[8%] w-[60px] h-[8px] bg-cyan-300/25 wave animate-wave-1"></div>
+            <div className="absolute bottom-[26%] left-[15%] w-[55px] h-[7px] bg-blue-300/22 wave animate-wave-2"></div>
+            <div className="absolute bottom-[30%] left-[25%] w-[65px] h-[9px] bg-cyan-300/28 wave animate-wave-3"></div>
+            <div className="absolute bottom-[27%] left-[35%] w-[58px] h-[8px] bg-blue-300/24 wave animate-wave-4"></div>
+            <div className="absolute bottom-[29%] left-[45%] w-[62px] h-[8px] bg-cyan-300/26 wave animate-wave-5"></div>
+            <div className="absolute bottom-[28%] left-[55%] w-[60px] h-[8px] bg-blue-300/23 wave animate-wave-6"></div>
+            <div className="absolute bottom-[26%] left-[65%] w-[56px] h-[7px] bg-cyan-300/25 wave animate-wave-7"></div>
+            <div className="absolute bottom-[30%] left-[75%] w-[64px] h-[9px] bg-blue-300/27 wave animate-wave-8"></div>
           </div>
 
-          {/* Street Lamp Glows */}
+          {/* SAILBOATS - Gentle bobbing */}
           <div className="absolute inset-0">
-            {/* Left side lamps */}
-            <div className="absolute top-[56%] left-[24%] w-[10px] h-[12px] bg-yellow-300/75 rounded-full lamp-glow animate-lamp-glow-1"></div>
-            <div className="absolute top-[62%] left-[18%] w-[10px] h-[12px] bg-amber-300/72 rounded-full lamp-glow animate-lamp-glow-2"></div>
+            {/* Left sailboat */}
+            <div className="absolute top-[62%] left-[8%] w-[15px] h-[20px] bg-white/35 sailboat animate-sailboat-bob-1"></div>
+            <div className="absolute top-[62%] left-[8%] w-[25px] h-[30px] bg-cyan-200/15 sailboat-glow animate-sailboat-glow-1"></div>
             
-            {/* Center lamps near lighthouse */}
-            <div className="absolute top-[58%] left-[40%] w-[10px] h-[12px] bg-yellow-300/73 rounded-full lamp-glow animate-lamp-glow-3"></div>
-            <div className="absolute top-[58%] left-[60%] w-[10px] h-[12px] bg-amber-300/74 rounded-full lamp-glow animate-lamp-glow-4"></div>
+            {/* Center-left sailboat */}
+            <div className="absolute top-[60%] left-[28%] w-[14px] h-[18px] bg-white/32 sailboat animate-sailboat-bob-2"></div>
+            <div className="absolute top-[60%] left-[28%] w-[24px] h-[28px] bg-cyan-200/13 sailboat-glow animate-sailboat-glow-2"></div>
             
-            {/* Right side lamps */}
-            <div className="absolute top-[56%] left-[76%] w-[10px] h-[12px] bg-yellow-300/72 rounded-full lamp-glow animate-lamp-glow-5"></div>
-            <div className="absolute top-[62%] left-[82%] w-[10px] h-[12px] bg-amber-300/70 rounded-full lamp-glow animate-lamp-glow-6"></div>
+            {/* Center-right sailboat */}
+            <div className="absolute top-[61%] left-[42%] w-[13px] h-[17px] bg-white/30 sailboat animate-sailboat-bob-3"></div>
+            <div className="absolute top-[61%] left-[42%] w-[23px] h-[27px] bg-cyan-200/12 sailboat-glow animate-sailboat-glow-3"></div>
           </div>
 
-          {/* Red Roof Tile Sparkles */}
+          {/* CLIFF GRASS/VEGETATION - Gentle sway */}
           <div className="absolute inset-0">
-            {/* Left roofs */}
-            <div className="absolute top-[24%] left-[12%] w-[3px] h-[3px] bg-red-300/85 rounded-full roof-sparkle animate-roof-sparkle-1"></div>
-            <div className="absolute top-[28%] left-[18%] w-[3px] h-[3px] bg-orange-300/82 rounded-full roof-sparkle animate-roof-sparkle-2"></div>
-            <div className="absolute top-[32%] left-[22%] w-[3px] h-[3px] bg-red-300/88 rounded-full roof-sparkle animate-roof-sparkle-3"></div>
+            {/* Right cliff vegetation */}
+            <div className="absolute bottom-[20%] right-[5%] w-[45px] h-[55px] bg-green-400/18 vegetation animate-vegetation-sway-1"></div>
+            <div className="absolute bottom-[18%] right-[8%] w-[40px] h-[50px] bg-emerald-400/16 vegetation animate-vegetation-sway-2"></div>
+            <div className="absolute bottom-[22%] right-[12%] w-[42px] h-[52px] bg-green-400/17 vegetation animate-vegetation-sway-3"></div>
             
-            {/* Center roofs */}
-            <div className="absolute top-[26%] left-[38%] w-[3px] h-[3px] bg-orange-300/86 rounded-full roof-sparkle animate-roof-sparkle-4"></div>
-            <div className="absolute top-[30%] left-[62%] w-[3px] h-[3px] bg-red-300/84 rounded-full roof-sparkle animate-roof-sparkle-5"></div>
-            
-            {/* Right roofs */}
-            <div className="absolute top-[24%] left-[78%] w-[3px] h-[3px] bg-red-300/86 rounded-full roof-sparkle animate-roof-sparkle-6"></div>
-            <div className="absolute top-[28%] left-[85%] w-[3px] h-[3px] bg-orange-300/83 rounded-full roof-sparkle animate-roof-sparkle-7"></div>
-            <div className="absolute top-[32%] left-[90%] w-[3px] h-[3px] bg-red-300/87 rounded-full roof-sparkle animate-roof-sparkle-8"></div>
-            
-            {/* Foreground roofs - larger */}
-            <div className="absolute top-[48%] left-[8%] w-[4px] h-[4px] bg-red-300/90 rounded-full roof-sparkle animate-roof-sparkle-9"></div>
-            <div className="absolute top-[48%] left-[88%] w-[4px] h-[4px] bg-orange-300/88 rounded-full roof-sparkle animate-roof-sparkle-10"></div>
+            {/* Left cliff vegetation */}
+            <div className="absolute bottom-[15%] left-[2%] w-[50px] h-[60px] bg-green-400/20 vegetation animate-vegetation-sway-4"></div>
+            <div className="absolute bottom-[12%] left-[5%] w-[45px] h-[55px] bg-emerald-400/18 vegetation animate-vegetation-sway-5"></div>
           </div>
 
-          {/* Lighthouse Stone Edge Sparkles */}
+          {/* CLIFF EDGE HIGHLIGHTS */}
           <div className="absolute inset-0">
-            <div className="absolute top-[28%] left-[48%] w-[3px] h-[3px] bg-white/88 rounded-full stone-sparkle animate-stone-sparkle-1"></div>
-            <div className="absolute top-[30%] left-[52%] w-[3px] h-[3px] bg-cyan-100/86 rounded-full stone-sparkle animate-stone-sparkle-2"></div>
-            <div className="absolute top-[36%] left-[47%] w-[3px] h-[3px] bg-white/90 rounded-full stone-sparkle animate-stone-sparkle-3"></div>
-            <div className="absolute top-[38%] left-[53%] w-[3px] h-[3px] bg-cyan-100/88 rounded-full stone-sparkle animate-stone-sparkle-4"></div>
-            <div className="absolute top-[44%] left-[48.5%] w-[3px] h-[3px] bg-white/87 rounded-full stone-sparkle animate-stone-sparkle-5"></div>
-            <div className="absolute top-[46%] left-[51.5%] w-[3px] h-[3px] bg-cyan-100/85 rounded-full stone-sparkle animate-stone-sparkle-6"></div>
+            <div className="absolute top-[52%] right-[15%] w-[4px] h-[4px] bg-yellow-300/75 cliff-sparkle animate-cliff-sparkle-1"></div>
+            <div className="absolute top-[56%] right-[18%] w-[4px] h-[4px] bg-cyan-200/70 cliff-sparkle animate-cliff-sparkle-2"></div>
+            <div className="absolute top-[60%] right-[22%] w-[4px] h-[4px] bg-yellow-300/72 cliff-sparkle animate-cliff-sparkle-3"></div>
+            <div className="absolute top-[48%] right-[12%] w-[4px] h-[4px] bg-cyan-200/68 cliff-sparkle animate-cliff-sparkle-4"></div>
           </div>
 
-          {/* Foliage Shimmer - Trees */}
+          {/* WATER FOAM/SPLASH - At cliff base */}
           <div className="absolute inset-0">
-            {/* Left side trees */}
-            <div className="absolute top-[15%] left-[5%] w-[55px] h-[48px] bg-green-300/14 rounded-full foliage-glow animate-foliage-glow-1"></div>
-            <div className="absolute top-[22%] left-[8%] w-[50px] h-[45px] bg-emerald-300/12 rounded-full foliage-glow animate-foliage-glow-2"></div>
-            
-            {/* Right side trees */}
-            <div className="absolute top-[15%] right-[5%] w-[58px] h-[50px] bg-green-300/15 rounded-full foliage-glow animate-foliage-glow-3"></div>
-            <div className="absolute top-[22%] right-[8%] w-[52px] h-[46px] bg-emerald-300/13 rounded-full foliage-glow animate-foliage-glow-4"></div>
-            
-            {/* Background trees */}
-            <div className="absolute top-[18%] left-[28%] w-[45px] h-[40px] bg-green-300/11 rounded-full foliage-glow animate-foliage-glow-5"></div>
-            <div className="absolute top-[20%] right-[28%] w-[46px] h-[42px] bg-emerald-300/12 rounded-full foliage-glow animate-foliage-glow-6"></div>
+            <div className="absolute bottom-[24%] left-[52%] w-[35px] h-[18px] bg-cyan-200/30 foam animate-foam-splash-1"></div>
+            <div className="absolute bottom-[22%] left-[55%] w-[32px] h-[16px] bg-white/25 foam animate-foam-splash-2"></div>
+            <div className="absolute bottom-[26%] left-[58%] w-[30px] h-[15px] bg-cyan-200/28 foam animate-foam-splash-3"></div>
           </div>
 
-          {/* Floating Coastal Particles */}
+          {/* LIGHTHOUSE TOWER STONE DETAILS */}
           <div className="absolute inset-0">
-            {/* Upper area particles */}
-            <div className="absolute top-[25%] left-[35%] w-[3px] h-[3px] bg-cyan-200/70 rounded-full dust-particle animate-coastal-dust-1"></div>
-            <div className="absolute top-[28%] left-[45%] w-[3px] h-[3px] bg-blue-200/68 rounded-full dust-particle animate-coastal-dust-2"></div>
-            <div className="absolute top-[30%] left-[55%] w-[4px] h-[4px] bg-cyan-200/75 rounded-full dust-particle animate-coastal-dust-3"></div>
-            <div className="absolute top-[32%] left-[65%] w-[3px] h-[3px] bg-blue-200/70 rounded-full dust-particle animate-coastal-dust-4"></div>
-            
-            {/* Mid-air particles */}
-            <div className="absolute top-[42%] left-[25%] w-[2px] h-[2px] bg-cyan-200/65 rounded-full dust-particle animate-coastal-dust-5"></div>
-            <div className="absolute top-[45%] left-[50%] w-[2px] h-[2px] bg-blue-200/68 rounded-full dust-particle animate-coastal-dust-6"></div>
-            <div className="absolute top-[48%] left-[75%] w-[2px] h-[2px] bg-cyan-200/62 rounded-full dust-particle animate-coastal-dust-7"></div>
+            <div className="absolute top-[30%] left-[71%] w-[3px] h-[3px] bg-white/80 stone-detail animate-stone-detail-1"></div>
+            <div className="absolute top-[35%] left-[73%] w-[3px] h-[3px] bg-cyan-100/75 stone-detail animate-stone-detail-2"></div>
+            <div className="absolute top-[40%] left-[72%] w-[3px] h-[3px] bg-white/78 stone-detail animate-stone-detail-3"></div>
+            <div className="absolute top-[45%] left-[74%] w-[3px] h-[3px] bg-cyan-100/73 stone-detail animate-stone-detail-4"></div>
           </div>
 
-          {/* Cobblestone Path Shimmer */}
+          {/* MOONLIGHT GLOW - Soft atmospheric light */}
           <div className="absolute inset-0">
-            <div className="absolute top-[68%] left-[38%] w-[35px] h-[18px] bg-yellow-200/16 rounded-full path-shimmer animate-path-shimmer-1"></div>
-            <div className="absolute top-[72%] left-[45%] w-[38px] h-[20px] bg-amber-200/14 rounded-full path-shimmer animate-path-shimmer-2"></div>
-            <div className="absolute top-[76%] left-[50%] w-[36px] h-[19px] bg-yellow-200/18 rounded-full path-shimmer animate-path-shimmer-3"></div>
-            <div className="absolute top-[80%] left-[55%] w-[32px] h-[16px] bg-amber-200/15 rounded-full path-shimmer animate-path-shimmer-4"></div>
+            <div className="absolute top-[5%] left-[35%] w-[180px] h-[180px] bg-yellow-200/8 moonlight animate-moonlight-glow"></div>
           </div>
 
-          {/* Localized Sun Rays */}
+          {/* ATMOSPHERIC PARTICLES - Floating in air */}
           <div className="absolute inset-0">
-            <div className="absolute top-[0%] left-[25%] w-[100px] h-[45%] bg-gradient-to-b from-yellow-200/16 via-amber-100/9 to-transparent sun-ray animate-sun-ray-1"></div>
-            <div className="absolute top-[0%] left-[65%] w-[110px] h-[48%] bg-gradient-to-b from-amber-200/18 via-yellow-100/10 to-transparent sun-ray animate-sun-ray-2"></div>
+            <div className="absolute top-[25%] left-[15%] w-[2px] h-[2px] bg-cyan-200/60 particle animate-particle-float-1"></div>
+            <div className="absolute top-[30%] left-[30%] w-[2px] h-[2px] bg-blue-200/58 particle animate-particle-float-2"></div>
+            <div className="absolute top-[35%] left-[50%] w-[2px] h-[2px] bg-cyan-200/62 particle animate-particle-float-3"></div>
+            <div className="absolute top-[28%] left-[65%] w-[2px] h-[2px] bg-blue-200/56 particle animate-particle-float-4"></div>
+            <div className="absolute top-[40%] left-[20%] w-[2px] h-[2px] bg-cyan-200/59 particle animate-particle-float-5"></div>
+            <div className="absolute top-[32%] left-[80%] w-[2px] h-[2px] bg-blue-200/57 particle animate-particle-float-6"></div>
           </div>
         </div>
         
         <style jsx>{`
+          /* LIGHTHOUSE EFFECTS */
           .lighthouse-beacon {
             filter: blur(45px);
           }
@@ -213,100 +184,106 @@ export function Island4Module5Image() {
           }
           
           .window-glow {
-            filter: blur(5px);
-            box-shadow: 0 0 25px currentColor, 0 0 50px currentColor, 0 0 75px currentColor;
+            box-shadow: 0 0 25px currentColor, 0 0 50px currentColor;
+            filter: blur(3px);
           }
           
-          .window-light {
-            filter: blur(4px);
+          .window-glow-outer {
+            filter: blur(15px);
+          }
+          
+          /* STAR EFFECTS */
+          .star-large {
             box-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
-          }
-          
-          .lamp-glow {
-            filter: blur(10px);
-            box-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
-          }
-          
-          .roof-sparkle {
-            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
             filter: blur(0.4px);
           }
           
-          .stone-sparkle {
-            box-shadow: 0 0 22px currentColor, 0 0 44px currentColor, 0 0 66px currentColor;
+          .star-medium {
+            box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
             filter: blur(0.3px);
           }
           
-          .foliage-glow {
-            filter: blur(25px);
+          .star-small {
+            box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+            filter: blur(0.2px);
           }
           
-          .dust-particle {
-            box-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
+          /* CLOUD EFFECTS */
+          .cloud {
+            filter: blur(28px);
+          }
+          
+          /* WAVE EFFECTS */
+          .wave {
+            filter: blur(12px);
+          }
+          
+          /* SAILBOAT EFFECTS */
+          .sailboat {
+            filter: blur(8px);
+          }
+          
+          .sailboat-glow {
+            filter: blur(20px);
+          }
+          
+          /* VEGETATION EFFECTS */
+          .vegetation {
+            filter: blur(18px);
+          }
+          
+          /* CLIFF SPARKLES */
+          .cliff-sparkle {
+            box-shadow: 0 0 18px currentColor, 0 0 36px currentColor;
             filter: blur(0.5px);
           }
           
-          .path-shimmer {
-            filter: blur(16px);
+          /* FOAM EFFECTS */
+          .foam {
+            filter: blur(14px);
           }
           
-          .sun-ray {
-            filter: blur(35px);
-            opacity: 0;
+          /* STONE DETAILS */
+          .stone-detail {
+            box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
+            filter: blur(0.4px);
           }
           
-          .animate-effects .lighthouse-beacon {
+          /* MOONLIGHT */
+          .moonlight {
+            filter: blur(60px);
+          }
+          
+          /* PARTICLES */
+          .particle {
+            box-shadow: 0 0 8px currentColor, 0 0 16px currentColor;
+            filter: blur(0.4px);
+          }
+          
+          /* ANIMATION STATES */
+          .animate-effects .lighthouse-beacon,
+          .animate-effects .lighthouse-core,
+          .animate-effects .lighthouse-beam,
+          .animate-effects .dome-sparkle,
+          .animate-effects .window-glow,
+          .animate-effects .window-glow-outer,
+          .animate-effects .star-large,
+          .animate-effects .star-medium,
+          .animate-effects .star-small,
+          .animate-effects .cloud,
+          .animate-effects .wave,
+          .animate-effects .sailboat,
+          .animate-effects .sailboat-glow,
+          .animate-effects .vegetation,
+          .animate-effects .cliff-sparkle,
+          .animate-effects .foam,
+          .animate-effects .stone-detail,
+          .animate-effects .moonlight,
+          .animate-effects .particle {
             animation-play-state: running;
           }
           
-          .animate-effects .lighthouse-core {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .lighthouse-beam {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .dome-sparkle {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .window-glow {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .window-light {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .lamp-glow {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .roof-sparkle {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .stone-sparkle {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .foliage-glow {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .dust-particle {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .path-shimmer {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .sun-ray {
-            animation-play-state: running;
-          }
-          
+          /* LIGHTHOUSE ANIMATIONS */
           @keyframes lighthouse-beacon-1 {
             0%, 100% { opacity: 0.45; transform: scale(1); }
             50% { opacity: 0.75; transform: scale(1.35); }
@@ -357,386 +334,344 @@ export function Island4Module5Image() {
           }
           
           @keyframes lighthouse-window-1 {
-            0%, 100% { opacity: 0.92; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.5); }
-          }
-          
-          @keyframes lighthouse-window-2 {
             0%, 100% { opacity: 0.9; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.48); }
-          }
-          
-          @keyframes lighthouse-window-3 {
-            0%, 100% { opacity: 0.9; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.46); }
-          }
-          
-          @keyframes lighthouse-window-4 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.44); }
-          }
-          
-          @keyframes lighthouse-window-5 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes lighthouse-window-6 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-1 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
             50% { opacity: 1; transform: scale(1.4); }
           }
           
-          @keyframes window-light-2 {
-            0%, 100% { opacity: 0.82; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.38); }
+          @keyframes lighthouse-window-glow {
+            0%, 100% { opacity: 0.45; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.25); }
           }
           
-          @keyframes window-light-3 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.42); }
+          /* STAR TWINKLE ANIMATIONS */
+          @keyframes star-twinkle-1 {
+            0%, 100% { opacity: 0.95; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.6); }
           }
           
-          @keyframes window-light-4 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-5 {
-            0%, 100% { opacity: 0.84; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-6 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            48% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-7 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-8 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-9 {
-            0%, 100% { opacity: 0.87; transform: scale(1); }
-            62% { opacity: 1; transform: scale(1.44); }
-          }
-          
-          @keyframes window-light-10 {
-            0%, 100% { opacity: 0.83; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.36); }
-          }
-          
-          @keyframes window-light-11 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            51% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-12 {
-            0%, 100% { opacity: 0.84; transform: scale(1); }
-            59% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-13 {
-            0%, 100% { opacity: 0.88; transform: scale(1); }
-            53% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-14 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            57% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-15 {
-            0%, 100% { opacity: 0.83; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.36); }
-          }
-          
-          @keyframes window-light-16 {
-            0%, 100% { opacity: 0.87; transform: scale(1); }
-            54% { opacity: 1; transform: scale(1.42); }
-          }
-          
-          @keyframes window-light-17 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-18 {
-            0%, 100% { opacity: 0.82; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.36); }
-          }
-          
-          @keyframes window-light-19 {
-            0%, 100% { opacity: 0.86; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.4); }
-          }
-          
-          @keyframes window-light-20 {
-            0%, 100% { opacity: 0.84; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.38); }
-          }
-          
-          @keyframes window-light-fg-1 {
+          @keyframes star-twinkle-2 {
             0%, 100% { opacity: 0.92; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.48); }
+            50% { opacity: 0.35; transform: scale(0.58); }
           }
           
-          @keyframes window-light-fg-2 {
+          @keyframes star-twinkle-3 {
+            0%, 100% { opacity: 0.98; transform: scale(1); }
+            50% { opacity: 0.45; transform: scale(0.65); }
+          }
+          
+          @keyframes star-twinkle-4 {
             0%, 100% { opacity: 0.9; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.46); }
+            50% { opacity: 0.38; transform: scale(0.6); }
           }
           
-          @keyframes window-light-fg-3 {
-            0%, 100% { opacity: 0.94; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.5); }
+          @keyframes star-twinkle-5 {
+            0%, 100% { opacity: 0.93; transform: scale(1); }
+            50% { opacity: 0.42; transform: scale(0.62); }
           }
           
-          @keyframes window-light-fg-4 {
-            0%, 100% { opacity: 0.92; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.48); }
+          @keyframes star-twinkle-6 {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            50% { opacity: 0.32; transform: scale(0.55); }
           }
           
-          @keyframes window-light-fg-5 {
-            0%, 100% { opacity: 0.9; transform: scale(1); }
-            56% { opacity: 1; transform: scale(1.46); }
+          @keyframes star-twinkle-7 {
+            0%, 100% { opacity: 0.82; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.52); }
           }
           
-          @keyframes window-light-fg-6 {
-            0%, 100% { opacity: 0.94; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.5); }
+          @keyframes star-twinkle-8 {
+            0%, 100% { opacity: 0.88; transform: scale(1); }
+            50% { opacity: 0.36; transform: scale(0.58); }
           }
           
-          @keyframes lamp-glow-1 {
+          @keyframes star-twinkle-9 {
+            0%, 100% { opacity: 0.84; transform: scale(1); }
+            50% { opacity: 0.34; transform: scale(0.56); }
+          }
+          
+          @keyframes star-twinkle-10 {
+            0%, 100% { opacity: 0.86; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(0.57); }
+          }
+          
+          @keyframes star-twinkle-11 {
             0%, 100% { opacity: 0.75; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.4); }
+            50% { opacity: 0.25; transform: scale(0.5); }
           }
           
-          @keyframes lamp-glow-2 {
+          @keyframes star-twinkle-12 {
             0%, 100% { opacity: 0.72; transform: scale(1); }
-            60% { opacity: 1; transform: scale(1.38); }
+            50% { opacity: 0.22; transform: scale(0.48); }
           }
           
-          @keyframes lamp-glow-3 {
-            0%, 100% { opacity: 0.73; transform: scale(1); }
-            55% { opacity: 1; transform: scale(1.42); }
+          @keyframes star-twinkle-13 {
+            0%, 100% { opacity: 0.78; transform: scale(1); }
+            50% { opacity: 0.28; transform: scale(0.52); }
           }
           
-          @keyframes lamp-glow-4 {
+          @keyframes star-twinkle-14 {
             0%, 100% { opacity: 0.74; transform: scale(1); }
-            58% { opacity: 1; transform: scale(1.4); }
+            50% { opacity: 0.24; transform: scale(0.5); }
           }
           
-          @keyframes lamp-glow-5 {
-            0%, 100% { opacity: 0.72; transform: scale(1); }
-            52% { opacity: 1; transform: scale(1.38); }
+          @keyframes star-twinkle-15 {
+            0%, 100% { opacity: 0.76; transform: scale(1); }
+            50% { opacity: 0.26; transform: scale(0.51); }
           }
           
-          @keyframes lamp-glow-6 {
-            0%, 100% { opacity: 0.7; transform: scale(1); }
-            56% { opacity: 0.98; transform: scale(1.36); }
+          @keyframes star-twinkle-16 {
+            0%, 100% { opacity: 0.73; transform: scale(1); }
+            50% { opacity: 0.23; transform: scale(0.49); }
           }
           
-          @keyframes roof-sparkle-1 {
-            0%, 70%, 100% { opacity: 0; transform: scale(1); }
-            75%, 85% { opacity: 0.85; transform: scale(2.2); }
-            80% { opacity: 0.5; transform: scale(1.8); }
+          @keyframes star-twinkle-17 {
+            0%, 100% { opacity: 0.77; transform: scale(1); }
+            50% { opacity: 0.27; transform: scale(0.52); }
           }
           
-          @keyframes roof-sparkle-2 {
-            0%, 72%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            77%, 87% { opacity: 0.82; transform: scale(2.1) rotate(360deg); }
-            82% { opacity: 0.48; transform: scale(1.7) rotate(180deg); }
+          @keyframes star-twinkle-18 {
+            0%, 100% { opacity: 0.75; transform: scale(1); }
+            50% { opacity: 0.25; transform: scale(0.5); }
           }
           
-          @keyframes roof-sparkle-3 {
-            0%, 68%, 100% { opacity: 0; transform: scale(1); }
-            73%, 83% { opacity: 0.88; transform: scale(2.3); }
-            78% { opacity: 0.52; transform: scale(1.9); }
+          /* CLOUD FLOAT ANIMATIONS */
+          @keyframes cloud-float-1 {
+            0%, 100% { opacity: 0.12; transform: translateX(0px); }
+            50% { opacity: 0.22; transform: translateX(15px); }
           }
           
-          @keyframes roof-sparkle-4 {
-            0%, 74%, 100% { opacity: 0; transform: scale(1); }
-            79%, 89% { opacity: 0.86; transform: scale(2.2); }
-            84% { opacity: 0.51; transform: scale(1.8); }
+          @keyframes cloud-float-2 {
+            0%, 100% { opacity: 0.1; transform: translateX(0px); }
+            50% { opacity: 0.2; transform: translateX(-12px); }
           }
           
-          @keyframes roof-sparkle-5 {
-            0%, 66%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            71%, 81% { opacity: 0.84; transform: scale(2.15) rotate(360deg); }
-            76% { opacity: 0.49; transform: scale(1.75) rotate(180deg); }
+          @keyframes cloud-float-3 {
+            0%, 100% { opacity: 0.14; transform: translateX(0px); }
+            50% { opacity: 0.24; transform: translateX(18px); }
           }
           
-          @keyframes roof-sparkle-6 {
-            0%, 76%, 100% { opacity: 0; transform: scale(1); }
-            81%, 91% { opacity: 0.86; transform: scale(2.2); }
-            86% { opacity: 0.51; transform: scale(1.8); }
+          @keyframes cloud-float-4 {
+            0%, 100% { opacity: 0.11; transform: translateX(0px); }
+            50% { opacity: 0.21; transform: translateX(-14px); }
           }
           
-          @keyframes roof-sparkle-7 {
-            0%, 64%, 100% { opacity: 0; transform: scale(1); }
-            69%, 79% { opacity: 0.83; transform: scale(2.18); }
-            74% { opacity: 0.48; transform: scale(1.78); }
+          @keyframes cloud-float-5 {
+            0%, 100% { opacity: 0.13; transform: translateX(0px); }
+            50% { opacity: 0.23; transform: translateX(-16px); }
           }
           
-          @keyframes roof-sparkle-8 {
-            0%, 78%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            83%, 93% { opacity: 0.87; transform: scale(2.25) rotate(360deg); }
-            88% { opacity: 0.52; transform: scale(1.85) rotate(180deg); }
+          @keyframes cloud-float-6 {
+            0%, 100% { opacity: 0.12; transform: translateX(0px); }
+            50% { opacity: 0.22; transform: translateX(13px); }
           }
           
-          @keyframes roof-sparkle-9 {
-            0%, 62%, 100% { opacity: 0; transform: scale(1); }
-            67%, 77% { opacity: 0.9; transform: scale(2.4); }
-            72% { opacity: 0.55; transform: scale(2); }
+          /* WAVE ANIMATIONS */
+          @keyframes wave-1 {
+            0%, 100% { opacity: 0.25; transform: scaleX(1); }
+            50% { opacity: 0.4; transform: scaleX(1.15); }
           }
           
-          @keyframes roof-sparkle-10 {
-            0%, 65%, 100% { opacity: 0; transform: scale(1); }
-            70%, 80% { opacity: 0.88; transform: scale(2.35); }
-            75% { opacity: 0.53; transform: scale(1.95); }
+          @keyframes wave-2 {
+            0%, 100% { opacity: 0.22; transform: scaleX(1); }
+            50% { opacity: 0.38; transform: scaleX(1.12); }
           }
           
-          @keyframes stone-sparkle-1 {
-            0%, 70%, 100% { opacity: 0; transform: scale(1); }
-            75%, 85% { opacity: 0.88; transform: scale(2.2); }
-            80% { opacity: 0.54; transform: scale(1.8); }
+          @keyframes wave-3 {
+            0%, 100% { opacity: 0.28; transform: scaleX(1); }
+            50% { opacity: 0.42; transform: scaleX(1.18); }
           }
           
-          @keyframes stone-sparkle-2 {
-            0%, 72%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            77%, 87% { opacity: 0.86; transform: scale(2.1) rotate(360deg); }
-            82% { opacity: 0.52; transform: scale(1.7) rotate(180deg); }
+          @keyframes wave-4 {
+            0%, 100% { opacity: 0.24; transform: scaleX(1); }
+            50% { opacity: 0.39; transform: scaleX(1.14); }
           }
           
-          @keyframes stone-sparkle-3 {
-            0%, 68%, 100% { opacity: 0; transform: scale(1); }
-            73%, 83% { opacity: 0.9; transform: scale(2.25); }
-            78% { opacity: 0.56; transform: scale(1.85); }
+          @keyframes wave-5 {
+            0%, 100% { opacity: 0.26; transform: scaleX(1); }
+            50% { opacity: 0.41; transform: scaleX(1.16); }
           }
           
-          @keyframes stone-sparkle-4 {
-            0%, 74%, 100% { opacity: 0; transform: scale(1); }
-            79%, 89% { opacity: 0.88; transform: scale(2.2); }
-            84% { opacity: 0.54; transform: scale(1.8); }
+          @keyframes wave-6 {
+            0%, 100% { opacity: 0.23; transform: scaleX(1); }
+            50% { opacity: 0.37; transform: scaleX(1.13); }
           }
           
-          @keyframes stone-sparkle-5 {
-            0%, 66%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            71%, 81% { opacity: 0.87; transform: scale(2.15) rotate(360deg); }
-            76% { opacity: 0.53; transform: scale(1.75) rotate(180deg); }
+          @keyframes wave-7 {
+            0%, 100% { opacity: 0.25; transform: scaleX(1); }
+            50% { opacity: 0.4; transform: scaleX(1.15); }
           }
           
-          @keyframes stone-sparkle-6 {
-            0%, 76%, 100% { opacity: 0; transform: scale(1); }
-            81%, 91% { opacity: 0.85; transform: scale(2.12); }
-            86% { opacity: 0.51; transform: scale(1.72); }
+          @keyframes wave-8 {
+            0%, 100% { opacity: 0.27; transform: scaleX(1); }
+            50% { opacity: 0.42; transform: scaleX(1.17); }
           }
           
-          @keyframes foliage-glow-1 {
-            0%, 100% { opacity: 0.14; transform: scale(1); }
-            50% { opacity: 0.28; transform: scale(1.18); }
+          /* SAILBOAT ANIMATIONS */
+          @keyframes sailboat-bob-1 {
+            0%, 100% { opacity: 0.35; transform: translateY(0px); }
+            50% { opacity: 0.5; transform: translateY(-5px); }
           }
           
-          @keyframes foliage-glow-2 {
-            0%, 100% { opacity: 0.12; transform: scale(1); }
-            60% { opacity: 0.26; transform: scale(1.15); }
+          @keyframes sailboat-bob-2 {
+            0%, 100% { opacity: 0.32; transform: translateY(0px); }
+            50% { opacity: 0.48; transform: translateY(-4px); }
           }
           
-          @keyframes foliage-glow-3 {
+          @keyframes sailboat-bob-3 {
+            0%, 100% { opacity: 0.3; transform: translateY(0px); }
+            50% { opacity: 0.46; transform: translateY(-4.5px); }
+          }
+          
+          @keyframes sailboat-glow-1 {
             0%, 100% { opacity: 0.15; transform: scale(1); }
-            55% { opacity: 0.3; transform: scale(1.2); }
+            50% { opacity: 0.28; transform: scale(1.15); }
           }
           
-          @keyframes foliage-glow-4 {
+          @keyframes sailboat-glow-2 {
             0%, 100% { opacity: 0.13; transform: scale(1); }
-            58% { opacity: 0.28; transform: scale(1.17); }
+            50% { opacity: 0.26; transform: scale(1.12); }
           }
           
-          @keyframes foliage-glow-5 {
-            0%, 100% { opacity: 0.11; transform: scale(1); }
-            52% { opacity: 0.24; transform: scale(1.14); }
-          }
-          
-          @keyframes foliage-glow-6 {
+          @keyframes sailboat-glow-3 {
             0%, 100% { opacity: 0.12; transform: scale(1); }
-            56% { opacity: 0.26; transform: scale(1.16); }
+            50% { opacity: 0.24; transform: scale(1.1); }
           }
           
-          @keyframes coastal-dust-1 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.7; transform: translateY(-60px) translateX(25px) rotate(180deg); }
+          /* VEGETATION SWAY ANIMATIONS */
+          @keyframes vegetation-sway-1 {
+            0%, 100% { opacity: 0.18; transform: rotate(0deg); }
+            25% { opacity: 0.28; transform: rotate(2deg); }
+            75% { opacity: 0.25; transform: rotate(-2deg); }
           }
           
-          @keyframes coastal-dust-2 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.68; transform: translateY(-55px) translateX(-22px) rotate(200deg); }
+          @keyframes vegetation-sway-2 {
+            0%, 100% { opacity: 0.16; transform: rotate(0deg); }
+            30% { opacity: 0.26; transform: rotate(-2.5deg); }
+            70% { opacity: 0.23; transform: rotate(2.5deg); }
           }
           
-          @keyframes coastal-dust-3 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.75; transform: translateY(-65px) translateX(28px) rotate(190deg); }
+          @keyframes vegetation-sway-3 {
+            0%, 100% { opacity: 0.17; transform: rotate(0deg); }
+            35% { opacity: 0.27; transform: rotate(2.2deg); }
+            65% { opacity: 0.24; transform: rotate(-2.2deg); }
           }
           
-          @keyframes coastal-dust-4 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px) rotate(0deg); }
-            50% { opacity: 0.7; transform: translateY(-58px) translateX(-24px) rotate(210deg); }
+          @keyframes vegetation-sway-4 {
+            0%, 100% { opacity: 0.2; transform: rotate(0deg); }
+            25% { opacity: 0.3; transform: rotate(-2.8deg); }
+            75% { opacity: 0.27; transform: rotate(2.8deg); }
           }
           
-          @keyframes coastal-dust-5 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.65; transform: translateY(-50px) translateX(18px); }
+          @keyframes vegetation-sway-5 {
+            0%, 100% { opacity: 0.18; transform: rotate(0deg); }
+            30% { opacity: 0.28; transform: rotate(2.5deg); }
+            70% { opacity: 0.25; transform: rotate(-2.5deg); }
           }
           
-          @keyframes coastal-dust-6 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.68; transform: translateY(-52px) translateX(-16px); }
+          /* CLIFF SPARKLE ANIMATIONS */
+          @keyframes cliff-sparkle-1 {
+            0%, 65%, 100% { opacity: 0; transform: scale(1); }
+            70%, 80% { opacity: 0.75; transform: scale(2); }
+            75% { opacity: 0.45; transform: scale(1.6); }
           }
           
-          @keyframes coastal-dust-7 {
-            0%, 100% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.62; transform: translateY(-55px) translateX(20px); }
+          @keyframes cliff-sparkle-2 {
+            0%, 68%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
+            73%, 83% { opacity: 0.7; transform: scale(1.9) rotate(360deg); }
+            78% { opacity: 0.42; transform: scale(1.5) rotate(180deg); }
           }
           
-          @keyframes path-shimmer-1 {
-            0%, 100% { opacity: 0.16; transform: scale(1); }
-            50% { opacity: 0.32; transform: scale(1.2); }
+          @keyframes cliff-sparkle-3 {
+            0%, 62%, 100% { opacity: 0; transform: scale(1); }
+            67%, 77% { opacity: 0.72; transform: scale(1.95); }
+            72% { opacity: 0.43; transform: scale(1.55); }
           }
           
-          @keyframes path-shimmer-2 {
-            0%, 100% { opacity: 0.14; transform: scale(1) rotate(0deg); }
-            60% { opacity: 0.3; transform: scale(1.18) rotate(10deg); }
+          @keyframes cliff-sparkle-4 {
+            0%, 70%, 100% { opacity: 0; transform: scale(1); }
+            75%, 85% { opacity: 0.68; transform: scale(1.88); }
+            80% { opacity: 0.4; transform: scale(1.48); }
           }
           
-          @keyframes path-shimmer-3 {
-            0%, 100% { opacity: 0.18; transform: scale(1); }
-            55% { opacity: 0.35; transform: scale(1.22); }
+          /* FOAM SPLASH ANIMATIONS */
+          @keyframes foam-splash-1 {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
           }
           
-          @keyframes path-shimmer-4 {
-            0%, 100% { opacity: 0.15; transform: scale(1) rotate(0deg); }
-            58% { opacity: 0.31; transform: scale(1.15) rotate(-10deg); }
+          @keyframes foam-splash-2 {
+            0%, 100% { opacity: 0.25; transform: scale(1); }
+            50% { opacity: 0.45; transform: scale(1.18); }
           }
           
-          @keyframes sun-ray-1 {
-            0%, 100% { opacity: 0; transform: translateY(0px); }
-            50% { opacity: 0.26; transform: translateY(-12px); }
+          @keyframes foam-splash-3 {
+            0%, 100% { opacity: 0.28; transform: scale(1); }
+            50% { opacity: 0.48; transform: scale(1.15); }
           }
           
-          @keyframes sun-ray-2 {
-            0%, 100% { opacity: 0; transform: translateY(0px); }
-            60% { opacity: 0.3; transform: translateY(-15px); }
+          /* STONE DETAIL ANIMATIONS */
+          @keyframes stone-detail-1 {
+            0%, 72%, 100% { opacity: 0; transform: scale(1); }
+            77%, 87% { opacity: 0.8; transform: scale(1.8); }
+            82% { opacity: 0.5; transform: scale(1.4); }
           }
           
+          @keyframes stone-detail-2 {
+            0%, 68%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
+            73%, 83% { opacity: 0.75; transform: scale(1.7) rotate(360deg); }
+            78% { opacity: 0.45; transform: scale(1.3) rotate(180deg); }
+          }
+          
+          @keyframes stone-detail-3 {
+            0%, 75%, 100% { opacity: 0; transform: scale(1); }
+            80%, 90% { opacity: 0.78; transform: scale(1.75); }
+            85% { opacity: 0.48; transform: scale(1.35); }
+          }
+          
+          @keyframes stone-detail-4 {
+            0%, 70%, 100% { opacity: 0; transform: scale(1); }
+            75%, 85% { opacity: 0.73; transform: scale(1.72); }
+            80% { opacity: 0.43; transform: scale(1.32); }
+          }
+          
+          /* MOONLIGHT GLOW */
+          @keyframes moonlight-glow {
+            0%, 100% { opacity: 0.08; transform: scale(1); }
+            50% { opacity: 0.15; transform: scale(1.1); }
+          }
+          
+          /* PARTICLE FLOAT ANIMATIONS */
+          @keyframes particle-float-1 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.6; transform: translateY(-45px) translateX(12px); }
+          }
+          
+          @keyframes particle-float-2 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.58; transform: translateY(-42px) translateX(-10px); }
+          }
+          
+          @keyframes particle-float-3 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.62; transform: translateY(-48px) translateX(14px); }
+          }
+          
+          @keyframes particle-float-4 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.56; transform: translateY(-40px) translateX(-11px); }
+          }
+          
+          @keyframes particle-float-5 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.59; transform: translateY(-44px) translateX(13px); }
+          }
+          
+          @keyframes particle-float-6 {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            50% { opacity: 0.57; transform: translateY(-43px) translateX(-12px); }
+          }
+          
+          /* ANIMATION CLASS ASSIGNMENTS */
           .animate-lighthouse-beacon-1 { animation: lighthouse-beacon-1 4s ease-in-out infinite; }
           .animate-lighthouse-beacon-2 { animation: lighthouse-beacon-2 5s ease-in-out infinite 1s; }
           .animate-lighthouse-core { animation: lighthouse-core 3s ease-in-out infinite; }
@@ -749,87 +684,79 @@ export function Island4Module5Image() {
           .animate-dome-sparkle-3 { animation: dome-sparkle-3 10.5s linear infinite 5s; }
           
           .animate-lighthouse-window-1 { animation: lighthouse-window-1 4s ease-in-out infinite; }
-          .animate-lighthouse-window-2 { animation: lighthouse-window-2 4.5s ease-in-out infinite 0.5s; }
-          .animate-lighthouse-window-3 { animation: lighthouse-window-3 4.2s ease-in-out infinite 1s; }
-          .animate-lighthouse-window-4 { animation: lighthouse-window-4 4.7s ease-in-out infinite 1.5s; }
-          .animate-lighthouse-window-5 { animation: lighthouse-window-5 4.4s ease-in-out infinite 2s; }
-          .animate-lighthouse-window-6 { animation: lighthouse-window-6 4.6s ease-in-out infinite 2.5s; }
+          .animate-lighthouse-window-glow { animation: lighthouse-window-glow 4.5s ease-in-out infinite 0.5s; }
           
-          .animate-window-light-1 { animation: window-light-1 5s ease-in-out infinite; }
-          .animate-window-light-2 { animation: window-light-2 5.5s ease-in-out infinite 0.5s; }
-          .animate-window-light-3 { animation: window-light-3 5.2s ease-in-out infinite 1s; }
-          .animate-window-light-4 { animation: window-light-4 5.8s ease-in-out infinite 1.5s; }
-          .animate-window-light-5 { animation: window-light-5 5.3s ease-in-out infinite 2s; }
-          .animate-window-light-6 { animation: window-light-6 5.6s ease-in-out infinite 2.5s; }
-          .animate-window-light-7 { animation: window-light-7 5.4s ease-in-out infinite 3s; }
-          .animate-window-light-8 { animation: window-light-8 5.7s ease-in-out infinite 3.5s; }
-          .animate-window-light-9 { animation: window-light-9 5.1s ease-in-out infinite 4s; }
-          .animate-window-light-10 { animation: window-light-10 5.9s ease-in-out infinite 0.8s; }
-          .animate-window-light-11 { animation: window-light-11 5.5s ease-in-out infinite 1.3s; }
-          .animate-window-light-12 { animation: window-light-12 5.3s ease-in-out infinite 1.8s; }
-          .animate-window-light-13 { animation: window-light-13 5.8s ease-in-out infinite 2.3s; }
-          .animate-window-light-14 { animation: window-light-14 5.2s ease-in-out infinite 2.8s; }
-          .animate-window-light-15 { animation: window-light-15 5.6s ease-in-out infinite 3.3s; }
-          .animate-window-light-16 { animation: window-light-16 5.4s ease-in-out infinite 3.8s; }
-          .animate-window-light-17 { animation: window-light-17 5.7s ease-in-out infinite 4.3s; }
-          .animate-window-light-18 { animation: window-light-18 5.1s ease-in-out infinite 0.6s; }
-          .animate-window-light-19 { animation: window-light-19 5.9s ease-in-out infinite 1.2s; }
-          .animate-window-light-20 { animation: window-light-20 5.3s ease-in-out infinite 1.7s; }
+          .animate-star-twinkle-1 { animation: star-twinkle-1 3s ease-in-out infinite; }
+          .animate-star-twinkle-2 { animation: star-twinkle-2 3.5s ease-in-out infinite 0.5s; }
+          .animate-star-twinkle-3 { animation: star-twinkle-3 2.8s ease-in-out infinite 1s; }
+          .animate-star-twinkle-4 { animation: star-twinkle-4 3.2s ease-in-out infinite 1.5s; }
+          .animate-star-twinkle-5 { animation: star-twinkle-5 3.6s ease-in-out infinite 0.8s; }
+          .animate-star-twinkle-6 { animation: star-twinkle-6 3.3s ease-in-out infinite 1.2s; }
+          .animate-star-twinkle-7 { animation: star-twinkle-7 3.1s ease-in-out infinite 0.3s; }
+          .animate-star-twinkle-8 { animation: star-twinkle-8 3.4s ease-in-out infinite 1.8s; }
+          .animate-star-twinkle-9 { animation: star-twinkle-9 3.7s ease-in-out infinite 2.2s; }
+          .animate-star-twinkle-10 { animation: star-twinkle-10 3.2s ease-in-out infinite 0.6s; }
+          .animate-star-twinkle-11 { animation: star-twinkle-11 3.5s ease-in-out infinite 1.4s; }
+          .animate-star-twinkle-12 { animation: star-twinkle-12 3.8s ease-in-out infinite 2s; }
+          .animate-star-twinkle-13 { animation: star-twinkle-13 3.3s ease-in-out infinite 0.9s; }
+          .animate-star-twinkle-14 { animation: star-twinkle-14 3.6s ease-in-out infinite 2.5s; }
+          .animate-star-twinkle-15 { animation: star-twinkle-15 3.1s ease-in-out infinite 1.1s; }
+          .animate-star-twinkle-16 { animation: star-twinkle-16 3.4s ease-in-out infinite 1.7s; }
+          .animate-star-twinkle-17 { animation: star-twinkle-17 3.7s ease-in-out infinite 0.4s; }
+          .animate-star-twinkle-18 { animation: star-twinkle-18 3.2s ease-in-out infinite 2.3s; }
           
-          .animate-window-light-fg-1 { animation: window-light-fg-1 4.8s ease-in-out infinite; }
-          .animate-window-light-fg-2 { animation: window-light-fg-2 5.2s ease-in-out infinite 0.8s; }
-          .animate-window-light-fg-3 { animation: window-light-fg-3 4.9s ease-in-out infinite 1.6s; }
-          .animate-window-light-fg-4 { animation: window-light-fg-4 5.3s ease-in-out infinite 2.4s; }
-          .animate-window-light-fg-5 { animation: window-light-fg-5 5s ease-in-out infinite 3.2s; }
-          .animate-window-light-fg-6 { animation: window-light-fg-6 5.1s ease-in-out infinite 4s; }
+          .animate-cloud-float-1 { animation: cloud-float-1 20s ease-in-out infinite; }
+          .animate-cloud-float-2 { animation: cloud-float-2 22s ease-in-out infinite 3s; }
+          .animate-cloud-float-3 { animation: cloud-float-3 24s ease-in-out infinite 6s; }
+          .animate-cloud-float-4 { animation: cloud-float-4 21s ease-in-out infinite 2s; }
+          .animate-cloud-float-5 { animation: cloud-float-5 23s ease-in-out infinite 8s; }
+          .animate-cloud-float-6 { animation: cloud-float-6 25s ease-in-out infinite 4s; }
           
-          .animate-lamp-glow-1 { animation: lamp-glow-1 4s ease-in-out infinite; }
-          .animate-lamp-glow-2 { animation: lamp-glow-2 4.5s ease-in-out infinite 1s; }
-          .animate-lamp-glow-3 { animation: lamp-glow-3 4.2s ease-in-out infinite 2s; }
-          .animate-lamp-glow-4 { animation: lamp-glow-4 4.7s ease-in-out infinite 0.5s; }
-          .animate-lamp-glow-5 { animation: lamp-glow-5 4.4s ease-in-out infinite 1.5s; }
-          .animate-lamp-glow-6 { animation: lamp-glow-6 4.6s ease-in-out infinite 2.5s; }
+          .animate-wave-1 { animation: wave-1 3s ease-in-out infinite; }
+          .animate-wave-2 { animation: wave-2 3.5s ease-in-out infinite 0.5s; }
+          .animate-wave-3 { animation: wave-3 3.2s ease-in-out infinite 1s; }
+          .animate-wave-4 { animation: wave-4 3.8s ease-in-out infinite 1.5s; }
+          .animate-wave-5 { animation: wave-5 3.4s ease-in-out infinite 0.8s; }
+          .animate-wave-6 { animation: wave-6 3.6s ease-in-out infinite 1.3s; }
+          .animate-wave-7 { animation: wave-7 3.3s ease-in-out infinite 0.3s; }
+          .animate-wave-8 { animation: wave-8 3.7s ease-in-out infinite 1.8s; }
           
-          .animate-roof-sparkle-1 { animation: roof-sparkle-1 8s linear infinite; }
-          .animate-roof-sparkle-2 { animation: roof-sparkle-2 9s linear infinite 1.5s; }
-          .animate-roof-sparkle-3 { animation: roof-sparkle-3 8.5s linear infinite 3s; }
-          .animate-roof-sparkle-4 { animation: roof-sparkle-4 9.5s linear infinite 4.5s; }
-          .animate-roof-sparkle-5 { animation: roof-sparkle-5 8.2s linear infinite 2s; }
-          .animate-roof-sparkle-6 { animation: roof-sparkle-6 9.2s linear infinite 6s; }
-          .animate-roof-sparkle-7 { animation: roof-sparkle-7 8.8s linear infinite 1s; }
-          .animate-roof-sparkle-8 { animation: roof-sparkle-8 9.8s linear infinite 5s; }
-          .animate-roof-sparkle-9 { animation: roof-sparkle-9 8.3s linear infinite 7s; }
-          .animate-roof-sparkle-10 { animation: roof-sparkle-10 9.3s linear infinite 3.5s; }
+          .animate-sailboat-bob-1 { animation: sailboat-bob-1 4s ease-in-out infinite; }
+          .animate-sailboat-bob-2 { animation: sailboat-bob-2 4.5s ease-in-out infinite 1s; }
+          .animate-sailboat-bob-3 { animation: sailboat-bob-3 4.2s ease-in-out infinite 2s; }
           
-          .animate-stone-sparkle-1 { animation: stone-sparkle-1 8s linear infinite; }
-          .animate-stone-sparkle-2 { animation: stone-sparkle-2 9s linear infinite 1.5s; }
-          .animate-stone-sparkle-3 { animation: stone-sparkle-3 8.5s linear infinite 3s; }
-          .animate-stone-sparkle-4 { animation: stone-sparkle-4 9.5s linear infinite 4.5s; }
-          .animate-stone-sparkle-5 { animation: stone-sparkle-5 8.2s linear infinite 2s; }
-          .animate-stone-sparkle-6 { animation: stone-sparkle-6 9.2s linear infinite 6s; }
+          .animate-sailboat-glow-1 { animation: sailboat-glow-1 5s ease-in-out infinite; }
+          .animate-sailboat-glow-2 { animation: sailboat-glow-2 5.5s ease-in-out infinite 1s; }
+          .animate-sailboat-glow-3 { animation: sailboat-glow-3 5.2s ease-in-out infinite 2s; }
           
-          .animate-foliage-glow-1 { animation: foliage-glow-1 10s ease-in-out infinite; }
-          .animate-foliage-glow-2 { animation: foliage-glow-2 11s ease-in-out infinite 2s; }
-          .animate-foliage-glow-3 { animation: foliage-glow-3 10.5s ease-in-out infinite 4s; }
-          .animate-foliage-glow-4 { animation: foliage-glow-4 11.5s ease-in-out infinite 1s; }
-          .animate-foliage-glow-5 { animation: foliage-glow-5 9.5s ease-in-out infinite 5s; }
-          .animate-foliage-glow-6 { animation: foliage-glow-6 12s ease-in-out infinite 3s; }
+          .animate-vegetation-sway-1 { animation: vegetation-sway-1 6s ease-in-out infinite; }
+          .animate-vegetation-sway-2 { animation: vegetation-sway-2 6.5s ease-in-out infinite 1s; }
+          .animate-vegetation-sway-3 { animation: vegetation-sway-3 6.2s ease-in-out infinite 2s; }
+          .animate-vegetation-sway-4 { animation: vegetation-sway-4 7s ease-in-out infinite 0.5s; }
+          .animate-vegetation-sway-5 { animation: vegetation-sway-5 6.8s ease-in-out infinite 1.5s; }
           
-          .animate-coastal-dust-1 { animation: coastal-dust-1 16s ease-in-out infinite; }
-          .animate-coastal-dust-2 { animation: coastal-dust-2 18s ease-in-out infinite 3s; }
-          .animate-coastal-dust-3 { animation: coastal-dust-3 17s ease-in-out infinite 6s; }
-          .animate-coastal-dust-4 { animation: coastal-dust-4 19s ease-in-out infinite 2s; }
-          .animate-coastal-dust-5 { animation: coastal-dust-5 20s ease-in-out infinite 4s; }
-          .animate-coastal-dust-6 { animation: coastal-dust-6 18.5s ease-in-out infinite 7s; }
-          .animate-coastal-dust-7 { animation: coastal-dust-7 17.5s ease-in-out infinite 9s; }
+          .animate-cliff-sparkle-1 { animation: cliff-sparkle-1 9s linear infinite; }
+          .animate-cliff-sparkle-2 { animation: cliff-sparkle-2 10s linear infinite 2s; }
+          .animate-cliff-sparkle-3 { animation: cliff-sparkle-3 9.5s linear infinite 4s; }
+          .animate-cliff-sparkle-4 { animation: cliff-sparkle-4 10.5s linear infinite 6s; }
           
-          .animate-path-shimmer-1 { animation: path-shimmer-1 7s ease-in-out infinite; }
-          .animate-path-shimmer-2 { animation: path-shimmer-2 8s ease-in-out infinite 2s; }
-          .animate-path-shimmer-3 { animation: path-shimmer-3 7.5s ease-in-out infinite 4s; }
-          .animate-path-shimmer-4 { animation: path-shimmer-4 8.5s ease-in-out infinite 1s; }
+          .animate-foam-splash-1 { animation: foam-splash-1 3s ease-in-out infinite; }
+          .animate-foam-splash-2 { animation: foam-splash-2 3.5s ease-in-out infinite 0.8s; }
+          .animate-foam-splash-3 { animation: foam-splash-3 3.2s ease-in-out infinite 1.5s; }
           
-          .animate-sun-ray-1 { animation: sun-ray-1 16s ease-in-out infinite; }
-          .animate-sun-ray-2 { animation: sun-ray-2 18s ease-in-out infinite 5s; }
+          .animate-stone-detail-1 { animation: stone-detail-1 8s linear infinite; }
+          .animate-stone-detail-2 { animation: stone-detail-2 9s linear infinite 2s; }
+          .animate-stone-detail-3 { animation: stone-detail-3 8.5s linear infinite 4s; }
+          .animate-stone-detail-4 { animation: stone-detail-4 9.5s linear infinite 6s; }
+          
+          .animate-moonlight-glow { animation: moonlight-glow 12s ease-in-out infinite; }
+          
+          .animate-particle-float-1 { animation: particle-float-1 14s ease-in-out infinite; }
+          .animate-particle-float-2 { animation: particle-float-2 16s ease-in-out infinite 2s; }
+          .animate-particle-float-3 { animation: particle-float-3 15s ease-in-out infinite 4s; }
+          .animate-particle-float-4 { animation: particle-float-4 17s ease-in-out infinite 1s; }
+          .animate-particle-float-5 { animation: particle-float-5 14.5s ease-in-out infinite 6s; }
+          .animate-particle-float-6 { animation: particle-float-6 16.5s ease-in-out infinite 3s; }
         `}</style>
       </div>
     </Card>
