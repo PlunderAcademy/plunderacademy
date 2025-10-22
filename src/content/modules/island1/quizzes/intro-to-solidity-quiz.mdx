@@ -131,22 +131,6 @@ Arrange these steps in the correct order for a typical Solidity function executi
 }
 ```
 
-<!--
-API ANSWER FORMAT for backend validation:
-{
-  "type": "timeline-builder",
-  "userResponse": {
-    "sequence": ["evt-1", "evt-2", "evt-3", "evt-4", "evt-5"]  // User's ordered event IDs
-  }
-}
-CORRECT ORDER:
-1. evt-1 (Function is called by external user)
-2. evt-2 (Modifier checks are executed)
-3. evt-3 (Function body logic executes)
-4. evt-4 (State changes are written to storage)
-5. evt-5 (Events are emitted)
--->
-
 **Options:**
 - A) Person[] public people;
 - B) mapping(address => Person) people;

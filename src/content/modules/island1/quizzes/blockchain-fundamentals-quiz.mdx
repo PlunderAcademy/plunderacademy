@@ -66,18 +66,6 @@ Unscramble this blockchain term:
 }
 ```
 
-<!--
-API ANSWER FORMAT for backend validation:
-{
-  "type": "word-jumble",
-  "userResponse": {
-    "word": "BLOCKCHAIN",  // User's unscrambled answer
-    "timeSpent": 45        // Seconds taken
-  }
-}
-CORRECT ANSWER: "BLOCKCHAIN"
--->
-
 ---
 
 ### Question 4
@@ -300,25 +288,3 @@ After deploying a contract on the Zilliqa EVM testnet, where can you verify the 
 **Passing Score:** 80 points
 
 ---
-
-## Implementation Notes for Developers
-
-```typescript
-interface QuizQuestion {
-  id: number;
-  type: 'multiple-choice' | 'multiple-select';
-  lesson: string;
-  question: string;
-  options: string[];
-  correctAnswer: string | string[];
-  points: number;
-  explanation: string;
-}
-
-interface QuizConfig {
-  totalQuestions: 16;
-  passingScore: 80;
-  timeLimit: 20; // minutes
-  moduleId: 'blockchain-fundamentals';
-}
-```

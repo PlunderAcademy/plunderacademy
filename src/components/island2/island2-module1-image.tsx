@@ -18,43 +18,44 @@ export function Island2Module1Image() {
         
         {/* Animated overlay effects */}
         <div className="absolute inset-0 animate-effects">
-          {/* Campfire Flames & Glow */}
+          {/* Ship Lantern Glow */}
           <div className="absolute inset-0">
-            {/* Main campfire glow */}
-            <div className="absolute top-[93%] left-[73%] w-[15px] h-[10px] bg-orange-400/70 rounded-full campfire-glow animate-campfire-flicker-1"></div>
-            <div className="absolute top-[94%] left-[73.5%] w-[10px] h-[8px] bg-yellow-300/80 rounded-full campfire-glow animate-campfire-flicker-2"></div>
-            <div className="absolute top-[95%] left-[74%] w-[6px] h-[5px] bg-yellow-100/90 rounded-full campfire-core animate-campfire-core"></div>
-            
-            {/* Fire embers rising */}
-            <div className="absolute top-[91%] left-[72%] w-[2px] h-[2px] bg-orange-400/80 rounded-full fire-ember animate-ember-rise-1"></div>
-            <div className="absolute top-[92%] left-[74%] w-[2px] h-[2px] bg-yellow-400/70 rounded-full fire-ember animate-ember-rise-2"></div>
-            <div className="absolute top-[90%] left-[73.5%] w-[1px] h-[1px] bg-red-400/60 rounded-full fire-ember animate-ember-rise-3"></div>
+            {/* Lanterns on ship */}
+            <div className="absolute top-[40%] left-[28%] w-[8px] h-[8px] bg-amber-400/95 rounded-full lantern-glow animate-lantern-flicker-1"></div>
+            <div className="absolute top-[45%] left-[26%] w-[7px] h-[7px] bg-yellow-300/90 rounded-full lantern-glow animate-lantern-flicker-2"></div>
+            <div className="absolute top-[48%] left-[30%] w-[7px] h-[7px] bg-amber-300/85 rounded-full lantern-glow animate-lantern-flicker-3"></div>
           </div>
 
-          {/* Ice Glacier Sparkles */}
+          {/* Ice Glacier & Berg Sparkles */}
           <div className="absolute inset-0">
-            {/* Central glacier sparkles */}
-            <div className="absolute top-[48%] left-[50%] w-[3px] h-[3px] bg-cyan-200/90 rounded-full ice-sparkle animate-ice-sparkle-1"></div>
-            <div className="absolute top-[45%] left-[48%] w-[2px] h-[2px] bg-blue-100/80 rounded-full ice-sparkle animate-ice-sparkle-2"></div>
-            <div className="absolute top-[52%] left-[55%] w-[3px] h-[3px] bg-white/85 rounded-full ice-sparkle animate-ice-sparkle-3"></div>
-            <div className="absolute top-[46%] left-[52%] w-[2px] h-[2px] bg-cyan-100/75 rounded-full ice-sparkle animate-ice-sparkle-4"></div>
-            <div className="absolute top-[50%] left-[45%] w-[2px] h-[2px] bg-blue-200/70 rounded-full ice-sparkle animate-ice-sparkle-5"></div>
+            {/* Ship iceberg sparkles */}
+            <div className="absolute top-[55%] left-[28%] w-[4px] h-[4px] bg-cyan-300/100 rounded-full ice-sparkle animate-ice-sparkle-1"></div>
+            <div className="absolute top-[58%] left-[32%] w-[4px] h-[4px] bg-white/100 rounded-full ice-sparkle animate-ice-sparkle-2"></div>
+            <div className="absolute top-[52%] left-[25%] w-[4px] h-[4px] bg-blue-200/100 rounded-full ice-sparkle animate-ice-sparkle-3"></div>
             
-            {/* Left iceberg sparkles */}
-            <div className="absolute top-[58%] left-[20%] w-[2px] h-[2px] bg-cyan-200/85 rounded-full ice-sparkle animate-ice-sparkle-6"></div>
-            <div className="absolute top-[60%] left-[18%] w-[2px] h-[2px] bg-white/75 rounded-full ice-sparkle animate-ice-sparkle-7"></div>
+            {/* Left foreground iceberg sparkles */}
+            <div className="absolute top-[75%] left-[8%] w-[4px] h-[4px] bg-cyan-300/100 rounded-full ice-sparkle animate-ice-sparkle-4"></div>
+            <div className="absolute top-[72%] left-[12%] w-[4px] h-[4px] bg-white/100 rounded-full ice-sparkle animate-ice-sparkle-5"></div>
+            
+            {/* Right foreground iceberg sparkles */}
+            <div className="absolute top-[78%] left-[88%] w-[4px] h-[4px] bg-cyan-200/100 rounded-full ice-sparkle animate-ice-sparkle-6"></div>
+            <div className="absolute top-[75%] left-[92%] w-[4px] h-[4px] bg-blue-200/100 rounded-full ice-sparkle animate-ice-sparkle-7"></div>
             
             {/* Mountain snow sparkles */}
-            <div className="absolute top-[25%] left-[50%] w-[2px] h-[2px] bg-white/90 rounded-full ice-sparkle animate-ice-sparkle-8"></div>
-            <div className="absolute top-[30%] left-[35%] w-[1px] h-[1px] bg-cyan-100/80 rounded-full ice-sparkle animate-ice-sparkle-9"></div>
-            <div className="absolute top-[28%] left-[65%] w-[2px] h-[2px] bg-blue-100/85 rounded-full ice-sparkle animate-ice-sparkle-10"></div>
+            <div className="absolute top-[32%] left-[45%] w-[3px] h-[3px] bg-white/100 rounded-full ice-sparkle animate-ice-sparkle-8"></div>
+            <div className="absolute top-[28%] left-[55%] w-[3px] h-[3px] bg-cyan-200/100 rounded-full ice-sparkle animate-ice-sparkle-9"></div>
+            <div className="absolute top-[35%] left-[65%] w-[3px] h-[3px] bg-blue-200/100 rounded-full ice-sparkle animate-ice-sparkle-10"></div>
+            <div className="absolute top-[30%] left-[38%] w-[3px] h-[3px] bg-white/100 rounded-full ice-sparkle animate-ice-sparkle-11"></div>
           </div>
 
           {/* Floating Icebergs Motion */}
           <div className="absolute inset-0">
-            {/* Subtle iceberg shimmer overlay */}
-            <div className="absolute top-[56%] left-[15%] w-[120px] h-[80px] bg-cyan-200/8 rounded-full iceberg-shimmer animate-iceberg-float-1"></div>
-            <div className="absolute top-[70%] left-[85%] w-[80px] h-[50px] bg-blue-100/6 rounded-full iceberg-shimmer animate-iceberg-float-2"></div>
+            {/* Left foreground iceberg shimmer */}
+            <div className="absolute top-[68%] left-[5%] w-[110px] h-[70px] bg-cyan-200/8 rounded-full iceberg-shimmer animate-iceberg-float-1"></div>
+            {/* Right foreground iceberg shimmer */}
+            <div className="absolute top-[72%] left-[86%] w-[90px] h-[60px] bg-blue-100/7 rounded-full iceberg-shimmer animate-iceberg-float-2"></div>
+            {/* Ship's iceberg subtle motion */}
+            <div className="absolute top-[48%] left-[24%] w-[140px] h-[90px] bg-cyan-100/5 rounded-full iceberg-shimmer animate-iceberg-float-3"></div>
           </div>
 
           {/* Arctic Wind & Snow Drift */}
@@ -84,17 +85,30 @@ export function Island2Module1Image() {
             <div className="absolute bottom-[15%] left-[40%] w-[45px] h-[14px] bg-blue-50/14 rounded-full fog-wisp animate-fog-drift-4"></div>
           </div>
 
-          {/* Igloo Warmth Glow */}
+          {/* Igloo Village Warmth Glow */}
           <div className="absolute inset-0">
-            <div className="absolute top-[68%] right-[14%] w-[12px] h-[8px] bg-orange-200/30 rounded-full igloo-glow animate-igloo-warmth"></div>
-            <div className="absolute top-[69%] right-[14.5%] w-[6px] h-[4px] bg-yellow-200/25 rounded-full igloo-glow animate-igloo-warmth-core"></div>
+            {/* Multiple igloo glows */}
+            <div className="absolute top-[70%] left-[52%] w-[10px] h-[8px] bg-orange-300/70 rounded-full igloo-glow animate-igloo-warmth-1"></div>
+            <div className="absolute top-[71%] left-[56%] w-[9px] h-[7px] bg-amber-300/65 rounded-full igloo-glow animate-igloo-warmth-2"></div>
+            <div className="absolute top-[70.5%] left-[60%] w-[10px] h-[8px] bg-yellow-300/68 rounded-full igloo-glow animate-igloo-warmth-3"></div>
+            <div className="absolute top-[72%] left-[54%] w-[8px] h-[6px] bg-orange-200/60 rounded-full igloo-glow animate-igloo-warmth-4"></div>
           </div>
 
-          {/* Northern Lights Atmospheric Effect */}
+          {/* Northern Lights Atmospheric Effect with Sparkles */}
           <div className="absolute inset-0">
-            {/* Subtle aurora borealis shimmer */}
-            <div className="absolute top-[10%] left-[20%] w-[200px] h-[80px] bg-gradient-to-r from-cyan-300/5 via-blue-300/8 to-transparent aurora animate-aurora-1"></div>
-            <div className="absolute top-[5%] right-[15%] w-[180px] h-[70px] bg-gradient-to-l from-blue-200/6 via-cyan-200/7 to-transparent aurora animate-aurora-2"></div>
+            {/* Aurora borealis shimmer waves - Much bolder */}
+            <div className="absolute top-[8%] left-[10%] w-[280px] h-[90px] bg-gradient-to-r from-emerald-400/35 via-cyan-400/45 to-blue-400/28 aurora animate-aurora-1"></div>
+            <div className="absolute top-[12%] right-[8%] w-[260px] h-[85px] bg-gradient-to-l from-cyan-400/38 via-emerald-300/42 to-transparent aurora animate-aurora-2"></div>
+            <div className="absolute top-[6%] left-[35%] w-[240px] h-[75px] bg-gradient-to-r from-transparent via-emerald-400/40 to-cyan-300/32 aurora animate-aurora-3"></div>
+            
+            {/* Aurora sparkles - Much more visible */}
+            <div className="absolute top-[10%] left-[18%] w-[5px] h-[5px] bg-emerald-300/100 rounded-full aurora-sparkle animate-aurora-sparkle-1"></div>
+            <div className="absolute top-[14%] left-[45%] w-[5px] h-[5px] bg-cyan-200/100 rounded-full aurora-sparkle animate-aurora-sparkle-2"></div>
+            <div className="absolute top-[8%] left-[72%] w-[5px] h-[5px] bg-emerald-400/100 rounded-full aurora-sparkle animate-aurora-sparkle-3"></div>
+            <div className="absolute top-[16%] right-[20%] w-[5px] h-[5px] bg-cyan-300/100 rounded-full aurora-sparkle animate-aurora-sparkle-4"></div>
+            <div className="absolute top-[12%] left-[55%] w-[4px] h-[4px] bg-emerald-200/100 rounded-full aurora-sparkle animate-aurora-sparkle-5"></div>
+            <div className="absolute top-[9%] left-[85%] w-[5px] h-[5px] bg-cyan-400/100 rounded-full aurora-sparkle animate-aurora-sparkle-6"></div>
+            <div className="absolute top-[15%] left-[28%] w-[4px] h-[4px] bg-emerald-300/100 rounded-full aurora-sparkle animate-aurora-sparkle-7"></div>
           </div>
 
           {/* Arctic Atmospheric Glow */}
@@ -105,24 +119,14 @@ export function Island2Module1Image() {
         </div>
         
         <style jsx>{`
-          .campfire-glow {
-            filter: blur(6px);
-            box-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 0 90px currentColor;
-          }
-          
-          .campfire-core {
-            filter: blur(3px);
-            box-shadow: 0 0 25px currentColor, 0 0 50px currentColor, 0 0 75px currentColor;
-          }
-          
-          .fire-ember {
-            box-shadow: 0 0 15px currentColor, 0 0 30px currentColor, 0 0 45px currentColor;
-            filter: blur(0.6px);
+          .lantern-glow {
+            filter: blur(8px);
+            box-shadow: 0 0 40px currentColor, 0 0 80px currentColor, 0 0 120px currentColor, 0 0 160px currentColor;
           }
           
           .ice-sparkle {
-            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
-            filter: blur(0.3px);
+            box-shadow: 0 0 40px currentColor, 0 0 80px currentColor, 0 0 120px currentColor, 0 0 160px currentColor;
+            filter: blur(0.5px);
           }
           
           .iceberg-shimmer {
@@ -150,24 +154,25 @@ export function Island2Module1Image() {
           }
           
           .igloo-glow {
-            filter: blur(10px);
-            box-shadow: 0 0 25px currentColor, 0 0 50px currentColor;
+            filter: blur(12px);
+            box-shadow: 0 0 50px currentColor, 0 0 100px currentColor, 0 0 150px currentColor;
           }
           
           .aurora {
-            filter: blur(35px);
-            opacity: 0;
+            filter: blur(45px);
+            opacity: 0.35;
           }
           
-          .animate-effects .campfire-glow {
+          .aurora-sparkle {
+            box-shadow: 0 0 50px currentColor, 0 0 100px currentColor, 0 0 150px currentColor, 0 0 200px currentColor;
+            filter: blur(0.6px);
+          }
+          
+          .animate-effects .lantern-glow {
             animation-play-state: running;
           }
           
-          .animate-effects .campfire-core {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .fire-ember {
+          .animate-effects .aurora-sparkle {
             animation-play-state: running;
           }
           
@@ -203,42 +208,24 @@ export function Island2Module1Image() {
             animation-play-state: running;
           }
           
-          @keyframes campfire-flicker-1 {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            25% { opacity: 1; transform: scale(1.4); }
-            50% { opacity: 0.7; transform: scale(0.95); }
-            75% { opacity: 0.95; transform: scale(1.25); }
+          @keyframes lantern-flicker-1 {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            30% { opacity: 0.8; transform: scale(1.15); }
+            60% { opacity: 0.5; transform: scale(0.95); }
+            85% { opacity: 0.75; transform: scale(1.08); }
           }
           
-          @keyframes campfire-flicker-2 {
-            0%, 100% { opacity: 0.9; transform: scale(1) rotate(0deg); }
-            30% { opacity: 1; transform: scale(1.5) rotate(8deg); }
-            60% { opacity: 0.6; transform: scale(0.85) rotate(-5deg); }
-            90% { opacity: 1; transform: scale(1.3) rotate(4deg); }
+          @keyframes lantern-flicker-2 {
+            0%, 100% { opacity: 0.55; transform: scale(1); }
+            40% { opacity: 0.75; transform: scale(1.2); }
+            70% { opacity: 0.45; transform: scale(0.9); }
           }
           
-          @keyframes campfire-core {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            40% { opacity: 1; transform: scale(1.8); }
-            70% { opacity: 0.8; transform: scale(0.8); }
-          }
-          
-          @keyframes ember-rise-1 {
-            0% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.8; transform: translateY(-25px) translateX(5px); }
-            100% { opacity: 0; transform: translateY(-50px) translateX(8px); }
-          }
-          
-          @keyframes ember-rise-2 {
-            0% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.7; transform: translateY(-20px) translateX(-3px); }
-            100% { opacity: 0; transform: translateY(-40px) translateX(-5px); }
-          }
-          
-          @keyframes ember-rise-3 {
-            0% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.6; transform: translateY(-18px) translateX(4px); }
-            100% { opacity: 0; transform: translateY(-35px) translateX(6px); }
+          @keyframes lantern-flicker-3 {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            35% { opacity: 0.7; transform: scale(1.12); }
+            65% { opacity: 0.48; transform: scale(0.93); }
+            90% { opacity: 0.68; transform: scale(1.05); }
           }
           
           @keyframes ice-sparkle-1 {
@@ -301,14 +288,25 @@ export function Island2Module1Image() {
             82% { opacity: 0.7; transform: scale(1.9); }
           }
           
+          @keyframes ice-sparkle-11 {
+            0%, 68%, 100% { opacity: 0; transform: scale(1); }
+            73%, 83% { opacity: 1; transform: scale(2.2); }
+            78% { opacity: 0.68; transform: scale(1.75); }
+          }
+          
           @keyframes iceberg-float-1 {
             0%, 100% { opacity: 0.08; transform: translateY(0px); }
             50% { opacity: 0.15; transform: translateY(-3px); }
           }
           
           @keyframes iceberg-float-2 {
-            0%, 100% { opacity: 0.06; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.12; transform: translateY(-2px) translateX(2px); }
+            0%, 100% { opacity: 0.07; transform: translateY(0px) translateX(0px); }
+            50% { opacity: 0.13; transform: translateY(-2px) translateX(1px); }
+          }
+          
+          @keyframes iceberg-float-3 {
+            0%, 100% { opacity: 0.05; transform: translateY(0px); }
+            50% { opacity: 0.10; transform: translateY(-1px); }
           }
           
           @keyframes snow-drift-1 {
@@ -384,24 +382,81 @@ export function Island2Module1Image() {
             50% { opacity: 0.16; transform: translateX(-20px) translateY(2px) scale(1.12); }
           }
           
-          @keyframes igloo-warmth {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
+          @keyframes igloo-warmth-1 {
+            0%, 100% { opacity: 0.35; transform: scale(1); }
+            50% { opacity: 0.55; transform: scale(1.2); }
           }
           
-          @keyframes igloo-warmth-core {
-            0%, 100% { opacity: 0.25; transform: scale(1); }
-            60% { opacity: 0.45; transform: scale(1.4); }
+          @keyframes igloo-warmth-2 {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            60% { opacity: 0.5; transform: scale(1.15); }
+          }
+          
+          @keyframes igloo-warmth-3 {
+            0%, 100% { opacity: 0.32; transform: scale(1); }
+            55% { opacity: 0.52; transform: scale(1.18); }
+          }
+          
+          @keyframes igloo-warmth-4 {
+            0%, 100% { opacity: 0.28; transform: scale(1); }
+            65% { opacity: 0.48; transform: scale(1.22); }
           }
           
           @keyframes aurora-1 {
-            0%, 100% { opacity: 0; transform: translateY(0px) scaleY(1); }
-            50% { opacity: 0.35; transform: translateY(-15px) scaleY(1.4); }
+            0%, 100% { opacity: 0.35; transform: translateY(0px) scaleY(1) scaleX(1); }
+            50% { opacity: 0.75; transform: translateY(-8px) scaleY(1.3) scaleX(1.1); }
           }
           
           @keyframes aurora-2 {
-            0%, 100% { opacity: 0; transform: translateY(0px) scaleY(1); }
-            60% { opacity: 0.28; transform: translateY(-12px) scaleY(1.3); }
+            0%, 100% { opacity: 0.38; transform: translateY(0px) scaleY(1) scaleX(1); }
+            60% { opacity: 0.72; transform: translateY(-6px) scaleY(1.25) scaleX(1.08); }
+          }
+          
+          @keyframes aurora-3 {
+            0%, 100% { opacity: 0.4; transform: translateY(0px) scaleY(1) scaleX(1); }
+            55% { opacity: 0.78; transform: translateY(-10px) scaleY(1.35) scaleX(1.12); }
+          }
+          
+          @keyframes aurora-sparkle-1 {
+            0%, 70%, 100% { opacity: 0; transform: scale(1); }
+            75%, 85% { opacity: 1; transform: scale(3.5); }
+            80% { opacity: 0.9; transform: scale(3); }
+          }
+          
+          @keyframes aurora-sparkle-2 {
+            0%, 65%, 100% { opacity: 0; transform: scale(1); }
+            70%, 80% { opacity: 1; transform: scale(3.6); }
+            75% { opacity: 0.95; transform: scale(3.1); }
+          }
+          
+          @keyframes aurora-sparkle-3 {
+            0%, 75%, 100% { opacity: 0; transform: scale(1); }
+            80%, 90% { opacity: 1; transform: scale(3.4); }
+            85% { opacity: 0.9; transform: scale(2.9); }
+          }
+          
+          @keyframes aurora-sparkle-4 {
+            0%, 80%, 100% { opacity: 0; transform: scale(1); }
+            85%, 95% { opacity: 1; transform: scale(3.5); }
+            90% { opacity: 0.9; transform: scale(3); }
+          }
+          
+          @keyframes aurora-sparkle-5 {
+            0%, 60%, 100% { opacity: 0; transform: scale(1); }
+            65%, 75% { opacity: 1; transform: scale(3.3); }
+            70% { opacity: 0.85; transform: scale(2.8); }
+          }
+          
+          @keyframes aurora-sparkle-6 {
+            0%, 72%, 100% { opacity: 0; transform: scale(1); }
+            77%, 87% { opacity: 1; transform: scale(3.4); }
+            82% { opacity: 0.88; transform: scale(2.95); }
+          }
+          
+          @keyframes aurora-sparkle-7 {
+            0%, 68%, 100% { opacity: 0; transform: scale(1); }
+            73%, 83% { opacity: 1; transform: scale(3.2); }
+            78% { opacity: 0.82; transform: scale(2.75); }
           }
           
           @keyframes arctic-atmosphere {
@@ -414,28 +469,16 @@ export function Island2Module1Image() {
             50% { opacity: 0.9; }
           }
           
-          .animate-campfire-flicker-1 {
-            animation: campfire-flicker-1 3s ease-in-out infinite;
+          .animate-lantern-flicker-1 {
+            animation: lantern-flicker-1 4s ease-in-out infinite;
           }
           
-          .animate-campfire-flicker-2 {
-            animation: campfire-flicker-2 2.5s ease-in-out infinite 0.5s;
+          .animate-lantern-flicker-2 {
+            animation: lantern-flicker-2 4.5s ease-in-out infinite 1s;
           }
           
-          .animate-campfire-core {
-            animation: campfire-core 2s ease-in-out infinite 1s;
-          }
-          
-          .animate-ember-rise-1 {
-            animation: ember-rise-1 4s ease-out infinite;
-          }
-          
-          .animate-ember-rise-2 {
-            animation: ember-rise-2 5s ease-out infinite 1.5s;
-          }
-          
-          .animate-ember-rise-3 {
-            animation: ember-rise-3 4.5s ease-out infinite 3s;
+          .animate-lantern-flicker-3 {
+            animation: lantern-flicker-3 3.8s ease-in-out infinite 0.5s;
           }
           
           .animate-ice-sparkle-1 {
@@ -478,12 +521,20 @@ export function Island2Module1Image() {
             animation: ice-sparkle-10 9.5s linear infinite 4.5s;
           }
           
+          .animate-ice-sparkle-11 {
+            animation: ice-sparkle-11 8.2s linear infinite 5.2s;
+          }
+          
           .animate-iceberg-float-1 {
             animation: iceberg-float-1 8s ease-in-out infinite;
           }
           
           .animate-iceberg-float-2 {
             animation: iceberg-float-2 10s ease-in-out infinite 3s;
+          }
+          
+          .animate-iceberg-float-3 {
+            animation: iceberg-float-3 12s ease-in-out infinite 1.5s;
           }
           
           .animate-snow-drift-1 {
@@ -538,20 +589,60 @@ export function Island2Module1Image() {
             animation: fog-drift-4 26s ease-in-out infinite 4s;
           }
           
-          .animate-igloo-warmth {
-            animation: igloo-warmth 5s ease-in-out infinite;
+          .animate-igloo-warmth-1 {
+            animation: igloo-warmth-1 5s ease-in-out infinite;
           }
           
-          .animate-igloo-warmth-core {
-            animation: igloo-warmth-core 6s ease-in-out infinite 1s;
+          .animate-igloo-warmth-2 {
+            animation: igloo-warmth-2 5.5s ease-in-out infinite 1s;
+          }
+          
+          .animate-igloo-warmth-3 {
+            animation: igloo-warmth-3 6s ease-in-out infinite 0.5s;
+          }
+          
+          .animate-igloo-warmth-4 {
+            animation: igloo-warmth-4 5.8s ease-in-out infinite 1.5s;
           }
           
           .animate-aurora-1 {
-            animation: aurora-1 20s ease-in-out infinite;
+            animation: aurora-1 18s ease-in-out infinite;
           }
           
           .animate-aurora-2 {
-            animation: aurora-2 24s ease-in-out infinite 8s;
+            animation: aurora-2 22s ease-in-out infinite 6s;
+          }
+          
+          .animate-aurora-3 {
+            animation: aurora-3 20s ease-in-out infinite 3s;
+          }
+          
+          .animate-aurora-sparkle-1 {
+            animation: aurora-sparkle-1 8s linear infinite;
+          }
+          
+          .animate-aurora-sparkle-2 {
+            animation: aurora-sparkle-2 9s linear infinite 2s;
+          }
+          
+          .animate-aurora-sparkle-3 {
+            animation: aurora-sparkle-3 7.5s linear infinite 4s;
+          }
+          
+          .animate-aurora-sparkle-4 {
+            animation: aurora-sparkle-4 8.5s linear infinite 1.5s;
+          }
+          
+          .animate-aurora-sparkle-5 {
+            animation: aurora-sparkle-5 10s linear infinite 3s;
+          }
+          
+          .animate-aurora-sparkle-6 {
+            animation: aurora-sparkle-6 9.2s linear infinite 5s;
+          }
+          
+          .animate-aurora-sparkle-7 {
+            animation: aurora-sparkle-7 8.8s linear infinite 6s;
           }
           
           .animate-arctic-atmosphere {

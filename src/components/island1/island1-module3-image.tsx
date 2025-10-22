@@ -10,154 +10,113 @@ export function JungleModule3Image() {
         {/* Base image */}
         <Image
           src="/islands/island1/island1-module3-image.webp"
-          alt="Volcanic Pirate Castle Adventure Scene"
+          alt="Tropical Pirate Castle Paradise Scene"
           fill
           className="object-cover"
         />
         
         {/* Animated overlay effects */}
         <div className="absolute inset-0 animate-effects">
-          {/* Volcanic Eruption Effects */}
+          {/* Gentle Cloud Movement */}
           <div className="absolute inset-0">
-            {/* Main volcanic glow */}
-            <div className="absolute top-[25%] left-[40%] w-[60px] h-[40px] bg-orange-500/60 rounded-full volcanic-glow animate-volcanic-pulse"></div>
-            <div className="absolute top-[28%] left-[43%] w-[40px] h-[25px] bg-red-400/70 rounded-full volcanic-glow animate-volcanic-flicker"></div>
-            <div className="absolute top-[22%] left-[45%] w-[30px] h-[20px] bg-yellow-400/50 rounded-full volcanic-glow animate-volcanic-core"></div>
-            
-            {/* Lava flow effects */}
-            <div className="absolute top-[25%] left-[42%] w-[8px] h-[30px] bg-gradient-to-b from-orange-400/60 to-red-600/40 lava-flow animate-lava-flow-1"></div>
-            <div className="absolute top-[25%] left-[55%] w-[6px] h-[25px] bg-gradient-to-b from-red-500/50 to-orange-700/30 lava-flow animate-lava-flow-2"></div>
-            <div className="absolute top-[22%] left-[60%] w-[4px] h-[20px] bg-gradient-to-b from-yellow-500/40 to-red-500/20 lava-flow animate-lava-flow-3"></div>
+            {/* Floating clouds */}
+            <div className="absolute top-[8%] left-[15%] w-[80px] h-[25px] bg-white/20 rounded-full cloud animate-cloud-drift-1"></div>
+            <div className="absolute top-[12%] right-[20%] w-[100px] h-[30px] bg-white/15 rounded-full cloud animate-cloud-drift-2"></div>
+            <div className="absolute top-[18%] left-[60%] w-[70px] h-[22px] bg-white/18 rounded-full cloud animate-cloud-drift-3"></div>
+            <div className="absolute top-[5%] left-[40%] w-[60px] h-[20px] bg-white/12 rounded-full cloud animate-cloud-drift-4"></div>
           </div>
 
-          {/* Volcanic Ember Particles */}
+          {/* Tropical Sunlight Particles */}
           <div className="absolute inset-0">
-            {/* Large floating embers */}
-            <div className="absolute top-[20%] left-[35%] w-[4px] h-[4px] bg-orange-400/80 rounded-full ember animate-ember-float-1"></div>
-            <div className="absolute top-[25%] left-[65%] w-[3px] h-[3px] bg-red-400/70 rounded-full ember animate-ember-float-2"></div>
-            <div className="absolute top-[18%] left-[50%] w-[5px] h-[5px] bg-yellow-400/75 rounded-full ember animate-ember-float-3"></div>
-            <div className="absolute top-[30%] left-[40%] w-[3px] h-[3px] bg-orange-500/65 rounded-full ember animate-ember-float-4"></div>
-            <div className="absolute top-[15%] right-[30%] w-[4px] h-[4px] bg-red-300/60 rounded-full ember animate-ember-float-5"></div>
-            
-            {/* Medium ember particles */}
-            <div className="absolute top-[22%] left-[58%] w-[2px] h-[2px] bg-orange-300/50 rounded-full ember animate-ember-float-6"></div>
-            <div className="absolute top-[28%] right-[35%] w-[2px] h-[2px] bg-yellow-300/45 rounded-full ember animate-ember-float-7"></div>
-            <div className="absolute top-[16%] left-[45%] w-[3px] h-[3px] bg-red-200/40 rounded-full ember animate-ember-float-8"></div>
+            {/* Floating light particles - dust motes in sunlight */}
+            <div className="absolute top-[25%] left-[20%] w-[3px] h-[3px] bg-yellow-200/60 rounded-full light-particle animate-light-drift-1"></div>
+            <div className="absolute top-[35%] left-[75%] w-[2px] h-[2px] bg-yellow-100/50 rounded-full light-particle animate-light-drift-2"></div>
+            <div className="absolute top-[45%] left-[30%] w-[3px] h-[3px] bg-white/40 rounded-full light-particle animate-light-drift-3"></div>
+            <div className="absolute top-[28%] right-[25%] w-[2px] h-[2px] bg-yellow-200/45 rounded-full light-particle animate-light-drift-4"></div>
+            <div className="absolute top-[55%] left-[65%] w-[2px] h-[2px] bg-white/35 rounded-full light-particle animate-light-drift-5"></div>
+            <div className="absolute top-[40%] left-[85%] w-[3px] h-[3px] bg-yellow-100/55 rounded-full light-particle animate-light-drift-6"></div>
           </div>
 
-          {/* Castle Window Glows */}
+          {/* Water Sparkles */}
           <div className="absolute inset-0">
-            {/* Main tower windows */}
-            <div className="absolute top-[35%] left-[48%] w-[3px] h-[4px] bg-yellow-200/60 rounded castle-window animate-window-flicker-1"></div>
-            <div className="absolute top-[45%] left-[46%] w-[2px] h-[3px] bg-orange-200/50 rounded castle-window animate-window-flicker-2"></div>
-            <div className="absolute top-[40%] left-[52%] w-[2px] h-[3px] bg-yellow-300/55 rounded castle-window animate-window-flicker-3"></div>
-            
-            {/* Side tower windows */}
-            <div className="absolute top-[42%] left-[42%] w-[2px] h-[2px] bg-orange-100/40 rounded castle-window animate-window-flicker-4"></div>
-            <div className="absolute top-[38%] right-[45%] w-[2px] h-[3px] bg-yellow-200/45 rounded castle-window animate-window-flicker-5"></div>
+            {/* Sparkles on the water surface */}
+            <div className="absolute bottom-[35%] left-[25%] w-[4px] h-[4px] bg-cyan-200/80 rounded-full water-sparkle animate-sparkle-1"></div>
+            <div className="absolute bottom-[38%] left-[45%] w-[3px] h-[3px] bg-blue-200/70 rounded-full water-sparkle animate-sparkle-2"></div>
+            <div className="absolute bottom-[32%] right-[35%] w-[3px] h-[3px] bg-white/75 rounded-full water-sparkle animate-sparkle-3"></div>
+            <div className="absolute bottom-[40%] left-[60%] w-[2px] h-[2px] bg-cyan-100/60 rounded-full water-sparkle animate-sparkle-4"></div>
+            <div className="absolute bottom-[36%] left-[70%] w-[3px] h-[3px] bg-blue-100/65 rounded-full water-sparkle animate-sparkle-5"></div>
           </div>
 
           {/* Pirate Flag Animation */}
           <div className="absolute inset-0">
-            <div className="absolute top-[25%] left-[50%] w-[8px] h-[6px] bg-black/40 flag animate-flag-wave"></div>
+            {/* Main flag on tall tower */}
+            <div className="absolute top-[20%] left-[49.5%] w-[10px] h-[8px] bg-black/50 flag animate-flag-wave"></div>
+            {/* Left ship flag */}
+            <div className="absolute top-[38%] left-[18%] w-[6px] h-[5px] bg-black/40 flag animate-flag-wave-2"></div>
+            {/* Right ship flag */}
+            <div className="absolute top-[40%] right-[18%] w-[6px] h-[5px] bg-black/40 flag animate-flag-wave-3"></div>
           </div>
 
-          {/* Dramatic Sky Lightning */}
+          {/* Gentle Foliage Sway */}
           <div className="absolute inset-0">
-            <div className="absolute top-[5%] left-[20%] w-[2px] h-[25%] bg-white/70 lightning animate-lightning-flash-1"></div>
-            <div className="absolute top-[8%] right-[25%] w-[1px] h-[20%] bg-blue-100/60 lightning animate-lightning-flash-2"></div>
-            <div className="absolute top-[3%] left-[70%] w-[2px] h-[18%] bg-white/50 lightning animate-lightning-flash-3"></div>
-            
-            {/* Lightning flash overlay */}
-            <div className="absolute inset-0 bg-white/15 lightning-flash animate-sky-flash"></div>
+            {/* Palm fronds subtle movement */}
+            <div className="absolute top-[10%] left-[2%] w-[15%] h-[30%] foliage animate-foliage-sway-1"></div>
+            <div className="absolute top-[8%] right-[1%] w-[18%] h-[35%] foliage animate-foliage-sway-2"></div>
           </div>
 
-          {/* Mysterious Bottom Fog */}
+          {/* Sunlight Rays */}
           <div className="absolute inset-0">
-            {/* Dense fog base */}
-            <div className="absolute bottom-[0%] left-[0%] w-full h-[10%] bg-gradient-to-t from-gray-300/25 via-gray-400/15 to-transparent fog-base animate-fog-drift-base"></div>
-            
-            {/* Floating fog wisps */}
-            <div className="absolute bottom-[2%] left-[10%] w-[80px] h-[25px] bg-gray-200/20 rounded-full fog-wisp animate-fog-drift-1"></div>
-            <div className="absolute bottom-[4%] right-[15%] w-[60px] h-[20px] bg-gray-300/18 rounded-full fog-wisp animate-fog-drift-2"></div>
-            <div className="absolute bottom-[1%] left-[60%] w-[70px] h-[22px] bg-gray-100/22 rounded-full fog-wisp animate-fog-drift-3"></div>
-            <div className="absolute bottom-[6%] left-[30%] w-[50px] h-[18px] bg-gray-400/16 rounded-full fog-wisp animate-fog-drift-4"></div>
-            
-            {/* Thin fog tendrils */}
-            <div className="absolute bottom-[3%] right-[40%] w-[40px] h-[15px] bg-gray-200/14 rounded-full fog-tendril animate-fog-tendril-1"></div>
-            <div className="absolute bottom-[7%] left-[20%] w-[35px] h-[12px] bg-gray-300/12 rounded-full fog-tendril animate-fog-tendril-2"></div>
+            {/* God rays filtering through clouds */}
+            <div className="absolute top-[0%] left-[25%] w-[60px] h-[35%] bg-gradient-to-b from-yellow-100/15 via-yellow-200/8 to-transparent sunray animate-sunray-1"></div>
+            <div className="absolute top-[0%] right-[30%] w-[50px] h-[40%] bg-gradient-to-b from-yellow-50/12 via-white/6 to-transparent sunray animate-sunray-2"></div>
           </div>
 
-          {/* Volcanic Atmospheric Glow */}
-          <div className="absolute inset-0 bg-gradient-to-b from-red-600/8 via-orange-500/5 to-yellow-400/3 animate-volcanic-atmosphere"></div>
+          {/* Tropical Atmosphere */}
+          <div className="absolute inset-0 bg-gradient-to-b from-cyan-200/5 via-transparent to-green-100/8 animate-tropical-atmosphere"></div>
           
-          {/* Dramatic Sky Depth */}
-          <div className="absolute inset-0 bg-gradient-to-t from-purple-900/6 via-transparent to-red-900/8 animate-dramatic-sky"></div>
+          {/* Warm Sunny Glow */}
+          <div className="absolute inset-0 bg-gradient-to-t from-yellow-100/8 via-transparent to-blue-100/10 animate-sunny-glow"></div>
         </div>
         
         <style jsx>{`
-          .volcanic-glow {
+          .cloud {
             filter: blur(8px);
-            box-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 0 90px currentColor;
+            opacity: 0.8;
           }
           
-          .lava-flow {
-            filter: blur(2px);
-            box-shadow: 0 0 15px currentColor;
-          }
-          
-          .ember {
-            box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+          .light-particle {
             filter: blur(0.5px);
+            box-shadow: 0 0 6px currentColor, 0 0 12px currentColor;
           }
           
-          .castle-window {
-            filter: blur(1px);
+          .water-sparkle {
             box-shadow: 0 0 8px currentColor, 0 0 16px currentColor;
+            filter: blur(0.5px);
           }
           
           .flag {
             filter: blur(0.5px);
           }
           
-          .lightning {
-            filter: blur(1px);
-            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+          .foliage {
             opacity: 0;
+            transform-origin: bottom center;
           }
           
-          .lightning-flash {
-            opacity: 0;
+          .sunray {
+            filter: blur(10px);
+            opacity: 0.6;
           }
           
-          .fog-base {
-            filter: blur(4px);
-            opacity: 0;
-          }
-          
-          .fog-wisp {
-            filter: blur(6px);
-            opacity: 0;
-          }
-          
-          .fog-tendril {
-            filter: blur(3px);
-            opacity: 0;
-          }
-          
-          .animate-effects .volcanic-glow {
+          .animate-effects .cloud {
             animation-play-state: running;
           }
           
-          .animate-effects .lava-flow {
+          .animate-effects .light-particle {
             animation-play-state: running;
           }
           
-          .animate-effects .ember {
-            animation-play-state: running;
-          }
-          
-          .animate-effects .castle-window {
+          .animate-effects .water-sparkle {
             animation-play-state: running;
           }
           
@@ -165,127 +124,90 @@ export function JungleModule3Image() {
             animation-play-state: running;
           }
           
-          .animate-effects .lightning {
+          .animate-effects .foliage {
             animation-play-state: running;
           }
           
-          .animate-effects .lightning-flash {
+          .animate-effects .sunray {
             animation-play-state: running;
           }
           
-          .animate-effects .fog-base {
-            animation-play-state: running;
+          @keyframes cloud-drift-1 {
+            0%, 100% { transform: translateX(0px) scale(1); opacity: 0.8; }
+            50% { transform: translateX(30px) scale(1.1); opacity: 0.6; }
           }
           
-          .animate-effects .fog-wisp {
-            animation-play-state: running;
+          @keyframes cloud-drift-2 {
+            0%, 100% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.7; }
+            50% { transform: translateX(-25px) translateY(-5px) scale(1.15); opacity: 0.5; }
           }
           
-          .animate-effects .fog-tendril {
-            animation-play-state: running;
+          @keyframes cloud-drift-3 {
+            0%, 100% { transform: translateX(0px) scale(1); opacity: 0.75; }
+            50% { transform: translateX(20px) scale(1.05); opacity: 0.55; }
           }
           
-          @keyframes volcanic-pulse {
-            0%, 100% { opacity: 0.6; transform: scale(1); }
-            50% { opacity: 0.9; transform: scale(1.2); }
+          @keyframes cloud-drift-4 {
+            0%, 100% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.65; }
+            50% { transform: translateX(35px) translateY(3px) scale(1.2); opacity: 0.45; }
           }
           
-          @keyframes volcanic-flicker {
-            0%, 100% { opacity: 0.7; transform: scale(1) rotate(-2deg); }
-            25% { opacity: 0.9; transform: scale(1.3) rotate(1deg); }
-            50% { opacity: 0.4; transform: scale(0.8) rotate(-1deg); }
-            75% { opacity: 0.8; transform: scale(1.1) rotate(2deg); }
-          }
-          
-          @keyframes volcanic-core {
-            0%, 100% { opacity: 0.5; transform: scale(1); }
-            33% { opacity: 0.8; transform: scale(1.4); }
-            66% { opacity: 0.3; transform: scale(0.7); }
-          }
-          
-          @keyframes lava-flow-1 {
-            0%, 100% { opacity: 0.6; transform: scaleY(1) skewX(2deg); }
-            50% { opacity: 0.9; transform: scaleY(1.2) skewX(-1deg); }
-          }
-          
-          @keyframes lava-flow-2 {
-            0%, 100% { opacity: 0.5; transform: scaleY(1) skewX(-1deg); }
-            60% { opacity: 0.8; transform: scaleY(1.3) skewX(2deg); }
-          }
-          
-          @keyframes lava-flow-3 {
-            0%, 100% { opacity: 0.4; transform: scaleY(1); }
-            40% { opacity: 0.7; transform: scaleY(1.4); }
-          }
-          
-          @keyframes ember-float-1 {
-            0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); opacity: 0.8; }
-            33% { transform: translateY(-30px) translateX(20px) rotate(120deg); opacity: 0.4; }
-            66% { transform: translateY(-15px) translateX(-10px) rotate(240deg); opacity: 1; }
-          }
-          
-          @keyframes ember-float-2 {
-            0%, 100% { transform: translateY(0px) translateX(0px) scale(1); opacity: 0.7; }
-            50% { transform: translateY(-40px) translateX(-15px) scale(1.5); opacity: 0.3; }
-          }
-          
-          @keyframes ember-float-3 {
-            0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.75; }
-            25% { transform: translateY(-25px) translateX(15px); opacity: 0.9; }
-            75% { transform: translateY(-35px) translateX(-8px); opacity: 0.2; }
-          }
-          
-          @keyframes ember-float-4 {
-            0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); opacity: 0.65; }
-            40% { transform: translateY(-20px) translateX(25px) rotate(180deg); opacity: 0.9; }
-            80% { transform: translateY(-45px) translateX(-12px) rotate(360deg); opacity: 0.1; }
-          }
-          
-          @keyframes ember-float-5 {
+          @keyframes light-drift-1 {
             0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.6; }
-            60% { transform: translateY(-50px) translateX(-20px); opacity: 0.4; }
+            33% { transform: translateY(20px) translateX(15px); opacity: 0.9; }
+            66% { transform: translateY(10px) translateX(-8px); opacity: 0.3; }
           }
           
-          @keyframes ember-float-6 {
+          @keyframes light-drift-2 {
             0%, 100% { transform: translateY(0px) translateX(0px) scale(1); opacity: 0.5; }
-            45% { transform: translateY(-18px) translateX(12px) scale(1.8); opacity: 0.8; }
-            85% { transform: translateY(-38px) translateX(-6px) scale(0.5); opacity: 0.2; }
+            50% { transform: translateY(25px) translateX(-12px) scale(1.3); opacity: 0.8; }
           }
           
-          @keyframes ember-float-7 {
+          @keyframes light-drift-3 {
+            0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.4; }
+            40% { transform: translateY(18px) translateX(20px); opacity: 0.7; }
+            80% { transform: translateY(5px) translateX(-5px); opacity: 0.2; }
+          }
+          
+          @keyframes light-drift-4 {
             0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.45; }
-            35% { transform: translateY(-28px) translateX(-18px); opacity: 0.7; }
-            70% { transform: translateY(-12px) translateX(8px); opacity: 0.9; }
+            60% { transform: translateY(22px) translateX(-18px); opacity: 0.75; }
           }
           
-          @keyframes ember-float-8 {
-            0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); opacity: 0.4; }
-            55% { transform: translateY(-32px) translateX(22px) rotate(270deg); opacity: 0.6; }
+          @keyframes light-drift-5 {
+            0%, 100% { transform: translateY(0px) translateX(0px) scale(1); opacity: 0.35; }
+            45% { transform: translateY(15px) translateX(10px) scale(1.5); opacity: 0.65; }
           }
           
-          @keyframes window-flicker-1 {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 0.9; }
+          @keyframes light-drift-6 {
+            0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.55; }
+            35% { transform: translateY(28px) translateX(-22px); opacity: 0.85; }
+            70% { transform: translateY(12px) translateX(8px); opacity: 0.25; }
           }
           
-          @keyframes window-flicker-2 {
-            0%, 100% { opacity: 0.5; }
-            60% { opacity: 0.8; }
+          @keyframes sparkle-1 {
+            0%, 100% { opacity: 0.2; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1.5); }
           }
           
-          @keyframes window-flicker-3 {
-            0%, 100% { opacity: 0.55; }
-            40% { opacity: 0.85; }
+          @keyframes sparkle-2 {
+            0%, 100% { opacity: 0.3; transform: scale(0.6) rotate(0deg); }
+            50% { opacity: 0.9; transform: scale(1.3) rotate(180deg); }
           }
           
-          @keyframes window-flicker-4 {
-            0%, 100% { opacity: 0.4; }
-            70% { opacity: 0.7; }
+          @keyframes sparkle-3 {
+            0%, 100% { opacity: 0.25; transform: scale(0.7); }
+            60% { opacity: 0.85; transform: scale(1.4); }
           }
           
-          @keyframes window-flicker-5 {
-            0%, 100% { opacity: 0.45; }
-            30% { opacity: 0.75; }
+          @keyframes sparkle-4 {
+            0%, 100% { opacity: 0.15; transform: scale(0.4); }
+            40% { opacity: 0.7; transform: scale(1.2); }
+          }
+          
+          @keyframes sparkle-5 {
+            0%, 100% { opacity: 0.2; transform: scale(0.5) rotate(0deg); }
+            50% { opacity: 0.8; transform: scale(1.6) rotate(360deg); }
           }
           
           @keyframes flag-wave {
@@ -295,206 +217,144 @@ export function JungleModule3Image() {
             75% { transform: skewX(4deg) scaleX(1.05); }
           }
           
-          @keyframes lightning-flash-1 {
-            0%, 95%, 100% { opacity: 0; transform: scaleY(0); }
-            96%, 98% { opacity: 1; transform: scaleY(1); }
-            97% { opacity: 0.5; transform: scaleY(0.8); }
+          @keyframes flag-wave-2 {
+            0%, 100% { transform: skewX(0deg) scaleX(1) rotate(-2deg); }
+            25% { transform: skewX(4deg) scaleX(1.08) rotate(1deg); }
+            50% { transform: skewX(-2deg) scaleX(0.92) rotate(-1deg); }
+            75% { transform: skewX(3deg) scaleX(1.03) rotate(0deg); }
           }
           
-          @keyframes lightning-flash-2 {
-            0%, 90%, 100% { opacity: 0; transform: scaleY(0) skewX(3deg); }
-            91%, 93% { opacity: 0.8; transform: scaleY(1) skewX(3deg); }
-            92% { opacity: 0.3; transform: scaleY(0.6) skewX(3deg); }
+          @keyframes flag-wave-3 {
+            0%, 100% { transform: skewX(0deg) scaleX(1) rotate(2deg); }
+            25% { transform: skewX(-4deg) scaleX(1.06) rotate(-1deg); }
+            50% { transform: skewX(3deg) scaleX(0.94) rotate(1deg); }
+            75% { transform: skewX(-2deg) scaleX(1.02) rotate(0deg); }
           }
           
-          @keyframes lightning-flash-3 {
-            0%, 88%, 100% { opacity: 0; transform: scaleY(0); }
-            89%, 91% { opacity: 0.6; transform: scaleY(1); }
-            90% { opacity: 0.2; transform: scaleY(0.7); }
+          @keyframes foliage-sway-1 {
+            0%, 100% { transform: rotate(0deg) scaleX(1); opacity: 0; }
+            50% { transform: rotate(2deg) scaleX(1.02); opacity: 0; }
           }
           
-          @keyframes sky-flash {
-            0%, 88%, 100% { opacity: 0; }
-            89%, 91% { opacity: 0.2; }
+          @keyframes foliage-sway-2 {
+            0%, 100% { transform: rotate(0deg) scaleX(1); opacity: 0; }
+            50% { transform: rotate(-2deg) scaleX(1.02); opacity: 0; }
           }
           
-          @keyframes volcanic-atmosphere {
+          @keyframes sunray-1 {
+            0%, 100% { opacity: 0.5; transform: scaleY(1) scaleX(1); }
+            50% { opacity: 0.8; transform: scaleY(1.1) scaleX(1.05); }
+          }
+          
+          @keyframes sunray-2 {
+            0%, 100% { opacity: 0.4; transform: scaleY(1) scaleX(1); }
+            50% { opacity: 0.7; transform: scaleY(1.15) scaleX(1.08); }
+          }
+          
+          @keyframes tropical-atmosphere {
             0%, 100% { opacity: 0.8; }
             50% { opacity: 1; }
           }
           
-          @keyframes dramatic-sky {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 0.9; }
+          @keyframes sunny-glow {
+            0%, 100% { opacity: 0.9; }
+            50% { opacity: 1; }
           }
           
-          @keyframes fog-drift-base {
-            0%, 100% { opacity: 0.25; }
-            50% { opacity: 0.4; }
+          .animate-cloud-drift-1 {
+            animation: cloud-drift-1 40s ease-in-out infinite;
           }
           
-          @keyframes fog-drift-1 {
-            0%, 100% { opacity: 0; transform: translateX(0px) scale(1); }
-            50% { opacity: 0.3; transform: translateX(30px) scale(1.2); }
+          .animate-cloud-drift-2 {
+            animation: cloud-drift-2 50s ease-in-out infinite 10s;
           }
           
-          @keyframes fog-drift-2 {
-            0%, 100% { opacity: 0; transform: translateX(0px) translateY(0px) scale(1); }
-            50% { opacity: 0.25; transform: translateX(-25px) translateY(-3px) scale(1.1); }
+          .animate-cloud-drift-3 {
+            animation: cloud-drift-3 45s ease-in-out infinite 20s;
           }
           
-          @keyframes fog-drift-3 {
-            0%, 100% { opacity: 0; transform: translateX(0px) scale(1); }
-            50% { opacity: 0.35; transform: translateX(20px) scale(1.3); }
+          .animate-cloud-drift-4 {
+            animation: cloud-drift-4 55s ease-in-out infinite 15s;
           }
           
-          @keyframes fog-drift-4 {
-            0%, 100% { opacity: 0; transform: translateX(0px) translateY(0px) scale(1); }
-            50% { opacity: 0.22; transform: translateX(-15px) translateY(2px) scale(1.1); }
+          .animate-light-drift-1 {
+            animation: light-drift-1 8s ease-in-out infinite;
           }
           
-          @keyframes fog-tendril-1 {
-            0%, 100% { opacity: 0; transform: translateX(0px) scaleX(1); }
-            33% { opacity: 0.2; transform: translateX(15px) scaleX(1.4); }
-            66% { opacity: 0.15; transform: translateX(8px) scaleX(0.8); }
+          .animate-light-drift-2 {
+            animation: light-drift-2 10s ease-in-out infinite 2s;
           }
           
-          @keyframes fog-tendril-2 {
-            0%, 100% { opacity: 0; transform: translateX(0px) translateY(0px) scaleX(1); }
-            40% { opacity: 0.18; transform: translateX(-12px) translateY(-2px) scaleX(1.3); }
-            80% { opacity: 0.12; transform: translateX(-5px) translateY(-1px) scaleX(0.9); }
+          .animate-light-drift-3 {
+            animation: light-drift-3 9s ease-in-out infinite 4s;
           }
           
-          .animate-volcanic-pulse {
-            animation: volcanic-pulse 4s ease-in-out infinite;
+          .animate-light-drift-4 {
+            animation: light-drift-4 11s ease-in-out infinite 1s;
           }
           
-          .animate-volcanic-flicker {
-            animation: volcanic-flicker 3s ease-in-out infinite 0.5s;
+          .animate-light-drift-5 {
+            animation: light-drift-5 12s ease-in-out infinite 5s;
           }
           
-          .animate-volcanic-core {
-            animation: volcanic-core 2.5s ease-in-out infinite 1s;
+          .animate-light-drift-6 {
+            animation: light-drift-6 7s ease-in-out infinite 3s;
           }
           
-          .animate-lava-flow-1 {
-            animation: lava-flow-1 5s ease-in-out infinite;
+          .animate-sparkle-1 {
+            animation: sparkle-1 3s ease-in-out infinite;
           }
           
-          .animate-lava-flow-2 {
-            animation: lava-flow-2 6s ease-in-out infinite 2s;
+          .animate-sparkle-2 {
+            animation: sparkle-2 4s ease-in-out infinite 1s;
           }
           
-          .animate-lava-flow-3 {
-            animation: lava-flow-3 4.5s ease-in-out infinite 3s;
+          .animate-sparkle-3 {
+            animation: sparkle-3 3.5s ease-in-out infinite 2s;
           }
           
-          .animate-ember-float-1 {
-            animation: ember-float-1 12s ease-in-out infinite;
+          .animate-sparkle-4 {
+            animation: sparkle-4 4.5s ease-in-out infinite 0.5s;
           }
           
-          .animate-ember-float-2 {
-            animation: ember-float-2 14s ease-in-out infinite 3s;
-          }
-          
-          .animate-ember-float-3 {
-            animation: ember-float-3 10s ease-in-out infinite 6s;
-          }
-          
-          .animate-ember-float-4 {
-            animation: ember-float-4 16s ease-in-out infinite 2s;
-          }
-          
-          .animate-ember-float-5 {
-            animation: ember-float-5 13s ease-in-out infinite 8s;
-          }
-          
-          .animate-ember-float-6 {
-            animation: ember-float-6 11s ease-in-out infinite 4s;
-          }
-          
-          .animate-ember-float-7 {
-            animation: ember-float-7 15s ease-in-out infinite 7s;
-          }
-          
-          .animate-ember-float-8 {
-            animation: ember-float-8 9s ease-in-out infinite 5s;
-          }
-          
-          .animate-window-flicker-1 {
-            animation: window-flicker-1 6s ease-in-out infinite;
-          }
-          
-          .animate-window-flicker-2 {
-            animation: window-flicker-2 7s ease-in-out infinite 2s;
-          }
-          
-          .animate-window-flicker-3 {
-            animation: window-flicker-3 5.5s ease-in-out infinite 4s;
-          }
-          
-          .animate-window-flicker-4 {
-            animation: window-flicker-4 8s ease-in-out infinite 1s;
-          }
-          
-          .animate-window-flicker-5 {
-            animation: window-flicker-5 6.5s ease-in-out infinite 3s;
+          .animate-sparkle-5 {
+            animation: sparkle-5 3.8s ease-in-out infinite 1.5s;
           }
           
           .animate-flag-wave {
             animation: flag-wave 4s ease-in-out infinite;
           }
           
-          .animate-lightning-flash-1 {
-            animation: lightning-flash-1 15s linear infinite;
+          .animate-flag-wave-2 {
+            animation: flag-wave-2 4.5s ease-in-out infinite 1s;
           }
           
-          .animate-lightning-flash-2 {
-            animation: lightning-flash-2 18s linear infinite 5s;
+          .animate-flag-wave-3 {
+            animation: flag-wave-3 4.2s ease-in-out infinite 2s;
           }
           
-          .animate-lightning-flash-3 {
-            animation: lightning-flash-3 20s linear infinite 10s;
+          .animate-foliage-sway-1 {
+            animation: foliage-sway-1 6s ease-in-out infinite;
           }
           
-          .animate-sky-flash {
-            animation: sky-flash 18s linear infinite 5s;
+          .animate-foliage-sway-2 {
+            animation: foliage-sway-2 7s ease-in-out infinite 1s;
           }
           
-          .animate-volcanic-atmosphere {
-            animation: volcanic-atmosphere 10s ease-in-out infinite;
+          .animate-sunray-1 {
+            animation: sunray-1 12s ease-in-out infinite;
           }
           
-          .animate-dramatic-sky {
-            animation: dramatic-sky 15s ease-in-out infinite;
+          .animate-sunray-2 {
+            animation: sunray-2 15s ease-in-out infinite 5s;
           }
           
-          .animate-fog-drift-base {
-            animation: fog-drift-base 12s ease-in-out infinite;
+          .animate-tropical-atmosphere {
+            animation: tropical-atmosphere 20s ease-in-out infinite;
           }
           
-          .animate-fog-drift-1 {
-            animation: fog-drift-1 20s ease-in-out infinite;
-          }
-          
-          .animate-fog-drift-2 {
-            animation: fog-drift-2 25s ease-in-out infinite 5s;
-          }
-          
-          .animate-fog-drift-3 {
-            animation: fog-drift-3 18s ease-in-out infinite 8s;
-          }
-          
-          .animate-fog-drift-4 {
-            animation: fog-drift-4 22s ease-in-out infinite 3s;
-          }
-          
-          .animate-fog-tendril-1 {
-            animation: fog-tendril-1 15s ease-in-out infinite 2s;
-          }
-          
-          .animate-fog-tendril-2 {
-            animation: fog-tendril-2 17s ease-in-out infinite 6s;
+          .animate-sunny-glow {
+            animation: sunny-glow 25s ease-in-out infinite;
           }
         `}</style>
       </div>

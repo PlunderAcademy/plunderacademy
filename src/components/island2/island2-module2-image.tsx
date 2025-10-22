@@ -18,54 +18,50 @@ export function Island2Module2Image() {
         
         {/* Animated overlay effects */}
         <div className="absolute inset-0 animate-effects">
-          {/* Igloo Window Glows - Left Side */}
+          {/* Igloo Doorway Glows - Left Side */}
           <div className="absolute inset-0">
-            <div className="absolute top-[42%] left-[8%] w-[4px] h-[6px] bg-orange-300/60 rounded igloo-window animate-window-glow-1"></div>
-            <div className="absolute top-[48%] left-[6%] w-[3px] h-[5px] bg-yellow-300/55 rounded igloo-window animate-window-glow-2"></div>
-            <div className="absolute top-[52%] left-[12%] w-[4px] h-[6px] bg-orange-300/58 rounded igloo-window animate-window-glow-3"></div>
-            <div className="absolute top-[58%] left-[5%] w-[3px] h-[5px] bg-yellow-200/50 rounded igloo-window animate-window-glow-4"></div>
-            <div className="absolute top-[65%] left-[10%] w-[4px] h-[6px] bg-orange-300/62 rounded igloo-window animate-window-glow-5"></div>
+            <div className="absolute top-[60%] left-[8%] w-[6px] h-[10px] bg-orange-400/90 rounded igloo-door animate-door-glow-1"></div>
+            <div className="absolute top-[52%] left-[18%] w-[5px] h-[9px] bg-amber-400/85 rounded igloo-door animate-door-glow-2"></div>
+            <div className="absolute top-[65%] left-[2%] w-[5px] h-[9px] bg-yellow-400/88 rounded igloo-door animate-door-glow-3"></div>
           </div>
 
-          {/* Igloo Window Glows - Center */}
+          {/* Igloo Doorway Glows - Center Background */}
           <div className="absolute inset-0">
-            <div className="absolute top-[35%] left-[40%] w-[4px] h-[6px] bg-yellow-300/65 rounded igloo-window animate-window-glow-6"></div>
-            <div className="absolute top-[38%] left-[48%] w-[5px] h-[7px] bg-orange-300/68 rounded igloo-window animate-window-glow-7"></div>
-            <div className="absolute top-[42%] left-[55%] w-[4px] h-[6px] bg-yellow-300/60 rounded igloo-window animate-window-glow-8"></div>
-            <div className="absolute top-[48%] left-[45%] w-[3px] h-[5px] bg-orange-200/55 rounded igloo-window animate-window-glow-9"></div>
-            <div className="absolute top-[52%] left-[52%] w-[4px] h-[6px] bg-yellow-300/63 rounded igloo-window animate-window-glow-10"></div>
+            <div className="absolute top-[48%] left-[28%] w-[4px] h-[7px] bg-orange-300/80 rounded igloo-door animate-door-glow-4"></div>
+            <div className="absolute top-[50%] left-[38%] w-[4px] h-[7px] bg-amber-300/75 rounded igloo-door animate-door-glow-5"></div>
+            <div className="absolute top-[48%] left-[62%] w-[4px] h-[7px] bg-yellow-300/78 rounded igloo-door animate-door-glow-6"></div>
+            <div className="absolute top-[50%] left-[72%] w-[4px] h-[7px] bg-orange-300/76 rounded igloo-door animate-door-glow-7"></div>
           </div>
 
-          {/* Igloo Window Glows - Right Side */}
+          {/* Igloo Doorway Glows - Right Side */}
           <div className="absolute inset-0">
-            <div className="absolute top-[40%] right-[8%] w-[4px] h-[6px] bg-orange-300/60 rounded igloo-window animate-window-glow-11"></div>
-            <div className="absolute top-[45%] right-[15%] w-[3px] h-[5px] bg-yellow-300/57 rounded igloo-window animate-window-glow-12"></div>
-            <div className="absolute top-[50%] right-[10%] w-[4px] h-[6px] bg-orange-300/62 rounded igloo-window animate-window-glow-13"></div>
-            <div className="absolute top-[56%] right-[18%] w-[3px] h-[5px] bg-yellow-200/54 rounded igloo-window animate-window-glow-14"></div>
-            <div className="absolute top-[62%] right-[12%] w-[4px] h-[6px] bg-orange-300/59 rounded igloo-window animate-window-glow-15"></div>
+            <div className="absolute top-[58%] right-[6%] w-[6px] h-[10px] bg-orange-400/92 rounded igloo-door animate-door-glow-8"></div>
+            <div className="absolute top-[52%] right-[16%] w-[5px] h-[9px] bg-amber-400/87 rounded igloo-door animate-door-glow-9"></div>
+            <div className="absolute top-[62%] right-[12%] w-[5px] h-[9px] bg-yellow-400/85 rounded igloo-door animate-door-glow-10"></div>
           </div>
 
-          {/* Central Hall Large Windows */}
+          {/* Central Palace Arched Windows */}
           <div className="absolute inset-0">
-            <div className="absolute top-[42%] left-[30%] w-[5px] h-[7px] bg-orange-300/70 rounded hall-window animate-hall-glow-1"></div>
-            <div className="absolute top-[42%] left-[35%] w-[5px] h-[7px] bg-yellow-300/68 rounded hall-window animate-hall-glow-2"></div>
-            <div className="absolute top-[45%] left-[32%] w-[4px] h-[6px] bg-orange-300/65 rounded hall-window animate-hall-glow-3"></div>
-          </div>
-
-          {/* Campfire Spots */}
-          <div className="absolute inset-0">
-            {/* Center campfire */}
-            <div className="absolute top-[72%] left-[50%] w-[12px] h-[8px] bg-orange-400/75 rounded-full campfire animate-campfire-flicker-1"></div>
-            <div className="absolute top-[73%] left-[50.5%] w-[8px] h-[6px] bg-yellow-300/85 rounded-full campfire animate-campfire-flicker-2"></div>
-            <div className="absolute top-[74%] left-[51%] w-[4px] h-[3px] bg-yellow-100/90 rounded-full campfire animate-campfire-core-1"></div>
+            {/* Main large arched windows */}
+            <div className="absolute top-[48%] left-[46%] w-[7px] h-[12px] bg-yellow-300/95 rounded-t-full palace-window animate-palace-glow-1"></div>
+            <div className="absolute top-[48%] left-[50%] w-[8px] h-[13px] bg-orange-300/100 rounded-t-full palace-window animate-palace-glow-2"></div>
+            <div className="absolute top-[48%] left-[54%] w-[7px] h-[12px] bg-yellow-300/95 rounded-t-full palace-window animate-palace-glow-3"></div>
             
-            {/* Left side campfire */}
-            <div className="absolute top-[78%] left-[25%] w-[10px] h-[7px] bg-orange-400/70 rounded-full campfire animate-campfire-flicker-3"></div>
-            <div className="absolute top-[79%] left-[25.5%] w-[6px] h-[5px] bg-yellow-300/80 rounded-full campfire animate-campfire-core-2"></div>
+            {/* Side windows */}
+            <div className="absolute top-[50%] left-[43%] w-[5px] h-[9px] bg-amber-300/85 rounded-t-full palace-window animate-palace-glow-4"></div>
+            <div className="absolute top-[50%] left-[57%] w-[5px] h-[9px] bg-amber-300/85 rounded-t-full palace-window animate-palace-glow-5"></div>
+          </div>
+
+          {/* Path Lanterns */}
+          <div className="absolute inset-0">
+            {/* Front path lanterns */}
+            <div className="absolute top-[72%] left-[48%] w-[4px] h-[8px] bg-cyan-200/95 rounded lantern-light animate-lantern-glow-1"></div>
+            <div className="absolute top-[72%] left-[52%] w-[4px] h-[8px] bg-cyan-200/95 rounded lantern-light animate-lantern-glow-2"></div>
+            <div className="absolute top-[68%] left-[47%] w-[3px] h-[7px] bg-cyan-100/90 rounded lantern-light animate-lantern-glow-3"></div>
+            <div className="absolute top-[68%] left-[53%] w-[3px] h-[7px] bg-cyan-100/90 rounded lantern-light animate-lantern-glow-4"></div>
             
-            {/* Right side campfire */}
-            <div className="absolute top-[76%] right-[20%] w-[10px] h-[7px] bg-orange-400/72 rounded-full campfire animate-campfire-flicker-4"></div>
-            <div className="absolute top-[77%] right-[19.5%] w-[6px] h-[5px] bg-yellow-300/82 rounded-full campfire animate-campfire-core-3"></div>
+            {/* Cabin doorway - bottom left */}
+            <div className="absolute top-[82%] left-[6%] w-[8px] h-[12px] bg-orange-400/100 rounded cabin-door animate-cabin-glow"></div>
           </div>
 
           {/* Chimney Smoke Plumes */}
@@ -84,71 +80,83 @@ export function Island2Module2Image() {
             <div className="absolute top-[32%] right-[18%] w-[13px] h-[13px] bg-gray-400/23 rounded-full chimney-smoke animate-smoke-rise-7"></div>
           </div>
 
-          {/* Falling Snow Particles */}
+          {/* Falling Snow Particles - Bold & Visible */}
           <div className="absolute inset-0">
             {/* Large snowflakes */}
-            <div className="absolute top-[10%] left-[15%] w-[3px] h-[3px] bg-white/60 rounded-full snowflake animate-snow-fall-1"></div>
-            <div className="absolute top-[5%] left-[35%] w-[4px] h-[4px] bg-white/65 rounded-full snowflake animate-snow-fall-2"></div>
-            <div className="absolute top-[8%] left-[55%] w-[3px] h-[3px] bg-white/58 rounded-full snowflake animate-snow-fall-3"></div>
-            <div className="absolute top-[12%] left-[75%] w-[4px] h-[4px] bg-white/62 rounded-full snowflake animate-snow-fall-4"></div>
-            <div className="absolute top-[6%] left-[85%] w-[3px] h-[3px] bg-white/60 rounded-full snowflake animate-snow-fall-5"></div>
+            <div className="absolute top-[10%] left-[15%] w-[5px] h-[5px] bg-white/95 rounded-full snowflake animate-snow-fall-1"></div>
+            <div className="absolute top-[5%] left-[35%] w-[6px] h-[6px] bg-white/100 rounded-full snowflake animate-snow-fall-2"></div>
+            <div className="absolute top-[8%] left-[55%] w-[5px] h-[5px] bg-white/92 rounded-full snowflake animate-snow-fall-3"></div>
+            <div className="absolute top-[12%] left-[75%] w-[6px] h-[6px] bg-white/98 rounded-full snowflake animate-snow-fall-4"></div>
+            <div className="absolute top-[6%] left-[85%] w-[5px] h-[5px] bg-white/95 rounded-full snowflake animate-snow-fall-5"></div>
             
             {/* Medium snowflakes */}
-            <div className="absolute top-[15%] left-[20%] w-[2px] h-[2px] bg-white/50 rounded-full snowflake animate-snow-fall-6"></div>
-            <div className="absolute top-[10%] left-[45%] w-[2px] h-[2px] bg-white/52 rounded-full snowflake animate-snow-fall-7"></div>
-            <div className="absolute top-[18%] left-[65%] w-[2px] h-[2px] bg-white/48 rounded-full snowflake animate-snow-fall-8"></div>
-            <div className="absolute top-[12%] left-[80%] w-[2px] h-[2px] bg-white/55 rounded-full snowflake animate-snow-fall-9"></div>
+            <div className="absolute top-[15%] left-[20%] w-[4px] h-[4px] bg-white/88 rounded-full snowflake animate-snow-fall-6"></div>
+            <div className="absolute top-[10%] left-[45%] w-[4px] h-[4px] bg-white/90 rounded-full snowflake animate-snow-fall-7"></div>
+            <div className="absolute top-[18%] left-[65%] w-[4px] h-[4px] bg-white/86 rounded-full snowflake animate-snow-fall-8"></div>
+            <div className="absolute top-[12%] left-[80%] w-[4px] h-[4px] bg-white/92 rounded-full snowflake animate-snow-fall-9"></div>
             
             {/* Small snowflakes */}
-            <div className="absolute top-[8%] left-[25%] w-[1px] h-[1px] bg-white/45 rounded-full snowflake animate-snow-fall-10"></div>
-            <div className="absolute top-[14%] left-[50%] w-[1px] h-[1px] bg-white/42 rounded-full snowflake animate-snow-fall-11"></div>
-            <div className="absolute top-[11%] left-[70%] w-[1px] h-[1px] bg-white/48 rounded-full snowflake animate-snow-fall-12"></div>
+            <div className="absolute top-[8%] left-[25%] w-[3px] h-[3px] bg-white/82 rounded-full snowflake animate-snow-fall-10"></div>
+            <div className="absolute top-[14%] left-[50%] w-[3px] h-[3px] bg-white/80 rounded-full snowflake animate-snow-fall-11"></div>
+            <div className="absolute top-[11%] left-[70%] w-[3px] h-[3px] bg-white/85 rounded-full snowflake animate-snow-fall-12"></div>
+            
+            {/* Additional snow layers */}
+            <div className="absolute top-[7%] left-[10%] w-[4px] h-[4px] bg-white/88 rounded-full snowflake animate-snow-fall-13"></div>
+            <div className="absolute top-[16%] left-[60%] w-[5px] h-[5px] bg-white/93 rounded-full snowflake animate-snow-fall-14"></div>
+            <div className="absolute top-[9%] left-[90%] w-[4px] h-[4px] bg-white/90 rounded-full snowflake animate-snow-fall-15"></div>
           </div>
 
-          {/* Ice/Snow Sparkles on Mountains */}
+          {/* Ice/Snow Sparkles on Mountains - More Visible */}
           <div className="absolute inset-0">
-            <div className="absolute top-[18%] left-[30%] w-[2px] h-[2px] bg-cyan-200/85 rounded-full ice-sparkle animate-mountain-sparkle-1"></div>
-            <div className="absolute top-[22%] left-[50%] w-[3px] h-[3px] bg-white/90 rounded-full ice-sparkle animate-mountain-sparkle-2"></div>
-            <div className="absolute top-[20%] left-[65%] w-[2px] h-[2px] bg-blue-100/80 rounded-full ice-sparkle animate-mountain-sparkle-3"></div>
-            <div className="absolute top-[25%] left-[40%] w-[2px] h-[2px] bg-cyan-100/85 rounded-full ice-sparkle animate-mountain-sparkle-4"></div>
-            <div className="absolute top-[24%] left-[75%] w-[2px] h-[2px] bg-white/88 rounded-full ice-sparkle animate-mountain-sparkle-5"></div>
+            <div className="absolute top-[28%] left-[15%] w-[4px] h-[4px] bg-cyan-300/100 rounded-full ice-sparkle animate-mountain-sparkle-1"></div>
+            <div className="absolute top-[26%] left-[30%] w-[4px] h-[4px] bg-white/100 rounded-full ice-sparkle animate-mountain-sparkle-2"></div>
+            <div className="absolute top-[24%] left-[50%] w-[5px] h-[5px] bg-blue-200/100 rounded-full ice-sparkle animate-mountain-sparkle-3"></div>
+            <div className="absolute top-[27%] left-[68%] w-[4px] h-[4px] bg-cyan-200/100 rounded-full ice-sparkle animate-mountain-sparkle-4"></div>
+            <div className="absolute top-[25%] left-[82%] w-[4px] h-[4px] bg-white/100 rounded-full ice-sparkle animate-mountain-sparkle-5"></div>
+            <div className="absolute top-[29%] left-[40%] w-[3px] h-[3px] bg-cyan-100/100 rounded-full ice-sparkle animate-mountain-sparkle-6"></div>
           </div>
-
-          {/* Village Activity Warmth Glow */}
+          
+          {/* Northern Lights / Aurora Borealis */}
           <div className="absolute inset-0">
-            <div className="absolute top-[65%] left-[35%] w-[40px] h-[25px] bg-orange-200/12 rounded-full activity-glow animate-activity-warmth-1"></div>
-            <div className="absolute top-[70%] left-[55%] w-[35px] h-[20px] bg-yellow-200/10 rounded-full activity-glow animate-activity-warmth-2"></div>
-            <div className="absolute top-[68%] left-[20%] w-[30px] h-[18px] bg-orange-200/11 rounded-full activity-glow animate-activity-warmth-3"></div>
-          </div>
-
-          {/* Cold Wind Effect */}
-          <div className="absolute inset-0">
-            <div className="absolute top-[40%] left-[0%] w-[80px] h-[20px] bg-white/8 rounded-full wind-effect animate-wind-drift-1"></div>
-            <div className="absolute top-[35%] right-[0%] w-[70px] h-[18px] bg-cyan-100/7 rounded-full wind-effect animate-wind-drift-2"></div>
-            <div className="absolute top-[50%] left-[0%] w-[60px] h-[15px] bg-white/6 rounded-full wind-effect animate-wind-drift-3"></div>
+            {/* Aurora waves */}
+            <div className="absolute top-[8%] left-[10%] w-[280px] h-[90px] bg-gradient-to-r from-emerald-400/35 via-cyan-400/45 to-blue-400/28 aurora animate-aurora-1"></div>
+            <div className="absolute top-[12%] right-[8%] w-[260px] h-[85px] bg-gradient-to-l from-cyan-400/38 via-emerald-300/42 to-transparent aurora animate-aurora-2"></div>
+            <div className="absolute top-[6%] left-[35%] w-[240px] h-[75px] bg-gradient-to-r from-transparent via-emerald-400/40 to-cyan-300/32 aurora animate-aurora-3"></div>
+            
+            {/* Aurora sparkles */}
+            <div className="absolute top-[10%] left-[18%] w-[5px] h-[5px] bg-emerald-300/100 rounded-full aurora-sparkle animate-aurora-sparkle-1"></div>
+            <div className="absolute top-[14%] left-[45%] w-[5px] h-[5px] bg-cyan-200/100 rounded-full aurora-sparkle animate-aurora-sparkle-2"></div>
+            <div className="absolute top-[8%] left-[72%] w-[5px] h-[5px] bg-emerald-400/100 rounded-full aurora-sparkle animate-aurora-sparkle-3"></div>
+            <div className="absolute top-[16%] right-[20%] w-[5px] h-[5px] bg-cyan-300/100 rounded-full aurora-sparkle animate-aurora-sparkle-4"></div>
+            <div className="absolute top-[12%] left-[55%] w-[4px] h-[4px] bg-emerald-200/100 rounded-full aurora-sparkle animate-aurora-sparkle-5"></div>
           </div>
 
           {/* Arctic Atmospheric Glow */}
-          <div className="absolute inset-0 bg-gradient-to-b from-cyan-200/4 via-blue-100/3 to-transparent animate-arctic-atmosphere"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-cyan-200/5 via-blue-100/3 to-transparent animate-arctic-atmosphere"></div>
           
           {/* Village Warmth Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-orange-100/8 via-transparent to-transparent animate-village-warmth"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-orange-100/12 via-transparent to-transparent animate-village-warmth"></div>
         </div>
         
         <style jsx>{`
-          .igloo-window {
-            filter: blur(4px);
-            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
+          .igloo-door {
+            filter: blur(10px);
+            box-shadow: 0 0 40px currentColor, 0 0 80px currentColor, 0 0 120px currentColor, 0 0 160px currentColor;
           }
           
-          .hall-window {
-            filter: blur(5px);
-            box-shadow: 0 0 25px currentColor, 0 0 50px currentColor, 0 0 75px currentColor;
+          .palace-window {
+            filter: blur(12px);
+            box-shadow: 0 0 50px currentColor, 0 0 100px currentColor, 0 0 150px currentColor, 0 0 200px currentColor;
           }
           
-          .campfire {
-            filter: blur(6px);
-            box-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 0 90px currentColor;
+          .lantern-light {
+            filter: blur(8px);
+            box-shadow: 0 0 35px currentColor, 0 0 70px currentColor, 0 0 105px currentColor, 0 0 140px currentColor;
+          }
+          
+          .cabin-door {
+            filter: blur(11px);
+            box-shadow: 0 0 45px currentColor, 0 0 90px currentColor, 0 0 135px currentColor, 0 0 180px currentColor;
           }
           
           .chimney-smoke {
@@ -157,33 +165,38 @@ export function Island2Module2Image() {
           }
           
           .snowflake {
-            box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
-            filter: blur(0.7px);
+            box-shadow: 0 0 25px currentColor, 0 0 50px currentColor, 0 0 75px currentColor;
+            filter: blur(1px);
           }
           
           .ice-sparkle {
-            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
-            filter: blur(0.3px);
+            box-shadow: 0 0 40px currentColor, 0 0 80px currentColor, 0 0 120px currentColor, 0 0 160px currentColor;
+            filter: blur(0.5px);
           }
           
-          .activity-glow {
-            filter: blur(22px);
+          .aurora {
+            filter: blur(45px);
+            opacity: 0.35;
           }
           
-          .wind-effect {
-            filter: blur(18px);
-            opacity: 0;
+          .aurora-sparkle {
+            box-shadow: 0 0 50px currentColor, 0 0 100px currentColor, 0 0 150px currentColor, 0 0 200px currentColor;
+            filter: blur(0.6px);
           }
           
-          .animate-effects .igloo-window {
+          .animate-effects .igloo-door {
             animation-play-state: running;
           }
           
-          .animate-effects .hall-window {
+          .animate-effects .palace-window {
             animation-play-state: running;
           }
           
-          .animate-effects .campfire {
+          .animate-effects .lantern-light {
+            animation-play-state: running;
+          }
+          
+          .animate-effects .cabin-door {
             animation-play-state: running;
           }
           
@@ -199,146 +212,103 @@ export function Island2Module2Image() {
             animation-play-state: running;
           }
           
-          .animate-effects .activity-glow {
+          .animate-effects .aurora {
             animation-play-state: running;
           }
           
-          .animate-effects .wind-effect {
+          .animate-effects .aurora-sparkle {
             animation-play-state: running;
           }
           
-          @keyframes window-glow-1 {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
+          @keyframes door-glow-1 { 0%, 100% { opacity: 0.9; } 50% { opacity: 1; } }
+          @keyframes door-glow-2 { 0%, 100% { opacity: 0.85; } 55% { opacity: 1; } }
+          @keyframes door-glow-3 { 0%, 100% { opacity: 0.88; } 48% { opacity: 1; } }
+          @keyframes door-glow-4 { 0%, 100% { opacity: 0.8; } 52% { opacity: 1; } }
+          @keyframes door-glow-5 { 0%, 100% { opacity: 0.75; } 60% { opacity: 1; } }
+          @keyframes door-glow-6 { 0%, 100% { opacity: 0.78; } 45% { opacity: 1; } }
+          @keyframes door-glow-7 { 0%, 100% { opacity: 0.76; } 58% { opacity: 1; } }
+          @keyframes door-glow-8 { 0%, 100% { opacity: 0.92; } 50% { opacity: 1; } }
+          @keyframes door-glow-9 { 0%, 100% { opacity: 0.87; } 54% { opacity: 1; } }
+          @keyframes door-glow-10 { 0%, 100% { opacity: 0.85; } 47% { opacity: 1; } }
+          
+          @keyframes palace-glow-1 {
+            0%, 100% { opacity: 0.95; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
           }
           
-          @keyframes window-glow-2 {
-            0%, 100% { opacity: 0.75; }
-            60% { opacity: 1; }
+          @keyframes palace-glow-2 {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.08); }
           }
           
-          @keyframes window-glow-3 {
-            0%, 100% { opacity: 0.78; }
-            40% { opacity: 1; }
+          @keyframes palace-glow-3 {
+            0%, 100% { opacity: 0.95; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
           }
           
-          @keyframes window-glow-4 {
-            0%, 100% { opacity: 0.7; }
-            70% { opacity: 0.98; }
+          @keyframes palace-glow-4 {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            55% { opacity: 1; transform: scale(1.04); }
           }
           
-          @keyframes window-glow-5 {
-            0%, 100% { opacity: 0.82; }
-            45% { opacity: 1; }
+          @keyframes palace-glow-5 {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            55% { opacity: 1; transform: scale(1.04); }
           }
           
-          @keyframes window-glow-6 {
-            0%, 100% { opacity: 0.85; }
-            55% { opacity: 1; }
+          @keyframes lantern-glow-1 { 0%, 100% { opacity: 0.95; } 50% { opacity: 1; } }
+          @keyframes lantern-glow-2 { 0%, 100% { opacity: 0.95; } 55% { opacity: 1; } }
+          @keyframes lantern-glow-3 { 0%, 100% { opacity: 0.9; } 48% { opacity: 1; } }
+          @keyframes lantern-glow-4 { 0%, 100% { opacity: 0.9; } 52% { opacity: 1; } }
+          
+          @keyframes cabin-glow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.06); }
           }
           
-          @keyframes window-glow-7 {
-            0%, 100% { opacity: 0.88; }
-            50% { opacity: 1; }
+          @keyframes aurora-1 {
+            0%, 100% { opacity: 0.35; transform: translateY(0px) scaleY(1) scaleX(1); }
+            50% { opacity: 0.75; transform: translateY(-8px) scaleY(1.3) scaleX(1.1); }
           }
           
-          @keyframes window-glow-8 {
-            0%, 100% { opacity: 0.8; }
-            65% { opacity: 1; }
+          @keyframes aurora-2 {
+            0%, 100% { opacity: 0.38; transform: translateY(0px) scaleY(1) scaleX(1); }
+            60% { opacity: 0.72; transform: translateY(-6px) scaleY(1.25) scaleX(1.08); }
           }
           
-          @keyframes window-glow-9 {
-            0%, 100% { opacity: 0.75; }
-            48% { opacity: 1; }
+          @keyframes aurora-3 {
+            0%, 100% { opacity: 0.4; transform: translateY(0px) scaleY(1) scaleX(1); }
+            55% { opacity: 0.78; transform: translateY(-10px) scaleY(1.35) scaleX(1.12); }
           }
           
-          @keyframes window-glow-10 {
-            0%, 100% { opacity: 0.83; }
-            58% { opacity: 1; }
+          @keyframes aurora-sparkle-1 {
+            0%, 70%, 100% { opacity: 0; transform: scale(1); }
+            75%, 85% { opacity: 1; transform: scale(3.5); }
+            80% { opacity: 0.9; transform: scale(3); }
           }
           
-          @keyframes window-glow-11 {
-            0%, 100% { opacity: 0.8; }
-            52% { opacity: 1; }
+          @keyframes aurora-sparkle-2 {
+            0%, 65%, 100% { opacity: 0; transform: scale(1); }
+            70%, 80% { opacity: 1; transform: scale(3.6); }
+            75% { opacity: 0.95; transform: scale(3.1); }
           }
           
-          @keyframes window-glow-12 {
-            0%, 100% { opacity: 0.77; }
-            62% { opacity: 1; }
+          @keyframes aurora-sparkle-3 {
+            0%, 75%, 100% { opacity: 0; transform: scale(1); }
+            80%, 90% { opacity: 1; transform: scale(3.4); }
+            85% { opacity: 0.9; transform: scale(2.9); }
           }
           
-          @keyframes window-glow-13 {
-            0%, 100% { opacity: 0.82; }
-            47% { opacity: 1; }
+          @keyframes aurora-sparkle-4 {
+            0%, 80%, 100% { opacity: 0; transform: scale(1); }
+            85%, 95% { opacity: 1; transform: scale(3.5); }
+            90% { opacity: 0.9; transform: scale(3); }
           }
           
-          @keyframes window-glow-14 {
-            0%, 100% { opacity: 0.74; }
-            68% { opacity: 0.99; }
-          }
-          
-          @keyframes window-glow-15 {
-            0%, 100% { opacity: 0.79; }
-            54% { opacity: 1; }
-          }
-          
-          @keyframes hall-glow-1 {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 0.95; }
-          }
-          
-          @keyframes hall-glow-2 {
-            0%, 100% { opacity: 0.68; }
-            60% { opacity: 0.92; }
-          }
-          
-          @keyframes hall-glow-3 {
-            0%, 100% { opacity: 0.65; }
-            55% { opacity: 0.9; }
-          }
-          
-          @keyframes campfire-flicker-1 {
-            0%, 100% { opacity: 0.75; transform: scale(1); }
-            25% { opacity: 0.95; transform: scale(1.2); }
-            50% { opacity: 0.55; transform: scale(0.9); }
-            75% { opacity: 0.85; transform: scale(1.1); }
-          }
-          
-          @keyframes campfire-flicker-2 {
-            0%, 100% { opacity: 0.85; transform: scale(1) rotate(0deg); }
-            30% { opacity: 1; transform: scale(1.3) rotate(5deg); }
-            60% { opacity: 0.5; transform: scale(0.8) rotate(-3deg); }
-            90% { opacity: 0.9; transform: scale(1.15) rotate(2deg); }
-          }
-          
-          @keyframes campfire-flicker-3 {
-            0%, 100% { opacity: 0.7; transform: scale(1); }
-            40% { opacity: 0.9; transform: scale(1.25); }
-            70% { opacity: 0.5; transform: scale(0.85); }
-          }
-          
-          @keyframes campfire-flicker-4 {
-            0%, 100% { opacity: 0.72; transform: scale(1); }
-            35% { opacity: 0.92; transform: scale(1.22); }
-            65% { opacity: 0.52; transform: scale(0.88); }
-          }
-          
-          @keyframes campfire-core-1 {
-            0%, 100% { opacity: 0.9; transform: scale(1); }
-            40% { opacity: 1; transform: scale(1.5); }
-            70% { opacity: 0.6; transform: scale(0.7); }
-          }
-          
-          @keyframes campfire-core-2 {
-            0%, 100% { opacity: 0.8; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.4); }
-            75% { opacity: 0.5; transform: scale(0.8); }
-          }
-          
-          @keyframes campfire-core-3 {
-            0%, 100% { opacity: 0.82; transform: scale(1); }
-            45% { opacity: 1; transform: scale(1.45); }
-            72% { opacity: 0.55; transform: scale(0.75); }
+          @keyframes aurora-sparkle-5 {
+            0%, 60%, 100% { opacity: 0; transform: scale(1); }
+            65%, 75% { opacity: 1; transform: scale(3.3); }
+            70% { opacity: 0.85; transform: scale(2.8); }
           }
           
           @keyframes smoke-rise-1 {
@@ -451,111 +421,97 @@ export function Island2Module2Image() {
           
           @keyframes snow-fall-12 {
             0% { opacity: 0; transform: translateY(0px) translateX(0px); }
-            50% { opacity: 0.48; transform: translateY(308px) translateX(-11px); }
+            50% { opacity: 0.85; transform: translateY(308px) translateX(-11px); }
             100% { opacity: 0; transform: translateY(616px) translateX(-20px); }
+          }
+          
+          @keyframes snow-fall-13 {
+            0% { opacity: 0; transform: translateY(0px) translateX(0px); }
+            50% { opacity: 0.88; transform: translateY(295px) translateX(16px); }
+            100% { opacity: 0; transform: translateY(590px) translateX(28px); }
+          }
+          
+          @keyframes snow-fall-14 {
+            0% { opacity: 0; transform: translateY(0px) translateX(0px); }
+            50% { opacity: 0.93; transform: translateY(318px) translateX(-14px); }
+            100% { opacity: 0; transform: translateY(636px) translateX(-24px); }
+          }
+          
+          @keyframes snow-fall-15 {
+            0% { opacity: 0; transform: translateY(0px) translateX(0px); }
+            50% { opacity: 0.9; transform: translateY(302px) translateX(19px); }
+            100% { opacity: 0; transform: translateY(604px) translateX(32px); }
           }
           
           @keyframes mountain-sparkle-1 {
             0%, 75%, 100% { opacity: 0; transform: scale(1); }
-            80%, 90% { opacity: 0.85; transform: scale(1.5); }
-            85% { opacity: 0.4; transform: scale(1.2); }
+            80%, 90% { opacity: 1; transform: scale(3); }
+            85% { opacity: 0.8; transform: scale(2.5); }
           }
           
           @keyframes mountain-sparkle-2 {
             0%, 68%, 100% { opacity: 0; transform: scale(1) rotate(0deg); }
-            73%, 83% { opacity: 0.9; transform: scale(1.6) rotate(360deg); }
-            78% { opacity: 0.3; transform: scale(1.3) rotate(180deg); }
+            73%, 83% { opacity: 1; transform: scale(3.2) rotate(360deg); }
+            78% { opacity: 0.75; transform: scale(2.6) rotate(180deg); }
           }
           
           @keyframes mountain-sparkle-3 {
             0%, 82%, 100% { opacity: 0; transform: scale(1); }
-            87%, 95% { opacity: 0.8; transform: scale(1.4); }
-            91% { opacity: 0.35; transform: scale(1.1); }
+            87%, 95% { opacity: 1; transform: scale(3.4); }
+            91% { opacity: 0.85; transform: scale(2.8); }
           }
           
           @keyframes mountain-sparkle-4 {
             0%, 70%, 100% { opacity: 0; transform: scale(1); }
-            75%, 85% { opacity: 0.85; transform: scale(1.5); }
-            80% { opacity: 0.38; transform: scale(1.25); }
+            75%, 85% { opacity: 1; transform: scale(3); }
+            80% { opacity: 0.8; transform: scale(2.5); }
           }
           
           @keyframes mountain-sparkle-5 {
             0%, 78%, 100% { opacity: 0; transform: scale(1); }
-            83%, 93% { opacity: 0.88; transform: scale(1.55); }
-            88% { opacity: 0.4; transform: scale(1.28); }
+            83%, 93% { opacity: 1; transform: scale(3.1); }
+            88% { opacity: 0.82; transform: scale(2.6); }
           }
           
-          @keyframes activity-warmth-1 {
-            0%, 100% { opacity: 0.12; transform: scale(1); }
-            50% { opacity: 0.2; transform: scale(1.15); }
-          }
-          
-          @keyframes activity-warmth-2 {
-            0%, 100% { opacity: 0.10; transform: scale(1); }
-            60% { opacity: 0.18; transform: scale(1.12); }
-          }
-          
-          @keyframes activity-warmth-3 {
-            0%, 100% { opacity: 0.11; transform: scale(1); }
-            55% { opacity: 0.19; transform: scale(1.13); }
-          }
-          
-          @keyframes wind-drift-1 {
-            0% { opacity: 0; transform: translateX(-50px); }
-            50% { opacity: 0.12; transform: translateX(400px); }
-            100% { opacity: 0; transform: translateX(850px); }
-          }
-          
-          @keyframes wind-drift-2 {
-            0% { opacity: 0; transform: translateX(50px); }
-            50% { opacity: 0.10; transform: translateX(-380px); }
-            100% { opacity: 0; transform: translateX(-810px); }
-          }
-          
-          @keyframes wind-drift-3 {
-            0% { opacity: 0; transform: translateX(-40px); }
-            50% { opacity: 0.08; transform: translateX(360px); }
-            100% { opacity: 0; transform: translateX(760px); }
+          @keyframes mountain-sparkle-6 {
+            0%, 65%, 100% { opacity: 0; transform: scale(1); }
+            70%, 80% { opacity: 1; transform: scale(2.8); }
+            75% { opacity: 0.78; transform: scale(2.3); }
           }
           
           @keyframes arctic-atmosphere {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 0.6; }
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.75; }
           }
           
           @keyframes village-warmth {
-            0%, 100% { opacity: 0.8; }
+            0%, 100% { opacity: 1; }
             50% { opacity: 1; }
           }
           
-          .animate-window-glow-1 { animation: window-glow-1 6s ease-in-out infinite; }
-          .animate-window-glow-2 { animation: window-glow-2 7s ease-in-out infinite 0.5s; }
-          .animate-window-glow-3 { animation: window-glow-3 5.5s ease-in-out infinite 1s; }
-          .animate-window-glow-4 { animation: window-glow-4 6.5s ease-in-out infinite 1.5s; }
-          .animate-window-glow-5 { animation: window-glow-5 7.5s ease-in-out infinite 2s; }
-          .animate-window-glow-6 { animation: window-glow-6 6.2s ease-in-out infinite 2.5s; }
-          .animate-window-glow-7 { animation: window-glow-7 6.8s ease-in-out infinite 3s; }
-          .animate-window-glow-8 { animation: window-glow-8 7.2s ease-in-out infinite 3.5s; }
-          .animate-window-glow-9 { animation: window-glow-9 5.8s ease-in-out infinite 4s; }
-          .animate-window-glow-10 { animation: window-glow-10 6.4s ease-in-out infinite 4.5s; }
-          .animate-window-glow-11 { animation: window-glow-11 7s ease-in-out infinite 5s; }
-          .animate-window-glow-12 { animation: window-glow-12 6.6s ease-in-out infinite 5.5s; }
-          .animate-window-glow-13 { animation: window-glow-13 7.4s ease-in-out infinite 6s; }
-          .animate-window-glow-14 { animation: window-glow-14 5.6s ease-in-out infinite 0.8s; }
-          .animate-window-glow-15 { animation: window-glow-15 6.9s ease-in-out infinite 1.2s; }
+          .animate-door-glow-1 { animation: door-glow-1 6s ease-in-out infinite; }
+          .animate-door-glow-2 { animation: door-glow-2 7s ease-in-out infinite 0.5s; }
+          .animate-door-glow-3 { animation: door-glow-3 5.5s ease-in-out infinite 1s; }
+          .animate-door-glow-4 { animation: door-glow-4 6.5s ease-in-out infinite 1.5s; }
+          .animate-door-glow-5 { animation: door-glow-5 7.5s ease-in-out infinite 2s; }
+          .animate-door-glow-6 { animation: door-glow-6 6.2s ease-in-out infinite 2.5s; }
+          .animate-door-glow-7 { animation: door-glow-7 6.8s ease-in-out infinite 3s; }
+          .animate-door-glow-8 { animation: door-glow-8 7.2s ease-in-out infinite 3.5s; }
+          .animate-door-glow-9 { animation: door-glow-9 5.8s ease-in-out infinite 4s; }
+          .animate-door-glow-10 { animation: door-glow-10 6.4s ease-in-out infinite 4.5s; }
           
-          .animate-hall-glow-1 { animation: hall-glow-1 5s ease-in-out infinite; }
-          .animate-hall-glow-2 { animation: hall-glow-2 5.5s ease-in-out infinite 1s; }
-          .animate-hall-glow-3 { animation: hall-glow-3 6s ease-in-out infinite 2s; }
+          .animate-palace-glow-1 { animation: palace-glow-1 5s ease-in-out infinite; }
+          .animate-palace-glow-2 { animation: palace-glow-2 5.5s ease-in-out infinite 1s; }
+          .animate-palace-glow-3 { animation: palace-glow-3 6s ease-in-out infinite 2s; }
+          .animate-palace-glow-4 { animation: palace-glow-4 5.2s ease-in-out infinite 0.5s; }
+          .animate-palace-glow-5 { animation: palace-glow-5 5.8s ease-in-out infinite 1.5s; }
           
-          .animate-campfire-flicker-1 { animation: campfire-flicker-1 3s ease-in-out infinite; }
-          .animate-campfire-flicker-2 { animation: campfire-flicker-2 2.5s ease-in-out infinite 0.5s; }
-          .animate-campfire-flicker-3 { animation: campfire-flicker-3 3.2s ease-in-out infinite 1s; }
-          .animate-campfire-flicker-4 { animation: campfire-flicker-4 2.8s ease-in-out infinite 1.5s; }
+          .animate-lantern-glow-1 { animation: lantern-glow-1 4s ease-in-out infinite; }
+          .animate-lantern-glow-2 { animation: lantern-glow-2 4.5s ease-in-out infinite 0.5s; }
+          .animate-lantern-glow-3 { animation: lantern-glow-3 4.2s ease-in-out infinite 1s; }
+          .animate-lantern-glow-4 { animation: lantern-glow-4 4.8s ease-in-out infinite 1.5s; }
           
-          .animate-campfire-core-1 { animation: campfire-core-1 2s ease-in-out infinite; }
-          .animate-campfire-core-2 { animation: campfire-core-2 2.2s ease-in-out infinite 0.8s; }
-          .animate-campfire-core-3 { animation: campfire-core-3 2.4s ease-in-out infinite 1.2s; }
+          .animate-cabin-glow { animation: cabin-glow 5.5s ease-in-out infinite; }
           
           .animate-smoke-rise-1 { animation: smoke-rise-1 8s ease-out infinite; }
           .animate-smoke-rise-2 { animation: smoke-rise-2 9s ease-out infinite 2s; }
@@ -577,20 +533,26 @@ export function Island2Module2Image() {
           .animate-snow-fall-10 { animation: snow-fall-10 10.5s linear infinite 9s; }
           .animate-snow-fall-11 { animation: snow-fall-11 11.8s linear infinite 2.5s; }
           .animate-snow-fall-12 { animation: snow-fall-12 13.8s linear infinite 4.5s; }
+          .animate-snow-fall-13 { animation: snow-fall-13 12.2s linear infinite 1.5s; }
+          .animate-snow-fall-14 { animation: snow-fall-14 14.2s linear infinite 6.5s; }
+          .animate-snow-fall-15 { animation: snow-fall-15 13.5s linear infinite 8.5s; }
           
           .animate-mountain-sparkle-1 { animation: mountain-sparkle-1 8s linear infinite; }
           .animate-mountain-sparkle-2 { animation: mountain-sparkle-2 9s linear infinite 2s; }
           .animate-mountain-sparkle-3 { animation: mountain-sparkle-3 7.5s linear infinite 4s; }
           .animate-mountain-sparkle-4 { animation: mountain-sparkle-4 8.5s linear infinite 6s; }
           .animate-mountain-sparkle-5 { animation: mountain-sparkle-5 9.5s linear infinite 3s; }
+          .animate-mountain-sparkle-6 { animation: mountain-sparkle-6 8.2s linear infinite 5s; }
           
-          .animate-activity-warmth-1 { animation: activity-warmth-1 10s ease-in-out infinite; }
-          .animate-activity-warmth-2 { animation: activity-warmth-2 12s ease-in-out infinite 3s; }
-          .animate-activity-warmth-3 { animation: activity-warmth-3 11s ease-in-out infinite 6s; }
+          .animate-aurora-1 { animation: aurora-1 18s ease-in-out infinite; }
+          .animate-aurora-2 { animation: aurora-2 22s ease-in-out infinite 6s; }
+          .animate-aurora-3 { animation: aurora-3 20s ease-in-out infinite 3s; }
           
-          .animate-wind-drift-1 { animation: wind-drift-1 20s linear infinite; }
-          .animate-wind-drift-2 { animation: wind-drift-2 24s linear infinite 8s; }
-          .animate-wind-drift-3 { animation: wind-drift-3 22s linear infinite 4s; }
+          .animate-aurora-sparkle-1 { animation: aurora-sparkle-1 8s linear infinite; }
+          .animate-aurora-sparkle-2 { animation: aurora-sparkle-2 9s linear infinite 2s; }
+          .animate-aurora-sparkle-3 { animation: aurora-sparkle-3 7.5s linear infinite 4s; }
+          .animate-aurora-sparkle-4 { animation: aurora-sparkle-4 8.5s linear infinite 1.5s; }
+          .animate-aurora-sparkle-5 { animation: aurora-sparkle-5 10s linear infinite 3s; }
           
           .animate-arctic-atmosphere { animation: arctic-atmosphere 18s ease-in-out infinite; }
           .animate-village-warmth { animation: village-warmth 15s ease-in-out infinite; }
