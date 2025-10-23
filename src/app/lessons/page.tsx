@@ -66,7 +66,7 @@ export default async function LessonsPage() {
           </div>
 
           {/* Overall Adventure Map (click anywhere to zoom + navigate) */}
-          <MapZoom islands={islands} />
+          <MapZoom />
         </div>
       </div>
 
