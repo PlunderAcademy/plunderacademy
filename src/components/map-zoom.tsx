@@ -160,7 +160,7 @@ export function MapZoom() {
                   {/* Background Image */}
                   <div className="absolute inset-0">
                     <Image
-                      src={`/Islands/map/island${index + 1}.webp`}
+                      src={`/islands/map/island${index + 1}.webp`}
                       alt={island.name}
                       fill
                       className="object-cover"
@@ -252,7 +252,7 @@ export function MapZoom() {
                 {/* Background Image */}
                 <div className="absolute inset-0">
                   <Image
-                    src={`/Islands/map/island${index + 1}.webp`}
+                    src={`/islands/map/island${index + 1}.webp`}
                     alt={island.name}
                     fill
                     className={`object-cover transition-all duration-300 ${
