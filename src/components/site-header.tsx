@@ -24,10 +24,11 @@ const nav = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const [isAchievementsModalOpen, setIsAchievementsModalOpen] = React.useState(false);
-  
+  const [isAchievementsModalOpen, setIsAchievementsModalOpen] =
+    React.useState(false);
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="font-semibold tracking-tight">
           Plunder Academy
@@ -47,7 +48,9 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="hidden md:flex items-center gap-2">
-          <HeaderAchievements onOpenModal={() => setIsAchievementsModalOpen(true)} />
+          <HeaderAchievements
+            onOpenModal={() => setIsAchievementsModalOpen(true)}
+          />
           <WalletButton />
           <ThemeToggle />
         </div>
@@ -84,7 +87,9 @@ export function SiteHeader() {
               <div className="mt-auto px-6 py-4">
                 <div className="flex flex-col gap-3">
                   <div className="flex gap-2">
-                    <HeaderAchievements onOpenModal={() => setIsAchievementsModalOpen(true)} />
+                    <HeaderAchievements
+                      onOpenModal={() => setIsAchievementsModalOpen(true)}
+                    />
                     <div className="flex-1" />
                     <ThemeToggle />
                   </div>
@@ -95,11 +100,11 @@ export function SiteHeader() {
           </Sheet>
         </div>
       </div>
-      
+
       {/* Achievements Modal */}
-      <AchievementsModal 
-        isOpen={isAchievementsModalOpen} 
-        onClose={() => setIsAchievementsModalOpen(false)} 
+      <AchievementsModal
+        isOpen={isAchievementsModalOpen}
+        onClose={() => setIsAchievementsModalOpen(false)}
         useAnimatedCards={true} // Enable animated cards in modal
       />
     </header>

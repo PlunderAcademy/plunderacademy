@@ -47,7 +47,7 @@ export default function Home() {
                 Learn EVM development faster
               </div>
               <h1 className="text-balance text-6xl font-extrabold tracking-tight leading-[0.95] sm:text-8xl">
-                <span className="bg-gradient-to-r from-primary via-orange-500/80 to-primary bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-primary via-orange-400 to-primary bg-clip-text text-transparent">
                   Plunder Academy
                 </span>
               </h1>
