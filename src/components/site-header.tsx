@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -30,8 +31,20 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="font-semibold tracking-tight">
-          Plunder Academy
+        <Link
+          href="/"
+          className="flex items-center"
+          aria-label="Plunder Academy home"
+        >
+          <Image
+            src="/logo.svg"
+            alt="Plunder Academy logo"
+            width={140}
+            height={40}
+            className="h-8 w-auto"
+            priority
+          />
+          <span className="sr-only">Plunder Academy</span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm">
           {nav.map((item) => (
@@ -64,8 +77,19 @@ export function SiteHeader() {
             </SheetTrigger>
             <SheetContent side="right" className="flex flex-col gap-4 p-0">
               <div className="px-6 pb-4 pt-6">
-                <Link href="/" className="font-semibold tracking-tight">
-                  Plunder Academy
+                <Link
+                  href="/"
+                  className="flex items-center"
+                  aria-label="Plunder Academy home"
+                >
+                  <Image
+                    src="/logo.svg"
+                    alt="Plunder Academy logo"
+                    width={140}
+                    height={40}
+                    className="h-8 w-auto"
+                  />
+                  <span className="sr-only">Plunder Academy</span>
                 </Link>
               </div>
               <Separator />
