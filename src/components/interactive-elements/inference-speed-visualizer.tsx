@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Zap, Turtle, Rabbit, RotateCcw } from "lucide-react";
 
@@ -142,7 +142,7 @@ export default function InferenceSpeedVisualizer() {
         <div className="mt-6 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-300 flex gap-2">
             <RotateCcw className="w-4 h-4 shrink-0 mt-0.5" />
             <p>
-                High-speed inference providers minimize "Time to First Token" and dramatically increase throughput, 
+                High-speed inference providers minimize &quot;Time to First Token&quot; and dramatically increase throughput, 
                 making AI tools feel instant rather than sluggish.
             </p>
         </div>
@@ -150,4 +150,3 @@ export default function InferenceSpeedVisualizer() {
     </div>
   );
 }
-
