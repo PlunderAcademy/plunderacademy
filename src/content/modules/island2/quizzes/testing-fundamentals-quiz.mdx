@@ -1,0 +1,217 @@
+---
+id: testing-fundamentals-quiz
+slug: testing-fundamentals-quiz
+module: testing-fundamentals
+title: "Module 3: Testing Fundamentals – Quiz"
+description: "Framework setup, unit testing patterns, fixtures, fuzzing/bounds, security testing basics."
+totalQuestions: 14
+passingScore: 80
+timeLimit: 18
+---
+
+### Question 1
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.1 Framework Setup
+
+Which is a best practice for structuring Solidity tests?
+
+**Options:**
+- A) Write a single test that covers all contract behavior
+- B) Group tests by feature/behavior with descriptive names and isolated setup
+- C) Avoid setup/teardown to reduce boilerplate
+- D) Use `console.log` as the primary assertion mechanism
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.2 Unit Testing Patterns
+
+What is the key benefit of using fixtures in test suites?
+
+**Options:**
+- A) Automatically deploys to mainnet
+- B) Reuses prepared state across tests for speed and consistency
+- C) Eliminates the need for assertions
+- D) Ensures tests only run once
+---
+
+### Question 3
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 3.2 Unit Testing Patterns
+
+Which are recommended unit testing patterns?
+
+**Options:**
+- A) Arrange-Act-Assert structure
+- B) Name tests by ticket number only
+- C) One assertion maximum per test
+- D) Use helpers/builders to reduce repetition
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.3 Security Testing
+
+What is the purpose of fuzzing in Ethereum smart contract tests?
+
+**Options:**
+- A) Randomly mutate bytecode to reduce size
+- B) Explore edge cases by generating many random inputs
+- C) Replace unit tests with end-to-end tests
+- D) Automatically deploy to multiple chains
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.1 Framework Setup
+
+In Foundry, which cheatcode or helper is commonly used to manipulate block timestamps?
+
+**Options:**
+- A) `vm.prank()`
+- B) `vm.warp()`
+- C) `vm.roll()`
+- D) `vm.snapshot()`
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.2 Unit Testing Patterns
+
+What is a good approach to testing revert conditions?
+
+**Options:**
+- A) Skip negative tests to save time
+- B) Use `expectRevert` or equivalent to assert specific errors
+- C) Assume reverts will be caught in production
+- D) Only test happy-path logic
+---
+
+### Question 7
+**Type:** Timeline Builder
+**Points:** 8
+**Lesson:** 3.1 Framework Setup
+
+Arrange a typical test lifecycle for a unit test.
+
+**Interactive Data:**
+```json
+{
+  "events": [
+    {"id": "evt-1", "text": "Deploy contracts/fixtures"},
+    {"id": "evt-2", "text": "Arrange inputs"},
+    {"id": "evt-3", "text": "Act: call function"},
+    {"id": "evt-4", "text": "Assert expectations"}
+  ]
+}
+```
+
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.2 Unit Testing Patterns
+
+Which helps keep tests deterministic?
+
+**Options:**
+- A) Rely on wall-clock time
+- B) Control randomness/seed and block timestamp
+- C) Use external oracle data
+- D) Skip setup to reduce code
+---
+
+### Question 9
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 3.3 Security Testing
+
+Which are examples of security-focused tests?
+
+**Options:**
+- A) Reentrancy attempt against sensitive function
+- B) Overflow test with `unchecked` arithmetic
+- C) Admin function access with non-admin
+- D) UI rendering snapshot
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.2 Unit Testing Patterns
+
+What is the advantage of using builders/factories in tests?
+
+**Options:**
+- A) They remove the need for test assertions entirely
+- B) They generate reproducible objects with minimal boilerplate
+- C) They automatically deploy on every chain
+- D) They make tests slower but more readable
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.1 Framework Setup
+
+Which command runs Foundry tests with fuzzing enabled by default?
+
+**Options:**
+- A) `forge test`
+- B) `forge fuzz`
+- C) `forge run`
+- D) `forge verify`
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.3 Security Testing
+
+Which practice improves coverage for time-based logic?
+
+**Options:**
+- A) Avoid testing time logic; rely on production
+- B) Use `vm.warp()` to simulate time progression and test boundaries
+- C) Run tests at midnight
+- D) Only test exact equality for timestamps
+---
+
+### Question 13
+**Type:** Word Jumble
+**Points:** 8
+**Lesson:** 3.2 Unit Testing Patterns
+
+Unscramble this concept central to test structure:
+
+**Interactive Data:**
+```json
+{
+  "hint": "Three-part testing style: setup, execution, verification",
+  "scrambled": "SNAGRAAEESRTR"
+}
+```
+
+---
+
+### Question 14
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 3.3 Security Testing
+
+What is a key sign of a flaky test?
+
+**Options:**
+- A) It passes only on CI
+- B) It fails intermittently without code changes due to timing or randomness
+- C) It has many assertions
+- D) It uses descriptive names
+---
+

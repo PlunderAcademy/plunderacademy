@@ -1,0 +1,1150 @@
+---
+id: "dapp-security-lesson-7"
+slug: "smart-contract-audit-methodology"
+module: "advanced-security"
+number: "5.18"
+title: "Smart Contract Audit Methodology"
+objective: "Master the professional audit process from preparation through remediation, including selecting audit firms, managing the audit lifecycle, and launching bug bounty programs."
+practicalTakeaway: "Navigate the $50K-$500K audit process efficiently, maximize audit value through proper preparation, and establish continuous security through bug bounties."
+---
+
+# Smart Contract Audit Methodology
+
+## Why this matters now
+
+You've built secure contracts with comprehensive defenses (common-vulnerability-patterns through incident-response-playbooks), but professional audits are still essential before launching protocols handling real funds. Audits cost $50K-$500K and take 2-6 weeks—expensive mistakes if you enter unprepared. Poorly prepared codebases waste auditor time on basic issues instead of finding sophisticated vulnerabilities.
+
+Professional auditors follow systematic methodologies: automated scanning, manual code review, threat modeling, exploit development, and detailed reporting. Understanding their process lets you prepare effectively, respond to findings efficiently, and maximize the return on your audit investment.
+
+This lesson teaches you the complete audit lifecycle: selecting reputable audit firms (and avoiding scams), preparing comprehensive documentation that saves auditor time, understanding the audit process phases (kickoff, analysis, reporting, remediation), managing finding remediation without introducing new bugs, and launching bug bounty programs for continuous security. You'll also learn to read audit reports critically and implement recommendations effectively.
+
+## Conceptual foundations for audit methodology
+
+**Definition — Professional audit**: Third-party security review by specialized firms employing expert auditors, automated tools, and systematic methodologies. **Why it's essential**: Fresh eyes catch blind spots, auditor reputation incentivizes thoroughness, audit reports build user confidence, and some vulnerabilities require specialized expertise to find.
+
+**Definition — Audit scope**: Specific contracts, commits, and functionalities to be reviewed. **Why it matters**: Auditors charge by complexity and LOC (lines of code). Clear scope prevents disputes, focuses auditor attention, and manages costs. Out-of-scope changes after audit starts add 20-50% cost.
+
+**Definition — Finding severity**: Classification system for vulnerabilities. **Standard tiers**: Critical (direct fund loss, trivial exploit), High (fund loss under specific conditions), Medium (functionality breaks or edge-case losses), Low (best practice violations, gas optimizations), Informational (suggestions, not vulnerabilities). **Why it's standardized**: Enables remediation prioritization and comparisons across audits.
+
+**Definition — Audit remediation**: Process of fixing findings, re-testing, and getting auditor sign-off. **Why it's iterative**: Initial fixes may introduce new issues, require multiple review rounds, and need verification before declaring "audit complete."
+
+**Definition — Bug bounty program**: Ongoing rewards for security researchers who report vulnerabilities. **Why post-audit**: Audits are point-in-time snapshots; bug bounties provide continuous monitoring, incentivize white-hat disclosure over black-hat exploitation, and tap into wider researcher pool.
+
+**Mental model — Audit as investment, not checkbox**: Audit's value isn't the report PDF—it's the improved code quality, team security education, and ongoing relationship with auditors. Best teams treat auditors as partners, not vendors.
+
+**Anti-pattern — "We got audited so we're safe"**: Displaying audit badge without implementing recommendations or understanding findings. **Why it fails**: Audit report doesn't make code secure—fixing vulnerabilities does. Unresolved findings are public knowledge for attackers.
+
+## Guided code walk-throughs
+
+### 1) Audit preparation documentation
+
+Comprehensive documentation saves auditor time and improves audit quality.
+
+#### Architecture overview
+
+Comprehensive documentation saves auditor time and improves audit quality. Create a dedicated `docs/audit/architecture.md` file with the following structure:
+
+**Example architecture document structure:**
+
+**File: `docs/audit/architecture.md`**
+
+# Protocol Architecture
+
+## Overview
+YieldVault is a single-asset staking protocol where users deposit USDC, earn yield from Aave lending, and receive proportional shares via ERC-4626 vault tokens.
+
+## Contracts in Scope
+
+### YieldVault.sol (350 LOC)
+- **Purpose**: Main vault implementing ERC-4626 standard
+- **External calls**: USDC, Aave Pool, Rewards Distributor
+- **Privileges**: 
+  - ADMIN_ROLE: Set fees, pause, upgrade
+  - KEEPER_ROLE: Harvest yield from Aave
+- **Trust assumptions**: Aave Pool is trusted (lending protocol), USDC is trusted (Circle contract)
+- **Known limitations**: Assumes USDC maintains 1:1 USD peg
+
+### RewardsDistributor.sol (150 LOC)
+- **Purpose**: Distributes protocol fees to governance token stakers
+- **External calls**: YieldVault (read share prices), Governance Token
+- **Privileges**: 
+  - ADMIN_ROLE: Set distribution rate
+- **Trust assumptions**: YieldVault share price calculation is correct
+- **Known limitations**: Reward calculations use block.timestamp (±15s miner manipulation)
+
+### GovernanceToken.sol (100 LOC)
+- **Purpose**: ERC-20 governance token with voting power
+- **External calls**: None (standard ERC-20)
+- **Privileges**:
+  - MINTER_ROLE: Mint new tokens (held by timelock)
+- **Trust assumptions**: Admin (3-of-5 multi-sig) is trusted
+- **Known limitations**: No burn mechanism (unlimited supply possible)
+
+## Out of Scope
+- USDC token contract (external dependency)
+- Aave lending pool contracts (audited by OpenZeppelin)
+- Frontend dApp (security review separate)
+- Multi-sig wallet contracts (using Gnosis Safe)
+
+## System Diagram
+
+```
+User
+  ↓ deposit(USDC)
+YieldVault
+  ↓ supply(USDC)
+Aave Pool
+  ↓ generates yield
+Keeper calls harvest()
+  ↓ withdraw yield
+YieldVault
+  ↓ distribute fees
+RewardsDistributor
+  ↓ claim rewards
+Governance Token stakers
+```
+
+## Access Control Matrix
+
+**DEFAULT_ADMIN_ROLE** → All contracts
+- Functions: Grant/revoke roles
+- Holder: Timelock (48hr delay)
+- Notes: 3-of-5 multi-sig controls timelock
+
+**ADMIN_ROLE** → YieldVault
+- Functions: setFee, pause, upgrade
+- Holder: Timelock
+- Notes: All admin actions require 48hr delay
+
+**KEEPER_ROLE** → YieldVault
+- Functions: harvest
+- Holder: Bot EOA
+- Notes: Automated, no funds at risk
+
+**PAUSER_ROLE** → YieldVault
+- Functions: pause
+- Holder: 2-of-3 emergency multi-sig
+- Notes: No timelock (instant response)
+
+**MINTER_ROLE** → GovernanceToken
+- Functions: mint
+- Holder: Timelock
+- Notes: Controlled by governance
+
+## Fund Flow Analysis
+
+### Normal Deposit Flow
+1. User approves USDC to YieldVault
+2. User calls `deposit(1000 USDC)`
+3. YieldVault transfers USDC from user
+4. YieldVault supplies USDC to Aave
+5. YieldVault mints shares to user
+6. User receives shares proportional to deposit
+
+### Normal Withdrawal Flow
+1. User calls `withdraw(500 USDC)`
+2. YieldVault burns user's shares
+3. YieldVault withdraws USDC from Aave
+4. YieldVault transfers USDC to user
+
+### Yield Harvest Flow
+1. Keeper calls `harvest()`
+2. YieldVault claims aUSDC interest from Aave
+3. YieldVault takes 10% protocol fee
+4. YieldVault sends fee to RewardsDistributor
+5. Remaining 90% compounded for users
+
+## Key Invariants
+
+These properties must ALWAYS be true:
+
+1. **Solvency**: `totalAssets() >= sum of all user shares value`
+   - Vault can always cover withdrawals
+   
+2. **Share price monotonic**: `sharePrice(t+1) >= sharePrice(t)`
+   - Share value never decreases (unless loss event)
+   
+3. **Conservation**: `USDC in Aave + USDC in vault = totalAssets()`
+   - No USDC is lost in system
+   
+4. **Authorization**: All admin functions require ADMIN_ROLE
+   - No unauthorized state changes
+
+5. **Reentrancy safe**: No external calls before state updates
+   - No reentrancy vulnerabilities
+
+## Known Issues & Mitigations
+
+### Issue 1: Aave Pool Could Be Paused
+**Risk**: If Aave pauses, withdrawals fail  
+**Mitigation**: Emergency withdrawal function bypasses Aave, uses vault's USDC reserves  
+**Residual risk**: If ALL funds in Aave and Aave paused, must wait for Aave unpause
+
+### Issue 2: USDC Could Depeg
+**Risk**: $1 USDC becomes worth $0.90  
+**Mitigation**: Oracle monitors peg, pauses deposits if depeg > 5%  
+**Residual risk**: Users holding shares during depeg suffer loss (market risk, not contract risk)
+
+### Issue 3: First Depositor Inflation Attack
+**Risk**: First depositor can inflate share price, DoS small deposits  
+**Mitigation**: Initial deposit of 1000 USDC burned to dead address (price anchor)  
+**Residual risk**: None (standard ERC-4626 defense)
+
+## Security Assumptions
+
+1. **EVM Security**: Solidity compiler is not backdoored, EVM executes correctly
+2. **External Dependencies**: Aave Pool is secure (audited by OpenZeppelin), USDC is secure (Circle)
+3. **Admin Trust**: 3-of-5 multi-sig signers are not colluding maliciously
+4. **Oracle Trust**: Chainlink price feeds are manipulation-resistant
+5. **Economic**: Gas costs prevent dust attacks, arbitrage keeps Aave rates competitive
+
+## Deployment Parameters
+
+**Mainnet (Zilliqa)**
+- YieldVault: Upgradeable via UUPS proxy
+- Initial USDC: 1000 (burned to 0x000...001)
+- Fee: 10% (1000 basis points)
+- Aave Pool: [address]
+- Multi-sig: [address] (3-of-5)
+- Timelock: 172800 seconds (48 hours)
+
+## Questions for Auditors
+
+1. Does ERC-4626 implementation correctly handle all edge cases (zero deposits, rounding)?
+2. Can share price manipulation (inflation attack) bypass our mitigations?
+3. Are there reentrancy vectors via Aave Pool callbacks?
+4. Can Aave yield calculation overflow for extreme deposit amounts?
+5. Does emergency withdrawal correctly handle all Aave pause scenarios?
+
+#### Threat model document
+
+**File: `docs/audit/threat-model.md`**
+
+# Threat Model
+
+## Attack Surfaces
+
+### 1. User-facing functions
+- `deposit()`, `withdraw()`, `transfer()`
+- Attack: Manipulate share price, steal other users' funds
+- Defense: ERC-4626 standard implementation, reentrancy guards
+
+### 2. Keeper functions
+- `harvest()`
+- Attack: Keeper could drain accumulated yield
+- Defense: Keeper can only call harvest (no withdrawal permissions), yield distributed to users automatically
+
+### 3. Admin functions
+- `setFee()`, `pause()`, `upgrade()`
+- Attack: Malicious admin sets 100% fee or steals funds via upgrade
+- Defense: 48hr timelock gives users exit window, 3-of-5 multi-sig requires consensus
+
+### 4. External integrations
+- Aave Pool, Chainlink oracles
+- Attack: Aave compromise or oracle manipulation
+- Defense: Emergency pause triggers, sanity checks on yield amounts
+
+## Attack Scenarios (Ranked by Likelihood × Impact)
+
+### CRITICAL Scenarios
+
+#### Scenario 1: Share Price Manipulation
+**Attacker**: Malicious first depositor  
+**Method**:
+1. Deposit 1 wei USDC (mint 1 wei shares)
+2. Donate 1M USDC directly to vault
+3. Share price = 1M USDC / 1 wei share = 1e24
+4. Next depositor must deposit > 1M USDC or get 0 shares (rounding)
+5. Protocol bricked for normal users
+
+**Mitigation**: Burn 1000 USDC initial shares to dead address  
+**Verification**: Test with 1 wei deposit after initial burn  
+**Residual Risk**: None if correctly implemented
+
+#### Scenario 2: Reentrancy in Withdraw
+**Attacker**: Malicious user with custom token receiver  
+**Method**:
+1. Attacker calls `withdraw(1000 USDC)`
+2. Vault transfers USDC to attacker
+3. Attacker's receive() hook calls `withdraw(1000 USDC)` again
+4. If shares not burned yet, attacker withdraws 2x
+5. Repeat until vault drained
+
+**Mitigation**: Checks-Effects-Interactions pattern + ReentrancyGuard  
+**Verification**: Attempt exploit in test, verify revert  
+**Residual Risk**: None if CEI pattern correct
+
+### HIGH Scenarios
+
+#### Scenario 3: Flash Loan Price Manipulation
+**Attacker**: Whale with flash loan access  
+**Method**:
+1. Flash loan 100M USDC from Aave
+2. Deposit 100M to vault (massive share price increase)
+3. Harvest yield (triggers fee calculation at inflated TVL)
+4. Protocol fee = 10% of huge yield
+5. Withdraw 100M, repay flash loan
+6. Attacker received inflated fees
+
+**Mitigation**: Fee calculation uses time-weighted TVL, not instant  
+**Verification**: Flash loan test, verify fees don't inflate  
+**Residual Risk**: Low if TWAP implemented
+
+#### Scenario 4: Admin Key Compromise
+**Attacker**: External attacker gains 1 of 5 multi-sig keys  
+**Method**:
+1. Attacker phishes 1 multi-sig signer
+2. Needs 2 more keys for 3-of-5 threshold
+3. Even with 3 keys, timelock requires 48hr wait
+4. Users see malicious proposal, mass withdraw before execution
+
+**Mitigation**: Hardware wallets for all signers, 48hr timelock, monitoring  
+**Verification**: Governance simulation, verify users can exit  
+**Residual Risk**: Medium (social engineering always possible)
+
+### MEDIUM Scenarios
+
+#### Scenario 5: Aave Pool Paused
+**Attacker**: N/A (external dependency failure)  
+**Method**:
+1. Aave governance pauses lending pool (emergency or governance decision)
+2. Vault can't withdraw USDC from Aave
+3. Users can't withdraw their funds
+
+**Mitigation**: Emergency withdrawal uses vault reserves, warns users of Aave risk  
+**Verification**: Test with mocked paused Aave  
+**Residual Risk**: High (external dependency, out of our control)
+
+### LOW Scenarios
+
+#### Scenario 6: Gas Price Manipulation DoS
+**Attacker**: Griefer willing to lose money  
+**Method**:
+1. Spam dust deposits (0.01 USDC each)
+2. Fills up blockchain with transactions
+3. Legitimate users can't deposit due to gas price spike
+
+**Mitigation**: Minimum deposit requirement (100 USDC)  
+**Verification**: Test with minimum enforced  
+**Residual Risk**: Very low (attacker loses money, temporary)
+
+## Trust Boundaries
+
+```
+User ←→ YieldVault: User trusts vault to track shares correctly
+  ↕
+YieldVault ←→ Aave: Vault trusts Aave won't steal USDC (audited by OpenZeppelin)
+  ↕
+YieldVault ←→ Chainlink: Vault trusts oracle for accurate prices
+  ↕
+Admin ←→ YieldVault: Users trust admin won't rug (mitigated by timelock)
+```
+
+## Out-of-Scope Risks
+
+- **Market risk**: USDC depegs to $0.50 (not contract vulnerability)
+- **Regulatory risk**: USDC gets blacklisted (not contract vulnerability)
+- **Centralization risk**: Aave governance is centralized (accepted trade-off)
+- **Network risk**: Zilliqa blockchain halts (infrastructure, not contract)
+
+## Security Checklist for Auditors
+
+- [ ] ERC-4626 implementation correct (deposit, withdraw, preview functions)
+- [ ] Share price manipulation prevented (initial deposit burned)
+- [ ] Reentrancy protection on all external calls
+- [ ] Access control verified on all admin functions
+- [ ] Fee calculation can't overflow or be manipulated
+- [ ] Emergency scenarios handled (Aave pause, USDC depeg)
+- [ ] Upgrade storage layout correct (no collisions)
+- [ ] Events emitted for all state changes
+- [ ] Integration with Aave tested (mocked and forked mainnet)
+
+### 2) Selecting audit firms
+
+Not all "auditors" are equal. Here's how to choose reputable firms.
+
+#### Top-tier audit firms
+
+**Trail of Bits** (Elite tier)
+- Cost: $100K-$300K
+- Turnaround: 4-6 weeks
+- Best for: High-complexity protocols, novel designs
+
+**OpenZeppelin** (Elite tier)
+- Cost: $80K-$250K
+- Turnaround: 3-5 weeks
+- Best for: ERC standards, upgradeability, general DeFi
+
+**ConsenSys Diligence** (Elite tier)
+- Cost: $80K-$250K
+- Turnaround: 3-5 weeks
+- Best for: Ethereum L1/L2, complex state machines
+
+**Cyfrin** (formerly ChainSecurity) (High tier)
+- Cost: $50K-$150K
+- Turnaround: 2-4 weeks
+- Best for: Mid-sized protocols, competitive rates
+
+**Spearbit** (High tier)
+- Cost: $60K-$180K
+- Turnaround: 3-4 weeks
+- Best for: Security researchers network
+
+**Code4rena** (Community tier)
+- Cost: $30K-$100K
+- Turnaround: 1-2 weeks
+- Best for: Competitive audit, many auditors
+
+**Sherlock** (Community tier)
+- Cost: $40K-$120K
+- Turnaround: 2-3 weeks
+- Best for: Audit + insurance coverage
+
+#### Red flags (avoid these "auditors")
+
+- ❌ No public track record of previous audits
+- ❌ Promises "100% secure" or "hack-proof" (impossible guarantees)
+- ❌ Charges < $10K (you get what you pay for)
+- ❌ Completes audit in < 1 week (insufficient time for thoroughness)
+- ❌ Refuses to publish report publicly (hiding poor quality)
+- ❌ No remediation phase included (audit is only first step)
+- ❌ Single auditor (no peer review)
+- ❌ No smart contract portfolio (unproven expertise)
+
+#### Audit firm vetting checklist
+
+```markdown
+## Vetting Checklist for [FIRM_NAME]
+
+### Reputation
+- [ ] Published > 50 public audit reports
+- [ ] Audited protocols with > $100M TVL still secure
+- [ ] Recommended by other protocol teams
+- [ ] Active on GitHub/Twitter with security content
+- [ ] No major scandals (missed critical bugs, conflicts of interest)
+
+### Expertise
+- [ ] Auditors have 3+ years smart contract experience
+- [ ] Team includes former protocol developers
+- [ ] Specialized in our tech stack (ERC-4626, Aave integration)
+- [ ] Published original security research
+- [ ] Contributed to protocol standards (EIPs, etc.)
+
+### Process
+- [ ] Provides detailed SOW (statement of work)
+- [ ] Includes remediation phase (2 rounds minimum)
+- [ ] Uses automated tools (Slither, Mythril, custom)
+- [ ] Writes exploit PoCs for findings
+- [ ] Publishes reports publicly (transparency)
+
+### Logistics
+- [ ] Can start within our timeline (2-3 weeks)
+- [ ] Cost within budget ($50K-$150K)
+- [ ] Provides written quote (no surprise fees)
+- [ ] Clear communication (dedicated point of contact)
+- [ ] Offers follow-on support (re-audit after major changes)
+
+### References
+- [ ] Spoke to 3 previous clients
+- [ ] Previous clients satisfied with quality
+- [ ] Previous clients found critical/high issues (proves thoroughness)
+- [ ] Remediation process smooth
+```
+
+### 3) Audit phases and timeline
+
+Understanding the audit workflow helps you manage the process.
+
+#### Typical audit timeline
+
+**Week 0: Pre-audit**
+- Sign SOW (statement of work)
+- Pay 50% deposit
+- Provide documentation (architecture, threat model)
+- Freeze code (commit hash locked)
+
+**Week 1-3: Active audit**
+- **Days 1-2**: Kickoff call
+  - Architecture walkthrough
+  - Q&A on design decisions
+  - Clarify scope and priorities
+  
+- **Days 3-10**: Automated scanning
+  - Slither, Mythril, custom tools
+  - Flag potential vulnerabilities
+  - No communication (auditors heads-down)
+  
+- **Days 11-18**: Manual review
+  - Line-by-line code review
+  - Threat modeling
+  - Write exploit PoCs
+  
+- **Days 19-21**: Report drafting
+  - Categorize findings (Critical/High/Medium/Low)
+  - Write recommendations
+  - Review within audit team (peer check)
+
+**Week 4: Report delivery**
+- **Day 22**: Preliminary report shared privately
+- **Days 23-25**: Your team reviews findings
+- **Day 26**: Clarification call
+  - Discuss findings
+  - Understand exploit scenarios
+  - Agree on remediation plan
+
+**Week 5-6: Remediation**
+- **Days 27-35**: Fix all Critical and High findings
+- **Days 36-37**: Re-submit code for review
+- **Days 38-40**: Auditor verifies fixes
+- **Days 41-42**: Final report with "Fixed" status
+
+**Week 7: Publication**
+- **Day 43**: Pay remaining 50%
+- **Day 44-45**: Publish audit report publicly
+- **Day 46+**: Launch protocol with "Audited by [Firm]" badge
+
+#### Daily activities during audit
+
+```markdown
+## Audit Phase Responsibilities
+
+### Your Team's Responsibilities
+
+**Pre-audit (1 week before)**
+- [ ] Freeze code at specific commit
+- [ ] Complete documentation (architecture, threat model)
+- [ ] Set up private repo access for auditors
+- [ ] Prepare test suite (100% passing tests)
+- [ ] Identify any known issues (document upfront)
+
+**During audit (Weeks 1-3)**
+- [ ] Respond to auditor questions within 4 hours
+- [ ] Don't change code (any changes invalidate audit)
+- [ ] Hold daily stand-ups (internal team)
+- [ ] Prepare fix branches (don't merge yet)
+
+**Remediation (Weeks 5-6)**
+- [ ] Fix Critical/High within 48 hours
+- [ ] Write tests for each fix
+- [ ] Document why each fix works
+- [ ] Re-run full test suite
+- [ ] Submit fixes for re-review
+
+**Post-audit (Week 7+)**
+- [ ] Publish report on website
+- [ ] Announce on Twitter/Discord
+- [ ] Thank auditors publicly
+- [ ] Maintain relationship for future re-audits
+
+### Auditor's Responsibilities
+
+**During audit**
+- Daily progress updates
+- Flag blockers immediately
+- Document all findings with severity
+- Write exploit PoCs for vulnerabilities
+
+**Remediation**
+- Review fixes within 3 business days
+- Verify exploits no longer work
+- Approve or request revisions
+- Sign off on final report
+```
+
+### 4) Reading and responding to audit reports
+
+Audit reports follow standard formats. Here's how to interpret them.
+
+#### Sample finding (Critical severity)
+
+```markdown
+## [C-01] Reentrancy in withdraw() Allows Fund Drainage
+
+### Severity: CRITICAL
+
+### Description
+The `withdraw()` function in YieldVault.sol (line 145) makes an external call to transfer USDC before updating the user's share balance. This allows a malicious recipient contract to re-enter `withdraw()` and drain the vault.
+
+### Affected Code
+```solidity
+// YieldVault.sol:145-152
+function withdraw(uint256 shares) external {
+    uint256 assets = convertToAssets(shares);
+    
+    // 🚨 External call BEFORE state update
+    IERC20(usdc).transfer(msg.sender, assets);
+    
+    // State update happens AFTER external call
+    balances[msg.sender] -= shares;
+    totalShares -= shares;
+}
+```
+
+### Exploit Scenario
+1. Attacker deposits 1000 USDC (receives 1000 shares)
+2. Attacker calls `withdraw(1000 shares)`
+3. Vault transfers 1000 USDC to attacker's malicious contract
+4. Attacker's `receive()` function calls `withdraw(1000 shares)` again
+5. Balance check passes (shares not updated yet)
+6. Vault transfers another 1000 USDC
+7. Loop continues until vault drained
+8. All balance updates execute (too late)
+
+### Proof of Concept
+```solidity
+contract Attacker {
+    YieldVault vault;
+    
+    function attack() external {
+        vault.deposit(1000e6);
+        vault.withdraw(1000e18);
+    }
+    
+    receive() external payable {
+        if (address(vault).balance > 0) {
+            vault.withdraw(1000e18);
+        }
+    }
+}
+
+// Test demonstrating exploit
+function testReentrancyExploit() public {
+    Attacker attacker = new Attacker();
+    // Fund vault with 10,000 USDC from other users
+    vault.deposit{from: user1}(10_000e6);
+    
+    // Attacker drains it all with 1000 USDC
+    attacker.attack();
+    
+    assert(address(vault).balance == 0);  // Vault drained
+    assert(attacker.balance > 10_000e6);  // Attacker profits
+}
+```
+
+### Recommendation
+**Primary fix**: Follow Checks-Effects-Interactions pattern. Update state BEFORE external call.
+
+```solidity
+function withdraw(uint256 shares) external {
+    uint256 assets = convertToAssets(shares);
+    
+    // ✅ Update state FIRST
+    balances[msg.sender] -= shares;
+    totalShares -= shares;
+    
+    // External call LAST
+    IERC20(usdc).transfer(msg.sender, assets);
+}
+```
+
+**Additional defense**: Add OpenZeppelin ReentrancyGuard
+
+```solidity
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract YieldVault is ReentrancyGuard {
+    function withdraw(uint256 shares) external nonReentrant {
+        // ... function body
+    }
+}
+```
+
+### Team Response
+**Status**: FIXED (commit abc123)  
+**Fix description**: Moved state updates before external call and added ReentrancyGuard.  
+**Test added**: `testCannotReenterWithdraw()` verifies exploit reverts.  
+**Auditor verification**: ✅ Approved (fix verified effective)
+
+---
+
+### Lessons Learned
+- Always use CEI pattern for functions with external calls
+- Reentrancy guards provide defense-in-depth
+- Test exploit scenarios, not just happy paths
+```
+
+#### Finding severity matrix
+
+| Severity | Criteria | Recommended Response Time |
+|----------|----------|--------------------------|
+| **Critical** | Direct fund loss with simple exploit | Fix immediately (< 24hrs) |
+| **High** | Fund loss under specific conditions | Fix before launch (< 48hrs) |
+| **Medium** | Protocol disruption or edge-case loss | Fix in remediation phase (< 1 week) |
+| **Low** | Best practice violation, no clear exploit | Address or document (< 2 weeks) |
+| **Informational** | Suggestions for improvement | Consider for future upgrades |
+
+#### Response template for findings
+
+```markdown
+## Team Response to [FINDING_ID]
+
+### Acknowledgment
+We confirm this finding and appreciate the auditor's thoroughness in identifying it.
+
+### Root Cause Analysis
+The vulnerability exists because [EXPLAIN_WHY_BUG_EXISTS]. This was introduced in commit [COMMIT_HASH] when we [CONTEXT].
+
+### Fix Description
+We've implemented [FIX_SUMMARY]:
+- Changed [SPECIFIC_CHANGE_1]
+- Added [SPECIFIC_CHANGE_2]
+- Removed [SPECIFIC_CHANGE_3]
+
+### Fix Commit
+- Branch: `audit-remediation-[FINDING_ID]`
+- Commit: [COMMIT_HASH]
+- Files changed: [LIST_FILES]
+
+### Testing
+We've added the following tests to prevent regression:
+- `test_[FINDING_ID]_ExploitReverts()`: Verifies exploit PoC now fails
+- `test_[FINDING_ID]_NormalFlowStillWorks()`: Ensures fix doesn't break functionality
+- `test_[FINDING_ID]_EdgeCases()`: Tests boundary conditions
+
+All tests passing:
+```
+✓ testReentrancyExploit (gas: 89234)
+✓ testNormalWithdrawStillWorks (gas: 45123)
+✓ testZeroWithdraw (gas: 23456)
+```
+
+### Verification Request
+Please verify:
+1. Exploit PoC from report now reverts with "ReentrancyGuard: reentrant call"
+2. Normal withdraw flow still succeeds
+3. No new issues introduced by fix
+
+### Timeline
+- Finding received: 2025-11-01
+- Fix implemented: 2025-11-02
+- Submitted for re-review: 2025-11-03
+```
+
+### 5) Bug bounty programs
+
+Continuous security after audit completes.
+
+#### Bug bounty structure
+
+```markdown
+# Bug Bounty Program
+
+## Overview
+We offer rewards up to $500,000 for responsibly disclosed vulnerabilities in our smart contracts.
+
+## Scope
+
+### In Scope
+- YieldVault.sol (0xABC...123)
+- RewardsDistributor.sol (0xDEF...456)
+- GovernanceToken.sol (0x789...ABC)
+- Deployment on Zilliqa mainnet
+
+### Out of Scope
+- Frontend bugs (report to security@example.com)
+- Social engineering / phishing attacks
+- Known issues listed in audit reports (see known-issues.md)
+- Testnet deployments
+
+## Rewards
+
+| Severity | Description | Reward |
+|----------|-------------|--------|
+| **Critical** | Direct fund loss, trivial exploit | $100,000 - $500,000 |
+| **High** | Fund loss under specific conditions | $25,000 - $100,000 |
+| **Medium** | Protocol disruption, edge-case loss | $5,000 - $25,000 |
+| **Low** | Best practice violations | $1,000 - $5,000 |
+
+Rewards determined by:
+- Impact: How much loss could occur?
+- Exploitability: How easy is it to execute?
+- Likelihood: How likely is attack to happen?
+- Quality: How clear is the report?
+
+## Submission Process
+
+1. **Do NOT exploit on mainnet** (will be prosecuted)
+2. Email security@example.com with:
+   - Vulnerability description
+   - Exploit PoC (code or detailed steps)
+   - Suggested fix (optional but appreciated)
+   - Your Ethereum address (for reward)
+3. We'll respond within 24 hours acknowledging receipt
+4. We'll assess severity within 72 hours
+5. We'll deploy fix within 7 days for Critical/High
+6. We'll pay reward after fix is live
+
+## Rules
+
+### Eligible Reports Must:
+- ✅ Be original (first reporter gets reward)
+- ✅ Include PoC demonstrating exploit
+- ✅ Not be publicly disclosed before fix
+- ✅ Follow responsible disclosure (give us time to fix)
+
+### Ineligible:
+- ❌ Already reported by someone else
+- ❌ In our known issues list
+- ❌ Out of scope (see above)
+- ❌ Theoretical only (no PoC)
+- ❌ Require admin key compromise (social engineering)
+
+## Past Bounties Paid
+
+| Date | Severity | Reward | Description |
+|------|----------|--------|-------------|
+| 2025-01-15 | High | $75,000 | Oracle manipulation via flash loan |
+| 2025-02-20 | Medium | $15,000 | Donation attack on share price |
+| 2025-03-10 | Low | $2,500 | Missing event emission |
+
+## Safe Harbor
+
+We commit to:
+- Not pursue legal action against researchers following these rules
+- Work with you to understand and fix issues
+- Publicly credit you (with permission)
+- Pay rewards promptly (within 30 days of fix deployment)
+
+## Contact
+
+- Email: security@example.com (PGP key: [link])
+- Encrypted form: [link to HackerOne/Immunefi]
+
+## FAQ
+
+**Q: Can I test on mainnet?**  
+A: No. Use a local fork via Hardhat/Foundry.
+
+**Q: Do you pay for known issues from audit?**  
+A: No. See known-issues.md for list.
+
+**Q: What if I find a critical bug but someone else reported it first?**  
+A: First reporter gets reward. We timestamp all submissions.
+
+**Q: Can I remain anonymous?**  
+A: Yes. We only need ETH address for payment.
+```
+
+#### Bug bounty platforms
+
+| Platform | Best For | Fee |
+|----------|----------|-----|
+| **Immunefi** | DeFi protocols, established reputation | 10% of payout |
+| **HackerOne** | Traditional tech, emerging in Web3 | 20% of payout |
+| **Code4rena** | Competitive audits, community | Varies by contest |
+| **Sherlock** | Audit + insurance bundle | Included in audit cost |
+| **Custom** | Full control, no middleman | 0% but requires manual management |
+
+### Frontend security audit considerations
+
+While this lesson focuses on smart contract audits, your dApp's frontend (covered in Modules 1-3) also represents a critical security boundary:
+
+**Frontend-specific audit scope**:
+
+- **Wallet integration security**:
+  - Verify wallet connection flows don't leak private keys
+  - Check that signature requests clearly display what user is signing
+  - Ensure malicious wallet extensions can't inject transactions
+
+- **Transaction construction**:
+  - Validate all user inputs before encoding transaction data
+  - Implement transaction simulation to catch revert scenarios
+  - Display clear warnings for high-value or high-risk transactions
+
+- **Contract data display**:
+  - Ensure displayed balances match actual on-chain state
+  - Prevent XSS attacks in user-provided data (token names, NFT metadata)
+  - Validate contract addresses before reads (prevent typosquatting)
+
+- **Approval management**:
+  - Warn users before unlimited token approvals
+  - Implement approval revocation UIs
+  - Track and display existing approvals to prevent phishing
+
+**Frontend audit checklist**:
+
+- [ ] All user inputs validated before transaction submission
+- [ ] Transaction simulation runs before prompting wallet signature
+- [ ] Approval amounts capped (prefer exact amounts over unlimited)
+- [ ] Contract addresses verified against official registry
+- [ ] Sensitive actions require confirmation dialogs
+- [ ] Error messages don't leak system details to attackers
+- [ ] No hardcoded private keys or secrets in frontend code
+- [ ] HTTPS enforced, no mixed content warnings
+
+**Note**: Most smart contract audit firms also offer frontend security reviews. When budgeting for audits, allocate ~20-30% for frontend review if your protocol has significant UI surface area.
+
+**Learn more**: For frontend-specific vulnerability patterns (XSS, CSRF, phishing), reference the OWASP Top 10 Web Application Security Risks as a complement to smart contract audits.
+
+## Professional audit workflow
+
+### Pre-audit checklist
+
+```markdown
+# Pre-Audit Checklist
+
+## Code Quality
+- [ ] All contracts compile without warnings
+- [ ] Test coverage > 90% (95%+ for security-critical functions)
+- [ ] All tests passing (zero failures)
+- [ ] No console.log or debugging code in production files
+- [ ] No TODO/FIXME comments (resolve or document why okay)
+- [ ] Code formatting consistent (use Prettier/Solhint)
+
+## Documentation
+- [ ] Architecture diagram with all contracts and interactions
+- [ ] Threat model with attack scenarios and mitigations
+- [ ] Access control matrix (who can do what)
+- [ ] Known issues documented (be upfront about limitations)
+- [ ] Deployment plan with parameters
+- [ ] README explains how to build and test
+
+## Security
+- [ ] Slither shows 0 High/Critical (or documented false positives)
+- [ ] All external calls identified and reviewed
+- [ ] All admin functions have access control
+- [ ] Reentrancy guards on value-transfer functions
+- [ ] No unchecked external calls (use SafeERC20)
+- [ ] Events emitted for all state changes
+
+## Testing
+- [ ] Unit tests for all public functions
+- [ ] Integration tests for cross-contract interactions
+- [ ] Fuzz tests for arithmetic and state transitions
+- [ ] Exploit tests for known attack vectors (from common-vulnerability-patterns and smart-contract-audit-methodology)
+- [ ] Gas benchmarks documented
+
+## Logistics
+- [ ] Code frozen at specific commit (no changes during audit)
+- [ ] Private repo access granted to auditors
+- [ ] Point of contact designated (responds within 4 hours)
+- [ ] Budget approved ($50K-$150K)
+- [ ] Timeline confirmed (3-6 weeks)
+- [ ] SOW signed with audit firm
+
+## Communication
+- [ ] Team calendar blocked for audit duration
+- [ ] Daily internal stand-ups scheduled
+- [ ] Remediation sprint planned (week 5-6)
+- [ ] Post-audit launch plan drafted
+```
+
+### Post-audit checklist
+
+```markdown
+# Post-Audit Checklist
+
+## Remediation
+- [ ] All Critical findings fixed and verified
+- [ ] All High findings fixed and verified
+- [ ] Medium findings fixed or documented (if accepted)
+- [ ] Low findings addressed or tracked for future
+- [ ] Re-audit complete (auditor signed off)
+
+## Documentation
+- [ ] Audit report published on website
+- [ ] Known issues documented (if any findings not fixed)
+- [ ] Security page updated with audit badge
+- [ ] GitHub README links to audit report
+
+## Communication
+- [ ] Audit completion announced on Twitter/Discord
+- [ ] Medium article explaining findings and fixes (builds trust)
+- [ ] Auditor thanked publicly (tag them)
+- [ ] Users notified (email blast if applicable)
+
+## Launch Preparation
+- [ ] Deployment scripts tested on testnet
+- [ ] Multi-sig signers briefed on launch procedures
+- [ ] Monitoring alerts configured (Tenderly, Defender)
+- [ ] Bug bounty program launched (Immunefi)
+- [ ] Emergency playbook reviewed (incident-response-playbooks)
+
+## Ongoing Security
+- [ ] Schedule quarterly code reviews (internal)
+- [ ] Subscribe to security mailing lists (OpenZeppelin, Consensys)
+- [ ] Join security Discord servers (Spearbit, etc.)
+- [ ] Plan re-audit for major upgrades (>20% LOC changes)
+- [ ] Maintain relationship with audit firm
+```
+
+## Real-world case study: Uniswap V3 audit
+
+**Protocol**: Uniswap V3 (concentrated liquidity AMM)  
+**Audit firm**: Trail of Bits (elite tier)  
+**Cost**: ~$200K (estimated)  
+**Duration**: 6 weeks  
+**LOC**: ~6,000 lines across 10 contracts  
+**Audit report**: [Uniswap V3 Trail of Bits Audit (PDF)](https://github.com/Uniswap/v3-core/blob/main/audits/tob/audit.pdf)
+
+**Timeline**:
+- **Week 0**: Uniswap team prepared extensive docs (100+ page spec)
+- **Week 1-4**: Trail of Bits manual review + automated scanning
+- **Week 5**: Preliminary report (8 findings: 1 High, 4 Medium, 3 Low)
+- **Week 6**: Remediation and re-review
+- **Week 7**: Public report published
+
+**Key findings**:
+1. **HIGH**: Liquidity could be locked permanently if certain price bounds set
+   - Fix: Added validation on price range parameters
+2. **MEDIUM**: Rounding errors could accumulate over time
+   - Fix: Added buffer for dust amounts
+3. **MEDIUM**: Flash accounting could be manipulated
+   - Fix: Added stricter invariant checks
+
+**Post-audit**:
+- Bug bounty: $500K for Critical, active on Immunefi
+- TVL grew to $1B+ in 6 months (audit report built confidence)
+- No major exploits to date (3+ years)
+
+**Lessons**:
+- Extensive documentation saves audit time (Uniswap's 100-page spec available at [Uniswap V3 Whitepaper](https://uniswap.org/whitepaper-v3.pdf))
+- Elite auditors found issues despite thorough internal review
+- Public report + bug bounty = ongoing security + user trust
+
+**Additional resources**:
+- [Uniswap V3 Core Repository](https://github.com/Uniswap/v3-core)
+- [Uniswap Security Documentation](https://docs.uniswap.org/concepts/uniswap-protocol)
+
+## Hands-on with AI Reviewer
+
+Practice audit workflows by reviewing sample contracts.
+
+### Exercise: Prepare contract for audit
+
+**Task**: Take the YieldVault contract from previous lessons and prepare it for audit.
+
+**Deliverables**:
+1. Architecture document (2-3 pages)
+2. Threat model (5+ attack scenarios)
+3. Test suite (90%+ coverage)
+4. Pre-audit checklist (all items checked)
+
+**Evaluation criteria**:
+- Can external auditor understand system in < 1 hour reading docs?
+- Are all trust assumptions explicitly stated?
+- Are known limitations documented upfront?
+- Is threat model realistic (not just "attacker sends random data")?
+
+### Exercise: Respond to audit finding
+
+**Given**: Sample Critical finding (reentrancy vulnerability)
+
+**Your task**:
+1. Implement fix in Solidity
+2. Write exploit test proving original vulnerability
+3. Write test proving fix works
+4. Document response using template above
+
+**Evaluation criteria**:
+- Fix actually resolves vulnerability (not just bandaid)
+- Tests comprehensively cover edge cases
+- Response clearly explains root cause and fix
+
+### Exercise: Simulate audit report review
+
+**Task**: Review this sample audit finding and write a team response using the template from lines 637-679.
+
+**Given**: Sample audit finding from a fictional audit:
+
+```markdown
+## [H-01] Fee Calculation Allows Arbitrary Precision Loss
+
+### Severity: HIGH (8/10)
+
+### Description
+The `setFee()` function in YieldVault.sol (line 89) accepts any value from 0 to 10000 basis points (100%) without validating that the fee won't cause precision loss in the share price calculation. When combined with small deposit amounts, this can lead to users receiving 0 shares.
+
+### Affected Code
+```solidity
+function setFee(uint256 newFee) external onlyAdmin {
+    require(newFee <= 10000, "Fee too high");  // 100% max
+    fee = newFee;
+    emit FeeUpdated(newFee);
+}
+```
+
+### Impact
+- Users depositing small amounts (< 1000 USDC) may receive 0 shares if fee is > 99%
+- Protocol's reputation damaged if users lose funds to rounding
+- Not directly exploitable for fund theft, but damages trust
+
+### Recommendation
+Add minimum deposit requirement (e.g., 100 USDC) OR cap fees at reasonable maximum (e.g., 30% = 3000 bps)
+
+```solidity
+function setFee(uint256 newFee) external onlyAdmin {
+    require(newFee <= 3000, "Fee capped at 30%");  // More reasonable max
+    fee = newFee;
+    emit FeeUpdated(newFee);
+}
+```
+```
+
+**Your deliverables**:
+
+1. Fill out the team response template (lines 637-679)
+2. Implement the recommended fix
+3. Write a test proving the vulnerability exists pre-fix
+4. Write a test proving the fix works
+
+**Evaluation criteria**:
+- Does your root cause analysis explain WHY the bug exists?
+- Is your fix commit referenced with actual code changes?
+- Do your tests actually reproduce and verify the fix?
+- Is your response professional and thorough?
+
+**Estimated time**: 30-45 minutes
+
+## Production audit checklist
+
+Before engaging audit firm:
+
+**Technical Preparation**
+- [ ] Code frozen and tagged (e.g., v1.0-audit)
+- [ ] All tests passing (0 failures)
+- [ ] Slither clean (0 High/Critical findings)
+- [ ] Documentation complete (architecture, threat model)
+- [ ] Known issues listed upfront
+
+**Financial Preparation**
+- [ ] Budget approved ($50K-$150K for mid-size protocol)
+- [ ] Payment terms understood (typically 50% upfront, 50% on delivery)
+- [ ] Contingency budget for extended remediation (add 20%)
+
+**Timeline Preparation**
+- [ ] Launch date flexible (audit may find delays needed)
+- [ ] Team availability confirmed (weeks 1-6)
+- [ ] Remediation sprint scheduled (weeks 5-6)
+- [ ] Post-audit buffer (1-2 weeks for final testing)
+
+**Team Preparation**
+- [ ] Point of contact designated
+- [ ] Daily stand-ups scheduled
+- [ ] Remediation team identified (who will fix issues)
+- [ ] Communication plan (internal and external)
+
+**Post-Audit Preparation**
+- [ ] Bug bounty program drafted
+- [ ] Launch announcement prepared
+- [ ] Emergency playbook reviewed
+- [ ] Monitoring tools configured
+
+## Wrap-up and next steps
+
+You've mastered the professional audit process: preparing comprehensive documentation, selecting reputable audit firms, understanding the audit workflow, interpreting findings and responding effectively, and establishing continuous security through bug bounties.
+
+**Key skills mastered:**
+- Writing architecture docs and threat models that save auditor time
+- Vetting audit firms (avoiding scams, choosing quality)
+- Managing the audit lifecycle (kickoff through remediation)
+- Responding to findings with clear fixes and tests
+- Setting up bug bounty programs for ongoing security
+
+**Next lesson (incident-response-playbooks)**: Incident Response & Escalation Playbooks—real-time monitoring, automated alerting systems, war room procedures, communication templates for active exploits, and post-mortem analysis. You'll combine the audit methodology from this lesson with live incident response.
+
+**Practice challenge**: Take a complex protocol (yours or open-source), write a complete audit preparation package (architecture doc, threat model, test suite), then submit to AI Reviewer for simulated audit. Practice responding to findings as if from real auditor.
+
+Audits aren't rubber stamps—they're partnerships. Prepare thoroughly, respond professionally, and maintain ongoing security. That's how protocols survive long-term.
+
+

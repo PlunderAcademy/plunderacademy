@@ -1,0 +1,168 @@
+---
+id: intro-to-evm
+module: evm-fundamentals
+number: 2.1
+title: Introduction to Ethereum Virtual Machine (EVM)
+objective: >-
+  Gain a thorough understanding of Ethereum Virtual Machine, the virtualized
+  computing environment that executes smart contracts for Ethereum-compatible
+  blockchains including Zilliqa 2.0.
+practicalTakeaway: >-
+  The Ethereum Virtual Machine is the core runtime that enables the execution of
+  trustless, decentralized applications on EVM-compatible blockchains.
+slug: intro-to-evm
+---
+
+## The World Computer That Never Sleeps
+
+Imagine a single, colossal computer that exists everywhere and nowhere at once. It has no power cord, no physical screen, and no owner. Instead, it lives on thousands of individual machines scattered across the globe—from server farms in Norway to laptops in Singapore. Yet, it functions as one unified mind. If you run a program on this computer, every single one of those thousands of machines runs the exact same code and agrees on the exact same result.
+
+This is the **Ethereum Virtual Machine (EVM)**.
+
+It is not a physical chip; it is a software entity, a "virtual" machine that emulates a specific computer architecture. It creates a layer of abstraction between your code and the messy reality of different hardware. Whether a node is running Windows, Linux, or macOS, the EVM ensures that `1 + 1` always equals `2`.
+
+### The Engine of Trust
+
+In the traditional web, you trust a server. When you log into a bank, you trust their mainframe to accurately subtract money from your account. If that server crashes, or if an admin decides to change a number, you have little recourse. This architecture relies on "Centralized Trust."
+
+The EVM flips this model. It is a **State Machine**. At any given block, the "State" of the world (who owns what, what contracts exist, what the balances are) is frozen. When transactions happen, the EVM computes the transition to the next State.
+
+Because this computation happens redundantly across thousands of nodes, it is **Deterministic**. There is no room for ambiguity. If a smart contract executes a trade, that trade is verified by the entire network. We don't trust a bank manager; we trust the math. This shift from "Institutional Trust" to "Cryptographic Truth" is the core value proposition of blockchain technology.
+
+### Inside the Machine: The Stack Architecture
+
+How does this virtual brain actually think? It doesn't work quite like the laptop you are using right now. The EVM is a **Stack-Based Machine**.
+
+In modern CPUs (like the one in your phone), registers are used to hold data for quick access. The EVM eschews this for a simpler, more verifiable structure: the Stack.
+
+Think of a stack of plates in a cafeteria. You can only add a plate to the top (`PUSH`) or take one off the top (`POP`). The EVM handles data the same way. It's a Last-In, First-Out (LIFO) data structure.
+
+To add two numbers, the EVM doesn't say "add A and B." It follows a precise sequence:
+1.  **PUSH 5**: Put `5` on top of the stack.
+2.  **PUSH 3**: Put `3` on top of the stack.
+3.  **ADD**: This command removes the top two items (`5` and `3`), adds them together, and puts the result (`8`) back on top.
+4.  The stack now holds `8`.
+
+This architecture is rigid, having a maximum depth of 1024 items and word size of 256 bits. While this 256-bit size is larger than standard 64-bit processors (optimized for cryptographic functions like hashing), the stack design limits complexity, making it easier to secure and harder for malicious code to crash the system.
+
+<StackVisualizer />
+
+### The Sandbox: Isolation is Security
+
+One of the EVM's most critical features is that it is a **Sandbox**.
+
+When a smart contract runs inside the EVM, it is completely cut off from the outside world. It cannot access the file system of the node running it. It cannot make API calls to the internet. It cannot even see other contracts unless it is explicitly calling them.
+
+This isolation is vital. It means that even if you deploy a malicious virus of a contract, it cannot "break out" and infect the host computer or the wider network. It lives and dies within its own little mathematical box.
+
+However, this isolation comes with a trade-off: contracts are blind to the outside world. They don't know the price of Apple stock or the winner of the World Cup. To get this data, they rely on "Oracles"—trusted bridges that push data into the sandbox.
+
+### EVM vs. Traditional Computing
+
+To truly grasp the shift, let's compare the architecture of a standard web app with an EVM app.
+
+<table>
+  <thead>
+    <tr>
+      <th>Feature</th>
+      <th>Traditional Web 2.0</th>
+      <th>EVM / Web3</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Execution</strong></td>
+      <td>Centralized (AWS, Google Cloud)</td>
+      <td>Decentralized (Thousands of Nodes)</td>
+    </tr>
+    <tr>
+      <td><strong>Trust</strong></td>
+      <td>Trust the Company</td>
+      <td>Trust the Code (Math)</td>
+    </tr>
+    <tr>
+      <td><strong>Downtime</strong></td>
+      <td>Single Point of Failure</td>
+      <td>Unstoppable (Resilient)</td>
+    </tr>
+    <tr>
+      <td><strong>Data</strong></td>
+      <td>Private Silos (SQL Database)</td>
+      <td>Public & Transparent (Blockchain)</td>
+    </tr>
+    <tr>
+      <td><strong>Access</strong></td>
+      <td>Permissioned (Login Required)</td>
+      <td>Permissionless (Wallet Required)</td>
+    </tr>
+  </tbody>
+</table>
+
+### Deep Dive: The World State
+
+To truly understand the EVM, you must understand what it is protecting: the **World State**.
+
+The World State is a mapping of addresses to accounts. There are two types of accounts:
+1.  **Externally Owned Accounts (EOAs):** Controlled by private keys (users like you). They have a balance and a nonce (transaction counter), but no code.
+2.  **Contract Accounts:** Controlled by their code. They have a balance, a nonce, their storage (persistent data), and their code hash.
+
+Every time a transaction is mined, the EVM takes the current World State, applies the transaction logic, and generates a new World State. This transition is atomic—it either happens completely or not at all. If a transaction runs out of gas or hits an error, the EVM reverts the state back to exactly how it was before the transaction started.
+
+### Real-World Applications: Beyond "Digital Gold"
+
+The EVM transformed blockchain from a simple ledger (Bitcoin) into a programmable computer. This capability birthed entire industries:
+
+*   **DeFi (Decentralized Finance):** Banks without bankers. Protocols like Uniswap (exchanges) and Aave (lending) are just smart contracts running on the EVM, managing billions of dollars autonomously.
+*   **NFTs (Digital Ownership):** The ERC-721 standard defines how to track unique assets. Whether it's digital art or a token representing a real-world house, the EVM tracks the ownership history immutably.
+*   **DAOs (Decentralized Autonomous Organizations):** Companies written in code. Governance rules are baked into the contract, allowing thousands of strangers to coordinate funds and decisions transparently.
+
+### Why Zilliqa Speaks EVM
+
+You might wonder: if Zilliqa has its own high-performance architecture, why use the EVM?
+
+Imagine building a new electric car. You could invent a brand new shape for the charging plug, forcing everyone to build new stations. Or, you could use the standard plug that is already in millions of garages.
+
+By adopting the EVM, Zilliqa 2.0 plugs directly into the massive Ethereum ecosystem.
+*   **For Developers:** If you know Solidity, you already know how to build on Zilliqa. You can use the tools you love—Remix, Hardhat, Foundry—without changing a single line of configuration other than the network URL.
+*   **For Users:** You get the best of both worlds. You get the rich, mature application ecosystem of Ethereum, but powered by Zilliqa's high-speed consensus engine. It’s like putting a Ferrari engine inside a reliable family sedan—everything works as you expect, but it moves significantly faster and costs a fraction of the price to run.
+
+Zilliqa 2.0 brings specific advantages to this relationship:
+*   **Performance:** 1-second block times mean your dApps feel responsive, not sluggish.
+*   **Cost:** Low gas fees enable micro-transaction use cases (like gaming) that are priced out of Ethereum Mainnet.
+*   **Scalability:** Zilliqa's architecture is designed to handle massive throughput without the congestion that plagues older networks.
+
+### Common Misconceptions
+
+<Callout type="tip">
+  **"EVM is slow and expensive"**
+  <br/>
+  **Reality:** The EVM specification itself is efficient. High costs usually come from network congestion (supply and demand), not the machine itself. On Zilliqa 2.0, the EVM runs cheaply and quickly because the underlying consensus layer is highly scalable.
+</Callout>
+
+<Callout type="tip">
+  **"Smart Contracts are AI"**
+  <br/>
+  **Reality:** Smart contracts are "smart" like a vending machine, not like a robot. They are passive logic. They only do exactly what they are programmed to do when someone inserts a coin (transaction).
+</Callout>
+
+<Callout type="tip">
+  **"You can hide secrets in the EVM"**
+  <br/>
+  **Reality:** Everything on the EVM is public. Even "private" variables in Solidity are only private to other contracts; any human can read them from the blockchain data. Never store passwords or API keys on-chain.
+</Callout>
+
+### Summary
+
+The EVM is the heartbeat of the decentralized web. It is the standard for how value and logic move on-chain. It provides a deterministic, isolated, and secure environment where code is law. As we move forward, we will look at how this machine reads code, how it charges for its services (Gas), and how you can become a master mechanic of this global engine.
+
+## 🎮 Interactive Practice
+
+Let's solidify your understanding of the core EVM concepts. Match the term to its definition to ensure you've grasped the vocabulary of the World Computer.
+
+<ConceptMatching pairs={[
+  {"conceptId": "evm", "definitionId": "def-evm", "concept": "EVM", "definition": "The 'World Computer' that executes smart contracts deterministically.", "category": "core"},
+  {"conceptId": "stack", "definitionId": "def-stack", "concept": "Stack", "definition": "The LIFO (Last-In-First-Out) data structure used for computation.", "category": "execution"},
+  {"conceptId": "sandbox", "definitionId": "def-sandbox", "concept": "Sandbox", "definition": "The isolated environment that prevents code from accessing the host system.", "category": "security"},
+  {"conceptId": "determinism", "definitionId": "def-det", "concept": "Determinism", "definition": "The guarantee that code produces the same result on every machine.", "category": "core"},
+  {"conceptId": "world-state", "definitionId": "def-state", "concept": "World State", "definition": "The global mapping of all accounts and their current data.", "category": "core"}
+]} />

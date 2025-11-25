@@ -1,0 +1,226 @@
+---
+id: "advanced-nft-lesson-2"
+slug: "reveal-mechanics"
+module: "advanced-nft-features"
+number: "3.5"
+title: "Reveal Mechanics and Royalty Standards"
+objective: "Implement sophisticated reveal mechanisms and royalty systems following EIP-2981 standards."
+practicalTakeaway: "Build NFT collections with delayed reveals and automated royalty distribution."
+---
+
+# Reveal Mechanics and Royalty Standards
+
+## Set the stage
+
+Imagine boarding a ship where the captain promises a treasure map but won't show it until you're at sea. If the captain can swap maps mid‑voyage or favor certain crew members, trust collapses. NFT reveals work the same way: collectors mint blind, expecting a fair, one‑time reveal that doesn't favor insiders or change post‑sale.
+
+Royalties add another layer: creators want ongoing economics from secondary sales, but enforcement lives off‑chain in marketplace policies. You'll wire ERC‑2981 to signal intent, document expectations, and keep admin actions auditable. For the staking arc, think of royalties as a reward stream that flows from trades, similar to how staking rewards accrue over time—but here, the "staking" is the creator's ongoing contribution to the ecosystem.
+
+Without disciplined reveal mechanics and transparent royalty policies, launches attract accusations of manipulation, marketplaces ignore your fees, and long‑term holder trust erodes.
+
+## Conceptual foundations
+
+- Hidden → revealed: switch base CID atomically via admin action
+- Provenance: optional hash to pre‑commit media ordering
+- Royalties: ERC‑2981 interface returns receiver and fee; marketplaces may honor it differently
+
+### Interactive: Reveal Process
+
+Experience how NFT reveals work. Click the button to toggle between hidden and revealed states, seeing how all tokens switch atomically.
+
+<RevealMechanicsVisualizer />
+
+### One‑way reveal and auditability
+
+- **Definition**: A single, irreversible switch from hidden metadata to final base URI.
+- **When to use**: Most profile‑picture (PFP) drops and generative sets to avoid selective reveals.
+- **Audit tip**: Emit events and store the final base CID for clear on‑chain evidence.
+
+### Provenance and fairness
+
+- **Definition**: A pre‑published hash committing to the order or content of media before mint.
+- **When to use**: If rarity distribution matters; helps resist claims of manipulation.
+- **Practice**: Publish the salt, shuffle method, and reveal policy alongside the hash.
+
+### Royalty semantics (EIP‑2981)
+
+- **Definition**: Standard `royaltyInfo(tokenId, salePrice)` → `(receiver, amount)`.
+- **When to use**: Collections that want creator economics supported by marketplaces.
+- **Reality check**: Enforcement is marketplace‑dependent; communicate expectations to collectors.
+
+### Admin model and separation of duties
+
+- **Definition**: Limit who can reveal, set royalties, or pause mints.
+- **Practice**: Use `Ownable` or `AccessControl`; log changes with events; prefer time‑locked ops when possible.
+
+## Code in practice
+
+### 1) Reveal + ERC‑2981
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
+
+contract RevealRoyalties is ERC721, ERC2981, Ownable {
+    string private _base;
+    string private _hidden;
+    bool public revealed;
+
+    constructor(address owner_, string memory hiddenURI, address royaltyReceiver, uint96 feeBps)
+        ERC721("RevealRoyalties", "RR")
+        Ownable(owner_)
+    {
+        _hidden = hiddenURI;
+        _setDefaultRoyalty(royaltyReceiver, feeBps); // e.g., 500 = 5%
+    }
+
+    function _baseURI() internal view override returns (string memory) { return _base; }
+    function setBaseURI(string calldata newBase) external onlyOwner { _base = newBase; }
+    function reveal(string calldata baseCid) external onlyOwner { _base = string.concat("ipfs://", baseCid, "/"); revealed = true; }
+
+    function tokenURI(uint256 id) public view override returns (string memory) {
+        if (!revealed) return _hidden;
+        return string.concat(_base, _toString(id), ".json");
+    }
+
+    function supportsInterface(bytes4 iid) public view override(ERC721, ERC2981) returns (bool) {
+        return ERC721.supportsInterface(iid) || ERC2981.supportsInterface(iid);
+    }
+}
+```
+
+Takeaway: default royalty applies to all tokens; you can override per‑token if needed.
+
+### 2) Staking‑aware badge update signal (ERC‑4906)
+
+Tie staking milestones to an NFT badge without changing the token’s identity. Signal indexers to refresh the JSON after a milestone.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IERC4906 { event MetadataUpdate(uint256 _tokenId); }
+
+contract StakingBadgeSignals {
+    event MilestoneReached(uint256 indexed tokenId, uint64 level);
+    function _onMilestone(uint256 tokenId, uint64 level) internal {
+        emit MilestoneReached(tokenId, level);
+        emit IERC4906.MetadataUpdate(tokenId);
+    }
+}
+```
+
+Takeaway: keep token identity stable; use events to notify clients that traits changed.
+
+### 3) Admin‑scoped royalty update
+
+Allow controlled royalty updates (e.g., policy change) while preserving auditability via events.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract RoyaltyAdmin is ERC2981, Ownable {
+    event DefaultRoyaltyUpdated(address receiver, uint96 bps);
+    constructor(address owner_) Ownable(owner_) {}
+    function setDefaultRoyalty(address receiver, uint96 feeBps) external onlyOwner {
+        _setDefaultRoyalty(receiver, feeBps);
+        emit DefaultRoyaltyUpdated(receiver, feeBps);
+    }
+}
+```
+
+Takeaway: pair permissioned updates with explicit events for clear on‑chain history.
+
+## Practice and reflection
+
+- Define your royalty receiver and basis points; document the policy for collectors
+- If using provenance, decide how you’ll publish the hash and mapping
+- Draft your reveal runbook: who triggers, when, and how you’ll verify success
+- Decide whether staking milestones should trigger ERC‑4906 metadata refreshes
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"r1","text":"ERC‑2981 guarantees marketplace enforcement","correctAnswer":false,"explanation":"It’s a standard interface; enforcement is marketplace‑dependent."},
+  {"id":"r2","text":"Reveals should update baseURI in a single transaction","correctAnswer":true,"explanation":"Atomic change avoids mixed states and confusion."}
+]}/>
+
+## Security and pitfalls
+
+Reveals and royalties touch trust and economics. Follow these patterns to avoid common traps.
+
+### Selective or delayed reveals
+
+**Danger**: Revealing tokens in batches or selectively lets insiders see rarity before others, enabling unfair trades.
+
+**Bad**:
+```solidity
+function revealToken(uint256 id) external onlyOwner {
+    _revealed[id] = true; // per-token reveal
+}
+```
+
+**Good**:
+```solidity
+function reveal(string calldata baseCid) external onlyOwner {
+    require(!revealed, "Already revealed");
+    _base = string.concat("ipfs://", baseCid, "/");
+    revealed = true;
+    emit Revealed(baseCid);
+}
+```
+
+**Rule**: Reveal the entire collection atomically in a single transaction; emit one event for auditability.
+
+### Mutable metadata without disclosure
+
+**Danger**: Changing images or traits post‑reveal without notice breaks provenance and collector expectations.
+
+**Rule**: Publish a metadata mutability policy before mint; if you must update, emit ERC‑4906 events and document the change in a public changelog.
+
+### Royalty rates beyond marketplace caps
+
+**Danger**: Setting royalties above marketplace limits (e.g., >10%) causes silent failures or marketplace rejections.
+
+**Rule**: Research target marketplace caps; default to 2.5–7.5% (250–750 bps); document the rate in your collection docs.
+
+### Missing provenance commitment
+
+**Danger**: Without a pre‑published hash, accusations of post‑mint rarity manipulation are hard to refute.
+
+**Rule**: If rarity matters, publish a provenance hash (e.g., `keccak256(concat(all_token_hashes))`) before mint; reveal the mapping and salt post‑reveal.
+
+### Coupled reveal and phase changes
+
+**Danger**: Revealing and opening a new mint phase in the same transaction creates confusion and potential front‑running.
+
+**Rule**: Keep reveal and phase transitions in separate transactions with distinct events; allow time for indexers to catch up.
+
+## Security checklist
+
+Before shipping reveals and royalties:
+
+- [ ] **One‑way reveal**: Single atomic switch from hidden to revealed; no per‑token reveals
+- [ ] **Provenance hash**: Published before mint if rarity distribution is critical
+- [ ] **Royalty rate**: Within marketplace limits (typically ≤10%, prefer 2.5–7.5%)
+- [ ] **ERC‑2981 support**: `supportsInterface` returns true for `0x2a55205a`
+- [ ] **Event logging**: Emit `Revealed` and `DefaultRoyaltyUpdated` events
+- [ ] **Admin access**: Reveal and royalty updates restricted to `onlyOwner` or role
+- [ ] **Metadata policy**: Published and linked in collection docs
+- [ ] **ERC‑4906 signals**: Emit `MetadataUpdate` if traits change post‑reveal
+- [ ] **Royalty receiver**: Verified address; consider multi‑sig for team splits
+- [ ] **Testing**: Unit tests for reveal idempotency and royalty calculations
+- [ ] **Audit trail**: All admin actions logged with indexed events
+- [ ] **Documentation**: Reveal runbook and royalty policy shared with community
+
+## Wrap‑up
+
+You now have fair reveal mechanics and standard royalties. Next: multi‑phase minting (allowlist/presale/public) with clear limits and events.
+

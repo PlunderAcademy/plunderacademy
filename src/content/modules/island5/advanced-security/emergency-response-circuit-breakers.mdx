@@ -1,0 +1,1457 @@
+---
+id: "dapp-security-lesson-5"
+slug: "emergency-response-circuit-breakers"
+module: "advanced-security"
+number: "5.16"
+title: "Emergency Response & Circuit Breakers"
+objective: "Master emergency pause mechanisms, safe upgrade procedures under duress, and incident response protocols that minimize damage when vulnerabilities are discovered."
+practicalTakeaway: "Build fail-safe protocols with circuit breakers that can halt exploits in seconds, emergency withdrawal patterns that protect user funds, and recovery procedures that restore service safely."
+---
+
+# Emergency Response & Circuit Breakers
+
+## Why this matters now
+
+You've built secure contracts with comprehensive testing (security-testing-audit-preparation), but no code is perfect. When Compound discovered a $150M bug in their token distribution, they had 7 days before the exploit window opened—enough time to deploy a fix because they had emergency procedures. When Cream Finance was exploited for $130M, they had no pause mechanism—attackers drained funds while the team scrambled.
+
+Circuit breakers are your last line of defense. They let you freeze contracts mid-attack, preventing further damage while you analyze the issue. Emergency withdrawal patterns let users rescue funds even when normal operations are compromised. Proper incident response turns potential catastrophes into minor incidents.
+
+**Frontend responsibility**: When building dApps (as you learned in Modules 1-3), your frontend must handle paused contract states gracefully. Display clear messages when contracts are paused, provide UI for emergency withdrawals, and communicate incident status to users. Never hide pause states or let users attempt transactions that will revert—transparent error handling builds trust during crises.
+
+This lesson teaches you to build fail-safe protocols: OpenZeppelin Pausable for instant freezes, emergency withdrawal patterns (pull over push), upgrade procedures that work under time pressure, incident response playbooks with decision trees, and communication templates that keep users informed. You'll learn the difference between protocols that survive exploits and those that don't.
+
+## Conceptual foundations for emergency response
+
+**Definition — Circuit breaker (pause mechanism)**: Smart contract feature that immediately halts all or specific operations when triggered by authorized addresses. **When to use it**: All production protocols handling user funds. Pause should be instant (no timelock) for true emergencies, but unpause should require timelock to prevent abuse.
+
+**Definition — Emergency withdrawal**: Pattern allowing users to retrieve funds even when contract is paused or compromised. **When to use it**: Staking contracts, vaults, and any system where users deposit funds long-term. Users must be able to exit without admin intervention.
+
+**Definition — Fail-safe defaults**: System design where failures lead to safe states (frozen) rather than exploitable states. **Example**: If price oracle fails, contract pauses instead of using stale data. If signature verification fails, transaction reverts instead of proceeding.
+
+**Definition — Incident response playbook**: Pre-written procedures executed when vulnerability is discovered or exploit is underway. **When to prepare it**: Before launch. During an attack, you don't have time to figure out who to call or what commands to run.
+
+**Mental model — Kill switch layers**: Layer 1 = automatic circuit breakers (code detects anomaly), Layer 2 = manual pause (team detects issue), Layer 3 = emergency upgrade (fix deployment), Layer 4 = communication (user notification). Each layer buys time for the next.
+
+**Anti-pattern — "We'll handle it when it happens"**: No emergency procedures because "our code is thoroughly audited." **Why it fails**: Even audited code has vulnerabilities (see: Poly Network, Wormhole, Nomad). Attackers move in seconds; unplanned responses take hours. By the time you coordinate, funds are gone.
+
+## Guided code walk-throughs
+
+### OpenZeppelin Pausable implementation
+
+The Pausable pattern stops contract operations instantly when triggered.
+
+#### Basic pause mechanism
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+/**
+ * @title SecureVault
+ * @notice Vault with emergency pause capability
+ * @dev PAUSER_ROLE can instantly freeze operations, preventing exploit damage
+ */
+contract SecureVault is Pausable, AccessControl, ReentrancyGuard {
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    
+    mapping(address => uint256) public balances;
+    uint256 public totalDeposits;
+    
+    // Emergency state tracking
+    bool public emergencyMode;
+    uint256 public pausedAt;
+    string public pauseReason;
+    
+    event EmergencyPause(address indexed by, string reason, uint256 timestamp);
+    event EmergencyUnpause(address indexed by, uint256 pauseDuration);
+    event EmergencyWithdrawal(address indexed user, uint256 amount);
+    
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ADMIN_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender);
+    }
+    
+    /**
+     * @notice Deposit funds to vault
+     * @dev Blocked when paused (normal operations only when safe)
+     */
+    function deposit() external payable whenNotPaused {
+        require(msg.value > 0, "Must deposit > 0");
+        
+        balances[msg.sender] += msg.value;
+        totalDeposits += msg.value;
+    }
+    
+    /**
+     * @notice Withdraw funds from vault
+     * @dev Blocked when paused in normal mode, but see emergencyWithdraw()
+     */
+    function withdraw(uint256 amount) external nonReentrant whenNotPaused {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        
+        balances[msg.sender] -= amount;
+        totalDeposits -= amount;
+        
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+    
+    /**
+     * @notice Emergency pause all operations
+     * @dev Callable by PAUSER_ROLE with no delay (instant circuit breaker)
+     * @param reason Human-readable explanation (logged on-chain for transparency)
+     */
+    function emergencyPause(string calldata reason) external onlyRole(PAUSER_ROLE) {
+        _pause();
+        pausedAt = block.timestamp;
+        pauseReason = reason;
+        emit EmergencyPause(msg.sender, reason, block.timestamp);
+    }
+    
+    /**
+     * @notice Unpause after emergency resolved
+     * @dev Requires ADMIN_ROLE (higher privilege than PAUSER_ROLE)
+     * @dev In production: Add timelock requirement for unpause
+     */
+    function emergencyUnpause() external onlyRole(ADMIN_ROLE) {
+        uint256 pauseDuration = block.timestamp - pausedAt;
+        _unpause();
+        pauseReason = "";
+        emit EmergencyUnpause(msg.sender, pauseDuration);
+    }
+    
+    /**
+     * @notice Emergency withdrawal bypassing pause
+     * @dev Users can withdraw even when paused (funds always accessible)
+     * @dev Only available after 24hrs of pause (prevents abuse during short pauses)
+     */
+    function emergencyWithdraw() external nonReentrant {
+        require(paused(), "Use normal withdraw when not paused");
+        require(block.timestamp >= pausedAt + 1 days, "Wait 24hrs after pause");
+        
+        uint256 amount = balances[msg.sender];
+        require(amount > 0, "No balance");
+        
+        balances[msg.sender] = 0;
+        totalDeposits -= amount;
+        
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+        
+        emit EmergencyWithdrawal(msg.sender, amount);
+    }
+    
+    /**
+     * @notice Check if contract is paused
+     */
+    function isPaused() external view returns (bool) {
+        return paused();
+    }
+    
+    /**
+     * @notice Get pause details
+     */
+    function getPauseInfo() external view returns (
+        bool isPaused,
+        uint256 pauseTimestamp,
+        string memory reason,
+        bool emergencyWithdrawAvailable
+    ) {
+        isPaused = paused();
+        pauseTimestamp = pausedAt;
+        reason = pauseReason;
+        emergencyWithdrawAvailable = paused() && (block.timestamp >= pausedAt + 1 days);
+    }
+}
+```
+
+**Key pause patterns:**
+
+- **Instant pause, delayed unpause**: PAUSER_ROLE freezes immediately, ADMIN_ROLE unpauses after investigation
+- **Reason logging**: `pauseReason` string recorded on-chain for transparency
+- **Emergency withdrawal**: Users can exit after 24hrs of pause (prevents permanent lock)
+- **Role separation**: Pausers can't unpause (prevents single compromised key from toggling)
+
+#### Advanced: Granular pausing
+
+```solidity
+/**
+ * @title GranularPauseVault
+ * @notice Vault with selective function pausing
+ * @dev Some functions remain operational during partial pauses
+ */
+contract GranularPauseVault is AccessControl {
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    
+    mapping(address => uint256) public balances;
+    
+    // Individual function pause flags
+    bool public depositsPaused;
+    bool public withdrawalsPaused;
+    bool public transfersPaused;
+    
+    event FunctionPaused(string functionName, address indexed by);
+    event FunctionUnpaused(string functionName, address indexed by);
+    
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender);
+    }
+    
+    modifier whenDepositsNotPaused() {
+        require(!depositsPaused, "Deposits paused");
+        _;
+    }
+    
+    modifier whenWithdrawalsNotPaused() {
+        require(!withdrawalsPaused, "Withdrawals paused");
+        _;
+    }
+    
+    modifier whenTransfersNotPaused() {
+        require(!transfersPaused, "Transfers paused");
+        _;
+    }
+    
+    /**
+     * @notice Pause specific function (surgical response)
+     * @dev Example: Pause deposits if deposit bug found, but withdrawals still work
+     */
+    function pauseDeposits() external onlyRole(PAUSER_ROLE) {
+        depositsPaused = true;
+        emit FunctionPaused("deposit", msg.sender);
+    }
+    
+    function pauseWithdrawals() external onlyRole(PAUSER_ROLE) {
+        withdrawalsPaused = true;
+        emit FunctionPaused("withdraw", msg.sender);
+    }
+    
+    function pauseTransfers() external onlyRole(PAUSER_ROLE) {
+        transfersPaused = true;
+        emit FunctionPaused("transfer", msg.sender);
+    }
+    
+    /**
+     * @notice Pause all operations (nuclear option)
+     */
+    function pauseAll() external onlyRole(PAUSER_ROLE) {
+        depositsPaused = true;
+        withdrawalsPaused = true;
+        transfersPaused = true;
+        emit FunctionPaused("all", msg.sender);
+    }
+    
+    function deposit() external payable whenDepositsNotPaused {
+        balances[msg.sender] += msg.value;
+    }
+    
+    function withdraw(uint256 amount) external whenWithdrawalsNotPaused {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+    
+    function transfer(address to, uint256 amount) external whenTransfersNotPaused {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+        balances[to] += amount;
+    }
+}
+```
+
+**When to use granular pausing:**
+
+Granular pausing allows surgical responses to specific vulnerabilities without halting all operations:
+
+**Deposit function bug** → Pause deposits only
+- Users can't deposit (safe)
+- Users can still withdraw and transfer existing balances
+- Funds are not locked
+
+**Withdrawal function bug** → Pause withdrawals only
+- Users can't withdraw (temporary inconvenience)
+- Users can still deposit and transfer
+- Protocol keeps functioning for new users
+
+**Transfer function bug** → Pause transfers only
+- Users can't transfer to each other
+- Users can still deposit and withdraw
+- Core vault functions remain operational
+
+**Critical multi-function bug** → Pause all operations
+- All operations frozen (nuclear option)
+- Emergency withdrawal available after 24 hours
+- Maximum protection while fix is deployed
+
+**Decision tree for pause level:**
+
+```
+Is the bug actively being exploited?
+├─ YES → Pause all immediately (use pauseAll())
+│         └─ Investigate which function is vulnerable
+│             └─ After investigation, unpause safe functions
+│
+└─ NO (vulnerability reported but not exploited)
+    └─ Assess which function has the vulnerability
+        ├─ Deposit vulnerable → pauseDeposits()
+        ├─ Withdraw vulnerable → pauseWithdrawals()  
+        ├─ Transfer vulnerable → pauseTransfers()
+        └─ Multiple functions → pauseAll()
+```
+
+**Example scenario**: You discover a reentrancy vulnerability in the `transfer()` function. Instead of pausing the entire vault (which would prevent legitimate withdrawals), you call `pauseTransfers()`. Users can still withdraw their funds to safety, but can't trigger the vulnerable transfer function. This maintains user trust while preventing exploitation.
+
+### Emergency withdrawal patterns
+
+Users must be able to retrieve funds even when contract is compromised.
+
+#### Pull over push pattern
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+/**
+ * @title PullPaymentVault
+ * @notice Uses pull pattern for withdrawals (safer than push)
+ * @dev Even if contract is paused, users can withdraw their recorded balances
+ * @dev Production example using ERC20 tokens (more common than raw ETH)
+ */
+contract PullPaymentVault {
+    using SafeERC20 for IERC20;
+    
+    IERC20 public immutable token;
+    
+    mapping(address => uint256) public withdrawableBalances;
+    uint256 public totalAllocated;
+    
+    bool public paused;
+    
+    event BalanceAllocated(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+    event Paused(address indexed by);
+    
+    constructor(address _token) {
+        require(_token != address(0), "Invalid token");
+        token = IERC20(_token);
+    }
+    
+    /**
+     * @notice Allocate withdrawable balance to user
+     * @dev Separates allocation from transfer (pull pattern)
+     * @dev Only callable by authorized contracts (e.g., reward distributor)
+     */
+    function allocate(address user, uint256 amount) external {
+        require(!paused, "Paused");
+        
+        // Ensure contract has sufficient token balance
+        uint256 contractBalance = token.balanceOf(address(this));
+        require(contractBalance >= totalAllocated + amount, "Insufficient contract balance");
+        
+        withdrawableBalances[user] += amount;
+        totalAllocated += amount;
+        
+        emit BalanceAllocated(user, amount);
+    }
+    
+    /**
+     * @notice User pulls their allocated funds
+     * @dev Works even when contract is paused (emergency withdrawal)
+     * @dev Users control when they withdraw (no forced pushes)
+     * @dev Uses SafeERC20 to handle non-standard token return values
+     */
+    function withdraw() external {
+        uint256 amount = withdrawableBalances[msg.sender];
+        require(amount > 0, "Nothing to withdraw");
+        
+        // Update state before transfer (CEI pattern + reentrancy protection)
+        withdrawableBalances[msg.sender] = 0;
+        totalAllocated -= amount;
+        
+        // Safe transfer (handles tokens that don't return bool)
+        token.safeTransfer(msg.sender, amount);
+        
+        emit Withdrawn(msg.sender, amount);
+    }
+    
+    /**
+     * @notice Emergency pause (blocks new allocations but NOT withdrawals)
+     * @dev In production: use AccessControl to restrict this to PAUSER_ROLE
+     */
+    function pause() external {
+        paused = true;
+        emit Paused(msg.sender);
+    }
+    
+    /**
+     * @notice Check how much user can withdraw
+     */
+    function getWithdrawableBalance(address user) external view returns (uint256) {
+        return withdrawableBalances[user];
+    }
+}
+```
+
+**Why pull is safer than push:**
+
+**Push pattern risks** (contract sends funds):
+- **Recipient revert risk**: If recipient reverts, entire transaction fails
+- **Reentrancy risk**: Recipient can re-enter during transfer, enabling attacks
+- **Gas limit risk**: Can't send to all users in single transaction (batch operations fail)
+
+**Pull pattern solution** (user withdraws):
+- Users control when they withdraw (no forced transfers)
+- Transaction only affects individual user (revert doesn't cascade)
+- Works even when contract is paused (emergency access)
+- **Trade-off**: Users must remember to withdraw (mitigate with UI reminders and notifications)
+
+#### Safe batch withdrawal
+
+```solidity
+/**
+ * @title BatchWithdrawalVault
+ * @notice Allows admin to prepare batch withdrawals for users
+ * @dev Users claim prepared withdrawals (can't be forced)
+ */
+contract BatchWithdrawalVault {
+    mapping(address => uint256) public pendingWithdrawals;
+    
+    event WithdrawalPrepared(address indexed user, uint256 amount);
+    event WithdrawalClaimed(address indexed user, uint256 amount);
+    
+    /**
+     * @notice Admin prepares withdrawals for multiple users
+     * @dev Used during migrations or emergency shutdowns
+     * @param users Array of user addresses
+     * @param amounts Array of withdrawal amounts (must match users length)
+     */
+    function prepareWithdrawals(
+        address[] calldata users,
+        uint256[] calldata amounts
+    ) external {
+        require(users.length == amounts.length, "Length mismatch");
+        
+        for (uint256 i = 0; i < users.length; i++) {
+            pendingWithdrawals[users[i]] += amounts[i];
+            emit WithdrawalPrepared(users[i], amounts[i]);
+        }
+    }
+    
+    /**
+     * @notice User claims prepared withdrawal
+     * @dev Pull pattern: user initiates when ready
+     */
+    function claimWithdrawal() external {
+        uint256 amount = pendingWithdrawals[msg.sender];
+        require(amount > 0, "Nothing to claim");
+        
+        pendingWithdrawals[msg.sender] = 0;
+        
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+        
+        emit WithdrawalClaimed(msg.sender, amount);
+    }
+    
+    /**
+     * @notice Check pending withdrawal amount
+     */
+    function getPendingWithdrawal(address user) external view returns (uint256) {
+        return pendingWithdrawals[user];
+    }
+    
+    receive() external payable {}
+}
+```
+
+### Upgrade procedures under duress
+
+When vulnerability is discovered, you need to upgrade safely and quickly.
+
+#### UUPS emergency upgrade
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+
+/**
+ * @title EmergencyUpgradeableVault
+ * @notice Upgradeable vault with emergency upgrade capability
+ * @dev Normal upgrades require timelock, emergency upgrades bypass timelock
+ */
+contract EmergencyUpgradeableVault is 
+    UUPSUpgradeable, 
+    AccessControlUpgradeable, 
+    PausableUpgradeable 
+{
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant EMERGENCY_ROLE = keccak256("EMERGENCY_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    
+    mapping(address => uint256) public balances;
+    
+    // Upgrade governance
+    address public timelock;  // Normal upgrades go through timelock
+    bool public emergencyUpgradeEnabled;  // Can bypass timelock when true
+    
+    event EmergencyUpgradeEnabled(address indexed by, string reason);
+    event EmergencyUpgradeExecuted(address indexed oldImplementation, address indexed newImplementation);
+    
+    function initialize(address _timelock) external initializer {
+        __UUPSUpgradeable_init();
+        __AccessControl_init();
+        __Pausable_init();
+        
+        timelock = _timelock;
+        
+        _grantRole(DEFAULT_ADMIN_ROLE, _timelock);
+        _grantRole(UPGRADER_ROLE, _timelock);
+        _grantRole(EMERGENCY_ROLE, msg.sender);  // Deployer can enable emergency mode
+        _grantRole(PAUSER_ROLE, msg.sender);
+    }
+    
+    /**
+     * @notice Enable emergency upgrade mode
+     * @dev Allows bypassing timelock when critical bug found
+     * @param reason Explanation logged on-chain
+     */
+    function enableEmergencyUpgrade(string calldata reason) 
+        external 
+        onlyRole(EMERGENCY_ROLE) 
+    {
+        emergencyUpgradeEnabled = true;
+        emit EmergencyUpgradeEnabled(msg.sender, reason);
+    }
+    
+    /**
+     * @notice Authorize upgrade to new implementation
+     * @dev Normal path: msg.sender must be timelock (48hr delay)
+     * @dev Emergency path: msg.sender can be EMERGENCY_ROLE (instant)
+     */
+    function _authorizeUpgrade(address newImplementation) 
+        internal 
+        override 
+    {
+        if (emergencyUpgradeEnabled && hasRole(EMERGENCY_ROLE, msg.sender)) {
+            // Emergency upgrade: bypass timelock
+            emit EmergencyUpgradeExecuted(
+                _getImplementation(),
+                newImplementation
+            );
+        } else {
+            // Normal upgrade: require timelock
+            require(msg.sender == timelock, "Must go through timelock");
+            require(hasRole(UPGRADER_ROLE, msg.sender), "Not authorized");
+        }
+    }
+    
+    /**
+     * @notice Get current implementation address
+     */
+    function getImplementation() external view returns (address) {
+        return _getImplementation();
+    }
+    
+    // Vault functions (omitted for brevity)
+    function deposit() external payable whenNotPaused {
+        balances[msg.sender] += msg.value;
+    }
+    
+    function withdraw(uint256 amount) external whenNotPaused {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+}
+```
+
+**Emergency upgrade workflow:**
+
+```bash
+# Emergency upgrade workflow using Foundry's cast CLI
+# Prerequisites: Install Foundry (https://getfoundry.sh)
+# Set environment variables: VAULT_ADDRESS, PAUSER_KEY, EMERGENCY_KEY, RPC_URL, etc.
+
+# 1. Discover critical vulnerability
+# Team lead calls emergency meeting, confirms exploit is real
+
+# 2. Pause contract immediately
+cast send $VAULT_ADDRESS "emergencyPause(string)" "Reentrancy in withdraw()" \
+  --private-key $PAUSER_KEY \
+  --rpc-url $RPC_URL
+
+# 3. Enable emergency upgrade mode
+cast send $VAULT_ADDRESS "enableEmergencyUpgrade(string)" "Critical: Fix reentrancy" \
+  --private-key $EMERGENCY_KEY \
+  --rpc-url $RPC_URL
+
+# 4. Deploy fixed implementation
+forge create EmergencyUpgradeableVaultV2 \
+  --private-key $DEPLOYER_KEY \
+  --rpc-url $RPC_URL
+
+# 5. Upgrade to fixed implementation (bypasses timelock)
+# Use the implementation address from step 4
+cast send $PROXY_ADDRESS "upgradeToAndCall(address,bytes)" $NEW_IMPL "0x" \
+  --private-key $EMERGENCY_KEY \
+  --rpc-url $RPC_URL
+
+# 6. Verify fix
+cast call $VAULT_ADDRESS "getImplementation()" --rpc-url $RPC_URL
+
+# 7. Test on testnet first (if time allows)
+# 8. Execute upgrade on mainnet
+# 9. Unpause after verification
+cast send $VAULT_ADDRESS "emergencyUnpause()" \
+  --private-key $ADMIN_KEY \
+  --rpc-url $RPC_URL
+
+# 10. Communicate to users
+```
+
+### Incident response playbooks
+
+Pre-written procedures for common emergency scenarios.
+
+#### Playbook 1: Exploit detected (funds actively draining)
+
+## CRITICAL: Active Exploit Detected
+
+**Objective**: Stop fund drainage within 60 seconds
+
+### Immediate Actions (0-5 minutes)
+
+- **PAUSE CONTRACT** (highest priority)
+   
+   ```bash
+   # Run from emergency hot wallet
+   cast send $CONTRACT "emergencyPause(string)" "Active exploit detected" \
+     --private-key $EMERGENCY_KEY \
+     --gas-limit 1000000 \
+     --priority-gas-price 100  # High gas for fast inclusion
+   ```
+
+- **ALERT TEAM** (simultaneously with step 1)
+   
+   - Post in #emergency channel: "@here ACTIVE EXPLOIT. Contract paused. Stand by."
+   - Call security lead: [PHONE_NUMBER]
+   - Notify exchange partners (if needed to halt trading)
+
+- **MONITOR ATTACKER**
+   
+   - Attacker address: [paste from etherscan]
+   - Track on Etherscan: https://etherscan.io/address/[ATTACKER]
+   - Watch for fund movements to exchanges (alert exchanges if detected)
+
+### Analysis Phase (5-30 minutes)
+
+- **IDENTIFY VULNERABILITY**
+   
+   - Check recent transactions for pattern
+   - Compare to known exploit techniques (reentrancy, flash loan, etc.)
+   - Find exact function and line causing issue
+
+- **ASSESS DAMAGE**
+   
+   - Total funds lost: `cast call $CONTRACT "getBalance()"`
+   - User funds at risk: Check remaining contract balance
+   - Affected users: Query event logs
+
+- **DETERMINE IF MORE CONTRACTS AFFECTED**
+   
+   - Does sister contract have same code?
+   - Are other chains affected?
+   - Pause all related contracts if unsure
+
+### Mitigation Phase (30-120 minutes)
+
+- **DEPLOY FIX**
+   
+   - Write patch for vulnerability
+   - Test patch on forked mainnet
+   - Deploy new implementation
+   - Upgrade contract (see emergency upgrade procedure)
+
+- **VERIFY FIX**
+   
+   - Attempt to reproduce exploit on new implementation
+   - Confirm exploit fails with new code
+   - Run full test suite
+
+- **UNPAUSE** (only after 100% confirmed safe)
+   
+   ```bash
+   cast send $CONTRACT "emergencyUnpause()" --private-key $ADMIN_KEY
+   ```
+
+### Recovery Phase (2-24 hours)
+
+- **USER COMMUNICATION**
+    
+    - Post incident report (see template)
+    - Announce resolution on Twitter, Discord
+    - Email affected users (if possible)
+
+- **FUND RECOVERY PLAN**
+    
+    - If attacker address known, offer bounty to return funds
+    - Work with exchanges to freeze attacker funds
+    - File police report (if > $1M)
+
+- **POST-MORTEM**
+    
+    - Document timeline
+    - Root cause analysis
+    - Update playbooks with lessons learned
+
+#### Playbook 2: Bug reported (no active exploit)
+
+## NON-CRITICAL: Bug Report Received
+
+**Objective**: Assess and fix before exploit occurs
+
+### Triage Phase (0-1 hour)
+
+- **ASSESS SEVERITY**
+   
+   - Can attacker drain funds? → CRITICAL (use Playbook 1)
+   - Can attacker disrupt service? → HIGH
+   - Is it edge case with no clear exploit? → MEDIUM
+   - Is it best practice violation? → LOW
+
+- **VERIFY BUG**
+   
+   - Can you reproduce it?
+   - Write proof-of-concept test
+   - Estimate impact ($ at risk)
+
+- **DECIDE PAUSE OR NOT**
+   
+   - PAUSE if: Direct fund loss possible
+   - DON'T PAUSE if: Edge case with no clear exploit path
+   - CONSULT if: Unsure (call security advisor)
+
+### Fix Phase (1-48 hours)
+
+- **DEVELOP PATCH**
+   
+   - Fix vulnerability
+   - Add regression test
+   - Run full test suite + fuzzing
+
+- **DEPLOY THROUGH NORMAL CHANNELS**
+   
+   - If not urgent: Use timelock (48hr delay)
+   - If urgent but not critical: Fast-track through governance
+   - If critical: Use emergency upgrade (Playbook 1)
+
+- **REWARD REPORTER**
+   
+   - Calculate bounty based on severity
+   - Pay reporter (builds goodwill for future reports)
+   - Thank publicly (with permission)
+
+### Prevention Phase (ongoing)
+
+- **UPDATE TESTS**
+   
+   - Add test case for this bug
+   - Add similar pattern checks
+
+- **AUDIT SIMILAR CODE**
+   
+   - Does same pattern exist elsewhere?
+   - Fix all instances
+
+- **UPDATE DOCUMENTATION**
+   
+   - Document vulnerability in internal wiki
+   - Update playbooks if new scenario
+
+#### Playbook 3: Oracle manipulation detected
+
+## HIGH: Oracle Price Manipulation
+
+**Objective**: Prevent arbitrage/liquidation exploits
+
+### Immediate Actions (0-2 minutes)
+
+- **PAUSE PRICE-SENSITIVE FUNCTIONS**
+   
+   - Pause liquidations (prevent malicious liquidations)
+   - Pause borrows (prevent under-collateralized loans)
+   - Keep withdrawals OPEN (users must exit)
+
+- **VERIFY ORACLE DATA**
+   
+   ```bash
+   # Check current price vs historical
+   cast call $ORACLE "getPrice(address)" $TOKEN_ADDRESS
+   
+   # Compare to backup oracle
+   cast call $BACKUP_ORACLE "getPrice(address)" $TOKEN_ADDRESS
+   ```
+
+- **IDENTIFY MANIPULATION METHOD**
+   
+   - Flash loan? (check for AAVE/Uniswap flash loan events)
+   - Low liquidity pool? (check pool reserves)
+   - Oracle downtime? (check oracle timestamp)
+
+### Mitigation Phase (2-30 minutes)
+
+- **SWITCH TO BACKUP ORACLE** (if available)
+   
+   ```bash
+   cast send $CONTRACT "setOracle(address)" $BACKUP_ORACLE \
+     --private-key $ADMIN_KEY
+   ```
+
+- **IMPLEMENT SANITY CHECKS**
+   
+   - Add price bounds (reject if > 10% change in 1 block)
+   - Add TWAP (time-weighted average price)
+   - Require multiple oracle sources
+
+- **UNPAUSE WHEN PRICE STABILIZES**
+   
+   - Wait for flash loan to unwind (1 block)
+   - Verify price returned to normal
+   - Resume operations
+
+### Recovery Phase
+
+- **COMPENSATE AFFECTED USERS**
+   
+   - Identify users unfairly liquidated
+   - Calculate damages
+   - Distribute compensation from treasury
+
+- **UPGRADE ORACLE LOGIC**
+   
+   - Deploy fix with sanity checks
+   - Test with historical data
+   - Upgrade through timelock
+
+### Communication templates
+
+Clear communication prevents panic and builds trust.
+
+#### Incident announcement (Twitter/Discord)
+
+```markdown
+🚨 INCIDENT ALERT
+
+We've paused the [CONTRACT_NAME] contract due to [BRIEF_DESCRIPTION].
+
+STATUS: Contract paused ✅
+USER FUNDS: Safe (withdrawals available after 24hrs of pause)
+ATTACKER FUNDS: [$ amount] (if applicable)
+
+TIMELINE:
+- 14:32 UTC: Issue detected
+- 14:33 UTC: Contract paused
+- 14:45 UTC: Root cause identified
+- [TBD]: Fix deployment
+
+We're working on a fix and will update every 30 minutes.
+
+Incident report: [link to detailed report]
+
+🔒 Security is our top priority. Thank you for your patience.
+```
+
+#### Post-mortem report
+
+```markdown
+# Incident Post-Mortem: [DATE]
+
+## Executive Summary
+
+On [DATE] at [TIME] UTC, we discovered a [VULNERABILITY_TYPE] vulnerability in [CONTRACT_NAME]. We paused the contract within [X] minutes, preventing [$Y] in potential losses. [Z] ETH was affected. All user funds are safe.
+
+## Timeline
+
+| Time (UTC) | Event |
+|------------|-------|
+| 14:30 | User reports unusual transaction |
+| 14:32 | Team confirms reentrancy vulnerability |
+| 14:33 | Contract paused |
+| 14:45 | Root cause identified (missing ReentrancyGuard) |
+| 15:30 | Fix deployed and tested |
+| 16:00 | Contract upgraded |
+| 16:15 | Verification complete |
+| 16:30 | Contract unpaused |
+
+## Root Cause
+
+The `withdraw()` function used external call before updating state:
+
+```solidity
+// VULNERABLE
+(bool success, ) = msg.sender.call{value: amount}("");
+balances[msg.sender] -= amount;  // State update AFTER external call
+```
+
+This allowed attacker to re-enter and withdraw multiple times.
+
+## Impact
+
+- **Funds at risk**: 1000 ETH (~$2M at time)
+- **Funds actually lost**: 0 ETH (paused before exploitation)
+- **Downtime**: 2 hours
+- **Users affected**: 0 (no losses)
+
+## Fix
+
+Added OpenZeppelin ReentrancyGuard:
+
+```solidity
+// FIXED
+balances[msg.sender] -= amount;  // State update FIRST
+(bool success, ) = msg.sender.call{value: amount}("");
+```
+
+## Lessons Learned
+
+- **What went well**: Emergency pause worked instantly, team coordinated effectively
+- **What didn't**: Vulnerability should have been caught by audit (auditor missed it)
+- **Action items**:
+   
+   - Add fuzzing tests for all external call patterns
+   - Require two audits for future contracts
+   - Train more team members on emergency procedures
+
+## Prevention
+
+- All new functions with external calls require ReentrancyGuard
+- Added test case: `testCannotReenterWithdraw()`
+- Updated audit checklist to explicitly check reentrancy
+
+## Bounty
+
+We're awarding $50,000 to the user who reported this issue.
+
+## Questions
+
+Contact security@[DOMAIN] for any questions.
+
+---
+
+*Report published: [DATE]*  
+*Contract address: [ADDRESS]*  
+*Fix commit: [GITHUB_LINK]*
+```
+
+## Testing emergency procedures
+
+Don't wait for real emergency to test your playbooks. Test locally first, then on testnet, before considering mainnet drills.
+
+**Testing environment progression:**
+
+- **Hardhat local network** (fastest iteration): Test pause/unpause, emergency withdrawals, and upgrade scenarios with time manipulation (`evm_increaseTime`)
+- **Public testnet** (Sepolia/Zilliqa testnet): Verify procedures work without time manipulation, test coordination with multiple signers
+- **Mainnet fork** (using Hardhat/Foundry): Test against actual production state without risking real funds
+- **Mainnet drill** (optional, expensive): Only for critical protocols >$10M TVL, coordinate with users, announce in advance
+
+### Emergency drill script (local development)
+
+Before running this drill:
+- Deploy contracts to local Hardhat network: `npx hardhat node`
+- Deploy vault: `npx hardhat run scripts/deploy.js --network localhost`
+- Set VAULT_ADDRESS in .env
+
+```javascript
+// scripts/emergency-drill.js
+// Simulates emergency pause/unpause on testnet
+// Run with: npx hardhat run scripts/emergency-drill.js --network localhost
+
+const { ethers } = require("hardhat");
+
+async function main() {
+  console.log("🚨 EMERGENCY DRILL STARTING\n");
+  
+  // Get signers (ensure you have testnet ETH on these accounts)
+  const [admin, pauser, user] = await ethers.getSigners();
+  
+  // Connect to deployed vault (set address in .env)
+  const vaultAddress = process.env.VAULT_ADDRESS;
+  if (!vaultAddress) {
+    throw new Error("VAULT_ADDRESS not set in .env");
+  }
+  
+  const vault = await ethers.getContractAt("SecureVault", vaultAddress);
+  
+  console.log(`Connected to vault at: ${vaultAddress}`);
+  console.log(`Admin: ${admin.address}`);
+  console.log(`Pauser: ${pauser.address}`);
+  console.log(`User: ${user.address}\n`);
+  
+  // 1. Normal operations
+  console.log("1. User deposits 1 ETH");
+  const depositTx = await vault.connect(user).deposit({ value: ethers.parseEther("1") });
+  await depositTx.wait();
+  console.log(`   ✅ Deposit successful (tx: ${depositTx.hash})`);
+  
+  // 2. Pauser detects issue
+  console.log("\n2. Pauser detects vulnerability and pauses");
+  const pauseStart = Date.now();
+  const pauseTx = await vault.connect(pauser).emergencyPause("Drill: Testing pause");
+  await pauseTx.wait();
+  const pauseDuration = Date.now() - pauseStart;
+  console.log(`   ✅ Contract paused in ${pauseDuration}ms`);
+  
+  // 3. Verify operations blocked
+  console.log("\n3. Verify deposits blocked");
+  try {
+    await vault.connect(user).deposit({ value: ethers.parseEther("0.1") });
+    console.log("   ❌ ERROR: Deposit should have reverted");
+    process.exit(1);
+  } catch (error) {
+    if (error.message.includes("Pausable: paused")) {
+      console.log("   ✅ Deposit correctly blocked");
+    } else {
+      console.log(`   ❌ ERROR: Unexpected error: ${error.message}`);
+      process.exit(1);
+    }
+  }
+  
+  // 4. Verify withdrawals blocked (initially)
+  console.log("\n4. Verify withdrawals blocked (first 24hrs)");
+  try {
+    await vault.connect(user).emergencyWithdraw();
+    console.log("   ❌ ERROR: Emergency withdrawal should require 24hr wait");
+    process.exit(1);
+  } catch (error) {
+    if (error.message.includes("Wait 24hrs after pause")) {
+      console.log("   ✅ Withdrawal correctly blocked (must wait 24hrs)");
+    } else {
+      console.log(`   ❌ ERROR: Unexpected error: ${error.message}`);
+      process.exit(1);
+    }
+  }
+  
+  // 5. Simulate time passing (testnet only - won't work on mainnet)
+  console.log("\n5. Fast-forward 24 hours (testnet only)");
+  try {
+    await ethers.provider.send("evm_increaseTime", [86400]);  // 24 hours
+    await ethers.provider.send("evm_mine", []);
+    console.log("   ✅ Time advanced 24 hours");
+  } catch (error) {
+    console.log(`   ⚠️  Warning: Time manipulation not supported on this network`);
+    console.log("   ℹ️  Skipping emergency withdrawal test (requires 24hr wait)");
+  }
+  
+  // 6. Emergency withdrawal now available (if time travel worked)
+  console.log("\n6. User performs emergency withdrawal");
+  try {
+    const balanceBefore = await ethers.provider.getBalance(user.address);
+    const withdrawTx = await vault.connect(user).emergencyWithdraw();
+    const receipt = await withdrawTx.wait();
+    const balanceAfter = await ethers.provider.getBalance(user.address);
+    
+    const gasCost = receipt.gasUsed * receipt.gasPrice;
+    const netGain = balanceAfter - balanceBefore;
+    
+    console.log(`   ✅ Withdrawn successfully`);
+    console.log(`      Gas cost: ${ethers.formatEther(gasCost)} ETH`);
+    console.log(`      Net gain: ${ethers.formatEther(netGain)} ETH`);
+  } catch (error) {
+    console.log(`   ℹ️  Emergency withdrawal test skipped (time-dependent)`);
+  }
+  
+  // 7. Admin unpauses
+  console.log("\n7. Admin unpauses contract");
+  const unpauseTx = await vault.connect(admin).emergencyUnpause();
+  await unpauseTx.wait();
+  console.log("   ✅ Contract unpaused");
+  
+  // 8. Verify operations resume
+  console.log("\n8. Verify deposits work again");
+  const resumeTx = await vault.connect(user).deposit({ value: ethers.parseEther("0.5") });
+  await resumeTx.wait();
+  console.log("   ✅ Deposit successful - operations resumed");
+  
+  console.log("\n✅ EMERGENCY DRILL COMPLETE\n");
+  console.log("📊 Performance metrics:");
+  console.log(`   - Pause execution time: ${pauseDuration}ms`);
+  console.log("   - Emergency withdrawal flow verified");
+  console.log("   - Unpause procedure validated");
+  console.log("\n💡 Next steps:");
+  console.log("   - Document drill results");
+  console.log("   - Update incident playbooks with timing data");
+  console.log("   - Schedule next drill in 3 months");
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("\n❌ DRILL FAILED:");
+    console.error(error);
+    process.exit(1);
+  });
+```
+
+### Foundry drill test (alternative to Hardhat)
+
+For developers using Foundry instead of Hardhat:
+
+```solidity
+// test/EmergencyDrill.t.sol
+// Foundry test simulating emergency scenarios
+// Run with: forge test --match-contract EmergencyDrillTest -vvv
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "forge-std/Test.sol";
+import "../src/SecureVault.sol";
+
+contract EmergencyDrillTest is Test {
+    SecureVault vault;
+    address admin;
+    address pauser;
+    address user;
+    
+    function setUp() public {
+        admin = makeAddr("admin");
+        pauser = makeAddr("pauser");
+        user = makeAddr("user");
+        
+        // Deploy vault
+        vm.prank(admin);
+        vault = new SecureVault();
+        
+        // Grant roles
+        vm.startPrank(admin);
+        vault.grantRole(vault.PAUSER_ROLE(), pauser);
+        vault.grantRole(vault.ADMIN_ROLE(), admin);
+        vm.stopPrank();
+        
+        // Fund user
+        vm.deal(user, 10 ether);
+    }
+    
+    function testEmergencyDrill() public {
+        console.log("=== EMERGENCY DRILL STARTING ===\n");
+        
+        // 1. Normal operations
+        console.log("1. User deposits 1 ETH");
+        vm.prank(user);
+        vault.deposit{value: 1 ether}();
+        assertEq(vault.balances(user), 1 ether);
+        console.log("   [PASS] Deposit successful\n");
+        
+        // 2. Pauser detects issue
+        console.log("2. Pauser triggers emergency pause");
+        uint256 pauseStart = block.timestamp;
+        vm.prank(pauser);
+        vault.emergencyPause("Drill: Testing pause mechanism");
+        assertTrue(vault.paused());
+        console.log("   [PASS] Contract paused\n");
+        
+        // 3. Verify deposits blocked
+        console.log("3. Verify deposits blocked when paused");
+        vm.prank(user);
+        vm.expectRevert("Pausable: paused");
+        vault.deposit{value: 0.1 ether}();
+        console.log("   [PASS] Deposits correctly blocked\n");
+        
+        // 4. Verify withdrawals blocked initially
+        console.log("4. Verify emergency withdrawals require 24hr wait");
+        vm.prank(user);
+        vm.expectRevert("Wait 24hrs after pause");
+        vault.emergencyWithdraw();
+        console.log("   [PASS] Emergency withdrawal correctly blocked\n");
+        
+        // 5. Fast-forward 24 hours
+        console.log("5. Fast-forward 24 hours");
+        vm.warp(block.timestamp + 24 hours);
+        console.log("   [PASS] Time advanced\n");
+        
+        // 6. Emergency withdrawal now works
+        console.log("6. User performs emergency withdrawal");
+        uint256 balanceBefore = user.balance;
+        vm.prank(user);
+        vault.emergencyWithdraw();
+        uint256 balanceAfter = user.balance;
+        assertEq(balanceAfter - balanceBefore, 1 ether);
+        console.log("   [PASS] Emergency withdrawal successful\n");
+        
+        // 7. Admin unpauses
+        console.log("7. Admin unpauses contract");
+        vm.prank(admin);
+        vault.emergencyUnpause();
+        assertFalse(vault.paused());
+        console.log("   [PASS] Contract unpaused\n");
+        
+        // 8. Operations resume
+        console.log("8. Verify operations resumed");
+        vm.deal(user, 1 ether);
+        vm.prank(user);
+        vault.deposit{value: 0.5 ether}();
+        assertEq(vault.balances(user), 0.5 ether);
+        console.log("   [PASS] Deposits work again\n");
+        
+        console.log("=== EMERGENCY DRILL COMPLETE ===\n");
+        console.log("Drill performance:");
+        console.log("  - All pause mechanisms functional");
+        console.log("  - Emergency withdrawals working");
+        console.log("  - Unpause procedure verified");
+    }
+    
+    function testMultipleUsersEmergencyWithdraw() public {
+        console.log("=== TESTING MULTI-USER EMERGENCY SCENARIO ===\n");
+        
+        // Setup multiple users
+        address user2 = makeAddr("user2");
+        address user3 = makeAddr("user3");
+        
+        vm.deal(user2, 5 ether);
+        vm.deal(user3, 5 ether);
+        
+        // Multiple deposits
+        vm.prank(user);
+        vault.deposit{value: 1 ether}();
+        
+        vm.prank(user2);
+        vault.deposit{value: 2 ether}();
+        
+        vm.prank(user3);
+        vault.deposit{value: 3 ether}();
+        
+        console.log("Multiple users deposited total 6 ETH");
+        
+        // Emergency pause
+        vm.prank(pauser);
+        vault.emergencyPause("Drill: Multi-user test");
+        
+        // Fast-forward 24hrs
+        vm.warp(block.timestamp + 24 hours);
+        
+        // All users can withdraw
+        vm.prank(user);
+        vault.emergencyWithdraw();
+        
+        vm.prank(user2);
+        vault.emergencyWithdraw();
+        
+        vm.prank(user3);
+        vault.emergencyWithdraw();
+        
+        // Verify all balances cleared
+        assertEq(vault.balances(user), 0);
+        assertEq(vault.balances(user2), 0);
+        assertEq(vault.balances(user3), 0);
+        
+        console.log("   [PASS] All users successfully withdrew\n");
+    }
+}
+```
+
+**Run drills quarterly:**
+- Q1: Pause/unpause drill
+- Q2: Emergency upgrade drill
+- Q3: Oracle failure drill
+- Q4: Full incident response simulation
+
+## Real-world case studies
+
+### Case study: Compound COMP distribution bug
+
+**Date**: September 30, 2021  
+**Issue**: Bug in COMP token distribution would give users $150M in unearned rewards  
+**Reference**: [Compound Proposal 062](https://compound.finance/governance/proposals/62) | [Post-mortem](https://www.comp.xyz/t/compound-bug-post-mortem/2284)
+
+**Timeline**:
+- Day 1, 8am: Bug deployed to mainnet via Proposal 062
+- Day 1, 10am: Bug discovered by founder Robert Leshner
+- Day 1, 11am: Public tweet warning users not to claim COMP
+- Day 7: Governance proposal to fix passes (7-day voting period)
+- Day 7+2: Timelock expires, fix deployed
+
+**Why it worked**:
+- 7-day delay before bug became fully exploitable (rewards vested over time)
+- Clear communication to users and white-hat researchers
+- Governance process followed despite urgency (maintained trust)
+- Only ~$80M distributed before fix (vs $150M potential)
+
+**Lessons**:
+- Build in vesting/delays for high-value actions (buys time for fixes)
+- Have governance fast-track procedure for emergencies
+- Public disclosure can work if you have time buffer
+- Community trust maintained through transparency
+
+---
+
+### Case study: Cream Finance exploit
+
+**Date**: October 27, 2021  
+**Amount lost**: $130M  
+**Issue**: Price oracle manipulation via flash loan  
+**Reference**: [PeckShield Analysis](https://twitter.com/peckshield/status/1453364046904786950) | [Rekt News Report](https://rekt.news/cream-rekt-2/)
+
+**Timeline**:
+- 0:00: Attacker borrows $2B in flash loan from Aave
+- 0:01: Attacker manipulates Cream's price oracle using flash-borrowed assets
+- 0:02: Attacker borrows at manipulated price (under-collateralized)
+- 0:03: Attacker repays flash loan with profit, exits with $130M
+- 0:05: Team detects abnormal transaction on Etherscan
+- 0:10: Contract paused—too late, funds already gone
+
+**Why it failed**:
+- No automatic circuit breakers (should pause on >10% price change in single block)
+- No flash loan detection or prevention
+- Manual pause too slow for flash loan attack (completes in 1 block)
+- Used spot price instead of TWAP (time-weighted average price)
+
+**Lessons**:
+- Add automatic pausers for anomaly detection (can't wait for humans)
+- Require TWAP (time-weighted average) for price feeds (manipulation-resistant)
+- Flash loan attacks complete in 1 block—human response too slow
+- Consider flash loan detection (unusual borrow amount patterns)
+
+**Technical detail**: The attacker exploited Cream's reliance on yUSD's spot price from a low-liquidity Curve pool. By swapping large amounts in the flash loan, they manipulated the pool's reserves and thus the reported price, allowing massive over-borrowing.
+
+## Hands-on with AI Reviewer
+
+Submit contracts and verify AI catches missing emergency features.
+
+### Exercise: Vault without emergency procedures
+
+**Submit this code:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract VulnerableVault {
+    mapping(address => uint256) public balances;
+    address public owner;
+    
+    constructor() {
+        owner = msg.sender;
+    }
+    
+    function deposit() external payable {
+        balances[msg.sender] += msg.value;
+    }
+    
+    function withdraw(uint256 amount) external {
+        require(balances[msg.sender] >= amount);
+        balances[msg.sender] -= amount;
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success);
+    }
+    
+    function emergencyWithdrawAll() external {
+        require(msg.sender == owner, "Only owner");
+        (bool success, ) = owner.call{value: address(this).balance}("");
+        require(success);
+    }
+}
+```
+
+**Expected AI findings:**
+
+- **CRITICAL (10/10)**: No pause mechanism—can't stop exploits
+   
+   - **Attack scenario**: "If vulnerability discovered, no way to halt operations. Attacker can continue draining funds while team scrambles to deploy fix. Recent examples: Cream Finance lost $130M because they couldn't pause fast enough."
+   - **Recommended fix**: "Implement OpenZeppelin's Pausable.sol with emergency pause function callable by PAUSER_ROLE. Add whenNotPaused modifier to deposit() and withdraw()."
+
+- **CRITICAL (9/10)**: `emergencyWithdrawAll()` steals all user funds (rug pull risk)
+   
+   - **Attack scenario**: "Owner can call emergencyWithdrawAll() and steal all deposited user funds. This is an intentional rug pull mechanism. Users have zero protection."
+   - **Recommended fix**: "Remove emergencyWithdrawAll() entirely. If emergency withdrawal needed, implement per-user emergency withdrawal after pause period (e.g., 24 hours) so users withdraw their own funds, not admin withdrawing everyone's."
+
+- **HIGH (8/10)**: Owner is single EOA (no multi-sig or timelock)
+   
+   - **Attack scenario**: "If owner's private key compromised, attacker immediately gains full control. Can call emergencyWithdrawAll() and drain all funds. No delays or multi-party approval required."
+   - **Recommended fix**: "Replace owner EOA with Gnosis Safe multi-sig (3-of-5 signers minimum). For upgrade authority, use OpenZeppelin TimelockController with 48hr delay."
+
+- **MEDIUM (6/10)**: No events for emergency actions
+   
+   - **Attack scenario**: "Emergency actions (emergencyWithdrawAll, ownership transfer) leave no on-chain trace. Users can't monitor for malicious admin activity. Attackers can act silently."
+   - **Recommended fix**: "Emit EmergencyWithdrawal(address indexed by, uint256 amount) event in emergencyWithdrawAll(). Add event logging to all owner-only functions."
+
+- **LOW (4/10)**: No reentrancy guard on withdraw()
+   
+   - **Attack scenario**: "Although state is updated before external call (follows CEI pattern), adding ReentrancyGuard provides defense-in-depth. If code refactored incorrectly, guard prevents exploitation."
+   - **Recommended fix**: "Import OpenZeppelin's ReentrancyGuard and add nonReentrant modifier to withdraw() and any function making external calls."
+
+**Your task:**
+
+- Submit the vulnerable contract to `/reviewer`
+- Compare your AI's findings to the expected findings above (severity should be similar)
+- Implement all CRITICAL and HIGH findings
+- Re-submit to verify AI clears those findings
+- Document any remaining MEDIUM/LOW findings you choose not to fix (with justification)
+
+**Fixed version checklist:**
+- [ ] Added OpenZeppelin Pausable with PAUSER_ROLE
+- [ ] Removed owner's emergencyWithdrawAll() function
+- [ ] Added user emergency withdrawal after 24hr pause
+- [ ] Replaced owner EOA with multi-sig address
+- [ ] Added events for all emergency actions
+- [ ] Added ReentrancyGuard to withdraw()
+- [ ] Re-ran AI Reviewer and verified all CRITICAL/HIGH cleared
+
+## Production emergency checklist
+
+Before mainnet:
+
+**Technical**
+- [ ] Pausable implemented with role separation (PAUSER ≠ UNPAUSER)
+- [ ] Emergency withdrawal available after 24hrs of pause
+- [ ] Upgrade mechanism tested (emergency + normal paths)
+- [ ] Automatic circuit breakers for anomalies (optional but recommended)
+- [ ] Events emitted for all emergency actions
+
+**Operational**
+- [ ] Incident playbooks written for 5 scenarios (exploit, bug, oracle, etc.)
+- [ ] Emergency contacts documented (phone numbers, backup numbers)
+- [ ] Multi-sig signers trained on emergency procedures
+- [ ] Emergency keys secured in hardware wallets (not hot wallets)
+- [ ] Quarterly emergency drills scheduled
+
+**Communication**
+- [ ] Twitter/Discord alert templates prepared
+- [ ] Post-mortem template ready
+- [ ] User FAQ prepared ("What happens if contract pauses?")
+- [ ] PR contact identified (if > $10M protocol)
+- [ ] Exchange contacts ready (to freeze attacker funds if needed)
+
+## Wrap-up and next steps
+
+You've mastered emergency response: Pausable circuit breakers, emergency withdrawal patterns, upgrade procedures under pressure, incident playbooks, and communication templates.
+
+**Key skills mastered:**
+- Implementing instant pause mechanisms with role separation
+- Building emergency withdrawal patterns (pull over push)
+- Executing upgrades under duress (with and without timelock)
+- Following incident playbooks for common scenarios
+- Communicating clearly during crises
+
+**Next lesson (advanced-attack-vectors)**: Advanced Attack Vectors & Defense in Depth—flash loan attacks, oracle manipulation, cross-contract reentrancy, storage collisions, signature replay, and frontrunning mitigation. You'll layer the emergency response skills from this lesson with proactive defenses against sophisticated attacks.
+
+**Practice challenge**: Build a vault with full emergency features: pause/unpause with role separation, emergency withdrawal after 24hrs, upgrade authorization with emergency bypass, and write a complete incident playbook. Run an emergency drill and document response times.
+
+Emergency features aren't "nice to have"—they're the difference between a recoverable incident and a fatal exploit. Build them before you need them.
+
+

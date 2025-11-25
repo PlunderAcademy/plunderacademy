@@ -1,0 +1,99 @@
+---
+id: "web3-frontend-lesson-2"
+slug: "contract-data-reading"
+module: "web3-frontend-basics"
+number: "5.2"
+title: "Reading Contract Data with Wagmi and Viem"
+objective: "Learn to read blockchain data efficiently using modern Web3 libraries and React hooks."
+practicalTakeaway: "Build responsive dApps that display real-time blockchain data with optimal performance."
+---
+
+# Reading Contract Data with Wagmi and Viem
+
+## Why this matters now
+
+After connecting a wallet, the next critical step is showing useful on-chain data: balances, contract configuration, user positions. Good read patterns keep your UI fresh without over-fetching or blocking the main thread. We’ll use wagmi’s `useReadContract` and viem utilities to display data reliably.
+
+## Conceptual foundations for Web3 frontend
+
+- **Definition — `useReadContract`**: wagmi hook for calling view/pure functions. **When to use it**: Reading ERC20 balances, config values, or any on-chain state that doesn’t change storage.
+- **Definition — ABI**: Contract interface describing functions, events, and errors. **When to use it**: Whenever encoding/decoding calls and logs; keep it typed in your codebase.
+- **Definition — `formatUnits`**: viem helper to render token amounts. **When to use it**: Convert `bigint` values to human numbers for your UI.
+- **Anti‑pattern**: Calling view functions on every render manually; prefer hooks with built‑in caching and re-fetch.
+
+## Guided code walk‑throughs
+
+### 1) Reading an ERC20 balance
+
+Fetch a user’s token balance using `useReadContract`. Gate the call behind connection and show a loading state for clarity.
+
+```tsx
+import { useAccount, useReadContract } from "wagmi";
+import { formatUnits } from "viem";
+import { erc20Abi } from "viem"; // Or import from a local file: import erc20Abi from "@/lib/abis/erc20.json";
+
+export function TokenBalance({ token, decimals }: { token: `0x${string}`; decimals: number }) {
+  const { address, isConnected } = useAccount();
+  const { data, isPending, error } = useReadContract({
+    address: token,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [address!],
+    query: { enabled: isConnected && !!address },
+  });
+
+  if (!isConnected) return <p>Connect to view balance.</p>;
+  if (isPending) return <p>Loading balance…</p>;
+  if (error) return <p className="text-red-600">Error: {error.message}</p>;
+
+  const display = formatUnits((data as bigint) ?? 0n, decimals);
+  return <p>Balance: {display}</p>;
+}
+```
+
+Takeaway: Use `query.enabled` to avoid calls before the wallet connects; format `bigint` values for display.
+
+### 2) Auto refresh and derived UI states
+
+Reads re-fetch on new blocks by default. Derive simple UI states (empty, non‑zero) from the result to drive UX.
+
+```tsx
+import { useMemo } from "react";
+
+export function BalancePill({ amount }: { amount: string }) {
+  const tier = useMemo(() => {
+    const n = Number(amount);
+    if (Number.isNaN(n) || n === 0) return "empty";
+    if (n < 1) return "small";
+    return "rich";
+  }, [amount]);
+
+  return <span className={`badge badge-${tier}`}>{tier}</span>;
+}
+```
+
+Takeaway: Simple derived states help prioritize information without extra calls.
+
+## Practical exercises
+
+{/* Concept Matching */}
+<ConceptMatching pairs={[
+  {"conceptId":"read","definitionId":"def-read","concept":"useReadContract","definition":"Hook to call view/pure contract functions","category":"wagmi"},
+  {"conceptId":"abi","definitionId":"def-abi","concept":"ABI","definition":"Interface for functions, events, and errors","category":"eth"},
+  {"conceptId":"fmt","definitionId":"def-fmt","concept":"formatUnits","definition":"Convert bigint token amounts to human strings","category":"viem"}
+]}/>
+
+### Reflection
+
+- What read calls will you cache globally, and which should be component-scoped?
+- Where will you show loading vs skeletons for better perceived performance?
+
+## UX and error handling best practices
+
+- Avoid flashing “0” before data arrives; show “Loading…” or a skeleton.
+- Normalize units early; pass formatted strings to presentational components.
+- Add empty states (no positions, no NFTs) with next actions.
+
+## Wrap‑up and next steps
+
+You can fetch and display on-chain data with friendly formatting. Next, you’ll manage chains and network switching so users land on the right network.

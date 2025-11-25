@@ -1,0 +1,217 @@
+---
+id: staking-concepts-time-logic-quiz
+slug: staking-concepts-time-logic-quiz
+module: staking-concepts-time-logic
+title: "Module 4: Staking Concepts & Time Logic – Quiz"
+description: "Staking architecture, reward mechanics, accrual windows, lockups/unstake delays, and time-based logic."
+totalQuestions: 14
+passingScore: 80
+timeLimit: 18
+---
+
+### Question 1
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.1 Staking Architecture
+
+Which pattern reduces reentrancy risk in staking withdrawals?
+
+**Options:**
+- A) Interactions before checks
+- B) Checks-Effects-Interactions
+- C) Effects-Checks-Interactions
+- D) Interactions only, no checks
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.1 Staking Architecture
+
+What is a safe approach to track user stakes?
+
+**Options:**
+- A) Single global counter
+- B) Mapping from user to stake struct with amount and timestamp
+- C) Event-only tracking, no state
+- D) Array of users iterated each block
+---
+
+### Question 3
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 4.2 Time-Based Logic
+
+Which are common time-based staking parameters?
+
+**Options:**
+- A) Lockup period before first withdrawal
+- B) Reward accrual interval or epoch
+- C) Fixed `msg.sender` per epoch
+- D) Unstake delay or cooldown
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.2 Time-Based Logic
+
+How should you test boundary conditions for reward accrual windows?
+
+**Options:**
+- A) Ignore: exact boundaries are not important
+- B) Use time travel (`vm.warp`) to test just before and just after window edges
+- C) Rely on manual testing only
+- D) Only test mid-window values
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.1 Staking Architecture
+
+Which helps prevent rounding drift when calculating rewards?
+
+**Options:**
+- A) Accrue per-second with scaled multipliers, update on interactions
+- B) Use floating-point math
+- C) Ignore small balances
+- D) Cast everything to `int256`
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.2 Time-Based Logic
+
+What is a typical formula to compute simple linear rewards over time for a single stake?
+
+**Options:**
+- A) `reward = amount * rate / timeElapsed`
+- B) `reward = rate * timeElapsed / amount`
+- C) `reward = amount * rate * timeElapsed`
+- D) `reward = (amount + rate) * timeElapsed`
+---
+
+### Question 7
+**Type:** Timeline Builder
+**Points:** 8
+**Lesson:** 4.2 Time-Based Logic
+
+Arrange a typical unstake flow with a cooldown.
+
+**Interactive Data:**
+```json
+{
+  "events": [
+    {"id": "evt-1", "text": "User requests unstake (start cooldown)"},
+    {"id": "evt-2", "text": "Cooldown period elapses"},
+    {"id": "evt-3", "text": "User finalizes withdraw"},
+    {"id": "evt-4", "text": "Rewards stop accruing (if specified by design)"}
+  ]
+}
+```
+
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.1 Staking Architecture
+
+What is the effect of using `block.timestamp` vs `block.number` for time logic?
+
+**Options:**
+- A) `block.number` measures time in seconds
+- B) `block.timestamp` is in seconds and can drift slightly within protocol bounds
+- C) `block.timestamp` is strictly monotonic and exact
+- D) Both are identical
+---
+
+### Question 9
+**Type:** Multiple Select
+**Points:** 7
+**Lesson:** 4.1 Staking Architecture
+
+Which mitigations help against reward abuse?
+
+**Options:**
+- A) Cap maximum reward rate per period
+- B) Reset accrual baseline on deposit/withdraw
+- C) Allow unlimited compounding without limits
+- D) Use snapshots or per-user checkpoints
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.2 Time-Based Logic
+
+When handling precise arithmetic for long periods, which is safer?
+
+**Options:**
+- A) Floating point with `double`
+- B) Fixed-point math using scaled integers
+- C) String math then parse
+- D) Rely on rounding by truncation always
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.1 Staking Architecture
+
+What is a safe default for unstake delay if unsure?
+
+**Options:**
+- A) Zero delay
+- B) Some non-zero cooldown (e.g., hours/days) aligned with system expectations
+- C) One year minimum
+- D) Set by user input freely
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 4.2 Time-Based Logic
+
+Which boundary should be tested for a lockup feature?
+
+**Options:**
+- A) Exactly at lockup end, just before, and just after
+- B) Only far after the lockup end
+- C) Only far before the lockup end
+- D) Never needed for deterministic code
+---
+
+### Question 13
+**Type:** Word Jumble
+**Points:** 8
+**Lesson:** 4.1 Staking Architecture
+
+Unscramble this key term related to adding principal over time:
+
+**Interactive Data:**
+```json
+{
+  "hint": "Increasing the main amount on which rewards may be computed",
+  "scrambled": "OPSITED"
+}
+```
+
+---
+
+### Question 14
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 4.1 Staking Architecture
+
+Which is a good monitoring metric for staking systems?
+
+**Options:**
+- A) Number of comments in repo
+- B) TVL (total value locked) and utilization rate
+- C) Number of UI components
+- D) IDE theme used by devs
+---
+

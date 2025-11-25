@@ -1,0 +1,96 @@
+---
+slug: mastering-ai-contract-reviews
+title: Mastering AI Contract Reviews with Plunder Academy
+excerpt: Learn how to leverage our AI Contract Reviewer to audit your smart contracts, test against real-world exploits, and improve security before deployment.
+level: beginner
+tags:
+  - ai
+  - security
+  - tools
+  - auditing
+---
+
+Smart contract security is paramount in Web3. While professional audits are indispensable for production code, catching vulnerabilities early in the development cycle can save time and money. 
+
+Plunder Academy's **AI Contract Reviewer** is designed to be your first line of defense—an always-on security partner that analyzes your Solidity code for common pitfalls, gas inefficiencies, and logic errors.
+
+## How AI Auditing Works
+
+Before diving into the tools, it's helpful to understand what's happening under the hood. Large Language Models (LLMs) aren't just databases that look up errors; they are sophisticated pattern-matching engines that have "read" billions of lines of code.
+
+<LLMProcessAnimation />
+
+### The Process Explained
+
+**Training (The Knowledge Ocean):** The base model has been trained on a massive dataset of open-source code, including standard libraries (like OpenZeppelin), famous hacks, and security research. It "knows" what a reentrancy attack looks like because it has seen thousands of them.
+    
+**System Prompting (The Captain's Orders):** This is where we steer the ship. A standard LLM might just summarize your code or tell you it looks "nice." To make it an auditor, we provide a strict **System Prompt**—a set of invisible instructions that tell it:
+    *   "You are an uncompromising security auditor."
+    *   "Focus only on high-severity vulnerabilities."
+    *   "Ignore minor style issues unless they pose a risk."
+    
+    This prompt "tunes" the model's attention, forcing it to look for danger rather than just explaining what the code does.
+
+**Inference (The Review):** When you paste your contract, the model processes it token by token. It compares your code's structure against the patterns of vulnerability it learned during training, filtered through the strict lens of our system prompt.
+
+## Getting Started with the AI Reviewer
+
+Now that you understand the mechanics, let's put it to work.
+
+### Step 1: Access the Reviewer
+
+Navigate to the [AI Reviewer](/reviewer) from the main menu. You'll need to connect your wallet to access the tool, ensuring a secure and personalized experience.
+
+### Step 2: Input Your Code
+
+You have two options:
+1. **Paste your own code:** Copy your Solidity contract and paste it into the editor.
+2. **Use a starter snippet:** Click on one of the example buttons (e.g., "Overflow token", "Guardian vault") to load a pre-written vulnerable contract.
+
+### Step 3: Run the Review
+
+Click the **"Review code"** button. The AI will analyze your code in real-time, streaming findings as they are generated.
+
+### Step 4: Analyze the Findings
+
+The results panel will highlight:
+- **Security Vulnerabilities:** Critical issues like reentrancy, overflow/underflow (in older Solidity versions), and access control gaps.
+- **Gas Optimizations:** Suggestions to make your contract more efficient.
+- **Best Practices:** Recommendations for code style and standard patterns.
+
+## Challenge: Test with Real Exploits
+
+To truly understand the power (and limitations) of AI auditing, we encourage you to test the reviewer against known vulnerable contracts.
+
+The **[DeFiHackLabs](https://github.com/SunWeb3Sec/DeFiHackLabs)** repository is an excellent resource for this. It contains a collection of reproduced DeFi hacks and vulnerable contracts.
+
+### How to Run the Challenge
+
+1.  Go to [DeFiHackLabs on GitHub](https://github.com/SunWeb3Sec/DeFiHackLabs).
+2.  Browse the `src` or `test` directories to find vulnerable contract examples.
+3.  Copy a vulnerable contract (e.g., a simple reentrancy example).
+4.  Paste it into the [Plunder Academy Reviewer](/reviewer).
+5.  **See if the AI catches the bug!**
+
+This exercise not only helps you verify the tool's effectiveness but also sharpens your own eye for security flaws.
+
+## We Need Your Feedback
+
+AI models are constantly learning, and your feedback is crucial for improvement. 
+
+- **Did the AI miss a bug?**
+- **Was a finding a false positive?**
+- **Was the explanation clear?**
+
+Use the feedback tools within the reviewer interface (thumbs up/down, comments) to let us know how it performed. By "silently" testing with known exploits and reporting the results, you help us fine-tune the model for the entire community.
+
+## Conclusion
+
+The AI Contract Reviewer is a powerful companion for any Solidity developer. It allows you to:
+- **Iterate faster** by catching bugs early.
+- **Learn security patterns** through interactive feedback.
+- **Deploy with confidence** knowing you've added an extra layer of checks.
+
+Remember, automated tools are a supplement to, not a replacement for, professional audits. Use them to harden your code before sending it to human auditors.
+
+**[Try the AI Reviewer Now](/reviewer) ->**

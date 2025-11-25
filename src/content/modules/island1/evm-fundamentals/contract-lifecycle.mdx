@@ -1,0 +1,102 @@
+---
+id: contract-lifecycle
+module: evm-fundamentals
+number: 2.4
+title: Contract Lifecycle on EVM
+objective: >-
+  Learn the phases of a smart contract's life from writing to deployment and
+  interaction.
+slug: contract-lifecycle
+---
+
+## The Digital Life Cycle
+
+A smart contract is not just a script; it is a living entity on the blockchain. Its life follows a distinct, irreversible path. Unlike web applications where you can push a "hotfix" to a server in seconds, a smart contract's lifecycle is more like launching a satellite into orbit. Once it's up there, it's up there. You can't reach up and tighten a bolt.
+
+Understanding this lifecycle is what separates a "coder" from a "smart contract engineer."
+
+<ContractLifecycleTimeline />
+
+### Phase 1: Birth (Writing & Compiling)
+It begins in your IDE (like Remix or VS Code). You write the logic, define the variables, and set the rules. This is the only time the contract is flexible. You can change, delete, and refactor as much as you want.
+
+**Best Practices at Birth:**
+*   **Requirements First:** Because you can't change it later, you must be 100% sure of what you want *before* you write it.
+*   **Standard Libraries:** Don't write your own math or security code. Use battle-tested libraries like **OpenZeppelin**. If you try to write your own "reentrancy guard," you will likely get hacked.
+*   **Simulation:** Before you even think about deployment, you run your code against local test networks (like Hardhat Network) to simulate how it will behave.
+
+**The 24KB Limit:** There is a hard physical limit to a contract's size. The EVM (per the Spurious Dragon fork) limits contract bytecode to **24,576 bytes**. If your compiled code is larger than this, deployment will fail. This forces developers to write efficient code or split their logic into multiple smaller contracts.
+
+Once you are satisfied, you **Compile** it. This freezes your intent into Bytecode.
+
+### Phase 2: Leaving the Nest (Deployment)
+This is the critical moment. To deploy a contract, you don't "upload" it to a server via FTP. You send a special transaction to the network.
+
+**The Anatomy of a Deployment Transaction:**
+*   **Recipient (To):** Empty (or Zero). This tells the EVM "I am creating something new."
+*   **Data:** Your Bytecode + Encoded Constructor Arguments.
+*   **Value:** Optional (Initial ETH/ZIL to give the contract).
+
+When the EVM sees this transaction:
+1.  It creates a new address (derived from your address and your transaction count/nonce).
+2.  It runs the contract's **Constructor**. This is a special function that runs *only once*. It initializes variables (e.g., "Set the owner to Me," "Mint 1 million tokens").
+3.  It takes the resulting code and stores it permanently at that new address.
+
+**The Cost:** Deployment is the most expensive transaction you will ever send. You are paying to store kilobytes of code on the blockchain forever.
+*   **Cost Breakdown:** 32,000 Gas (Base) + 200 Gas per byte of code.
+*   **Real Numbers:** A standard Token contract might cost 1-2 million Gas to deploy. On Ethereum, this could be $50-$100. On Zilliqa, it's typically under $0.10.
+
+### Phase 3: Career (Interaction)
+The contract is now live. It sits dormant at its address, waiting for someone to "poke" it. It doesn't run in the background. It doesn't have a "cron job." It only wakes up when called.
+
+**Types of Interactions:**
+*   **Read-Only Calls ("Views"):** Anyone can query the contract (e.g., `balanceOf(user)`). These run on a local node, don't require a transaction, and are **Free**.
+*   **State-Changing Transactions:** If a user wants to *change* data (e.g., `transfer(recipient, amount)`), they must send a signed transaction and pay Gas. The EVM wakes up the contract, runs the specific function, updates the state, and goes back to sleep.
+
+**Interaction Example (ethers.js):**
+```javascript
+// 1. Connect to the network
+const provider = new ethers.JsonRpcProvider("https://api.zilliqa.com");
+
+// 2. Define the contract
+const contract = new ethers.Contract(address, abi, provider);
+
+// 3. Read (Free)
+const balance = await contract.balanceOf("0xUserAddress..."); 
+console.log(`Balance: ${balance}`);
+
+// 4. Write (Costs Gas - requires Signer)
+const signer = await provider.getSigner();
+const tx = await contract.connect(signer).transfer("0xRecipient...", 100);
+await tx.wait(); // Wait for confirmation
+```
+
+### Phase 4: The End (Destruction)
+Contracts are generally permanent, but they can be destroyed using the `SELFDESTRUCT` opcode (though this is being phased out in newer EVM versions due to complexity). This clears the code and state from the blockchain and sends any remaining funds to a target address. Most modern contracts are designed to live forever.
+
+### The Diamond Rule: Immutability & The "Upgrade" Myth
+
+Here is the most important thing to remember: **You cannot change the code.**
+
+If you find a critical bug a week after deployment, you cannot patch it. You cannot edit the file. The code at that address is carved in digital stone. This creates a massive security responsibility.
+
+**So how do protocols "Upgrade"?**
+They don't change the code; they change the pointer.
+1.  **Proxy Pattern:** Users interact with a "Proxy" contract. The Proxy doesn't have logic; it just says "Forward this request to the Logic Contract at Address X."
+2.  **Upgrading:** To upgrade, the admin changes "Address X" to "Address Y" (the new version) in the Proxy.
+3.  **The Risk:** This introduces centralization. If the admin key is stolen, the hacker can point the Proxy to a malicious contract that steals everyone's money.
+
+This high-stakes environment ("Code is Law," but Code has Bugs) is why audits and rigorous testing are non-negotiable in Web3.
+
+## 🎮 Interactive Practice
+
+Can you reconstruct the lifecycle of a smart contract in the correct chronological order?
+
+<TimelineBuilder events={[
+  {"id": "evt-1", "text": "Write & Test Solidity Code", "correctPosition": 0},
+  {"id": "evt-2", "text": "Compile to Bytecode & ABI", "correctPosition": 1},
+  {"id": "evt-3", "text": "Send Deployment Transaction (Empty 'To' Field)", "correctPosition": 2},
+  {"id": "evt-4", "text": "EVM Executes Constructor Function", "correctPosition": 3},
+  {"id": "evt-5", "text": "Contract Deployed to Permanent Address", "correctPosition": 4},
+  {"id": "evt-6", "text": "Users Interact via Transactions", "correctPosition": 5}
+]} />

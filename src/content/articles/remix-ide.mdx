@@ -1,0 +1,205 @@
+---
+slug: remix-ide-zilliqa-shanghai
+title: "Using Remix IDE with Zilliqa: Why the “Shanghai” Version Matters"
+excerpt: "Learn how to set up Remix IDE for Zilliqa development — including selecting the correct version, configuring the network, deploying smart contracts, and interacting with Zilliqa 2.0."
+level: beginner
+tags:
+  - zilliqa
+  - remix ide
+  - smart contracts
+  - evm
+  - shanghai
+hero: /remix.png
+---
+
+Developing smart contracts on **Zilliqa 2.0** has never been easier, thanks to its full **EVM compatibility**.  
+If you’re building or testing contracts using **Remix IDE**, there’s one critical detail you must know:
+
+👉 **Zilliqa works best with the “Shanghai” version of Remix**.
+
+Older or experimental Remix versions may cause compilation or deployment errors when targeting Zilliqa’s EVM runtime.  
+This guide walks you through setting up Remix IDE for Zilliqa, deploying your first contract, and understanding why the **Shanghai** build is essential.
+
+---
+
+## ⚙️ Why Use Remix with Zilliqa?
+
+Remix IDE is one of the most accessible tools for smart-contract developers.  
+With Zilliqa 2.0’s EVM support, you can now:
+
+- Compile and deploy **Solidity** contracts directly from your browser  
+- Interact with **Zilliqa testnet or mainnet RPC endpoints**  
+- Debug and test transactions before publishing  
+
+It’s perfect for testing Zilliqa smart contracts quickly without installing local developer frameworks.
+
+---
+
+## 🧩 The Key Requirement — Use the “Shanghai” Version
+
+Zilliqa’s EVM runtime implements opcode compatibility aligned with the **Shanghai EVM upgrade**.  
+If you compile or deploy contracts using an older Remix version (e.g., “London” or “Berlin”), you may encounter errors such as:
+
+- “Invalid opcode”  
+- “Unsupported chain ID”  
+- Deployment failures or gas miscalculations  
+
+To ensure compatibility, select the **Shanghai version** in Remix before compiling.
+
+<table>
+  <thead>
+    <tr>
+      <th>Remix Version</th>
+      <th>Status with Zilliqa</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Shanghai</strong></td>
+      <td>✅ Supported</td>
+      <td>Required for compiling and deploying contracts on Zilliqa 2.0</td>
+    </tr>
+    <tr>
+      <td>London / Berlin</td>
+      <td>⚠️ Partially supported</td>
+      <td>May compile but will fail at deployment due to missing opcodes</td>
+    </tr>
+    <tr>
+      <td>Paris + Cancun (Beta)</td>
+      <td>🚫 Not compatible</td>
+      <td>Targets EVM features not yet available on Zilliqa</td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## 🧰 Prerequisites
+
+Before you start, you’ll need:
+
+- A **Zilliqa wallet** (e.g., ZilPay or MetaMask configured for Zilliqa EVM)  
+- Access to a **Zilliqa RPC endpoint** (mainnet or testnet)  
+- A basic **Solidity contract** to test  
+- Browser access to [Remix IDE](https://remix.ethereum.org)
+
+---
+
+## 🧭 Step 1 – Select the Correct Remix Version
+
+1. Open [Remix IDE](https://remix.ethereum.org).  
+2. In the top-right corner, click the **Remix version dropdown**.  
+3. Select **“Shanghai”**.  
+4. Reload the page to apply changes.
+
+> **Tip:** If Remix still shows an older version after reloading, clear your browser cache or open Remix in an incognito window.
+
+---
+
+## ⚙️ Step 2 – Connect Remix to Zilliqa
+
+1. Go to the **Deploy & Run Transactions** tab in Remix.  
+2. Under **Environment**, choose **“Injected Provider – MetaMask”**.  
+3. Connect MetaMask to your **Zilliqa RPC endpoint**:
+
+   - **Testnet:** `https://evm-api-testnet.zilliqa.com`  
+   - **Mainnet:** `https://evm-api.zilliqa.com`  
+
+4. Confirm your wallet connection.
+
+---
+
+## 💻 Step 3 – Write or Import a Contract
+
+Example contract (`HelloZilliqa.sol`):
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract HelloZilliqa {
+    string public message = "Hello from Zilliqa EVM!";
+
+    function setMessage(string calldata newMessage) external {
+        message = newMessage;
+    }
+}
+```
+
+Compile it under **Solidity Compiler > Version 0.8.20 (Shanghai)**.
+
+---
+
+## 🚀 Step 4 – Deploy the Contract
+
+1. In Remix, open the **Deploy & Run Transactions** tab.  
+2. Select your compiled contract.  
+3. Ensure the **Environment** is set to your connected Zilliqa network.  
+4. Click **Deploy** and confirm the transaction in MetaMask.
+
+Deployment will appear in Remix’s **Deployed Contracts** panel once confirmed.
+
+---
+
+## 🔍 Step 5 – Interact with Your Contract
+
+Use Remix’s interface to:
+
+- Call read-only functions (e.g., `message()`)  
+- Execute write functions (e.g., `setMessage("Hello World")`)  
+- Monitor transactions directly on Zilliqa’s explorer  
+
+Zilliqa’s low-latency EVM ensures quick confirmations for these transactions.
+
+---
+
+## ⚠️ Common Issues
+
+<table>
+  <thead>
+    <tr>
+      <th>Issue</th>
+      <th>Cause</th>
+      <th>Fix</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Invalid opcode</strong></td>
+      <td>Using a pre-Shanghai Remix compiler</td>
+      <td>Switch to the <strong>Shanghai</strong> compiler version</td>
+    </tr>
+    <tr>
+      <td><strong>Network not found</strong></td>
+      <td>Incorrect RPC endpoint or chain ID</td>
+      <td>Verify endpoint and use Zilliqa’s testnet/mainnet URLs</td>
+    </tr>
+    <tr>
+      <td><strong>Gas estimation errors</strong></td>
+      <td>Remix version mismatch</td>
+      <td>Refresh Remix after switching versions</td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## 🧠 Recap
+
+- **Remix IDE** is fully compatible with **Zilliqa 2.0** when using the **Shanghai** compiler version.  
+- Ensure your RPC endpoint points to the correct Zilliqa network.  
+- Always verify your Remix compiler and environment settings before deployment.  
+
+---
+
+## ✅ Next Steps
+
+- Explore the [Zilliqa Developer Portal](https://dev.zilliqa.com) for more resources.  
+- Try building a subgraph to index your contract’s events using **The Graph + Graphnode** (see your previous PlunderAcademy articles).  
+- Experiment with contract upgrades and on-chain analytics.
+
+---
+
+**Continue Reading →** [What Is Graphnode on Zilliqa and Why It’s a Game-Changer](/what-is-graphnode-zilliqa)
+

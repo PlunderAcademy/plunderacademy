@@ -1,0 +1,575 @@
+---
+id: "dapp-practical-lesson-2"
+slug: "project-setup"
+module: "dapp-interface-practical"
+number: "5.7"
+title: "Project Setup & Configuration"
+objective: "Scaffold a Next.js project and configure wagmi, viem, and RainbowKit for Zilliqa testnet."
+practicalTakeaway: "Get a working Next.js app with wallet connection running at localhost:3000 in under 15 minutes."
+---
+
+# Project Setup & Configuration
+
+## Why this matters now
+
+Every great dApp starts with solid foundations. We'll scaffold a Next.js project, install Web3 dependencies, and configure wagmi + RainbowKit to connect to Zilliqa testnet. By the end of this lesson, you'll have a running app with wallet connection—the hello world of Web3 frontends.
+
+## What we're building
+
+In this lesson, you'll:
+1. Create a fresh Next.js 15 project with TypeScript
+2. Install wagmi, viem, and RainbowKit dependencies
+3. Configure wagmi for Zilliqa testnet
+4. Set up environment variables (WalletConnect project ID)
+5. Add Tailwind CSS for styling
+6. Create a basic layout with wallet connection
+7. Run it locally and connect your wallet
+
+**Time estimate:** 15-20 minutes
+
+## Prerequisites check
+
+Before starting, ensure you have:
+- ✅ Node.js 20+ installed (`node --version`)
+- ✅ npm, yarn, or pnpm
+- ✅ VS Code or preferred editor
+- ✅ MetaMask with Zilliqa testnet configured
+- ✅ Testnet ZIL in your wallet
+- ✅ WalletConnect Cloud account (free) for project ID
+
+> **WalletConnect Project ID:** Go to [cloud.walletconnect.com](https://cloud.walletconnect.com), sign up (free), and create a project. Copy the Project ID—you'll need it in .env.local.
+
+## Step 1: Create Next.js project
+
+Open your terminal and create a new Next.js project:
+
+```bash
+npx create-next-app@latest my-token-dapp
+```
+
+**When prompted, choose these options:**
+
+```
+✔ Would you like to use TypeScript? … Yes
+✔ Would you like to use ESLint? … Yes
+✔ Would you like to use Tailwind CSS? … Yes
+✔ Would you like your code inside a `src/` directory? … Yes
+✔ Would you like to use App Router? … Yes
+✔ Would you like to use Turbopack for `next dev`? … Yes
+✔ Would you like to customize the import alias? … No
+```
+
+**Why these choices?**
+- **TypeScript**: Type-safe contract interactions, catch errors early
+- **Tailwind CSS**: Fast styling, matches Plunder Academy
+- **src/ directory**: Cleaner project structure
+- **App Router**: Modern Next.js (React Server Components)
+- **Turbopack**: Faster dev server (optional but nice)
+
+Navigate into your project:
+
+```bash
+cd my-token-dapp
+```
+
+## Step 2: Install Web3 dependencies
+
+Install wagmi, viem, RainbowKit, and TanStack Query:
+
+```bash
+npm install wagmi viem@2.x @tanstack/react-query @rainbow-me/rainbowkit
+```
+
+**What each does:**
+- **wagmi**: React hooks for Ethereum (useAccount, useReadContract, useWriteContract)
+- **viem**: Low-level Ethereum library (formatUnits, parseEther, chain definitions)
+- **@tanstack/react-query**: Data fetching & caching (wagmi uses this internally)
+- **@rainbow-me/rainbowkit**: Beautiful wallet connection UI
+
+**Version note:** We're using `viem@2.x` and compatible versions—these match Plunder Academy's setup.
+
+## Step 3: Add RainbowKit CSS
+
+RainbowKit needs its stylesheet imported. Open `src/app/layout.tsx` and add the import:
+
+```tsx
+import "@rainbow-me/rainbowkit/styles.css";
+import "./globals.css";
+```
+
+Place it **before** your globals.css import so you can override styles if needed.
+
+## Step 4: Configure wagmi for Zilliqa testnet
+
+Create a wagmi configuration file at `src/lib/wagmi.ts`:
+
+```bash
+mkdir -p src/lib
+touch src/lib/wagmi.ts
+```
+
+**Add this configuration** (matches Plunder Academy):
+
+```tsx
+// src/lib/wagmi.ts
+import { http } from "wagmi";
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { type Chain } from "viem";
+
+
+
+// Zilliqa testnet chain definition
+export const zilliqaTestnet: Chain = {
+  id: 33101,
+  name: "Zilliqa Testnet",
+  nativeCurrency: {
+    name: "Zilliqa",
+    symbol: "ZIL",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://api.testnet.zilliqa.com"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Blockscout",
+      url: "https://testnet.zilliqa.blockscout.com",
+    },
+  },
+  contracts: {
+    ensUniversalResolver: {
+      address: "0x579C72c5377a5a4A8Ce6d43A1701F389c8FDFC8e",
+    },
+    ensRegistry: {
+      address: "0x716c7e7dC02f7E0FD44343C720233DB57896Fb1b",
+    },
+    multicall3: {
+      address: "0x3c2ffc98284b2f6e1035eaeed75e9273b5b63223",
+      blockCreated: 3251173,
+    },
+  },
+  testnet: true,
+};
+
+// Zilliqa mainnet (for reference, not used yet)
+export const zilliqaMainnet: Chain = {
+  id: 32769,
+  name: "Zilliqa",
+  nativeCurrency: {
+    name: "Zilliqa",
+    symbol: "ZIL",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://api.zilliqa.com"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Blockscout",
+      url: "https://zilliqa.blockscout.com",
+    },
+  },
+  contracts: {
+    ensUniversalResolver: {
+      address: "0x2b6a7953c510392aE88c7C302a984460Daa8AF24",
+    },
+    ensRegistry: {
+      address: "0x2196b67Ca97bBcA07C01c7Bdf4f35209CC615389",
+    },
+    multicall3: {
+      address: "0x38899efb93d5106d3adb86662c557f237f6ecf57",
+      blockCreated: 5313022,
+    },
+  },
+  testnet: false,
+};
+
+// Wagmi configuration
+export const wagmiConfig = getDefaultConfig({
+  appName: "My Token dApp",
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "missing-project-id",
+  chains: [zilliqaTestnet], // Start with testnet only
+  ssr: true, // Enable server-side rendering
+  transports: {
+    [zilliqaTestnet.id]: http("https://api.testnet.zilliqa.com"),
+  },
+});
+```
+
+**Key points:**
+- **Chain ID 33101**: Zilliqa testnet (matches your MetaMask config)
+- **Setup for Zilnames and Multicall3!**: ENS and optimized read calls.
+- **SSR enabled**: Next.js App Router requires this
+- **projectId**: WalletConnect project ID (for mobile wallet support)
+- **Transports**: HTTP transport for RPC calls
+
+## Step 5: Set up environment variables
+
+Create `.env.local` in your project root:
+
+```bash
+touch .env.local
+```
+
+**Add your WalletConnect Project ID:**
+
+```bash
+# .env.local
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id_here
+```
+
+**Replace `your_project_id_here`** with the ID from [cloud.walletconnect.com](https://cloud.walletconnect.com).
+
+**Why NEXT_PUBLIC_?**
+- Next.js requires `NEXT_PUBLIC_` prefix for client-side env vars
+- Without it, the variable won't be accessible in the browser
+
+**Security note:** Never commit `.env.local` to git. It's already in `.gitignore` by default.
+
+## Step 6: Create providers wrapper
+
+Create `src/components/providers.tsx` to wrap your app with Web3 providers:
+
+```bash
+mkdir -p src/components
+touch src/components/providers.tsx
+```
+
+**Add this code:**
+
+```tsx
+// src/components/providers.tsx
+"use client";
+
+import * as React from "react";
+import { WagmiProvider } from "wagmi";
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { wagmiConfig } from "@/lib/wagmi";
+
+const queryClient = new QueryClient();
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>
+          {children}
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
+}
+```
+
+**Why this structure?**
+- **"use client"**: Marks this as a Client Component (required for hooks)
+- **WagmiProvider**: Provides wagmi context to all children
+- **QueryClientProvider**: Enables TanStack Query for caching
+- **RainbowKitProvider**: Adds RainbowKit wallet UI context
+- **Nesting order matters**: Wagmi → Query → RainbowKit
+
+## Step 7: Update root layout
+
+Open `src/app/layout.tsx` and wrap children with Providers:
+
+```tsx
+// src/app/layout.tsx
+import "@rainbow-me/rainbowkit/styles.css";
+import "./globals.css";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import { Providers } from "@/components/providers";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "My Token dApp",
+  description: "Web3 dApp built with Next.js, wagmi, and RainbowKit",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+**What changed:**
+- Imported `@rainbow-me/rainbowkit/styles.css`
+- Imported `Providers` component
+- Wrapped `{children}` with `<Providers>`
+
+## Step 8: Add wallet connection to homepage
+
+Open `src/app/page.tsx` and replace with this simple test:
+
+```tsx
+// src/app/page.tsx
+"use client";
+
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount } from "wagmi";
+
+export default function Home() {
+  const { address, isConnected } = useAccount();
+
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center p-24">
+      <div className="text-center space-y-8">
+        <h1 className="text-4xl font-bold">My Token dApp</h1>
+        <p className="text-muted-foreground">
+          Connect your wallet to get started
+        </p>
+        
+        <ConnectButton />
+        
+        {isConnected && (
+          <div className="mt-8 p-4 border rounded-lg">
+            <p className="text-sm text-muted-foreground">Connected as:</p>
+            <p className="font-mono text-sm">{address}</p>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+```
+
+**What this does:**
+- **ConnectButton**: RainbowKit's pre-built wallet connection UI
+- **useAccount**: Gets connection state and address
+- **Conditional render**: Shows address only when connected
+
+## Step 9: Add utility function (optional but recommended)
+
+Create `src/lib/utils.ts` for helper functions:
+
+```bash
+touch src/lib/utils.ts
+```
+
+**Add the `cn` helper** (used throughout the dApp):
+
+```tsx
+// src/lib/utils.ts
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+```
+
+This helper combines Tailwind classes intelligently. Install the dependencies:
+
+```bash
+npm install clsx tailwind-merge
+```
+
+## Step 10: Run your dApp locally
+
+Start the dev server:
+
+```bash
+npm run dev
+```
+
+**Open your browser to:** `http://localhost:3000`
+
+You should see:
+- ✅ "My Token dApp" heading
+- ✅ "Connect Wallet" button
+- ✅ Clean, centered layout
+
+**Click "Connect Wallet":**
+- Modal opens with wallet options
+- Select MetaMask → approve connection
+- Your address appears below the button
+- Success! 🎉
+
+## Testing your setup
+
+**1. Test wallet connection:**
+- Click "Connect Wallet"
+- Select MetaMask
+- Approve connection
+- See your address displayed
+
+**2. Test network detection:**
+- In MetaMask, switch to Ethereum mainnet
+- Notice RainbowKit shows "Wrong Network" indicator
+- Switch back to Zilliqa testnet
+- Indicator should clear
+
+**3. Test disconnection:**
+- Click your address in ConnectButton
+- Click "Disconnect"
+- Address disappears, button returns to "Connect Wallet"
+
+## Project structure at this stage
+
+Your project should look like:
+
+```
+my-token-dapp/
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx              ✅ Wrapped with Providers
+│   │   ├── page.tsx                ✅ Has ConnectButton
+│   │   └── globals.css
+│   ├── components/
+│   │   └── providers.tsx           ✅ Created
+│   ├── lib/
+│   │   ├── wagmi.ts                ✅ Configured for Zilliqa
+│   │   └── utils.ts                ✅ Helper functions
+├── .env.local                      ✅ WalletConnect ID
+├── package.json                    ✅ Dependencies installed
+├── next.config.ts
+├── tailwind.config.ts
+└── tsconfig.json
+```
+
+## Common issues and fixes
+
+### Issue: "missing-project-id" warning
+
+**Problem:** You see a warning about missing WalletConnect project ID.
+
+**Fix:**
+1. Go to [cloud.walletconnect.com](https://cloud.walletconnect.com)
+2. Create a project (free)
+3. Copy the Project ID
+4. Add to `.env.local`: `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_id`
+5. Restart dev server: `npm run dev`
+
+### Issue: "Module not found" errors
+
+**Problem:** Import errors for wagmi, viem, or RainbowKit.
+
+**Fix:**
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Issue: RainbowKit modal doesn't appear
+
+**Problem:** Clicking "Connect Wallet" does nothing.
+
+**Fix:**
+- Check browser console for errors
+- Ensure providers are in correct order: Wagmi → Query → RainbowKit
+- Verify `@rainbow-me/rainbowkit/styles.css` is imported
+
+### Issue: "Wrong Network" always shows
+
+**Problem:** RainbowKit thinks you're on wrong network.
+
+**Fix:**
+- Open MetaMask → Settings → Networks
+- Ensure Zilliqa testnet is configured:
+  - **Chain ID**: 33101
+  - **RPC URL**: https://api.testnet.zilliqa.com
+- Switch to that network
+- Refresh browser
+
+### Issue: TypeScript errors
+
+**Problem:** Red squiggles, type errors.
+
+**Fix:**
+- Ensure `"use client"` is at top of files using hooks
+- Restart VS Code TypeScript server: Cmd+Shift+P → "Restart TypeScript Server"
+- Check imports use `@/` path alias
+
+## Understanding the configuration
+
+### Why wagmi + viem + RainbowKit?
+
+**wagmi:**
+- High-level React hooks
+- Automatic caching and refetching
+- TypeScript-first design
+- Industry standard
+
+**viem:**
+- Low-level utilities (formatUnits, parseEther)
+- Faster and smaller than ethers.js
+- Tree-shakeable (only bundle what you use)
+- Modern API design
+
+**RainbowKit:**
+- Beautiful, accessible wallet UI
+- Supports 100+ wallets
+- Mobile support via WalletConnect
+- Customizable themes
+
+**Together:** Best-in-class Web3 DX (Developer Experience)
+
+### Why Zilliqa testnet?
+
+- **Free**: Testnet ZIL costs nothing
+- **Safe**: Can't lose real money
+- **Fast**: 1-second block times
+- **Matches training**: Your contracts are deployed here
+- **Easy switch**: Change chain ID for mainnet when ready
+
+### SSR configuration
+
+`ssr: true` in wagmiConfig enables:
+- Server-side rendering (Next.js App Router)
+- Hydration without errors
+- SEO-friendly (if needed)
+
+Without it, you'd see hydration mismatches and warnings.
+
+## Next steps
+
+You now have:
+- ✅ Working Next.js project
+- ✅ wagmi + viem + RainbowKit configured
+- ✅ Zilliqa testnet support
+- ✅ Wallet connection working
+- ✅ Clean project structure
+
+**Next lesson:** We'll build core components—network guard, layout with header/footer, and improve the wallet connection UI. We'll also add dark mode support to match modern dApp standards.
+
+## Checklist
+
+Before moving on, verify:
+
+- [ ] `npm run dev` starts without errors
+- [ ] Localhost:3000 shows your dApp
+- [ ] "Connect Wallet" button appears
+- [ ] Clicking it opens RainbowKit modal
+- [ ] MetaMask connects successfully
+- [ ] Your address displays after connection
+- [ ] No console errors in browser DevTools
+- [ ] `.env.local` has WalletConnect project ID
+- [ ] Project structure matches the example above
+
+**All checked?** Great! Let's build the core components next. 🚀
+

@@ -1,0 +1,168 @@
+---
+id: intro-to-zilliqa-ecosystem
+module: blockchain-fundamentals
+number: 1.5
+title: Introduction to Zilliqa Ecosystem and Developer Tools
+objective: >-
+  Set up and prepare to interact confidently with Zilliqa EVM developer
+  ecosystem by installing fundamental tools, configuring wallets, obtaining test
+  tokens, and deploying simple contracts.
+practicalTakeaway: >-
+  Setting up your wallet and tools to connect with Zilliqa EVM ecosystem is your
+  gateway to blockchain development. The Zilliqa ecosystem balances Ethereum
+  familiarity with powerful innovations including ultra-fast consensus and low fees.
+slug: intro-to-zilliqa-ecosystem
+---
+
+## Welcome to the Workshop
+
+Imagine you are a master craftsman. You have spent years perfecting your skills with a specific set of tools—drills, saws, chisels. Now, you walk into a brand new, state-of-the-art workshop.
+
+You might expect to be confused. You might worry that you need to learn how to use strange new alien machinery. But as you look around, you smile. The drills are the same. The saws are the same. The chisels fit perfectly in your hand.
+
+But there's a difference. The power outlets provide 100x more energy. The conveyor belts move 50x faster. The rent for the workshop is pennies on the dollar.
+
+This is the **Zilliqa EVM Ecosystem**. It is a high-performance workshop that uses the exact same tools you already know from Ethereum.
+
+## The Workbench: Familiar Tools, New Power
+
+The "Universal Power Outlet" of the blockchain world is the **EVM (Ethereum Virtual Machine)**. Because Zilliqa 2.0 is fully EVM-compatible, every tool that works on Ethereum works here. You don't need to learn a new programming language. You don't need to install new software. You just plug in and build.
+
+See how your favorite tools integrate seamlessly:
+
+<EcosystemIntegration />
+
+### Why EVM Compatibility Matters
+Think of the EVM as a standard, like USB-C.
+-   **For Developers:** It means you can use **Solidity**, the most popular blockchain language. You can use **MetaMask**, the most popular wallet. You can use **Hardhat**, the industry-standard testing framework.
+-   **For Users:** It means they don't need to download a special "Zilliqa Wallet." They can just add the network to their existing MetaMask and start using your app instantly.
+
+## The Toolbox: Essential Gear
+
+Before we start building, let's check our inventory. Every blockchain developer needs three things in their utility belt:
+
+1.  **The ID Badge (Wallet):** This is your identity. It holds your keys and your funds. We use **MetaMask**.
+2.  **The Drafting Table (IDE):** This is where you write your blueprints (smart contracts). We use **Remix** for quick prototypes and **Hardhat** for professional engineering.
+3.  **The Materials (Tokens):** You need raw materials to build. On the mainnet, this costs money. But on the **Testnet**, we use free "play money" from a **Faucet**.
+
+### Deep Dive: Testnet vs. Mainnet
+Imagine you are designing a new airplane.
+-   **Testnet** is the flight simulator. If you crash, you just hit "Reset." The physics are real, but the consequences are zero.
+-   **Mainnet** is the real sky. If you crash, you lose real money (and maybe your reputation).
+**Golden Rule:** Always, always build and test in the simulator first.
+
+## Setting Up Shop: Your First Day
+
+Let's get your environment ready. We are going to install your ID Badge (MetaMask) and connect it to the Zilliqa network.
+
+### Step 1: Install the Wallet
+If you don't have MetaMask, go to [metamask.io](https://metamask.io) and install the browser extension.
+> [!WARNING]
+> **Safety Goggles On:** When you create a wallet, it gives you a **Seed Phrase** (12 words). This is the master key to your life savings.
+> - **NEVER** share it.
+> - **NEVER** type it into a random website.
+> - **NEVER** take a screenshot of it.
+> Write it on paper and hide it. If you lose this, no one can help you. Not Zilliqa, not MetaMask, not the police.
+
+### Step 2: Connect to Zilliqa
+By default, MetaMask only knows about Ethereum. We need to teach it where Zilliqa is.
+1.  Open MetaMask and click the network dropdown (top left).
+2.  Select "Add Network" -> "Add a network manually".
+3.  Enter these coordinates for the **Testnet**:
+
+```text
+Network Name: Zilliqa EVM Testnet
+RPC URL: https://api.testnet.zilliqa.com
+Chain ID: 33101
+Currency Symbol: ZIL
+Block Explorer URL: https://evmx-dev.zilliqa.com
+```
+
+Once you click save, you are plugged into the matrix. You are now a Zilliqa developer.
+
+### Step 3: Get Free Materials (Faucet)
+Your wallet is set up, but your balance is 0 ZIL. You can't do anything without gas.
+1.  Copy your address from MetaMask (it starts with `0x...`).
+2.  Go to the [Zilliqa Testnet Faucet](https://faucet.zilliqa.com).
+3.  Paste your address and request tokens.
+4.  Wait a few seconds. Check your wallet. You should see 100 ZIL appear out of thin air!
+
+## First Project: Hello World
+
+Now that we have our tools and materials, let's build a simple prototype. We will use **Remix**, a browser-based IDE. It's like Google Docs for code—no installation needed.
+
+1.  **Open Remix:** Go to [remix.ethereum.org](https://remix.ethereum.org).
+2.  **Create a File:** Right-click the `contracts` folder and make a new file called `HelloZil.sol`.
+3.  **Write Code:** Paste this simple contract:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract HelloZil {
+    string public message = "Hello, Zilliqa!";
+
+    function updateMessage(string memory newMessage) public {
+        message = newMessage;
+    }
+}
+```
+
+4.  **Compile:** Click the "Solidity Compiler" tab (left sidebar) and click "Compile". You should see a green checkmark.
+5.  **Deploy:**
+    -   Click the "Deploy & Run" tab.
+    -   Change "Environment" to **Injected Provider - MetaMask**.
+    -   Remix will ask MetaMask for permission. Click "Connect".
+    -   Click the orange "Deploy" button.
+6.  **Confirm:** MetaMask will pop up asking you to pay a gas fee (using your free testnet ZIL). Click "Confirm".
+
+**Congratulations!** You just deployed code to a global, decentralized network. That code now lives on thousands of computers around the world. Anyone can interact with it, but no one can delete it.
+
+## Advanced Tooling: Leveling Up
+
+Once you outgrow the drafting table (Remix), you'll want to move to the heavy machinery.
+
+### Hardhat: The Power Drill
+Hardhat is a development environment that runs on your local machine. It lets you:
+-   **Automate Testing:** Write scripts that test your contract thousands of times in seconds.
+-   **Debug:** See exactly where your code failed with detailed error messages.
+-   **Script Deployments:** Deploy complex systems of contracts with a single command.
+
+Because Zilliqa is EVM compatible, you can use the standard Hardhat config. Just change the network URL to Zilliqa's RPC, and your existing tests will run on Zilliqa.
+
+### OpenZeppelin: The Prefab Parts
+You don't make your own screws, and you shouldn't write your own security code.
+**OpenZeppelin** provides a library of battle-tested contracts. Need a token? Import `ERC20.sol`. Need an NFT? Import `ERC721.sol`.
+These contracts have been audited by the best security experts in the world. Using them is like building with steel beams instead of wood.
+
+## Troubleshooting: When The Machine Jams
+
+Even the best workshops have bad days. Here are common issues and how to fix them.
+
+### "Internal JSON-RPC Error"
+This usually means your wallet is confused about the Nonce (the ticket number).
+**Fix:** Go to MetaMask Settings -> Advanced -> Clear Activity Tab Data. This resets your local history without losing funds.
+
+### "Insufficient Funds"
+You ran out of gas.
+**Fix:** Go back to the Faucet. If the Faucet is dry, ask a friend in the Discord community.
+
+### "Transaction Failed"
+Your contract logic reverted.
+**Fix:** Check the error message in the Block Explorer. It will often tell you exactly which `require` statement failed.
+
+## 🎮 Interactive Practice
+
+Let's make sure you know your tools. Match the item to its function in the workshop:
+
+<ConceptMatching
+  pairs={[
+    { conceptId: "metamask", definitionId: "def-metamask", concept: "MetaMask", definition: "Your digital ID badge and key ring", category: "wallet" },
+    { conceptId: "remix", definitionId: "def-remix", concept: "Remix", definition: "The drafting table for writing code", category: "ide" },
+    { conceptId: "faucet", definitionId: "def-faucet", concept: "Faucet", definition: "A dispenser for free test materials", category: "tools" },
+    { conceptId: "testnet", definitionId: "def-testnet", concept: "Testnet", definition: "The flight simulator for safe testing", category: "network" },
+    { conceptId: "evm", definitionId: "def-evm", concept: "EVM", definition: "The universal power outlet standard", category: "core" }
+  ]}
+/>
+
+You are now fully equipped. You have the tools, the environment, and the skills to start building. The workshop is open, and the possibilities are endless. What will you build first?

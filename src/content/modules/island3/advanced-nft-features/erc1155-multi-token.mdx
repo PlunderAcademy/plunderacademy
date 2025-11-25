@@ -1,0 +1,631 @@
+---
+id: "advanced-nft-lesson-4"
+slug: "erc1155-multi-token"
+module: "advanced-nft-features"
+number: "3.7"
+title: "ERC-1155 Multi-Token Standard"
+objective: "Master the ERC-1155 standard for efficient multi-token contracts with practical soulbound implementation."
+practicalTakeaway: "Build gas-efficient achievement systems and understand when to choose ERC-1155 over ERC-721."
+---
+
+# ERC-1155 Multi-Token Standard
+
+## Set the stage
+
+Picture a ship's quartermaster managing cargo: ERC-721 is like assigning one ledger book per unique item—your sword, your map, your parrot. ERC-1155 is like having one master ledger that tracks quantities of different item types: 50 cannonballs, 20 rum bottles, 3 treasure maps. Both are valuable, but when you need to manage multiple token types efficiently, ERC-1155 saves gas and simplifies operations.
+
+This isn't theoretical—Plunder Academy's own achievement system uses ERC-1155 to mint soulbound training badges. Instead of deploying a new contract for each achievement type, one contract manages all badges with minimal gas overhead. You'll learn when this pattern fits, how it differs from ERC-721, and how to implement it securely with real production code.
+
+By the end, you'll understand the trade-offs between token standards and be able to choose the right one for your project, whether you're building achievements, gaming items, or multi-edition art collections.
+
+## Conceptual foundations
+
+### What is ERC-1155?
+
+- **Definition**: A multi-token standard that can represent fungible, non-fungible, and semi-fungible tokens in a single contract.
+- **Key insight**: Instead of deploying one contract per token type, one contract manages unlimited token IDs with per-address balances.
+- **Standard**: Defined in [EIP-1155](https://eips.ethereum.org/EIPS/eip-1155), designed by Enjin for gaming use cases.
+
+### ERC-1155 vs ERC-721: Core differences
+
+#### Storage model
+
+**ERC-721**:
+```solidity
+mapping(uint256 tokenId => address owner) private _owners;
+// Each token has exactly one owner
+```
+
+**ERC-1155**:
+```solidity
+mapping(uint256 id => mapping(address account => uint256)) private _balances;
+// Each (tokenId, account) pair has a balance (0 or more)
+```
+
+**Implication**: ERC-1155 can represent both unique items (balance of 1) and fungible batches (balance of many).
+
+#### Batch operations
+
+**ERC-721**:
+```solidity
+// Must transfer tokens one at a time
+function transferFrom(address from, address to, uint256 tokenId) external;
+```
+
+**ERC-1155**:
+```solidity
+// Can transfer multiple token types in one transaction
+function safeBatchTransferFrom(
+    address from,
+    address to,
+    uint256[] calldata ids,
+    uint256[] calldata amounts,
+    bytes calldata data
+) external;
+```
+
+**Gas savings**: Transferring 10 different tokens costs ~40% less with batch operations than 10 individual ERC-721 transfers.
+
+#### Metadata flexibility
+
+**ERC-721**:
+```solidity
+function tokenURI(uint256 tokenId) external view returns (string memory);
+// Per-token URI, typically: baseURI + tokenId + ".json"
+```
+
+**ERC-1155**:
+```solidity
+function uri(uint256 id) external view returns (string memory);
+// Can use placeholder substitution or custom logic
+```
+
+**Pattern**: ERC-1155 URIs often use a placeholder token that clients replace: `https://api.example.com/token/0.json`
+
+### When to use ERC-1155 vs ERC-721
+
+#### Choose ERC-1155 when:
+
+1. **Multiple token types in one contract**: Achievements, badges, gaming items, membership tiers
+2. **Batch operations matter**: Airdrops, multi-token transfers, gaming inventory management
+3. **Semi-fungible tokens**: Event tickets (same tier, different holders), limited editions
+4. **Gas efficiency for many types**: Lower deployment cost than N separate ERC-721 contracts
+
+#### Choose ERC-721 when:
+
+1. **Each token is unique**: PFP collections, art pieces, domain names
+2. **Marketplace compatibility priority**: More mature ecosystem and tooling
+3. **Simple ownership model**: One owner per token with clear enumeration
+4. **Well-established patterns**: Greater community familiarity and audit history
+
+#### Real-world comparison
+
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>ERC-721</th>
+<th>ERC-1155</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Deployment cost</strong></td>
+<td>~2.5M gas per contract</td>
+<td>~2.5M gas for unlimited types</td>
+</tr>
+<tr>
+<td><strong>Mint cost (single)</strong></td>
+<td>~100k gas</td>
+<td>~90k gas</td>
+</tr>
+<tr>
+<td><strong>Transfer 10 tokens</strong></td>
+<td>~500k gas (10 txs)</td>
+<td>~300k gas (1 batch tx)</td>
+</tr>
+<tr>
+<td><strong>Balance query</strong></td>
+<td>Owner of 1 token</td>
+<td>Balance of token type</td>
+</tr>
+<tr>
+<td><strong>Marketplace support</strong></td>
+<td>Universal</td>
+<td>Growing (OpenSea, Rarible)</td>
+</tr>
+<tr>
+<td><strong>Metadata pattern</strong></td>
+<td>Per-token URI</td>
+<td>Shared URI pattern</td>
+</tr>
+</tbody>
+</table>
+
+## Real-world implementation: TrainingRegistry
+
+Plunder Academy's achievement system is built on ERC-1155. Let's examine the production contract deployed on Zilliqa.
+
+### Architecture overview
+
+The [TrainingRegistry contract](https://github.com/PlunderAcademy/plunder-academy-training-registry-contracts/blob/main/src/TrainingRegistry.sol) combines:
+
+- **ERC-1155** for multi-token achievement badges
+- **EIP-712** for cryptographic voucher verification
+- **UUPS** upgradeable proxy pattern
+- **Soulbound** non-transferable token logic
+
+### Core contract structure
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import {ERC1155Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+
+contract TrainingRegistry is 
+    ERC1155Upgradeable,
+    EIP712Upgradeable,
+    UUPSUpgradeable
+{
+    // Voucher struct for achievement completion
+    struct CompletionVoucher {
+        uint256 taskCode;      // tokenId for the achievement
+        address wallet;        // learner address
+    }
+    
+    // Track completion status per wallet per task
+    mapping(address => mapping(uint256 => bool)) public completed;
+    
+    // Issuer allowlist for voucher signing
+    mapping(address => bool) public isIssuer;
+```
+
+**Design insight**: `taskCode` serves dual purpose as both achievement identifier and ERC-1155 token ID. This eliminates the need for separate mapping and keeps gas costs low.
+
+### Voucher-based achievement minting
+
+```solidity
+// EIP-712 typehash for structured signing
+bytes32 private constant VOUCHER_TYPEHASH = keccak256(
+    "CompletionVoucher(uint256 taskCode,address wallet)"
+);
+
+function submitVoucher(uint256 taskCode, bytes calldata signature) 
+    external 
+    whenNotPaused 
+{
+    require(!completed[msg.sender][taskCode], "already completed");
+    
+    // Reconstruct EIP-712 signed message
+    bytes32 structHash = keccak256(
+        abi.encode(VOUCHER_TYPEHASH, taskCode, msg.sender)
+    );
+    bytes32 digest = MessageHashUtils.toTypedDataHash(
+        _domainSeparatorV4(), 
+        structHash
+    );
+    
+    // Verify signature from approved issuer
+    address signer = ECDSA.recover(digest, signature);
+    require(isIssuer[signer], "invalid issuer");
+    
+    // Mark complete and mint badge
+    completed[msg.sender][taskCode] = true;
+    _mint(msg.sender, taskCode, 1, "");
+    emit TaskCompleted(taskCode, msg.sender);
+}
+```
+
+**Security pattern**: EIP-712 signatures bind the voucher to the specific wallet and task, preventing replay attacks and ensuring only approved issuers can authorize achievements.
+
+### Soulbound implementation
+
+Achievements should be non-transferable—they represent personal accomplishment, not tradable assets.
+
+```solidity
+// Override _update hook to enforce soulbound behavior
+function _update(
+    address from,
+    address to,
+    uint256[] memory ids,
+    uint256[] memory amounts
+) internal override {
+    // Allow minting (from == 0) and burning (to == 0)
+    // Block all transfers between non-zero addresses
+    require(
+        from == address(0) || to == address(0), 
+        "SBT: non-transferable"
+    );
+    super._update(from, to, ids, amounts);
+    
+    // Maintain achievement index for frontend queries
+    if (to != address(0)) {
+        for (uint256 i = 0; i < ids.length; i++) {
+            if (!_hasTokenId[to][ids[i]] && balanceOf(to, ids[i]) > 0) {
+                _hasTokenId[to][ids[i]] = true;
+                _walletTokenIds[to].push(ids[i]);
+            }
+        }
+    }
+}
+```
+
+**Pattern**: OpenZeppelin's `_update` hook (introduced in v5.x) centralizes all balance changes, making it the perfect place to enforce transfer restrictions.
+
+### Custom URI resolution
+
+The ERC-1155 standard typically uses a URI template pattern, but for better control we implement custom padding:
+
+```solidity
+string private _baseDirectoryURI;
+uint8 public uriPadDigits; // default: 4
+
+function uri(uint256 tokenId) public view override returns (string memory) {
+    return string(abi.encodePacked(
+        _baseDirectoryURI,
+        _paddedDecimal(tokenId, uriPadDigits),
+        ".json"
+    ));
+}
+
+function _paddedDecimal(uint256 value, uint8 minDigits) 
+    internal 
+    pure 
+    returns (string memory) 
+{
+    string memory dec = Strings.toString(value);
+    uint256 len = bytes(dec).length;
+    if (len >= minDigits) return dec;
+    
+    uint256 pad = uint256(minDigits) - len;
+    bytes memory zeros = new bytes(pad);
+    for (uint256 i = 0; i < pad; i++) zeros[i] = "0";
+    return string(abi.encodePacked(zeros, dec));
+}
+```
+
+**Result**: Token ID `1` resolves to `https://static.plunderswap.com/training/0001.json` with zero-padding for clean file organization.
+
+### Achievement metadata example
+
+Here's the actual metadata for achievement #1 (The Last Bottle of Rum):
+
+```json
+{
+  "name": "The Last Bottle of Rum",
+  "description": "The last bottle of rum hidden in the captain's quarters.",
+  "image": "https://static.plunderswap.com/training/images/0001.webp",
+  "attributes": [
+    { "trait_type": "Achievement", "value": "The Last Bottle of Rum" },
+    { "trait_type": "Module", "value": "Blockchain Fundamentals" },
+    { "trait_type": "Location", "value": "The Marooned Ship" },
+    { "trait_type": "Island", "value": "Jungle Island" },
+    { "trait_type": "Level", "value": 1 },
+    { "trait_type": "Type", "value": "Fundamentals" },
+    { "trait_type": "Rarity", "value": "Common" }
+  ]
+}
+```
+
+**Standard compliance**: Follows [OpenSea metadata standards](https://docs.opensea.io/docs/metadata-standards) with `name`, `description`, `image`, and `attributes` for marketplace compatibility.
+
+### Frontend integration
+
+```typescript
+// Using wagmi + viem for type-safe contract interaction
+import { useContractWrite, useContractRead } from 'wagmi';
+
+const REGISTRY_ABI = [
+  "function submitVoucher(uint256 taskCode, bytes signature)",
+  "function completed(address wallet, uint256 taskCode) view returns (bool)",
+  "function getWalletAchievements(address wallet) view returns (uint256[])",
+  "function balanceOf(address account, uint256 id) view returns (uint256)"
+] as const;
+
+// Submit achievement voucher
+const { writeContract } = useContractWrite({
+  address: REGISTRY_ADDRESS,
+  abi: REGISTRY_ABI,
+  functionName: 'submitVoucher',
+});
+
+await writeContract({
+  args: [taskCode, signature]
+});
+
+// Check if user completed specific achievement
+const { data: isCompleted } = useContractRead({
+  address: REGISTRY_ADDRESS,
+  abi: REGISTRY_ABI,
+  functionName: 'completed',
+  args: [userAddress, taskCode]
+});
+
+// Get all user achievements
+const { data: achievements } = useContractRead({
+  address: REGISTRY_ADDRESS,
+  abi: REGISTRY_ABI,
+  functionName: 'getWalletAchievements',
+  args: [userAddress]
+});
+```
+
+**Developer experience**: ERC-1155 `balanceOf` queries are O(1), making frontend state management efficient even with hundreds of achievement types.
+
+## Advanced patterns and optimizations
+
+### Cached achievement index
+
+The TrainingRegistry maintains a per-wallet achievement cache to avoid expensive queries:
+
+```solidity
+// Storage
+mapping(address => uint256[]) private _walletTokenIds;
+mapping(address => mapping(uint256 => bool)) private _hasTokenId;
+
+// Updated in _update hook
+if (to != address(0) && !_hasTokenId[to][tokenId]) {
+    _hasTokenId[to][tokenId] = true;
+    _walletTokenIds[to].push(tokenId);
+}
+
+// O(1) existence check
+function hasAchievement(address wallet, uint256 tokenId) 
+    external 
+    view 
+    returns (bool) 
+{
+    return _hasTokenId[wallet][tokenId];
+}
+
+// Single query for all achievements
+function getWalletAchievements(address wallet) 
+    external 
+    view 
+    returns (uint256[] memory) 
+{
+    return _walletTokenIds[wallet];
+}
+```
+
+**Gas trade-off**: Costs ~20k extra gas per mint to maintain the index, but saves frontends from expensive iteration or multiple RPC calls.
+
+### Supply tracking per token type
+
+Unlike ERC-721's automatic enumeration, ERC-1155 requires manual tracking if you need total supply:
+
+```solidity
+mapping(uint256 => uint256) public totalSupply;
+
+function _update(
+    address from,
+    address to,
+    uint256[] memory ids,
+    uint256[] memory amounts
+) internal override {
+    for (uint256 i = 0; i < ids.length; i++) {
+        if (from == address(0)) {
+            totalSupply[ids[i]] += amounts[i]; // Minting
+        } else if (to == address(0)) {
+            totalSupply[ids[i]] -= amounts[i]; // Burning
+        }
+    }
+    super._update(from, to, ids, amounts);
+}
+```
+
+**Use case**: Needed for edition caps or dashboard analytics (e.g., "472 users earned this achievement").
+
+### Batch minting for airdrops
+
+ERC-1155's batch operations shine in airdrop scenarios:
+
+```solidity
+function airdropBadges(
+    address[] calldata recipients,
+    uint256 badgeId
+) external onlyOwner {
+    for (uint256 i = 0; i < recipients.length; i++) {
+        if (!completed[recipients[i]][badgeId]) {
+            completed[recipients[i]][badgeId] = true;
+            _mint(recipients[i], badgeId, 1, "");
+        }
+    }
+}
+```
+
+**Gas comparison**:
+- ERC-721: ~100k gas per recipient = 10M gas for 100 users
+- ERC-1155: ~80k gas per recipient = 8M gas for 100 users
+- Savings: ~20% reduction with potential for further optimization using `_mintBatch`
+
+## Practice and reflection
+
+- Review the [TrainingRegistry source](https://github.com/PlunderAcademy/plunder-academy-training-registry-contracts) to see production patterns
+- Compare gas costs: deploy a simple ERC-721 and ERC-1155 contract, mint 10 tokens, measure difference
+- Design a token system for your use case: would you benefit from batch operations?
+- Consider metadata strategy: static JSON files vs dynamic API endpoints
+
+**Question: When is ERC-1155 more gas-efficient than ERC-721?**
+
+A) Always, due to better storage layout  
+B) Only when transferring multiple token types in one transaction ✓  
+C) When minting hundreds of the same token type to different addresses  
+D) When metadata needs to be updated frequently  
+
+**Answer: B** — ERC-1155's main gas advantage comes from batch operations. A single `safeBatchTransferFrom` can move 10 different token types with ~40% less gas than 10 separate ERC-721 transfers. Individual mint and transfer costs are similar between standards.
+
+## Security and pitfalls
+
+### Approval model differences
+
+**ERC-721**:
+```solidity
+function approve(address to, uint256 tokenId) external;
+function getApproved(uint256 tokenId) external view returns (address);
+```
+
+**ERC-1155**:
+```solidity
+function setApprovalForAll(address operator, bool approved) external;
+function isApprovedForAll(address account, address operator) 
+    external view returns (bool);
+```
+
+**Critical difference**: ERC-1155 only supports operator approval (all or nothing), not per-token approval. This is intentional—with potentially thousands of token types per contract, per-token approvals would be impractical.
+
+**Security implication**: Users must trust an operator with ALL token types in the contract, not just one. Document this clearly in your UI.
+
+### Receiver validation
+
+Both standards require safe transfer checks, but ERC-1155 uses a different interface:
+
+```solidity
+// ERC-721 receiver
+interface IERC721Receiver {
+    function onERC721Received(...) external returns (bytes4);
+}
+
+// ERC-1155 receiver
+interface IERC1155Receiver {
+    function onERC1155Received(...) external returns (bytes4);
+    function onERC1155BatchReceived(...) external returns (bytes4);
+}
+```
+
+**Rule**: Always use `_mint()` and `_safeBatchTransferFrom()` (not `_unsafeMint`), which call receiver hooks to prevent tokens being locked in non-compatible contracts.
+
+### URI mutability and frontend caching
+
+**Danger**: Changing the base URI affects ALL token types simultaneously.
+
+```solidity
+function setBaseURI(string memory newBase) external onlyOwner {
+    _baseDirectoryURI = newBase;
+    emit URI(newBase, 0); // Signal to clients to refresh
+}
+```
+
+**Best practice**: 
+1. Use content-addressed storage (IPFS) for immutable metadata
+2. Emit `URI(newURI, id)` event when changing metadata location
+3. Support ERC-4906 `MetadataUpdate` events for explicit refresh signals
+
+### Soulbound edge cases
+
+**Danger**: Blocking ALL transfers prevents even burning (sending to zero address).
+
+**Bad**:
+```solidity
+function _update(...) internal override {
+    require(from == address(0), "Non-transferable"); // Blocks burning!
+    super._update(from, to, ids, amounts);
+}
+```
+
+**Good**:
+```solidity
+function _update(...) internal override {
+    require(
+        from == address(0) || to == address(0), 
+        "Non-transferable"
+    ); // Allows minting and burning
+    super._update(from, to, ids, amounts);
+}
+```
+
+**Rule**: Soulbound logic should allow `from == 0` (minting) and `to == 0` (burning), only blocking transfers between non-zero addresses.
+
+## Security checklist
+
+Before deploying ERC-1155 contracts:
+
+- [ ] **Approval model**: Documented that `setApprovalForAll` grants access to ALL token types
+- [ ] **Receiver checks**: Using `_mint` and safe transfer functions, not unsafe variants
+- [ ] **URI resolution**: Tested with various token IDs, including edge cases (0, max uint256)
+- [ ] **Supply tracking**: Implemented if needed for caps or analytics
+- [ ] **Batch operations**: Validated array length checks (`ids.length == amounts.length`)
+- [ ] **Transfer restrictions**: If implementing soulbound, tested minting, burning, and blocked transfers
+- [ ] **Events**: Emitting `TransferSingle`, `TransferBatch`, `URI` as per spec
+- [ ] **Metadata standards**: JSON follows OpenSea/marketplace requirements
+- [ ] **Upgradability**: If using proxies, storage gaps and initialization checks in place
+- [ ] **Access control**: Admin functions (setURI, pause) properly restricted
+- [ ] **Testing**: Unit tests covering single/batch mints, transfers, edge cases
+- [ ] **Gas profiling**: Measured costs for typical operations vs ERC-721 baseline
+
+## Comparison table: ERC-721 vs ERC-1155 decision matrix
+
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Recommendation</th>
+<th>Reasoning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PFP/Art collection (10k unique)</td>
+<td><strong>ERC-721</strong></td>
+<td>Better marketplace support, simpler ownership model</td>
+</tr>
+<tr>
+<td>Achievement badges (100+ types)</td>
+<td><strong>ERC-1155</strong></td>
+<td>One contract for all types, lower deployment cost</td>
+</tr>
+<tr>
+<td>Gaming items (mix of unique/fungible)</td>
+<td><strong>ERC-1155</strong></td>
+<td>Batch operations, semi-fungible support</td>
+</tr>
+<tr>
+<td>Event tickets (tiers, same tier fungible)</td>
+<td><strong>ERC-1155</strong></td>
+<td>Natural fit for semi-fungible tokens</td>
+</tr>
+<tr>
+<td>Domain names</td>
+<td><strong>ERC-721</strong></td>
+<td>Each is unique, mature ecosystem (ENS uses 721)</td>
+</tr>
+<tr>
+<td>Membership tiers</td>
+<td><strong>ERC-1155</strong></td>
+<td>Different tiers as token IDs, upgrades via burns/mints</td>
+</tr>
+<tr>
+<td>Collectible card game</td>
+<td><strong>ERC-1155</strong></td>
+<td>Multiple card types, need batch transfers</td>
+</tr>
+<tr>
+<td>1/1 art pieces</td>
+<td><strong>ERC-721</strong></td>
+<td>Maximum marketplace compatibility</td>
+</tr>
+</tbody>
+</table>
+
+## Wrap-up
+
+You now understand ERC-1155's multi-token architecture and how it compares to ERC-721. You've seen production code from Plunder Academy's achievement system implementing soulbound badges with cryptographic voucher verification. 
+
+**Key takeaways**:
+- ERC-1155 excels when managing multiple token types in one contract
+- Batch operations provide real gas savings for multi-token scenarios
+- Trade-offs exist: less marketplace maturity, all-or-nothing approvals
+- Soulbound implementation requires careful transfer hook logic
+- Choose your standard based on use case, not trend
+
+**Next steps**:
+- Explore the [TrainingRegistry repo](https://github.com/PlunderAcademy/plunder-academy-training-registry-contracts) for deployment scripts and tests
+- Try implementing a simple achievement system following the voucher pattern
+- Experiment with batch minting and measure gas savings
+- Compare ERC-721 and ERC-1155 for your specific use case with realistic data
+
+The compass is in your hands—choose your token standard wisely.
+
+

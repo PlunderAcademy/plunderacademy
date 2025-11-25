@@ -1,0 +1,200 @@
+---
+id: "contract-interactions-lesson-2"
+slug: "error-handling"
+module: "contract-interactions-error-handling"
+number: "5.5"
+title: "Error Handling and Event Listening"
+objective: "Implement comprehensive error handling and real-time event monitoring for responsive dApps."
+practicalTakeaway: "Create robust dApps that gracefully handle errors and provide real-time updates."
+---
+
+# Error Handling and Event Listening
+
+## Why this matters now
+
+Writes fail: users reject signatures, contracts revert, or the network hiccups. Great dApps anticipate failure and communicate clearly. Meanwhile, on-chain events let you update the UI in real time without polling. You’ll map errors to friendly messages and subscribe to contract events.
+
+## Conceptual foundations for Web3 frontend
+
+- **Definition — Custom errors (Solidity)**: Rich revert reasons with data. **When to use it**: Decode revert causes and map to user‑friendly messages.
+- **Definition — `useWatchContractEvent`**: wagmi hook to subscribe to events. **When to use it**: Reflect mints, transfers, or status changes immediately.
+- **Definition — “Retry with context”**: Offer the next best action with a reason, not a generic “try again”.
+
+## Guided code walk‑throughs
+
+### 1) Map errors to friendly messages
+
+Wrap error handling to catch common cases (user rejection, insufficient funds) and show actionable messages.
+
+```tsx
+function friendlyError(e: unknown): string {
+  const msg = (e as Error)?.message || "Unknown error";
+  if (msg.includes("User rejected")) return "You rejected the request in your wallet.";
+  if (msg.includes("insufficient funds")) return "You don't have enough funds for gas.";
+  if (msg.includes("execution reverted")) return "The contract rejected this action.";
+  return msg;
+}
+```
+
+Takeaway: Centralize error mapping to keep UI copy consistent.
+
+### 2) Listen to events and update UI (with cleanup and error handling)
+
+Use `useWatchContractEvent` to reflect live changes (e.g., token `Transfer`). Production apps must handle connection issues, cleanup subscriptions, and provide visual feedback.
+
+```tsx
+import { useWatchContractEvent } from "wagmi";
+import { useEffect, useState } from "react";
+import { erc20Abi } from "viem";
+
+export function TransfersWatcher({ token }: { token: `0x${string}` }) {
+  const [transfers, setTransfers] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(true);
+
+  // Watch for Transfer events with error handling
+  useWatchContractEvent({
+    address: token,
+    abi: erc20Abi,
+    eventName: "Transfer",
+    onLogs: (logs) => {
+      try {
+        setError(null);
+        setIsConnected(true);
+        // Keep handlers fast - minimal state updates only
+        setTransfers(prev => [...logs, ...prev].slice(0, 50)); // Keep last 50
+      } catch (err) {
+        console.error("Error processing transfer logs:", err);
+        setError("Failed to process transfer");
+      }
+    },
+    onError: (error) => {
+      console.error("Event watcher error:", error);
+      setError("Connection lost - attempting to reconnect...");
+      setIsConnected(false);
+    },
+  });
+
+  // Cleanup and reconnection monitoring
+  useEffect(() => {
+    // Set up a heartbeat to detect stale connections
+    const interval = setInterval(() => {
+      if (!isConnected) {
+        console.log("Reconnection attempt...");
+        // wagmi automatically handles reconnection, but you can add custom logic
+        setError("Reconnecting to blockchain events...");
+      }
+    }, 5000);
+
+    // Cleanup on unmount - stops watching
+    return () => {
+      clearInterval(interval);
+      console.log("Transfer watcher cleaned up");
+    };
+  }, [isConnected]);
+
+  return (
+    <div className="border rounded p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+        <span className="text-sm font-medium">
+          {isConnected ? 'Live' : 'Disconnected'}
+        </span>
+      </div>
+      {error && (
+        <div className="text-sm text-red-600 mb-2">{error}</div>
+      )}
+      <div className="text-xs text-muted-foreground">
+        {transfers.length} transfers tracked
+      </div>
+    </div>
+  );
+}
+```
+
+**Key improvements for production:**
+- **Error handling**: Catches log processing errors and connection failures
+- **Visual feedback**: Shows connection status with a colored indicator
+- **Cleanup**: Clears intervals when component unmounts (prevents memory leaks)
+- **State management**: Limits stored transfers to prevent unbounded memory growth
+- **Reconnection**: Monitors connection health and provides user feedback during outages
+
+**Important note**: `useWatchContractEvent` creates a WebSocket or polling connection that persists until the component unmounts. Always ensure your component properly unmounts or conditionally renders to avoid running multiple subscriptions simultaneously.
+
+### 3) Advanced: Manually control event watchers
+
+For scenarios where you need to stop and start event watching (e.g., when user toggles a "live updates" switch), use conditional rendering or manual subscription management:
+
+```tsx
+import { useWatchContractEvent } from "wagmi";
+import { useState } from "react";
+import { erc20Abi } from "viem";
+
+export function ControllableWatcher({ token }: { token: `0x${string}` }) {
+  const [isWatching, setIsWatching] = useState(true);
+  const [lastEvent, setLastEvent] = useState<string | null>(null);
+
+  // Only watch when isWatching is true (conditional hook execution)
+  useWatchContractEvent({
+    address: token,
+    abi: erc20Abi,
+    eventName: "Transfer",
+    enabled: isWatching, // Controls whether the watcher is active
+    onLogs: (logs) => {
+      setLastEvent(`Detected ${logs.length} transfer(s) at ${new Date().toLocaleTimeString()}`);
+    },
+  });
+
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={() => setIsWatching(!isWatching)}
+        className="px-4 py-2 bg-primary text-primary-foreground rounded"
+      >
+        {isWatching ? '⏸️ Pause' : '▶️ Resume'} Live Updates
+      </button>
+      <div className="text-sm">
+        Status: {isWatching ? '🟢 Watching' : '🔴 Paused'}
+      </div>
+      {lastEvent && (
+        <div className="text-xs text-muted-foreground">{lastEvent}</div>
+      )}
+    </div>
+  );
+}
+```
+
+**When to stop watchers:**
+- User navigates away from a page (automatic via component unmount)
+- User explicitly pauses live updates to reduce network usage
+- Application enters a background/idle state
+- Rate limiting or connection issues require backoff
+
+**Reconnection best practices:**
+- Use exponential backoff for reconnection attempts (5s, 10s, 20s, 40s)
+- Track the last successfully processed block to avoid missing events during outages
+- Consider storing a "cursor" (last processed block number) in localStorage for session persistence
+- Combine real-time events with periodic polling for critical data (events for UX, polling for accuracy)
+
+## Practical exercises
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"err1","text":"Always show raw error messages to users","correctAnswer":false,"explanation":"Map to friendly copy and suggest the next action."},
+  {"id":"err2","text":"Event handlers should do minimal work","correctAnswer":true,"explanation":"Schedule updates and keep handlers fast."}
+]}/>
+
+### Reflection
+
+- Which errors deserve specific copy in your app? Draft two now.
+- Which events meaningfully change your UI? Where will you subscribe?
+
+## UX and error handling best practices
+
+- Distinguish user‑rejected from on‑chain reverts.
+- Offer a clear recovery ("Switch network", "Top up funds", "Retry later").
+- Debounce event‑driven updates; batch where possible.
+
+## Wrap‑up and next steps
+
+You can translate errors into helpful guidance and reflect chain events in real time. Next, you’ll combine these patterns into a complete dApp interface.

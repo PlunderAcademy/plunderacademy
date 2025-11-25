@@ -1,0 +1,626 @@
+---
+id: "oracles-randomness-lesson-3"
+slug: "airdrop-mechanisms"
+module: "oracles-randomness-airdrop-patterns"
+number: 4.5
+title: "Efficient Airdrop and Distribution Mechanisms"
+objective: "Design gas-efficient airdrop systems with merkle trees and batch operations for fair token distribution."
+practicalTakeaway: "Implement scalable token distribution systems that handle thousands of recipients efficiently."
+---
+
+# Efficient Airdrop and Distribution Mechanisms
+
+## Set the stage
+
+Distributing tokens to large recipient sets must be cheap, fair, and verifiable. Naïve loops revert or run out of gas. Production systems use off‑chain tree commitments (Merkle/Sparse Merkle) with on‑chain verification, plus batching where appropriate.
+
+Picture a quartermaster handing out rations to a fleet. You wouldn’t shout names and hope you don’t miss anyone; you’d keep a manifest, check each sailor off once, and record what was given. Airdrops follow the same discipline: publish a commitment (Merkle root) to the manifest, have recipients prove inclusion, and mark claims so they can’t be repeated.
+
+In this lesson, you’ll learn when to use pull‑based Merkle claims versus push‑based batching, how to encode the leaf schema, and how to prevent replay efficiently with bitmaps. We’ll also standardize eventing and off‑chain manifests so outside auditors can reproduce your drop.
+
+## Conceptual foundations
+
+### The gas problem with naive loops
+
+Sending tokens to thousands of recipients in a single transaction hits gas limits. Even if you batch into multiple transactions, you pay for every `SSTORE` and `CALL`. Worse, if one recipient reverts (bad address, reentrancy), the entire batch fails.
+
+**Why naive loops fail at scale**: Each token transfer costs ~50,000 gas (storage writes, external calls, event emission). A batch of 100 recipients costs 5 million gas—feasible but expensive. A batch of 1,000 recipients costs 50 million gas—exceeds block limits on most chains. You'd need to split into multiple transactions, increasing operational complexity and the risk of inconsistency if one batch fails.
+
+**The pull pattern solution**: Instead of pushing tokens to recipients, publish a Merkle root (a 32-byte commitment to the entire recipient list) on‑chain. Recipients generate proofs off‑chain and submit them to claim their tokens. This shifts gas costs to claimants (each pays for their own claim) and isolates failures (one bad recipient doesn't block others). The contract stores only one root, regardless of recipient count—constant cost for the deployer.
+
+Production airdrops use pull patterns: publish a commitment (Merkle root) on‑chain, let users prove inclusion and claim individually. This shifts gas costs to claimants and isolates failures, enabling distributions to millions of recipients with minimal on‑chain overhead.
+
+### Merkle root and leaf schema
+
+Commit to the full recipient set with a Merkle root. Define the leaf preimage precisely (e.g., `keccak256(abi.encodePacked(index, account, amount))`). Including an `index` enables compact bitmap tracking.
+
+**How Merkle proofs work**: A Merkle tree is a binary tree of hashes. Each leaf is a hash of recipient data; each internal node is a hash of its two children. The root is the hash at the top—a commitment to the entire tree. To prove a leaf is in the tree, you provide the leaf and a "proof" (the sibling hashes along the path from leaf to root). The contract rehashes the leaf with each sibling, walking up the tree, and verifies the final hash matches the stored root.
+
+**Why this is efficient**: The proof size is logarithmic in the recipient count. For 1 million recipients, the proof is only ~20 hashes (640 bytes). Verification is also logarithmic—just rehash the proof path. This makes Merkle claims feasible for arbitrarily large distributions.
+
+**Critical: Use OpenZeppelin-compatible tree generation**: OpenZeppelin's `MerkleProof` library uses **double hashing** to prevent [second preimage attacks](https://flawed.net.nz/2018/02/21/attacking-merkle-trees-with-a-second-preimage-attack/). Standard Merkle tree libraries won't generate compatible proofs. Use one of these OpenZeppelin-compatible packages:
+
+- **JavaScript/TypeScript**: [`@openzeppelin/merkle-tree`](https://github.com/OpenZeppelin/merkle-tree) (official)
+- **Go**: [`openzeppelin-merkle-tree-go`](https://github.com/FantasyJony/openzeppelin-merkle-tree-go)
+- **Python**: [`multiproof`](https://github.com/stakewise/multiproof)
+
+These packages implement the same double-hashing scheme as OpenZeppelin's on-chain verifier, ensuring your off-chain proofs will verify correctly. Never use a generic Merkle tree library—your proofs will fail verification due to the hashing mismatch.
+
+The Merkle tree is computed off‑chain from the recipient list. The root is a 32‑byte commitment to the entire set. Users generate proofs (sibling hashes along the path from leaf to root) off‑chain and submit them on‑chain. The contract verifies the proof and transfers tokens. The contract never needs to store the full recipient list—just the root and a bitmap to track claims.
+
+### Pull claims vs. push batches
+
+Choose the right pattern based on your distribution size, trust model, and UX requirements:
+
+<table>
+  <thead>
+    <tr>
+      <th>Dimension</th>
+      <th>Pull (Merkle Proofs)</th>
+      <th>Push (Batch Sends)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Best for</strong></td>
+      <td>Large public airdrops (1,000+)</td>
+      <td>Trusted ops, team grants (fewer than 2,000)</td>
+    </tr>
+    <tr>
+      <td><strong>Gas cost</strong></td>
+      <td>Users pay to claim (distributed)</td>
+      <td>Deployer pays all gas (concentrated)</td>
+    </tr>
+    <tr>
+      <td><strong>Trust model</strong></td>
+      <td>Permissionless (anyone can verify)</td>
+      <td>Trusted sender (whitelist required)</td>
+    </tr>
+    <tr>
+      <td><strong>Complexity</strong></td>
+      <td>Higher (tree generation, proofs)</td>
+      <td>Lower (simple batch transfers)</td>
+    </tr>
+    <tr>
+      <td><strong>UX</strong></td>
+      <td>Users must claim (2 steps)</td>
+      <td>Automatic (1 step, sender initiates)</td>
+    </tr>
+    <tr>
+      <td><strong>Failure isolation</strong></td>
+      <td>Per-user (one bad claim doesn't affect others)</td>
+      <td>Per-batch (one bad recipient can block batch)</td>
+    </tr>
+    <tr>
+      <td><strong>Scalability</strong></td>
+      <td>Unlimited (millions of recipients)</td>
+      <td>Limited by gas (typically 100-2,000 per batch)</td>
+    </tr>
+    <tr>
+      <td><strong>On-chain storage</strong></td>
+      <td>Minimal (one root + bitmap)</td>
+      <td>None (ephemeral)</td>
+    </tr>
+  </tbody>
+</table>
+
+**When to use pull (Merkle)**: Public, permissionless distributions to thousands or millions of recipients. Priority is fairness, verifiability, and scalability. Users are expected to actively claim.
+
+**When to use push (batching)**: Trusted operations like team grants, vesting claims, or reward distributions to hundreds or low thousands of recipients. Priority is simplicity and automatic delivery. Sender is trusted and whitelisted.
+
+### Replay protection with bitmaps
+
+Use a bitmap keyed by `index >> 8` with `1 << (index & 255)` to track whether a leaf has claimed. Each 256‑bit word covers 256 indices. Bitmaps minimize storage vs. boolean mappings (`mapping(uint256 => bool)`) and scale to large sets.
+
+**Why bitmaps are more efficient**: A naive `mapping(uint256 => bool)` uses one storage slot (32 bytes) per flag. For 1 million recipients, that's 32 MB of storage—expensive to initialize and query. A bitmap packs 256 flags into one 32-byte slot. For 1 million recipients, you need only ~3,906 slots (125 KB)—a 250× reduction.
+
+**How the math works**: 
+- **Word index**: `index >> 8` (divide by 256) gives the storage slot
+- **Bit position**: `index & 255` (modulo 256) gives the bit within that slot
+- **Check if claimed**: `claimedWord[wordIndex] & (1 << bitPosition) != 0`
+- **Mark as claimed**: `claimedWord[wordIndex] |= (1 << bitPosition)`
+
+Example: index 257 → word `257 >> 8 = 1`, bit `257 & 255 = 1`. Check: `claimedWord[1] & (1 << 1) != 0`. This compact representation scales to billions of recipients with minimal storage overhead.
+
+### Auditable manifests and eventing
+
+Pin the manifest (recipient list, computed root, and parameters) to IPFS. Emit `Claimed(index, account, amount)` for each claim. Document the hashing schema to enable reproducibility.
+
+**Why manifests matter**: Without a public manifest, recipients can't generate proofs, and outside observers can't verify the distribution was fair. By publishing the full recipient list, computed root, leaf schema, and tree generation parameters, you enable trustless verification. Anyone can download the manifest, rebuild the tree using the same leaf schema, and confirm the root matches what's on‑chain.
+
+**What to include in the manifest**:
+- Full recipient list (index, address, amount)
+- Merkle root (32-byte hash)
+- Leaf schema (e.g., `keccak256(abi.encodePacked(index, account, amount))`)
+- Tree construction parameters (hash algorithm, balancing strategy)
+- Contract address and deployment block
+- IPFS CID of the manifest itself (for recursive pinning)
+
+Third parties should be able to download the manifest, recompute the Merkle root, and verify it matches the on‑chain root. This transparency builds trust and enables independent audits. Emit `Claimed(index, account, amount)` events so block explorers and analytics tools can track claim rates and identify anomalies (sudden spikes, duplicate claims, funding shortfalls).
+
+### Unclaimed tokens and finalization
+
+Not all recipients will claim. Define a policy: after a claim window (e.g., 90 days), unclaimed tokens can be burned, rolled over to the next airdrop, or reclaimed by the treasury. Emit finalization events and make the policy clear in announcements.
+
+**Why unclaimed policies matter**: Historically, 20-40% of airdrop recipients never claim (lost keys, inactive accounts, unaware of the drop). Without a finalization policy, these tokens remain stranded in the contract indefinitely. Clear policies prevent disputes and enable capital efficiency.
+
+**Common finalization strategies**:
+- **Burn unclaimed tokens** (deflationary): Reduces total supply; signals scarcity and commitment to tokenomics. Good for projects prioritizing supply discipline.
+- **Rollover to next drop** (redistribution): Rewards active participants in future campaigns; maintains community engagement. Good for growth-focused projects.
+- **Reclaim to treasury** (operational): Funds development, liquidity, or future initiatives. Good for projects needing operational flexibility.
+
+Announce the policy prominently before deployment. Set a claim deadline (e.g., `claimDeadline = block.timestamp + 90 days`) and emit a `Finalized(uint256 unclaimedAmount, address destination)` event when finalizing. Test finalization logic: ensure it can't be called early, can't be called twice, and correctly handles partial claims.
+
+## Guided code walk‑throughs
+
+### 1) Merkle airdrop with bitmap replay protection
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+
+contract MerkleAirdrop {
+  using SafeERC20 for IERC20;
+  event Claimed(uint256 indexed index, address indexed account, uint256 amount);
+  IERC20 public immutable token; bytes32 public immutable merkleRoot;
+  mapping(uint256 => uint256) private claimedWord;
+
+  constructor(IERC20 _token, bytes32 _root) { token = _token; merkleRoot = _root; }
+
+  function isClaimed(uint256 index) public view returns (bool) {
+    uint256 word = claimedWord[index >> 8];
+    uint256 mask = 1 << (index & 255);
+    return word & mask != 0;
+  }
+
+  /// @notice leaf = keccak256(abi.encodePacked(index, account, amount))
+  function claim(uint256 index, address account, uint256 amount, bytes32[] calldata proof) external {
+    require(!isClaimed(index), "CLAIMED");
+    bytes32 leaf = keccak256(abi.encodePacked(index, account, amount));
+    require(MerkleProof.verify(proof, merkleRoot, leaf), "BAD_PROOF");
+    claimedWord[index >> 8] |= (1 << (index & 255));
+    token.safeTransfer(account, amount);
+    emit Claimed(index, account, amount);
+  }
+}
+```
+
+Takeaway: publish one root on-chain and let users pull with proofs; use a bitmap to minimize storage.
+
+### 2) Production batch airdrop (trusted, whitelisted)
+
+This pattern is proven for distributions up to 2,000 recipients per batch. It uses a whitelist for sender control, configurable batch size limits, and comprehensive events.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract Airdropper is Ownable {
+  struct AirdropRecipient {
+    address recipient;
+    uint256 amount;
+  }
+
+  mapping(address => bool) public whitelistedAddresses;
+  uint256 public maxBatchSize;
+
+  event MaxBatchSizeUpdated(uint256 oldSize, uint256 newSize);
+  event AirdropExecuted(address indexed token, uint256 recipientCount, uint256 totalAmount);
+  event AddedToWhitelist(address indexed account);
+  event RemovedFromWhitelist(address indexed account);
+
+  modifier onlyWhitelisted() {
+    require(whitelistedAddresses[msg.sender], "Caller not whitelisted");
+    _;
+  }
+
+  constructor(address initialOwner, uint256 _maxBatchSize) Ownable(initialOwner) {
+    require(initialOwner != address(0), "Invalid owner");
+    require(_maxBatchSize > 0, "Invalid batch size");
+    whitelistedAddresses[initialOwner] = true;
+    maxBatchSize = _maxBatchSize;
+    emit MaxBatchSizeUpdated(0, _maxBatchSize);
+    emit AddedToWhitelist(initialOwner);
+  }
+
+  /// @notice Airdrops tokens to multiple recipients in a single transaction
+  /// @dev Caller must be whitelisted and approve tokens beforehand
+  function airdropToken(
+    address token,
+    AirdropRecipient[] calldata recipients
+  ) external onlyWhitelisted {
+    require(recipients.length > 0, "Empty recipients");
+    require(recipients.length <= maxBatchSize, "Batch too large");
+    
+    uint256 totalAmount = 0;
+    for(uint256 i = 0; i < recipients.length; i++) {
+      require(recipients[i].recipient != address(0), "Invalid recipient");
+      require(recipients[i].amount > 0, "Invalid amount");
+      totalAmount += recipients[i].amount;
+      require(totalAmount >= recipients[i].amount, "Overflow");
+    }
+
+    // Pull total from sender (who must have approved)
+    IERC20(token).transferFrom(msg.sender, address(this), totalAmount);
+
+    // Distribute to recipients
+    for(uint256 i = 0; i < recipients.length; i++) {
+      IERC20(token).transfer(recipients[i].recipient, recipients[i].amount);
+    }
+
+    emit AirdropExecuted(token, recipients.length, totalAmount);
+  }
+
+  /// @notice Updates maximum batch size
+  function setMaxBatchSize(uint256 newSize) external onlyOwner {
+    require(newSize > 0, "Invalid size");
+    uint256 oldSize = maxBatchSize;
+    maxBatchSize = newSize;
+    emit MaxBatchSizeUpdated(oldSize, newSize);
+  }
+
+  /// @notice Adds address to whitelist
+  function addToWhitelist(address account) external onlyOwner {
+    require(account != address(0), "Invalid address");
+    require(!whitelistedAddresses[account], "Already whitelisted");
+    whitelistedAddresses[account] = true;
+    emit AddedToWhitelist(account);
+  }
+
+  /// @notice Removes address from whitelist (cannot remove owner)
+  function removeFromWhitelist(address account) external onlyOwner {
+    require(account != owner(), "Cannot remove owner");
+    require(whitelistedAddresses[account], "Not whitelisted");
+    whitelistedAddresses[account] = false;
+    emit RemovedFromWhitelist(account);
+  }
+
+  /// @notice Recovers accidentally sent tokens
+  function recoverTokens(address token) external onlyOwner {
+    uint256 balance = IERC20(token).balanceOf(address(this));
+    require(balance > 0, "No tokens to recover");
+    IERC20(token).transfer(owner(), balance);
+  }
+}
+```
+
+**Key features:**
+- **Whitelist control**: Only authorized addresses can execute airdrops
+- **Configurable batch limits**: Tune for your chain's gas limits (tested up to 2,000)
+- **Overflow protection**: Validates total amount before transfers
+- **Event coverage**: Tracks all administrative actions and distributions
+- **Token recovery**: Owner can rescue mistakenly sent tokens
+
+**Usage:**
+```solidity
+// 1. Deploy with max batch size
+Airdropper airdropper = new Airdropper(owner, 2000);
+
+// 2. Whitelist additional senders
+airdropper.addToWhitelist(trustedOperator);
+
+// 3. Prepare recipients
+AirdropRecipient[] memory recipients = new AirdropRecipient[](100);
+recipients[0] = AirdropRecipient(0xabc..., 1000e18);
+// ... fill array
+
+// 4. Approve tokens and execute
+token.approve(address(airdropper), totalAmount);
+airdropper.airdropToken(address(token), recipients);
+```
+
+Takeaway: for trusted ops with moderate recipient counts (fewer than 2,000), this pattern offers simplicity and automatic delivery without Merkle proof complexity. For larger or public distributions, use Merkle claims.
+
+### 3) Off‑chain manifest and reproducibility
+
+```text
+manifest.json
+{
+  "token": "0x...",
+  "chainId": 32769,
+  "snapshotBlock": 12345678,
+  "recipients": [ { "index": 0, "account": "0xabc...", "amount": "1000000000000000000" }, ... ],
+  "merkleRoot": "0x...",
+  "ipfsCid": "bafy...",
+  "treeGenerator": "@openzeppelin/merkle-tree@1.0.0"
+}
+```
+
+**Example: Generating proofs with OpenZeppelin's package**
+
+```javascript
+// npm install @openzeppelin/merkle-tree
+import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
+
+// Recipient data: [index, account, amount]
+const recipients = [
+  [0, "0xabc...", "1000000000000000000"],
+  [1, "0xdef...", "2000000000000000000"],
+  // ...
+];
+
+// Generate tree (uses double hashing internally)
+const tree = StandardMerkleTree.of(recipients, ["uint256", "address", "uint256"]);
+
+// Get root for contract deployment
+console.log("Merkle Root:", tree.root);
+
+// Generate proof for a specific recipient
+const proof = tree.getProof([0, "0xabc...", "1000000000000000000"]);
+console.log("Proof:", proof);
+
+// Save tree to JSON for later proof generation
+fs.writeFileSync("tree.json", JSON.stringify(tree.dump(), null, 2));
+```
+
+Takeaway: use OpenZeppelin's official package to generate the tree and proofs; pin the manifest to IPFS with the generator version; enable third‑party verification by documenting the exact package and leaf schema used.
+
+## Practice and reflection
+
+Apply airdrop patterns to your token distribution needs:
+
+- **Choose your distribution pattern**: Merkle proofs (pull) for public, permissionless distributions to thousands or millions. Batch airdropper (push) for trusted ops to hundreds or low thousands (tested up to 2,000 per batch). Consider gas costs, trust model, and UX requirements.
+- **If using Merkle proofs**: Install `@openzeppelin/merkle-tree` (JavaScript), `openzeppelin-merkle-tree-go` (Go), or `multiproof` (Python). Never use generic Merkle libraries—they produce incompatible proofs. Test proof generation and on-chain verification before deploying.
+- **If using batch airdrop**: Set appropriate `maxBatchSize` for your chain (test with 100-500 first, scale to 2,000 if gas permits). Whitelist trusted operators. Monitor gas costs per batch and adjust batch sizes accordingly.
+- **Sketch your claim preimage**: Standardize `keccak256(abi.encodePacked(index, account, amount))`. Include `index` to enable compact bitmaps. Document the schema in NatSpec and the manifest.
+- **Choose where you'll publish and pin the manifest**: IPFS is standard for decentralized storage. Pin the manifest (recipient list, root, parameters) and record the CID on‑chain or in announcements. Enable third‑party verification.
+- **Define your unclaimed policy**: After a claim window (e.g., 90 days), what happens to unclaimed tokens? Burn (deflationary), rollover (next airdrop), or treasury reclaim (operational)? Document the policy and emit finalization events.
+- **Specify event coverage**: Emit `Claimed(index, account, amount)` for each claim. Emit configuration changes (pause, finalize, root updates). Off‑chain indexers should track claim rates and alert on anomalies.
+- **Test negative paths**: Write tests for bad proofs, duplicate claims, zero amounts, unknown indices, and funding shortfalls. Verify your contract fails safely in each scenario.
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"airdrop1","text":"Merkle proofs let users claim without uploading the entire list on-chain","correctAnswer":true,"explanation":"The root commits to the full set; proofs verify membership cheaply."},
+  {"id":"airdrop2","text":"Batch sends are preferred for permissionless public airdrops","correctAnswer":false,"explanation":"Batching is for trusted flows; public airdrops favor Merkle claims."},
+  {"id":"airdrop3","text":"Bitmaps are more gas-efficient than boolean mappings for replay protection","correctAnswer":true,"explanation":"Bitmaps pack 256 flags into one storage slot; mappings use one slot per flag."},
+  {"id":"airdrop4","text":"The manifest can be changed after deployment without breaking claims","correctAnswer":false,"explanation":"The root commits to the manifest; changing the manifest invalidates all proofs."}
+]}/>
+
+**Short reflection**: If 30% of recipients never claim, should you burn the unclaimed tokens (reducing supply) or reclaim them to the treasury (funding future operations)? What signal does each choice send to your community?
+
+## Security and pitfalls
+
+Airdrop mechanisms handle large value transfers. Follow these patterns to minimize risk.
+
+### 1) Using incompatible Merkle tree libraries
+
+**Danger**: Using a standard Merkle tree library instead of OpenZeppelin's implementation will cause **all proofs to fail verification**. OpenZeppelin's `MerkleProof` uses double hashing to prevent second preimage attacks, which means generic Merkle tree libraries produce incompatible proofs. This is a catastrophic failure—you'll deploy the contract, users will attempt to claim, and every single transaction will revert with "BAD_PROOF".
+
+**Why double hashing matters**: Without double hashing, an attacker can construct a malicious proof that tricks the contract into accepting a fake leaf by using an internal node hash as a leaf. OpenZeppelin prevents this by hashing leaves twice: `keccak256(keccak256(leaf))`. This breaks compatibility with standard libraries but provides critical security. [Read more about second preimage attacks](https://flawed.net.nz/2018/02/21/attacking-merkle-trees-with-a-second-preimage-attack/).
+
+**Bad**:
+```javascript
+// Using a generic Merkle tree library
+import MerkleTree from "merkletreejs"; // ❌ Won't work with OpenZeppelin!
+
+const tree = new MerkleTree(leaves, keccak256);
+const root = tree.getRoot(); // This root won't match OpenZeppelin's on-chain verification!
+```
+
+**Good**:
+```javascript
+// Use OpenZeppelin's official package
+import { StandardMerkleTree } from "@openzeppelin/merkle-tree"; // ✅ Compatible!
+
+const tree = StandardMerkleTree.of(recipients, ["uint256", "address", "uint256"]);
+const root = tree.root; // This root will verify correctly on-chain
+```
+
+**Compatible packages**:
+- **JavaScript/TypeScript**: [`@openzeppelin/merkle-tree`](https://github.com/OpenZeppelin/merkle-tree)
+- **Go**: [`openzeppelin-merkle-tree-go`](https://github.com/FantasyJony/openzeppelin-merkle-tree-go)
+- **Python**: [`multiproof`](https://github.com/stakewise/multiproof)
+
+**Rule**: Always use an OpenZeppelin-compatible package. Test proof generation and verification in your development environment before deploying. Include the package name and version in your manifest for reproducibility.
+
+### 2) Wrong leaf schema or ordering
+
+**Danger**: If the on‑chain hashing differs from the manifest, valid recipients can't claim or proofs collide. Changing the preimage order (e.g., `account, index, amount` vs. `index, account, amount`) produces different roots and breaks all proofs. This is a catastrophic failure mode—once deployed with the wrong schema, you must redeploy with a new root, re-generate all proofs, and re-announce to recipients. There's no way to fix it on-chain.
+
+**Bad**:
+```solidity
+// Manifest uses: keccak256(abi.encodePacked(index, account, amount))
+// Contract uses:
+bytes32 leaf = keccak256(abi.encodePacked(account, amount)); // Missing index!
+```
+
+**Good**:
+```solidity
+/// @notice Leaf = keccak256(abi.encodePacked(index, account, amount))
+function claim(uint256 index, address account, uint256 amount, bytes32[] calldata proof) external {
+  bytes32 leaf = keccak256(abi.encodePacked(index, account, amount));
+  require(MerkleProof.verify(proof, merkleRoot, leaf), "BAD_PROOF");
+  // ...
+}
+```
+
+**Rule**: Document and fix the preimage as `abi.encodePacked(index, account, amount)`; don't reorder. Test with real proofs from your manifest generation script.
+
+### 3) Missing replay protection
+
+**Danger**: Claims can be replayed if you don't record prior claims. Per‑address mappings (`mapping(address => bool)`) cost more storage and don't scale to large sets with multiple claims per address.
+
+**Bad**:
+```solidity
+function claim(...) external {
+  // No replay check; can claim multiple times!
+  token.safeTransfer(account, amount);
+}
+```
+
+**Good**:
+```solidity
+mapping(uint256 => uint256) private claimedWord;
+
+function claim(uint256 index, ...) external {
+  require(!isClaimed(index), "CLAIMED");
+  claimedWord[index >> 8] |= (1 << (index & 255));
+  token.safeTransfer(account, amount);
+}
+```
+
+**Rule**: Use a bitmap keyed by `index`; verify `!isClaimed(index)` before transferring. Bitmaps pack 256 flags per storage slot.
+
+### 4) Non‑standard ERC‑20 behavior
+
+**Danger**: Fee‑on‑transfer or non‑reverting tokens can break loops and totals. If a token deducts fees on transfer, the recipient receives less than `amount`, and batch totals don't match.
+
+**Bad**:
+```solidity
+function sendMany(IERC20 token, address[] calldata to, uint256[] calldata amounts) external {
+  for (uint256 i = 0; i < to.length; i++) {
+    token.transferFrom(msg.sender, to[i], amounts[i]); // May not revert!
+  }
+}
+```
+
+**Good**:
+```solidity
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+function sendMany(IERC20 token, address[] calldata to, uint256[] calldata amounts) external {
+  using SafeERC20 for IERC20;
+  for (uint256 i = 0; i < to.length; i++) {
+    token.safeTransferFrom(msg.sender, to[i], amounts[i]); // Reverts on failure
+  }
+}
+```
+
+**Rule**: Use `SafeERC20`; validate balances and transfers; avoid looping over untrusted arrays in public flows. Test with fee‑on‑transfer tokens if your airdrop supports them.
+
+### 5) Ambiguous unclaimed policy
+
+**Danger**: Without a clear deadline and policy, funds remain stranded or disputes arise. Recipients may expect indefinite claim windows; protocols may want to reclaim unclaimed tokens. Ambiguity leads to community disputes, legal uncertainty, and capital inefficiency. Projects have faced backlash for reclaiming tokens without clear advance notice, and others have left millions stranded indefinitely due to lack of policy.
+
+**Bad**:
+```solidity
+// No deadline, no finalization logic
+function claim(...) external {
+  // Claims open forever
+}
+```
+
+**Good**:
+```solidity
+uint256 public immutable claimDeadline;
+bool public finalized;
+
+function claim(...) external {
+  require(block.timestamp <= claimDeadline, "EXPIRED");
+  require(!finalized, "FINALIZED");
+  // ...
+}
+
+function finalize() external onlyOwner {
+  require(block.timestamp > claimDeadline, "TOO_EARLY");
+  finalized = true;
+  uint256 unclaimed = token.balanceOf(address(this));
+  token.safeTransfer(treasury, unclaimed); // or burn
+  emit Finalized(unclaimed);
+}
+```
+
+**Rule**: Set a claim window and finalize path (burn/rollback/treasury); emit finalization events. Announce the deadline clearly and give recipients ample time.
+
+### 6) Unbounded loops in public functions
+
+**Danger**: Looping over large recipient arrays in public functions can hit gas limits or enable DOS attacks. Even if you batch, a malicious recipient contract can revert and block the entire batch. An attacker could intentionally create recipient addresses that revert on transfer (via fallback logic or gas exhaustion) to DOS the entire distribution.
+
+**Additional attack vectors**:
+- **Gas griefing**: Recipient contracts with expensive fallback logic force the sender to pay excessive gas or revert
+- **Block stuffing**: Attacker fills blocks to prevent batch transactions from being mined
+- **Reentrancy**: Malicious recipient reenters during transfer, potentially manipulating state or draining funds
+
+**Rule**: Prefer Merkle claims for public airdrops—they eliminate these attack vectors entirely. If batching for trusted operations, bound array sizes (start with 100-500, scale to 2,000 with testing), test with worst‑case recipients (contracts with fallback logic), and consider allowing partial failures (skip reverting recipients and emit events for manual follow-up).
+
+### 7) Insufficient whitelist controls in batch airdrops
+
+**Danger**: If your batch airdrop contract has weak access controls, unauthorized addresses can drain tokens or spam the network. Without proper whitelist management, you risk sending tokens to unintended recipients or allowing malicious operators to exploit the system.
+
+**Bad**:
+```solidity
+// No access control - anyone can call
+function airdropToken(address token, address[] calldata to, uint256[] calldata amounts) external {
+  for(uint256 i = 0; i < to.length; i++) {
+    IERC20(token).transferFrom(msg.sender, to[i], amounts[i]);
+  }
+}
+```
+
+**Good**:
+```solidity
+mapping(address => bool) public whitelistedAddresses;
+
+modifier onlyWhitelisted() {
+  require(whitelistedAddresses[msg.sender], "Not whitelisted");
+  _;
+}
+
+function airdropToken(
+  address token,
+  AirdropRecipient[] calldata recipients
+) external onlyWhitelisted {
+  require(recipients.length <= maxBatchSize, "Batch too large");
+  // ... validated batch processing
+}
+
+function addToWhitelist(address account) external onlyOwner {
+  require(!whitelistedAddresses[account], "Already whitelisted");
+  whitelistedAddresses[account] = true;
+  emit AddedToWhitelist(account);
+}
+```
+
+**Rule**: Always use whitelist controls for batch airdrops. Limit batch sizes with configurable maximums. Emit events for all administrative actions (whitelist changes, batch size updates). Test with maximum batch sizes to ensure gas limits aren't exceeded. Never allow the owner to be removed from the whitelist.
+
+## Security checklist
+
+Before shipping airdrop mechanisms:
+
+**For Merkle (pull) airdrops:**
+
+- [ ] **OpenZeppelin-compatible tree generation**: Use `@openzeppelin/merkle-tree`, `openzeppelin-merkle-tree-go`, or `multiproof` packages—standard Merkle libraries will produce incompatible proofs due to double-hashing mismatch
+- [ ] **Leaf schema fixed**: Use `keccak256(abi.encodePacked(index, account, amount))` with explicit encoding; match exactly between on-chain and off-chain
+- [ ] **Bitmap tracking**: Prevent replays with `index >> 8` and bit masking; verify `!isClaimed(index)`
+- [ ] **Single transfer per claim**: CEI discipline; `SafeERC20` for sends; no reentrancy
+- [ ] **Events emitted**: `Claimed(index, account, amount)` and configuration changes (pause, finalize)
+- [ ] **Manifest pinned**: IPFS CID recorded alongside the root, parameters, and tree generator version; enable third‑party verification
+- [ ] **Unclaimed policy**: Claim window, finalization action (burn/rollover/treasury), and authority defined
+- [ ] **Negative‑path tests**: Bad proof, duplicate claim, zero amount, unknown index, funding shortfall, proof verification failure
+- [ ] **Proof generation**: Test manifest generation script; verify proofs match on‑chain root; test with multiple recipients
+
+**For batch (push) airdrops:**
+
+- [ ] **Whitelist controls**: Only authorized addresses can execute airdrops; use `onlyWhitelisted` modifier
+- [ ] **Configurable batch limits**: Set and enforce `maxBatchSize`; start with 100-500, scale to 2,000 with testing
+- [ ] **Owner protection**: Owner cannot be removed from whitelist; owner can manage all whitelist operations
+- [ ] **Overflow protection**: Validate total amount before transfers; check each addition doesn't overflow
+- [ ] **Events emitted**: Track airdrop executions, whitelist changes, and batch size updates
+- [ ] **Token recovery**: Owner can rescue mistakenly sent tokens; validate balance before recovery
+- [ ] **Gas testing**: Test with maximum batch size on target chain; measure actual gas costs
+- [ ] **Recipient validation**: Check for zero addresses and zero amounts before processing
+
+**General (both patterns):**
+
+- [ ] **Funding checks**: Contract funded before opening claims/airdrops; no mixed tokens; validate balance
+- [ ] **No unbounded loops**: Avoid iterating recipients on-chain in public flows; enforce batch size limits
+- [ ] **Operator controls**: Minimal admin surface; restrict critical functions to owner or whitelist
+- [ ] **Documentation**: NatSpec on all public functions; document pattern choice and trade-offs
+- [ ] **SafeERC20**: Use `SafeERC20` for all token transfers; handle non-reverting tokens properly
+
+## Wrap‑up
+
+You now have two proven patterns for token distribution:
+
+**Merkle claims (pull)** minimize deployer gas costs and scale to millions of recipients. Use OpenZeppelin-compatible tree generators, enforce bitmap replay protection, and publish auditable manifests. Best for public, permissionless distributions where fairness and verifiability are paramount.
+
+**Batch airdrops (push)** simplify operations for trusted distributions up to 2,000 recipients per batch. Use whitelist controls, configurable batch limits, and comprehensive events. Best for team grants, vesting claims, or reward distributions where automatic delivery and operational simplicity matter more than decentralization.
+
+The patterns you learned—OpenZeppelin-compatible Merkle proofs, bitmap replay protection, whitelisted batch processing, and auditable manifests—apply to any token distribution scenario: public airdrops, vesting schedules, reward claims, team allocations, and refunds. Choose the pattern that fits your trust model, scale requirements, and UX constraints.
+
+Both patterns work identically on Zilliqa EVM and other networks—keep your leaf schemas, batch sizes, and events consistent so off‑chain verification and monitoring remain chain‑agnostic. Airdrops are high‑value, high‑visibility operations—guard them carefully with proper testing, security checks, and clear communication to your community.

@@ -1,0 +1,982 @@
+---
+id: deployment-setup
+module: upgradable-contract-practical
+number: 4.6.3
+title: Deploying with Foundry
+objective: >-
+  Set up Foundry, understand the differences from Hardhat, and deploy TrainingRegistryV1 to Zilliqa testnet with claimant tracking.
+slug: deployment-setup
+---
+
+## Deployment Overview
+
+In this lesson, you'll deploy TrainingRegistryV1 using **Foundry** instead of Hardhat. This is your first time using Foundry, but don't worry - the Solidity you know transfers directly!
+
+**What you'll do:**
+1. **Install Foundry** (Rust-based toolkit)
+2. **Compare Foundry vs Hardhat** (understand the differences)
+3. **Set up project** with dependencies
+4. **Write deployment script** in Solidity (not TypeScript!)
+5. **Deploy to Zilliqa testnet** with claimant tracking
+6. **Verify deployment** on block explorer
+
+**Why Foundry for this lesson?**
+- Production contracts often use Foundry
+- Faster compilation and testing (10x+)
+- Write tests in Solidity (no context switching)
+- Industry standard for upgradeable contracts
+- Better for complex contract interactions
+
+## Foundry vs Hardhat: What's Different?
+
+You've been using Hardhat 3 for all previous practicals. Here's what changes with Foundry:
+
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Hardhat</th>
+<th>Foundry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Language</strong></td>
+<td>JavaScript/TypeScript</td>
+<td>Solidity + Rust</td>
+</tr>
+<tr>
+<td><strong>Test language</strong></td>
+<td>TypeScript with viem</td>
+<td>Solidity</td>
+</tr>
+<tr>
+<td><strong>Speed</strong></td>
+<td>Moderate (Node.js)</td>
+<td>Blazing fast (Rust)</td>
+</tr>
+<tr>
+<td><strong>Installation</strong></td>
+<td>npm install hardhat</td>
+<td>curl install (system-wide)</td>
+</tr>
+<tr>
+<td><strong>Config file</strong></td>
+<td>hardhat.config.ts</td>
+<td>foundry.toml</td>
+</tr>
+<tr>
+<td><strong>Compile</strong></td>
+<td>npx hardhat compile</td>
+<td>forge build</td>
+</tr>
+<tr>
+<td><strong>Test</strong></td>
+<td>npx hardhat test</td>
+<td>forge test</td>
+</tr>
+<tr>
+<td><strong>Deploy</strong></td>
+<td>TypeScript scripts</td>
+<td>Solidity scripts</td>
+</tr>
+<tr>
+<td><strong>Gas reports</strong></td>
+<td>Plugin required</td>
+<td>Built-in (--gas-report)</td>
+</tr>
+<tr>
+<td><strong>Dependencies</strong></td>
+<td>npm packages</td>
+<td>git submodules</td>
+</tr>
+</tbody>
+</table>
+
+### Command Comparison
+
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Hardhat Command</th>
+<th>Foundry Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initialize project</td>
+<td>npx hardhat --init</td>
+<td>forge init</td>
+</tr>
+<tr>
+<td>Install dependency</td>
+<td>npm install @openzeppelin/contracts</td>
+<td>forge install OpenZeppelin/openzeppelin-contracts</td>
+</tr>
+<tr>
+<td>Compile contracts</td>
+<td>npx hardhat compile</td>
+<td>forge build</td>
+</tr>
+<tr>
+<td>Run tests</td>
+<td>npx hardhat test</td>
+<td>forge test</td>
+</tr>
+<tr>
+<td>Deploy script</td>
+<td>npx hardhat run scripts/deploy.ts</td>
+<td>forge script script/Deploy.s.sol --broadcast</td>
+</tr>
+<tr>
+<td>Start local node</td>
+<td>npx hardhat node</td>
+<td>anvil</td>
+</tr>
+<tr>
+<td>Test coverage</td>
+<td>npx hardhat coverage</td>
+<td>forge coverage</td>
+</tr>
+</tbody>
+</table>
+
+### Test Syntax Comparison
+
+**Hardhat (TypeScript):**
+```typescript
+import { network } from "hardhat";
+import assert from "node:assert/strict";
+
+describe("MyContract", function () {
+  it("Should work", async function () {
+    const { viem } = await network.connect();
+    const contract = await viem.deployContract("MyContract", []);
+    const value = await contract.read.getValue();
+    assert.equal(value, 42n);
+  });
+});
+```
+
+**Foundry (Solidity):**
+```solidity
+import {Test} from "forge-std/Test.sol";
+import {MyContract} from "../src/MyContract.sol";
+
+contract MyContractTest is Test {
+    MyContract public myContract;
+    
+    function setUp() public {
+        myContract = new MyContract();
+    }
+    
+    function testValue() public view {
+        assertEq(myContract.getValue(), 42);
+    }
+}
+```
+
+**Key differences:**
+- Foundry tests are in Solidity (same language as contracts!)
+- `setUp()` instead of `beforeEach()`
+- `assertEq()` instead of `assert.equal()`
+- No async/await (pure EVM execution)
+
+## Prerequisites
+
+**⚠️ Windows Users:** You MUST use WSL (Windows Subsystem for Linux) for Foundry. All commands below should be run in WSL, not PowerShell or CMD.
+
+### Install WSL (Windows Only)
+
+If you're on Windows and haven't set up WSL yet:
+
+```bash
+# In PowerShell (as Administrator)
+wsl --install
+
+# Restart your computer
+# Launch "Ubuntu" from Start menu
+```
+
+All subsequent commands should be run inside WSL.
+
+### Installing Foundry
+
+**Linux / macOS / WSL:**
+
+```bash
+# Install Foundry (foundryup installer)
+curl -L https://foundry.paradigm.xyz | bash
+
+# Run foundryup to install forge, cast, anvil, chisel
+foundryup
+
+# Verify installation
+forge --version
+cast --version
+anvil --version
+```
+
+### Verify Installation
+
+```bash
+forge --version
+# Output: forge 0.2.0 (...)
+
+cast --version
+# Output: cast 0.2.0 (...)
+
+anvil --version
+# Output: anvil 0.2.0 (...)
+```
+
+**What did we install?**
+- **forge**: Compiler, tester, builder
+- **cast**: CLI for interacting with contracts
+- **anvil**: Local Ethereum node (like Hardhat node)
+- **chisel**: Solidity REPL (interactive testing)
+
+## Project Setup
+
+### Create New Foundry Project
+
+```bash
+# Create project directory
+mkdir training-registry-upgradeable
+cd training-registry-upgradeable
+
+# Initialize Foundry project (creates empty structure)
+forge init (use --force if not an empty dir)
+
+# Project structure created:
+# ├── src/              # Contracts here (empty)
+# ├── script/           # Deployment scripts (empty)
+# ├── test/             # Tests here (empty)
+# ├── lib/              # Dependencies (forge-std included)
+# ├── foundry.toml      # Configuration
+# └── .gitignore
+```
+
+**What was created:**
+- `src/`, `script/`, and `test/` directories
+- `lib/forge-std/` - Foundry standard library for testing
+- `foundry.toml` - Configuration file (we'll update this)
+- `.gitignore` - Already configured for Foundry projects
+
+**Delete demo files**
+- remove script/Counter.s.sol
+- remove src/Counter.sol
+- remove test/Counter.t.sol
+
+Your project is now ready for the TrainingRegistry contracts!
+
+### Install OpenZeppelin Upgradeable
+
+```bash
+# Install OpenZeppelin upgradeable contracts
+forge install OpenZeppelin/openzeppelin-contracts-upgradeable
+
+# Install OpenZeppelin regular contracts (needed as dependency)
+forge install OpenZeppelin/openzeppelin-contracts
+
+# These get added as git submodules in lib/
+```
+
+**Verify installation:**
+```bash
+ls lib/
+# openzeppelin-contracts/
+# openzeppelin-contracts-upgradeable/
+# forge-std/  (included by default for testing)
+```
+
+### Configure foundry.toml
+
+Update `foundry.toml` for Zilliqa compatibility:
+
+```toml
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+evm_version = 'shanghai'          # Required for Zilliqa 2.0
+optimizer = true
+optimizer_runs = 200
+via_ir = true                     # Improved optimization for complex contracts
+gas_limit = 20000000000
+solc_version = "0.8.28"           # Aligned with Zilliqa 2.0 and other practicals
+
+[rpc_endpoints]
+zilliqaTestnet = "https://api.testnet.zilliqa.com"
+zilliqaMainnet = "https://api.zilliqa.com"
+```
+
+**Key settings:**
+- **evm_version = 'shanghai'**: Required for Zilliqa 2.0 (same as Hardhat)
+- **solc_version = "0.8.28"**: Aligned with Zilliqa 2.0 and your previous practicals
+- **via_ir = true**: Better optimization for complex upgradeable contracts
+- **optimizer_runs = 200**: Standard optimization level
+
+**Note:** Remappings are automatic when using `forge install` - no manual configuration needed!
+
+### Setup Environment Variables
+
+Create `.env` file for your private keys and claimant address:
+
+```bash
+# Generate private key for development wallet
+openssl rand -hex 32 > .env.key
+echo "PRIVATE_KEY=0x$(cat .env.key)" > .env
+
+# Add claimant address (your training portal wallet)
+echo "CLAIMANT_ADDRESS=0xYourTrainingPortalWalletHere" >> .env
+
+# Add safety warnings
+echo "" >> .env
+echo "# WARNING: Never commit this file!" >> .env
+echo "# Add .env to .gitignore" >> .env
+
+# Clean up temporary file
+rm .env.key
+```
+
+**Important: Two different wallets!**
+
+<table>
+<thead>
+<tr>
+<th>Wallet Type</th>
+<th>Environment Variable</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Development Wallet</strong></td>
+<td><code>PRIVATE_KEY</code></td>
+<td>Deploys contract &amp; pays gas. Needs testnet ZIL from faucet.</td>
+</tr>
+<tr>
+<td><strong>Claimant Wallet</strong></td>
+<td><code>CLAIMANT_ADDRESS</code></td>
+<td>Your Plunder Academy training portal wallet. Proves YOU deployed it. Receives achievement NFT.</td>
+</tr>
+</tbody>
+</table>
+
+⚠️ **Never confuse these two!**
+- Development wallet: Temporary, just for deployment
+- Claimant wallet: Your real training portal wallet for verification
+
+### Load Environment in Scripts
+
+Foundry scripts can read `.env` automatically:
+
+```solidity
+// In deployment script
+vm.envUint("PRIVATE_KEY");  // Reads from .env
+vm.envAddress("CLAIMANT_ADDRESS");
+```
+
+### Update .gitignore
+
+```bash
+# Add to .gitignore
+echo ".env" >> .gitignore
+echo "broadcast/" >> .gitignore  # Foundry deployment artifacts
+echo "cache/" >> .gitignore
+echo "out/" >> .gitignore
+```
+
+## Creating the Contract
+
+### Create src/TrainingRegistryV1.sol
+
+**Create a new file** at `src/TrainingRegistryV1.sol` with the following code.
+
+This is the production TrainingRegistry with **4 lines added** for claimant tracking (building on the pattern you learned in Islands 2-3):
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {ERC1155Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+
+contract TrainingRegistryV1 is
+    Initializable,
+    UUPSUpgradeable,
+    Ownable2StepUpgradeable,
+    PausableUpgradeable,
+    EIP712Upgradeable,
+    ERC1155Upgradeable
+{
+    using ECDSA for bytes32;
+
+    struct CompletionVoucher {
+        uint256 taskCode;
+        address wallet;
+    }
+
+    bytes32 private constant VOUCHER_TYPEHASH = keccak256(
+        "CompletionVoucher(uint256 taskCode,address wallet)"
+    );
+
+    mapping(address => bool) public isIssuer;
+    mapping(address => mapping(uint256 => bool)) public completed;
+    mapping(address => uint256[]) private _walletTokenIds;
+    mapping(address => mapping(uint256 => bool)) private _hasTokenId;
+    
+    // Achievement tracking - LINE 1 ADDED
+    address public claimant;
+
+    event IssuerUpdated(address indexed issuer, bool allowed);
+    event TaskCompleted(uint256 indexed taskCode, address indexed wallet);
+    event BaseURISet(string newBaseURI);
+    event UriPadDigitsSet(uint8 newPadDigits);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
+        address initialOwner,
+        string memory baseURI,
+        string memory eip712Name,
+        string memory eip712Version,
+        address _claimant  // LINE 2 ADDED
+    ) external initializer {
+        __ERC1155_init(baseURI);
+        __Pausable_init();
+        __Ownable2Step_init();
+        __UUPSUpgradeable_init();
+        __EIP712_init(eip712Name, eip712Version);
+
+        _transferOwnership(initialOwner);
+
+        require(_claimant != address(0), "Invalid claimant address");  // LINE 3 ADDED
+        claimant = _claimant;  // LINE 4 ADDED
+
+        _baseDirectoryURI = baseURI;
+        uriPadDigits = 4;
+    }
+
+    function setIssuer(address issuer, bool allowed) external onlyOwner {
+        isIssuer[issuer] = allowed;
+        emit IssuerUpdated(issuer, allowed);
+    }
+
+    function setBaseURI(string memory newBaseURI) external onlyOwner {
+        _setURI(newBaseURI);
+        _baseDirectoryURI = newBaseURI;
+        emit BaseURISet(newBaseURI);
+    }
+
+    function setUriPadDigits(uint8 newPad) external onlyOwner {
+        uriPadDigits = newPad;
+        emit UriPadDigitsSet(newPad);
+    }
+
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
+
+    function submitVoucher(uint256 taskCode, bytes calldata signature) external whenNotPaused {
+        require(!completed[msg.sender][taskCode], "already completed");
+
+        bytes32 structHash = keccak256(abi.encode(VOUCHER_TYPEHASH, taskCode, msg.sender));
+        bytes32 digest = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
+        address signer = ECDSA.recover(digest, signature);
+        require(isIssuer[signer], "invalid issuer");
+
+        completed[msg.sender][taskCode] = true;
+        _mint(msg.sender, taskCode, 1, "");
+        emit TaskCompleted(taskCode, msg.sender);
+    }
+
+    function _update(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts
+    ) internal override {
+        require(from == address(0) || to == address(0), "SBT: non-transferable");
+        super._update(from, to, ids, amounts);
+
+        if (to != address(0)) {
+            for (uint256 i = 0; i < ids.length; i++) {
+                uint256 tokenId = ids[i];
+                if (!_hasTokenId[to][tokenId] && balanceOf(to, tokenId) > 0) {
+                    _hasTokenId[to][tokenId] = true;
+                    _walletTokenIds[to].push(tokenId);
+                }
+            }
+        }
+        if (from != address(0)) {
+            for (uint256 i = 0; i < ids.length; i++) {
+                uint256 tokenId = ids[i];
+                if (_hasTokenId[from][tokenId] && balanceOf(from, tokenId) == 0) {
+                    _hasTokenId[from][tokenId] = false;
+                    _removeWalletTokenId(from, tokenId);
+                }
+            }
+        }
+    }
+
+    function uri(uint256 tokenId) public view override returns (string memory) {
+        return string(abi.encodePacked(_baseDirectoryURI, _paddedDecimal(tokenId, uriPadDigits), ".json"));
+    }
+
+    function _paddedDecimal(uint256 value, uint8 minDigits) internal pure returns (string memory) {
+        string memory dec = Strings.toString(value);
+        uint256 len = bytes(dec).length;
+        if (len >= minDigits) return dec;
+        uint256 pad = uint256(minDigits) - len;
+        bytes memory zeros = new bytes(pad);
+        for (uint256 i = 0; i < pad; i++) zeros[i] = bytes1("0");
+        return string(abi.encodePacked(zeros, dec));
+    }
+
+    function _removeWalletTokenId(address wallet, uint256 tokenId) internal {
+        uint256[] storage list = _walletTokenIds[wallet];
+        for (uint256 i = 0; i < list.length; i++) {
+            if (list[i] == tokenId) {
+                uint256 last = list[list.length - 1];
+                list[i] = last;
+                list.pop();
+                break;
+            }
+        }
+    }
+
+    function getWalletAchievements(address wallet) external view returns (uint256[] memory) {
+        return _walletTokenIds[wallet];
+    }
+
+    function hasAchievement(address wallet, uint256 tokenId) external view returns (bool) {
+        return _hasTokenId[wallet][tokenId];
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    string private _baseDirectoryURI;
+    uint8 public uriPadDigits;
+    uint256[38] private __gap;
+}
+```
+
+**The 4 lines that add claimant tracking:**
+1. `address public claimant;` - State variable
+2. `address _claimant` - Parameter in initialize
+3. `require(_claimant != address(0), "Invalid claimant address");` - Validation
+4. `claimant = _claimant;` - Assignment
+
+**Identical to your NFT/Staking contracts, just in `initialize` instead of `constructor`!**
+
+### Compile the Contract
+
+```bash
+forge build
+```
+
+**Expected output:**
+```
+[⠊] Compiling...
+[⠒] Compiling 25 files with Solc 0.8.28
+[⠢] Solc 0.8.28 finished in 3.21s
+Compiler run successful!
+```
+
+**What just happened:**
+- Downloaded Solidity 0.8.28 compiler
+- Compiled TrainingRegistryV1
+- Compiled all OpenZeppelin dependencies
+- Generated artifacts in `out/`
+
+Much faster than Hardhat! ⚡
+
+## Creating the Deployment Script
+
+Foundry deployment scripts are written in Solidity (not TypeScript like Hardhat)!
+
+### Create script/Deploy.s.sol
+
+**Create a new file** at `script/Deploy.s.sol`:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {Script} from "forge-std/Script.sol";
+import {console2} from "forge-std/console2.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {TrainingRegistryV1} from "../src/TrainingRegistryV1.sol";
+
+contract Deploy is Script {
+    function run() external {
+        // Load environment variables
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address claimantAddress = vm.envAddress("CLAIMANT_ADDRESS");
+        address deployerAddress = vm.addr(deployerPrivateKey);
+        
+        console2.log("=== TrainingRegistry V1 Deployment ===");
+        console2.log("Deployer:", deployerAddress);
+        console2.log("Claimant:", claimantAddress);
+        console2.log("Chain ID:", block.chainid);
+        
+        // Start broadcasting transactions
+        vm.startBroadcast(deployerPrivateKey);
+        
+        // 1. Deploy implementation
+        console2.log("\n1. Deploying implementation...");
+        TrainingRegistryV1 implementation = new TrainingRegistryV1();
+        console2.log("Implementation deployed:", address(implementation));
+        
+        // 2. Prepare initialization data
+        bytes memory initData = abi.encodeWithSelector(
+            TrainingRegistryV1.initialize.selector,
+            deployerAddress,  // initialOwner
+            "https://static.plunderswap.com/training/",  // baseURI
+            "TrainingCert",   // eip712Name
+            "1",              // eip712Version
+            claimantAddress   // claimant (your training portal wallet!)
+        );
+        
+        // 3. Deploy proxy
+        console2.log("\n2. Deploying proxy...");
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        console2.log("Proxy deployed:", address(proxy));
+        
+        vm.stopBroadcast();
+        
+        // 4. Verify deployment
+        console2.log("\n3. Verifying deployment...");
+        TrainingRegistryV1 registry = TrainingRegistryV1(address(proxy));
+        
+        address owner = registry.owner();
+        address registeredClaimant = registry.claimant();
+        uint8 padDigits = registry.uriPadDigits();
+        string memory uri1 = registry.uri(1);
+        
+        console2.log("Owner:", owner);
+        console2.log("Claimant:", registeredClaimant);
+        console2.log("URI Pad Digits:", padDigits);
+        console2.log("Sample URI (token 1):", uri1);
+        
+        // Validation checks
+        require(owner == deployerAddress, "Owner mismatch");
+        require(registeredClaimant == claimantAddress, "Claimant mismatch");
+        
+        console2.log("\n=== Deployment Successful! ===");
+        console2.log("Proxy Address:", address(proxy));
+        console2.log("Implementation Address:", address(implementation));
+        console2.log("\nNext steps:");
+        console2.log("1. Fund development wallet with testnet ZIL");
+        console2.log("2. Run: forge script script/Deploy.s.sol --rpc-url zilliqaTestnet --broadcast --legacy");
+        console2.log("3. Submit deployment transaction to training portal");
+        console2.log("4. Verify claimant matches your connected wallet");
+    }
+}
+```
+
+**Key differences from Hardhat deploy scripts:**
+- Written in Solidity (not TypeScript!)
+- `vm.envUint()` to read environment variables
+- `vm.startBroadcast()` to send transactions
+- `console2.log()` for output
+- Inherits from `Script` base contract
+
+### Test the Script (Dry Run)
+
+```bash
+# Test without deploying (simulation)
+forge script script/Deploy.s.sol --rpc-url zilliqaTestnet
+
+# Expected output:
+# === TrainingRegistry V1 Deployment ===
+# Deployer: 0x...
+# Claimant: 0x...
+# Chain ID: 33101
+# ...
+# === Deployment Successful! ===
+```
+
+This simulates the deployment without spending gas. Perfect for testing!
+
+## Deploying to Zilliqa Testnet
+
+### Prerequisites
+
+**1. Add Zilliqa Testnet to MetaMask:**
+- Network Name: `Zilliqa Testnet`
+- RPC URL: `https://api.testnet.zilliqa.com`
+- Chain ID: `33101`
+- Currency Symbol: `ZIL`
+- Block Explorer: `https://testnet.zilliqa.blockscout.com`
+
+**2. Get Testnet ZIL:**
+```bash
+# Visit faucet
+https://faucet.testnet.zilliqa.com
+
+# Import development wallet to MetaMask
+# (Extract address from PRIVATE_KEY in .env)
+
+# Request testnet ZIL
+```
+
+**3. Verify .env file:**
+```bash
+cat .env
+# PRIVATE_KEY=0x...
+# CLAIMANT_ADDRESS=0x...  (your training portal wallet!)
+```
+
+### Deploy to Testnet
+
+```bash
+# Deploy to Zilliqa testnet
+forge script script/Deploy.s.sol \
+  --rpc-url zilliqaTestnet \
+  --broadcast \
+  --legacy
+
+# --broadcast: Actually send transactions
+# --legacy: Use legacy transaction format (required for Zilliqa)
+```
+
+**Expected output:**
+```
+=== TrainingRegistry V1 Deployment ===
+Deployer: 0xYourDevelopmentWallet
+Claimant: 0xYourTrainingPortalWallet
+Chain ID: 33101
+
+1. Deploying implementation...
+Implementation deployed: 0xImplementationAddress
+
+2. Deploying proxy...
+Proxy deployed: 0xProxyAddress
+
+3. Verifying deployment...
+Owner: 0xYourDevelopmentWallet
+Claimant: 0xYourTrainingPortalWallet
+URI Pad Digits: 4
+Sample URI (token 1): https://static.plunderswap.com/training/0001.json
+
+=== Deployment Successful! ===
+Proxy Address: 0xProxyAddress
+Implementation Address: 0xImplementationAddress
+
+## Transaction: 0xDeploymentTransactionHash
+```
+
+**Save these addresses!**
+```bash
+# Add to .env
+echo "PROXY_ADDRESS=0xYourProxyAddressHere" >> .env
+echo "IMPLEMENTATION_ADDRESS=0xYourImplementationAddressHere" >> .env
+```
+
+### Verify on Block Explorer
+
+Visit Zilliqa Blockscout:
+```
+https://testnet.zilliqa.blockscout.com
+```
+
+**Search for your proxy address:**
+- View deployment transaction
+- Check contract creation
+- Verify claimant is set correctly
+- See owner is your development wallet
+
+## Post-Deployment Verification
+
+### Create script/Verify.s.sol
+
+Create a verification script to check deployment.
+
+**Create a new file** at `script/Verify.s.sol`:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {Script} from "forge-std/Script.sol";
+import {console2} from "forge-std/console2.sol";
+import {TrainingRegistryV1} from "../src/TrainingRegistryV1.sol";
+
+contract Verify is Script {
+    function run() external view {
+        address proxyAddress = vm.envAddress("PROXY_ADDRESS");
+        address expectedClaimant = vm.envAddress("CLAIMANT_ADDRESS");
+        
+        console2.log("=== Verifying TrainingRegistry V1 ===");
+        console2.log("Proxy Address:", proxyAddress);
+        console2.log("Expected Claimant:", expectedClaimant);
+        
+        TrainingRegistryV1 registry = TrainingRegistryV1(proxyAddress);
+        
+        address owner = registry.owner();
+        address claimant = registry.claimant();
+        uint8 padDigits = registry.uriPadDigits();
+        
+        console2.log("\nContract State:");
+        console2.log("Owner:", owner);
+        console2.log("Claimant:", claimant);
+        console2.log("URI Pad Digits:", padDigits);
+        
+        // Test URI generation
+        string memory uri1 = registry.uri(1);
+        string memory uri50 = registry.uri(50);
+        console2.log("\nURI Examples:");
+        console2.log("Token 1:", uri1);
+        console2.log("Token 50:", uri50);
+        
+        // Validation
+        if (claimant != expectedClaimant) {
+            console2.log("WARNING: Claimant mismatch!");
+            console2.log("Expected:", expectedClaimant);
+            console2.log("Got:", claimant);
+        } else {
+            console2.log("Claimant correctly set!");
+        }
+        
+        console2.log("=== Verification Complete ===");
+    }
+}
+```
+
+**Run verification:**
+```bash
+forge script script/Verify.s.sol --rpc-url zilliqaTestnet
+```
+
+## Using Cast for Contract Interaction
+
+Cast is Foundry's CLI for interacting with contracts:
+
+### Read Contract State
+
+```bash
+# Need to export var firstly
+export PROXY_ADDRESS=0xYourProxyAddressHere
+
+# Get owner
+cast call $PROXY_ADDRESS "owner()" --rpc-url zilliqaTestnet
+
+# Get claimant
+cast call $PROXY_ADDRESS "claimant()" --rpc-url zilliqaTestnet
+
+# Get URI for token 1
+cast call $PROXY_ADDRESS "uri(uint256)" 1 --rpc-url zilliqaTestnet
+```
+
+## Common Issues and Solutions
+
+### Issue: "Compiler version mismatch"
+
+**Solution:**
+```toml
+# In foundry.toml, ensure:
+solc_version = "0.8.28"
+```
+
+### Issue: "Import not found"
+
+**Solution:**
+```bash
+# Check remappings in foundry.toml
+forge remappings
+
+# Should show:
+# @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+# @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+```
+
+### Issue: "Insufficient funds for gas"
+
+**Solution:**
+```bash
+# Get testnet ZIL from faucet
+https://faucet.testnet.zilliqa.com
+
+# Check balance
+cast balance $YOUR_ADDRESS --rpc-url zilliqaTestnet
+```
+
+### Issue: "Invalid claimant address"
+
+**Solution:**
+```bash
+# Verify CLAIMANT_ADDRESS in .env
+cat .env | grep CLAIMANT_ADDRESS
+
+# Must be your training portal wallet (0x...)
+# Not the development wallet!
+```
+
+### Issue: "Transaction reverted"
+
+**Solution:**
+```bash
+# Check transaction on block explorer
+https://testnet.zilliqa.blockscout.com
+
+# Look for revert reason
+# Common: wrong claimant, insufficient gas, network issues
+```
+
+## Foundry Project Structure
+
+Your final project should look like this:
+
+```
+training-registry-practical/
+├── src/
+│   └── TrainingRegistryV1.sol
+├── script/
+│   ├── Deploy.s.sol
+│   └── Verify.s.sol
+├── test/
+│   └── TrainingRegistryV1.t.sol  (next lesson!)
+├── lib/
+│   ├── forge-std/
+│   ├── openzeppelin-contracts/
+│   └── openzeppelin-contracts-upgradeable/
+├── broadcast/              # Deployment artifacts
+│   └── Deploy.s.sol/
+│       └── 33101/         # Testnet deployments
+├── foundry.toml
+├── .env
+├── .gitignore
+└── README.md
+```
+
+## Wrap-Up
+
+You've successfully:
+
+✅ **Installed Foundry** (forge, cast, anvil, chisel)  
+✅ **Compared Foundry vs Hardhat** (Solidity tests, faster compilation)  
+✅ **Set up project** with OpenZeppelin upgradeable contracts  
+✅ **Added claimant tracking** (4 lines, same as NFT/Staking!)  
+✅ **Wrote deployment script** in Solidity (not TypeScript!)  
+✅ **Deployed to Zilliqa testnet** with proxy + implementation  
+✅ **Verified deployment** on block explorer  
+✅ **Used cast** for contract interaction  
+
+**Key lesson:**
+Foundry is faster and uses Solidity for everything. The concepts transfer directly from Hardhat - just different syntax and tooling!
+
+**Next up:** We'll write comprehensive Solidity tests for TrainingRegistryV1, covering initialization, voucher submission, soulbound transfers, and more. Get ready to test in Solidity! 🧪🚀
+

@@ -1,0 +1,327 @@
+---
+id: "gas-optimization-lesson-2"
+slug: "security-audit-prep"
+module: "gas-optimization-security-patterns"
+number: 4.10
+title: "Security Patterns and Audit Preparation"
+objective: "Learn comprehensive security checklists and prepare contracts for professional security audits."
+practicalTakeaway: "Deliver audit-ready smart contracts with comprehensive security documentation and testing."
+---
+
+# Security Patterns and Audit Preparation
+
+## Set the stage
+
+Your ship is ready to launch, but before leaving port, every seaworthy vessel undergoes inspection. Auditors check for structural weaknesses, verify safety protocols, and test emergency systems. In smart contract development, a security audit serves the same purpose—but the stakes are higher. A missed reentrancy guard, an unchecked external call, or a subtle arithmetic overflow can drain millions of dollars in seconds, with no way to reverse the damage.
+
+Security auditing is not a checkbox at the end of development; it's a discipline woven into every design decision. Auditors expect to see CEI discipline in every value-moving function, pull payments instead of push patterns, bounded failures with circuit breakers, and comprehensive test coverage that exercises negative paths. They look for threat models that explicitly list assets, trust assumptions (oracles, signers, governance), and failure modes. A contract that arrives at audit with these foundations in place costs less to review, ships faster, and earns higher confidence from users and integrators.
+
+In this lesson, we'll walk through the patterns and documentation that prepare DeFi infrastructure—SwapRouter, LiquidityPool, OracleAdapter, RandomnessCoordinator—for professional security review. You'll learn how to apply defense-in-depth with access controls and pausability, surface failures gracefully with `try/catch` and events, encode invariants as assertions, and build audit trails that make monitoring and incident response straightforward. By the end, you'll have a practical framework for delivering audit-ready contracts to Zilliqa EVM that balance security, liveness, and maintainability.
+
+## Conceptual foundations
+
+Audit-ready contracts combine defensive architecture, comprehensive testing, and clear documentation. Security is not a single pattern but a layered discipline that anticipates failure modes and bounds their impact. The goal is to make risks explicit, testable, and monitorable—so that when something goes wrong (and eventually it will), the blast radius is contained and recovery paths are clear.
+
+### CEI discipline and reentrancy protection
+
+The Checks-Effects-Interactions pattern is the foundation of secure contract design. Every function should validate inputs and preconditions (Checks), update internal state (Effects), and only then call external contracts (Interactions). This order prevents reentrancy attacks where an external call allows an attacker to reenter your contract before state updates complete, leading to double-spending or state manipulation.
+
+Pair CEI with OpenZeppelin's `ReentrancyGuard` on all functions that move value (transfers, withdrawals, claims). The guard uses a mutex pattern to block reentry, adding a small gas cost (~2,400 gas) but eliminating entire classes of exploits. Even if you believe your CEI discipline is perfect, the guard provides defense-in-depth—a second line of defense if a future refactor accidentally breaks the pattern.
+
+In complex flows involving multiple external calls (e.g., a SwapRouter calling pool.swap() and oracle.getPrice()), maintain CEI discipline at every level. Update your contract's state before each external call, and never trust that the external contract will behave honestly. If you need to read external state, do it in the Checks phase; never read external state after updating your own state unless you've taken a snapshot and validated consistency.
+
+### Access control and least privilege
+
+Most vulnerabilities arise from insufficient access controls. Every privileged function (pausing, parameter updates, emergency withdrawals) should be protected with explicit role checks. Use OpenZeppelin's `Ownable` for single-admin patterns or `AccessControl` for role-based systems (ADMIN_ROLE, OPERATOR_ROLE, PAUSER_ROLE).
+
+Apply the principle of least privilege: each role should have the minimum permissions needed to perform its job. For example, a PAUSER_ROLE can call `setPaused(true)` but cannot withdraw funds or change economic parameters. An OPERATOR_ROLE can execute routine operations (refresh oracle, trigger rewards) but cannot pause the system or change access controls. This separation limits the damage from a compromised key or malicious insider.
+
+Pausability is a critical safety mechanism for production systems. A pause function controlled by a multisig or governance process allows you to halt operations if an exploit is detected, giving you time to investigate and deploy a fix. However, pausing must be carefully scoped: pause value-moving functions but leave view functions and user withdrawals operational when safe. A system that pauses all user access creates panic and may trap funds unnecessarily.
+
+### Input validation and boundary checks
+
+Never trust user inputs. Every function parameter must be validated: amounts checked for zero or negative values, addresses validated as non-zero, deadlines verified as future timestamps, slippage bounds enforced, array lengths checked against maximums. These checks prevent both accidental misuse and deliberate exploits.
+
+For token amounts, validate not just non-zero but also reasonable upper bounds relative to total supply or reserves. For addresses, consider maintaining a whitelist or registry for critical dependencies (oracles, pools, factories). For deadlines, enforce that `block.timestamp <= deadline` before executing time-sensitive operations like swaps or oracle updates. For slippage, use explicit minimum output amounts (`amountOutMin`) rather than percentage-based checks, which can be gamed with front-running.
+
+Document the valid ranges for every parameter in NatSpec comments. If a fee rate must be between 0 and 1000 basis points (10%), encode that check in the setter and document the invariant. If a withdrawal amount must not exceed the user's balance, check it explicitly even if you believe overflow protection will catch it. These checks serve double duty: they prevent exploits and they communicate your assumptions to auditors.
+
+### Bounded failures and circuit breakers
+
+Not all failures should revert the entire transaction. In complex systems with multiple external dependencies (oracles, bridges, L2 relays), you may want to isolate failures and degrade gracefully rather than bricking the entire flow. Use `try/catch` to wrap external calls where partial failure is acceptable, logging the error and continuing with a fallback strategy.
+
+For example, if a SwapRouter calls an oracle for a price feed and the oracle reverts (stale data, network issue), you might fall back to a cached price with a staleness warning or pause new swaps while allowing existing positions to close. The key is to define the failure policy explicitly: what's the fallback? When do you fail-closed (revert) vs fail-open (continue with degraded service)? Document these decisions and test them with fuzz tests that simulate each failure mode.
+
+Circuit breakers extend this pattern to system-wide limits. Track cumulative metrics (total value transferred per hour, number of failed oracle updates per day) and trigger an automatic pause if thresholds are exceeded. This prevents "slow drain" attacks where an attacker exploits a small vulnerability repeatedly, staying below manual detection thresholds but extracting significant value over time.
+
+### Observability and event-driven monitoring
+
+Every critical state change must emit an event. Events are your audit trail: they allow off-chain monitoring systems to track contract behavior in real-time, reconstruct history for incident response, and surface anomalies before they become full-blown exploits. Emit events for all value transfers, access control changes, parameter updates, pauses, and failures.
+
+Design event schemas carefully: index the subjects (user addresses, token addresses, pool IDs) for efficient filtering, include amounts and timestamps, and version your events if you anticipate schema changes. Keep events stable across upgrades—if you change an event signature, monitoring tools break. If you must evolve an event, emit both old and new versions during a transition period.
+
+Build dashboards that consume your events and alert on anomalies: unexpected pauses, large withdrawals, repeated failures, sudden spikes in gas costs. The faster you detect an exploit, the faster you can pause and mitigate. In a world where exploits can drain protocols in minutes, real-time monitoring is not optional—it's a core security control.
+
+### Threat modeling and documentation
+
+Before auditing, document your threat model: list all valuable assets (tokens held, LP positions, governance power), trust assumptions (which oracles are honest, which signers are required for multisig, which L2 bridges are secure), and known failure modes (oracle staleness, front-running risks, governance attacks). This document guides auditors to the highest-risk areas and demonstrates that you've thought critically about security.
+
+For each external dependency, document the trust assumption and the impact if it fails. If you depend on Chainlink price feeds, state: "We assume Chainlink oracles report prices with &lt;1% deviation and &lt;15 minute staleness. If this fails, trades may execute at unfair prices, enabling arbitrage. Mitigation: staleness checks, deviation thresholds, and manual circuit breaker." This explicitness helps auditors assess your risk posture and suggests additional mitigations.
+
+Maintain a security changelog: as you make changes (add new roles, change access controls, introduce external calls), document the security implications. If you refactor a function to cache storage reads for gas optimization, note: "CEI order verified; no external calls between read and write." If you add a new oracle integration, note: "Added staleness check at 15 minutes; tested with stale mock." This changelog becomes part of your audit package and accelerates review.
+
+## Guided code walk-throughs
+
+These examples demonstrate security patterns for DeFi infrastructure—access controls, bounded failures, and runtime invariants—showing how to build audit-ready systems that balance safety and liveness.
+
+### 1) Access control and pausability
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract Controlled is Ownable {
+  bool public paused;
+  event Paused(bool status);
+
+  constructor(address owner_) Ownable(owner_) {}
+
+  modifier notPaused() { require(!paused, "PAUSED"); _; }
+  function setPaused(bool p) external onlyOwner { paused = p; emit Paused(p); }
+}
+```
+
+Takeaway: keep emergency controls small and explicit. Emit events for state changes.
+
+### 2) CEI + bounded failures on module calls
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IModule { function run(address user, uint256 amount) external returns (bool); }
+
+contract Orchestrator {
+  event Attempt(address indexed user, uint256 amount);
+  event Success(address indexed user, uint256 amount);
+  event Failure(address indexed user, string reason);
+
+  function execute(IModule m, address user, uint256 amount) external returns (bool ok) {
+    emit Attempt(user, amount);
+    try m.run(user, amount) returns (bool r) {
+      ok = r; emit Success(user, amount);
+    } catch Error(string memory reason) {
+      emit Failure(user, reason); ok = false;
+    } catch (bytes memory) {
+      emit Failure(user, "Unknown"); ok = false;
+    }
+  }
+}
+```
+
+Takeaway: surface failures without bricking the entire flow when safe to do so.
+
+### 3) Assertions and invariants (runtime guards)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+library Invariants {
+  function supplyConserved(uint256 before_, uint256 minted, uint256 burned, uint256 after_) internal pure {
+    assert(before_ + minted >= burned); // sanity
+    assert(before_ + minted - burned == after_);
+  }
+}
+```
+
+Takeaway: assertions document invariants. Pair with fuzz tests off‑chain for deeper coverage.
+
+## Practice and reflection
+
+Apply security patterns and audit preparation techniques to your DeFi contracts:
+
+- **Audit access controls**: Review every privileged function (pause, withdraw, setParameter) and ensure it has explicit role checks. Apply the principle of least privilege: split ADMIN_ROLE, OPERATOR_ROLE, and PAUSER_ROLE so that compromising one key doesn't grant full control.
+- **Enforce CEI discipline**: Audit one value-moving function (withdraw, claim, swap) and verify that all state updates happen before external calls. Add `nonReentrant` guards and document the CEI order in comments.
+- **Add input validation**: Find three functions that accept user inputs (amounts, addresses, deadlines) and add comprehensive validation: non-zero checks, range bounds, deadline verification. Document valid ranges in NatSpec.
+- **Implement bounded failure**: Identify one external dependency (oracle, bridge, token transfer) and wrap it in `try/catch` with a fallback strategy. Document the failure policy: when do you fail-closed (revert) vs fail-open (degrade gracefully)?
+- **Instrument with events**: Add events for all critical state changes in one module (access control changes, pauses, value transfers, failures). Index subjects (addresses, IDs) and include amounts/timestamps for off-chain monitoring.
+- **Document threat model**: Write a threat model document listing assets, trust assumptions (oracles, signers, governance), and failure modes (staleness, front-running, governance attacks). For each external dependency, state the assumption and mitigation strategy.
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"security1","text":"CEI means doing external calls before state updates","correctAnswer":false,"explanation":"Checks → Effects → Interactions protects state before calling out."},
+  {"id":"security2","text":"Try/catch can convert reverts into safe no-ops with logging","correctAnswer":true,"explanation":"Use judiciously where partial failure is acceptable."},
+  {"id":"security3","text":"Pausability should halt all contract functions including view functions","correctAnswer":false,"explanation":"Pause value-moving functions but leave view functions and safe user operations operational."},
+  {"id":"security4","text":"Events provide an audit trail for off-chain monitoring and incident response","correctAnswer":true,"explanation":"Emit events for all critical state changes; index subjects for efficient filtering."}
+]}/>
+
+Short reflection: Which external dependency in your system poses the highest risk, and what would be the impact if it failed? How would you detect the failure and what's your mitigation strategy?
+
+## Security and pitfalls
+
+Audit preparation requires anticipating common failure modes and encoding defenses explicitly. These patterns show how to avoid vulnerabilities that auditors frequently find in production contracts.
+
+### Missing reentrancy guards on complex flows
+
+**Danger**: Reentrancy is not limited to simple withdraw patterns. Any function that makes an external call before completing its state updates is vulnerable, including complex flows like multi-hop swaps, batch operations, or callbacks. Even if the immediate function follows CEI, nested calls or callbacks can create reentrancy paths.
+
+**Bad**:
+```solidity
+function claimMultiple(uint256[] calldata ids) external {
+  uint256 total;
+  for (uint256 i = 0; i < ids.length; i++) {
+    total += claims[ids[i]];
+    claims[ids[i]] = 0; // Effect
+  }
+  // External call after loop—reentry possible if token is malicious
+  token.transfer(msg.sender, total);
+}
+```
+
+**Good**:
+```solidity
+function claimMultiple(uint256[] calldata ids) external nonReentrant {
+  uint256 total;
+  for (uint256 i = 0; i < ids.length; i++) {
+    total += claims[ids[i]];
+    claims[ids[i]] = 0; // Effect (zero before interaction)
+  }
+  // External call last, with nonReentrant guard
+  SafeERC20.safeTransfer(token, msg.sender, total);
+}
+```
+
+**Rule**: Add `nonReentrant` to all functions that move value or interact with untrusted contracts. Use `SafeERC20` for token transfers to handle non-standard return values. Document CEI order in comments and verify it in code review.
+
+### Insufficient input validation on critical parameters
+
+**Danger**: Missing or incomplete input validation allows users to pass extreme values that break invariants, drain funds, or brick the contract. Common issues include zero addresses, zero amounts, expired deadlines, out-of-range fee parameters, and array length mismatches. These issues often appear in admin functions where developers assume "trusted" inputs.
+
+**Bad**:
+```solidity
+function setFeeRate(uint256 newRate) external onlyOwner {
+  feeRate = newRate; // No bounds check—could be set to 100% or overflow
+  emit FeeRateUpdated(newRate);
+}
+```
+
+**Good**:
+```solidity
+error InvalidFeeRate(uint256 rate, uint256 max);
+
+function setFeeRate(uint256 newRate) external onlyOwner {
+  if (newRate > MAX_FEE) revert InvalidFeeRate(newRate, MAX_FEE);
+  if (newRate == 0) revert InvalidFeeRate(newRate, MAX_FEE);
+  feeRate = newRate;
+  emit FeeRateUpdated(newRate);
+}
+```
+
+**Rule**: Validate every input, even from trusted sources. Check non-zero for addresses and amounts, enforce upper bounds for fee rates and percentages, verify array lengths match, and ensure deadlines are in the future. Document valid ranges in NatSpec and emit events for all parameter changes.
+
+### Unbounded loops and DoS vectors
+
+**Danger**: Loops that iterate over user-controlled arrays or unbounded mappings can be exploited for denial-of-service. An attacker can pass an array with thousands of elements, causing the transaction to exceed the block gas limit and revert—or succeed but consume so much gas that the function is economically unusable. This is especially dangerous in admin functions and batch operations.
+
+**Bad**:
+```solidity
+function distributeBatch(address[] calldata recipients, uint256[] calldata amounts) external {
+  for (uint256 i = 0; i < recipients.length; i++) {
+    token.transfer(recipients[i], amounts[i]); // Unbounded loop, DoS risk
+  }
+}
+```
+
+**Good**:
+```solidity
+error BatchTooLarge(uint256 size, uint256 max);
+uint256 public constant MAX_BATCH_SIZE = 50;
+
+function distributeBatch(address[] calldata recipients, uint256[] calldata amounts) external {
+  if (recipients.length != amounts.length) revert ArrayLengthMismatch();
+  if (recipients.length > MAX_BATCH_SIZE) revert BatchTooLarge(recipients.length, MAX_BATCH_SIZE);
+  
+  for (uint256 i = 0; i < recipients.length; i++) {
+    SafeERC20.safeTransfer(token, recipients[i], amounts[i]);
+  }
+}
+```
+
+**Rule**: Always cap array lengths and loop iterations. Define a `MAX_BATCH_SIZE` constant and enforce it. For truly unbounded operations, use pull patterns where users claim individually rather than push patterns that iterate over all users. Test gas costs for maximum-size inputs.
+
+### Missing events for critical state changes
+
+**Danger**: Without comprehensive event coverage, you cannot monitor contract behavior off-chain, reconstruct history for incident response, or detect anomalies in real-time. Missing events on access control changes, pauses, parameter updates, or value transfers leave you blind to exploits until users notice missing funds.
+
+**Bad**:
+```solidity
+function setPaused(bool status) external onlyOwner {
+  paused = status; // No event—cannot monitor or audit pause history
+}
+```
+
+**Good**:
+```solidity
+event Paused(bool status, address indexed by, uint256 timestamp);
+
+function setPaused(bool status) external onlyOwner {
+  paused = status;
+  emit Paused(status, msg.sender, block.timestamp);
+}
+```
+
+**Rule**: Emit events for all critical state changes: access control (role grants/revokes), economic parameters (fee updates, limits), pauses, value transfers, and failures. Index subjects (addresses, token IDs) for efficient filtering. Keep event schemas stable across upgrades; version events if schemas must change.
+
+### Unchecked external call return values
+
+**Danger**: Not all ERC20 tokens return `true` on successful transfers; some return nothing, and some revert. Failing to check return values or assuming all tokens follow the standard can lead to silent failures where your contract believes a transfer succeeded but the tokens never moved. This is especially dangerous for withdrawal functions where users might claim tokens that were never sent.
+
+**Bad**:
+```solidity
+function withdraw(uint256 amount) external {
+  balances[msg.sender] -= amount; // Effect
+  token.transfer(msg.sender, amount); // No return value check—could silently fail
+}
+```
+
+**Good**:
+```solidity
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+function withdraw(uint256 amount) external nonReentrant {
+  balances[msg.sender] -= amount; // Effect
+  SafeERC20.safeTransfer(IERC20(token), msg.sender, amount); // Handles return value
+}
+```
+
+**Rule**: Always use `SafeERC20` for token interactions (`safeTransfer`, `safeTransferFrom`, `safeApprove`). Never call `transfer` or `transferFrom` directly on token contracts. Test with both standard and non-standard tokens (USDT, which returns nothing; or tokens that revert without return values).
+
+## Security checklist
+
+Before submitting contracts for audit:
+
+- [ ] **CEI order verified**: Every value-moving function follows Checks → Effects → Interactions; state updates complete before external calls
+- [ ] **Reentrancy guards active**: All functions that transfer value or call untrusted contracts use `nonReentrant` modifier
+- [ ] **Access controls enforced**: Every privileged function (pause, parameter updates, withdrawals) has explicit role checks with least-privilege separation
+- [ ] **Input validation comprehensive**: All user inputs validated (non-zero addresses, amount bounds, deadline checks, array length caps, slippage limits)
+- [ ] **SafeERC20 used universally**: All token interactions use `SafeERC20.safeTransfer`, `safeTransferFrom`, `safeApprove` instead of raw calls
+- [ ] **Events emitted for all critical changes**: Access control changes, pauses, parameter updates, value transfers, and failures emit indexed events with timestamps
+- [ ] **Bounded loops and batch operations**: Array lengths capped with `MAX_BATCH_SIZE` constants; gas costs tested for maximum inputs
+- [ ] **Pausability correctly scoped**: Emergency pause halts value-moving functions but leaves view functions and safe user operations accessible
+- [ ] **Threat model documented**: Assets, trust assumptions (oracles, signers, bridges), and failure modes listed with mitigation strategies
+- [ ] **Try/catch for bounded failures**: External dependencies wrapped with failure policies (fail-closed vs fail-open) documented and tested
+- [ ] **Runtime invariants encoded**: Critical system invariants (supply conservation, balance consistency) asserted in code and tested with fuzzing
+- [ ] **Comprehensive negative path testing**: Tests cover reverts for invalid inputs, unauthorized access, expired deadlines, insufficient balances, and external call failures
+- [ ] **Security changelog maintained**: All access control changes, new external calls, and refactors documented with security implications noted
+
+## Wrap‑up
+
+Audit-ready contracts balance defensive architecture, comprehensive testing, and clear documentation. By enforcing CEI discipline with reentrancy guards, applying least-privilege access controls with pausability, validating every input, and using `SafeERC20` for token interactions, you build systems that resist common exploits and degrade gracefully when dependencies fail. These patterns are not optional extras—they're the foundation of secure DeFi infrastructure that auditors expect and users trust.
+
+Observability and threat modeling transform security from reactive firefighting to proactive defense. Emit events for every critical state change to enable real-time monitoring and incident response. Document your threat model explicitly: list assets, trust assumptions for oracles and signers, and failure modes with mitigation strategies. This documentation guides auditors to high-risk areas, demonstrates that you've thought critically about security, and accelerates review. A contract that arrives at audit with comprehensive event coverage and a clear threat model costs less to review and ships faster.
+
+Security is a discipline, not a checklist. Use this lesson's patterns as a foundation, but adapt them to your specific risks and constraints. Test negative paths as rigorously as happy paths, maintain a security changelog as you refactor, and build relationships with auditors early—they can provide guidance during development, not just after. When you ship to Zilliqa EVM, your contracts will carry the confidence that comes from defense-in-depth, comprehensive testing, and a team that treats security as a core engineering discipline.

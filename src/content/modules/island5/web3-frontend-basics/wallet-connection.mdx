@@ -1,0 +1,99 @@
+---
+id: "web3-frontend-lesson-1"
+slug: "wallet-connection"
+module: "web3-frontend-basics"
+number: "5.1"
+title: "Wallet Connection with RainbowKit"
+objective: "Master wallet integration using RainbowKit and understand Web3 authentication patterns."
+practicalTakeaway: "Implement secure wallet connections with proper user experience and error handling."
+---
+
+# Wallet Connection with RainbowKit
+
+## Why this matters now
+
+You've shipped on-chain logic in Islands 1–4. Now users need a way to connect a wallet, approve actions, and see their state. Wallet connection is the front door of every dApp: get it wrong and nothing else lands. We'll use RainbowKit (for polished UI) and wagmi (React hooks built on viem) to make connection state reliable and ergonomic.
+
+> In the practical module, you'll build a fresh Next.js dApp from scratch that integrates wallet connection, contract reading (ERC20 balances, NFT viewing), and contract writing (ERC20 transfers). We'll use the same tech stack as Plunder Academy itself: wagmi 2.x, viem 2.x, and RainbowKit 2.x configured for Zilliqa testnet.
+
+## Conceptual foundations for Web3 frontend
+
+- **Definition — RainbowKit**: Wallet connection UI toolkit. **When to use it**: Add a production‑ready wallet picker quickly, with theme support and WalletConnect integration.
+- **Definition — wagmi**: React hooks for Ethereum interactions. **When to use it**: Read/write contracts, manage connection state, and track transactions.
+- **Definition — WalletConnect**: Standard for connecting wallets via QR/deep link. **When to use it**: Mobile wallets or when the user’s wallet isn’t injected.
+- **Mental model**: The dApp doesn’t “log in” users; wallets sign and broadcast. Connection exposes an address and chain, not an account session.
+
+<WalletConnectionVisualizer />
+
+## Guided code walk‑throughs
+
+### 1) Drop‑in connection button for your header
+
+RainbowKit’s `ConnectButton` gives users a familiar, secure entry point. It shows address, chain, and a modal for wallet selection. Keep your header clean and defer all wallet UX to this component.
+
+```tsx
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+
+export function HeaderConnect() {
+  return (
+    <ConnectButton
+      chainStatus="icon"       // compact chain pill
+      accountStatus="address"  // short address when connected
+      showBalance={false}
+    />
+  );
+}
+```
+
+Takeaway: Use `ConnectButton` in your global header and let RainbowKit handle wallet UX and theming.
+
+### 2) Reacting to connection state with wagmi
+
+Connection is a state machine: connecting → connected → disconnected. Use `useAccount` to branch UI and fetch user‑specific data only when an address is present.
+
+```tsx
+import { useAccount } from "wagmi";
+
+export function WalletStatus() {
+  const { address, isConnected, isConnecting, status } = useAccount();
+
+  if (isConnecting) return <p>Connecting wallet…</p>;
+  if (!isConnected) return <p>Please connect a wallet to continue.</p>;
+
+  return (
+    <div className="text-sm">
+      <p>Connected: <span className="font-mono">{address}</span></p>
+      <p className="text-muted-foreground">Status: {status}</p>
+    </div>
+  );
+}
+```
+
+Takeaway: Render different UI for each connection state; gate contract reads/writes behind `isConnected`.
+
+## Practical exercises
+
+{/* Timeline Builder */}
+<TimelineBuilder events={[
+  {"id":"evt-1","text":"User clicks Connect Wallet","correctPosition":0},
+  {"id":"evt-2","text":"Wallet modal opens (RainbowKit)","correctPosition":1},
+  {"id":"evt-3","text":"User selects wallet and approves","correctPosition":2},
+  {"id":"evt-4","text":"dApp receives address and chain","correctPosition":3},
+  {"id":"evt-5","text":"UI fetches user data gated by isConnected","correctPosition":4}
+]}/>
+
+### Reflection
+
+- Where in your UI will connection status live (header, sidebar, page‑level)?
+- Which components should render only when `isConnected` is true?
+
+## UX and error handling best practices
+
+- Keep the connect button visible in the same place across pages.
+- Show short address by default; expand on click for full details.
+- Explain why a connection is required (e.g., “to fetch balances and sign transactions”).
+- Handle disconnects gracefully and clear user‑specific state.
+
+## Wrap‑up and next steps
+
+You can add wallet connection quickly with RainbowKit and reflect state with wagmi. Next, you’ll read on‑chain data (balances, contract state) and display it reactively.

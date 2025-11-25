@@ -1,0 +1,269 @@
+---
+id: intro-to-solidity-quiz
+slug: intro-to-solidity-quiz
+module: intro-to-solidity
+title: "Module 3: Intro to Solidity - Interactive Quiz"
+description: "Test your knowledge of Solidity fundamentals, functions, data structures, events, and smart contract development"
+totalQuestions: 14
+passingScore: 80
+timeLimit: 20
+---
+
+# Module 3: Intro to Solidity - Interactive Quiz
+
+## Instructions
+- **Total Questions:** 14
+- **Time Limit:** 20 minutes  
+- **Passing Score:** 80%
+- **Question Types:** Multiple choice
+
+---
+
+## Questions
+
+### Question 1
+**Type:** Multiple Choice  
+**Points:** 7  
+**Lesson:** 3.1 Solidity Fundamentals
+
+What is the purpose of the pragma statement in Solidity?
+
+**Options:**
+- A) To define the software license
+- B) To specify the compiler version and settings
+- C) To declare the contract name
+- D) To import external libraries
+
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.1 Solidity Fundamentals
+
+Which variable type is used for storing blockchain wallet addresses?
+
+**Options:**
+- A) string for text representation
+- B) uint256 for numerical values
+- C) address for Ethereum-style addresses
+- D) bytes32 for hash storage
+
+---
+
+### Question 3
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.2 Functions, Visibility, and Access Control
+
+Which visibility keyword means a function can be called only internally by the contract or derived contracts?
+
+**Options:**
+- A) public for external access
+- B) private for contract-only access
+- C) internal for contract and derived contracts
+- D) external for outside calls only
+
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.2 Functions, Visibility, and Access Control
+
+What does msg.sender represent in a smart contract?
+
+**Options:**
+- A) The address of the current contract
+- B) The address of the transaction sender or function caller
+- C) The network node's address
+- D) The contract deployment address
+
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.2 Functions, Visibility, and Access Control
+
+What is the purpose of a modifier like onlyOwner in Solidity?
+
+**Options:**
+- A) To restrict function calls to a specific entity
+- B) To emit events after function execution
+- C) To allow anyone to call a function
+- D) To automatically transfer tokens
+
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.3 Data Structures — Structs, Arrays, Mappings
+
+What is a struct used for in Solidity?
+
+**Options:**
+- A) Grouping related data fields together
+- B) Defining a contract's function
+- C) Declaring a variable on-chain
+- D) Creating inheritance relationships
+
+---
+
+### Question 7
+**Type:** Timeline Builder
+**Points:** 8
+**Lesson:** 3.2 Functions, Visibility, and Access Control
+
+Arrange these steps in the correct order for a typical Solidity function execution with a modifier:
+
+**Interactive Data:**
+```json
+{
+  "events": [
+    {"id": "evt-1", "text": "Function is called by external user"},
+    {"id": "evt-2", "text": "Modifier checks are executed (e.g., onlyOwner)"},
+    {"id": "evt-3", "text": "Function body logic executes"},
+    {"id": "evt-4", "text": "State changes are written to storage"},
+    {"id": "evt-5", "text": "Events are emitted (if any)"}
+  ]
+}
+```
+
+**Options:**
+- A) Person[] public people;
+- B) mapping(address => Person) people;
+- C) Person people[];
+- D) array<Person> people;
+
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.3 Data Structures — Structs, Arrays, Mappings
+
+How do you access a value stored in a mapping called balances for an address user?
+
+**Options:**
+- A) balances(user)
+- B) balances[user]
+- C) user[balances]
+- D) balances.get(user)
+
+---
+
+### Question 9
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.4 Events and Error Handling
+
+What keyword is used to emit an event in Solidity?
+
+**Options:**
+- A) event
+- B) log
+- C) emit
+- D) trigger
+
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.4 Events and Error Handling
+
+What is the purpose of the require statement?
+
+**Options:**
+- A) To revert the transaction if a condition is false and provide an error message
+- B) To approve a transfer of tokens
+- C) To emit transaction logs
+- D) To import external contracts
+
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.4 Events and Error Handling
+
+What happens when a require statement's condition fails during a transaction?
+
+**Options:**
+- A) The transaction continues with a warning
+- B) The transaction is reverted and all state changes are rolled back
+- C) The state changes proceed partially
+- D) Only the current function exits
+
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 3.5 Putting It All Together — Your First Contract
+
+In the SimpleBank example, how are user balances most effectively tracked?
+
+**Options:**
+- A) Using an array of addresses
+- B) Using mapping(address => uint) to associate balances
+- C) Storing balances in an external database
+- D) Using a single global variable
+
+---
+
+### Question 13
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 3.5 Putting It All Together — Your First Contract
+
+What advantage does emitting events for deposits and withdrawals give?
+
+**Options:**
+- A) It increases contract gas cost without benefits
+- B) It enables off-chain applications to monitor and respond to state changes
+- C) It slows down contract execution
+- D) It automatically validates transactions
+
+---
+
+### Question 14
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 3.5 Putting It All Together — Your First Contract
+
+What is required to deploy and test the SimpleBank contract on the Zilliqa EVM testnet?
+
+**Options:**
+- A) Remix IDE and MetaMask configured for Zilliqa EVM
+- B) Only a local private blockchain
+- C) A centralized server environment
+- D) Physical hardware wallet connection
+
+---
+
+---
+
+## Answer Key Summary
+
+| Question | Lesson | Points |
+|----------|--------|---------|
+| 1 | 3.1 | 7 |
+| 2 | 3.1 | 7 |
+| 3 | 3.2 | 7 |
+| 4 | 3.2 | 7 |
+| 5 | 3.2 | 7 |
+| 6 | 3.3 | 7 |
+| 7 | 3.3 | 7 |
+| 8 | 3.3 | 7 |
+| 9 | 3.4 | 7 |
+| 10 | 3.4 | 7 |
+| 11 | 3.4 | 7 |
+| 12 | 3.5 | 7 |
+| 13 | 3.5 | 8 |
+| 14 | 3.5 | 8 |
+
+**Total Points:** 100  
+**Passing Score:** 80 points

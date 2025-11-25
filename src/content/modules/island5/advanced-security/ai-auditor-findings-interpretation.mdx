@@ -1,0 +1,1029 @@
+---
+id: "dapp-security-lesson-2"
+slug: "ai-auditor-findings-interpretation"
+module: "advanced-security"
+number: "5.13"
+title: "AI Auditor Findings Interpretation"
+objective: "Master the art of interpreting AI-generated security audit reports and translating findings into actionable fixes."
+practicalTakeaway: "Use Plunder Academy's AI Solidity Reviewer to identify vulnerabilities, prioritize them by severity, and implement production-grade fixes with confidence."
+---
+
+# AI Auditor Findings Interpretation
+
+## Why this matters now
+
+You've learned the fundamental vulnerability patterns in common-vulnerability-patterns. Now you need a systematic way to find them in your code before attackers do. Professional audits cost $50K-$500K and take weeks. AI-powered security tools democratize this process, giving you instant feedback on your contracts.
+
+Plunder Academy's AI Solidity Reviewer at `/reviewer` analyzes your contracts using the same patterns professional auditors look for: reentrancy, access control, integer issues, unchecked calls, and more. But raw AI output is only useful if you can interpret severity scores, understand attack scenarios, and prioritize fixes effectively.
+
+This lesson teaches you to think like an auditor. You'll learn to read AI findings critically, reproduce vulnerabilities in tests, and implement fixes that don't introduce new issues. This skill compounds—every contract you review makes you faster at spotting patterns in the next one.
+
+In Modules 1-3, you learned to integrate wallet connections, read contract data, and submit transactions from the frontend. But frontend code is also a security boundary: user inputs must be validated before submitting transactions, contract reverts must be handled gracefully, and your UI should protect users from phishing and malicious approvals. The AI Solidity Reviewer helps you find backend vulnerabilities, but you must also audit your frontend integration code to ensure it doesn't bypass contract protections or mislead users about security-critical actions.
+
+## Conceptual foundations for AI-assisted auditing
+
+**Definition — AI security analysis**: Automated code review using machine learning models trained on known vulnerabilities, exploit patterns, and secure coding best practices. **When to use it**: First-pass security review before manual audits, regression testing after changes, and learning to recognize patterns in your own code.
+
+**Definition — Severity scoring**: A 1-10 scale measuring exploitability and impact. **How AI assigns it**: Critical (9-10) = direct fund loss with simple exploit, High (7-8) = fund loss requiring specific conditions, Medium (5-6) = protocol disruption or edge-case losses, Low (1-4) = best practice violations without clear exploit path.
+
+**Definition — Attack scenario**: A step-by-step narrative showing how an attacker exploits a vulnerability. **Why it's essential**: Abstract warnings like "reentrancy detected" don't motivate fixes. Scenarios like "attacker drains 1000 ETH by calling withdraw() from their malicious contract's receive() function" create urgency and clarity.
+
+**Definition — False positive**: A flagged issue that isn't actually exploitable in your specific context. **Why they happen**: AI models lack full business logic context, may not see off-chain safeguards, or over-apply patterns from training data. **How to handle them**: Write a test proving it's safe, document why in comments, and track in a "reviewed and accepted" log.
+
+**Mental model — Triage workflow**: Critical → High → Medium → Low. Fix criticals immediately (they're exploit-ready), batch highs for next deploy, address mediums in refactors, and note lows for future improvements. Time is your most valuable resource during incident response.
+
+**Anti-pattern — Audit theater**: Running AI tools to check a box without actually implementing fixes or understanding findings. **Why it fails**: Attackers don't care about your audit reports—they care about deployed bytecode. An unaddressed critical finding is a $1M bounty for hackers.
+
+**What AI auditors CAN'T catch (yet):**
+
+1. **Business logic errors**: AI doesn't understand your protocol's economic model. If your lending pool's interest rate formula is mathematically flawed, AI won't catch it.
+2. **Cross-contract vulnerabilities**: If your system depends on external contracts (Uniswap, Chainlink), AI may not analyze those integration risks comprehensively.
+3. **Economic exploits**: Flash loan attacks, oracle manipulation, and MEV vulnerabilities require understanding of DeFi primitives beyond pattern matching.
+4. **Governance attacks**: If your DAO voting logic can be exploited via vote buying or delegate manipulation, AI might miss the attack vector.
+5. **Gas optimization attacks**: DoS via gas griefing or unbounded loops might not be flagged as Critical even if they can brick your protocol.
+6. **Novel vulnerability patterns**: AI is trained on historical exploits. Zero-day attack patterns won't be in the training data.
+
+**The human-AI partnership**: Use AI as your first pass (catches 70-80% of common issues), then follow with:
+
+- Manual review by experienced developers (catches business logic errors)
+- Professional audits (catches novel and complex vulnerabilities)
+- Bug bounties (continuous monitoring after launch)
+
+AI accelerates security work but doesn't replace human expertise. Treat AI findings as a starting point, not the finish line.
+
+## Guided code walk-throughs
+
+### 1) Using the AI Solidity Reviewer
+
+Plunder Academy provides an AI Solidity Reviewer at `/reviewer` that analyzes contracts in real-time (via API call) and returns structured findings with severity scores, attack scenarios, and recommended fixes.
+
+#### How to use the AI Solidity Reviewer
+
+1. Navigate to `/reviewer` in your browser while running Plunder Academy locally
+2. Paste your Solidity contract code into the text area
+3. Click "Review Contract" to submit for analysis
+4. Review the analysis results, which include:
+   - Severity scores (1-10 scale)
+   - Vulnerability descriptions
+   - Attack scenarios
+   - Recommended fixes
+
+The AI Solidity Reviewer analyzes contracts using multiple techniques:
+
+**1. Pattern matching**: Checks for known vulnerability signatures (e.g., `call{value}` before state updates)
+
+**2. Control flow analysis**: Maps execution paths to find reentrancy, race conditions, and logic errors
+
+**3. Access control review**: Verifies all privileged functions have permission checks
+
+**4. Best practice validation**: Flags missing events, unchecked math, and unsafe patterns
+
+The AI uses a system prompt trained on:
+
+- OpenZeppelin security advisories
+- Historical exploit post-mortems (Poly Network 2021, Wormhole 2022, Euler Finance 2023)
+- OWASP smart contract security guidelines
+- Real audit reports from Trail of Bits, ConsenSys Diligence, and OpenZeppelin
+
+### 2) Interpreting severity scores
+
+The AI assigns severity on a 1-10 scale. Here's how to translate scores into action:
+
+#### Critical (9-10): Drop everything and fix
+
+```solidity
+// Example AI finding: CRITICAL (10/10)
+// "Reentrancy vulnerability in withdraw() allows complete fund drainage"
+
+contract VulnerableVault {
+    mapping(address => uint256) public balances;
+
+    function withdraw(uint256 amount) external {
+        require(balances[msg.sender] >= amount);
+        (bool success, ) = msg.sender.call{value: amount}("");  // 🚨 CRITICAL
+        require(success);
+        balances[msg.sender] -= amount;  // State update AFTER external call
+    }
+}
+```
+
+**Why this is critical:**
+- **Exploitability**: Trivial (attacker just needs a malicious `receive()` function)
+- **Impact**: Total fund loss (attacker can drain entire contract balance)
+- **Reproducibility**: 100% (works every time in standard EVM environments)
+
+**Attack scenario from AI:**
+```
+1. Attacker deposits 1 ETH
+2. Attacker calls withdraw(1 ETH)
+3. Contract sends 1 ETH to attacker's contract
+4. Attacker's receive() calls withdraw(1 ETH) again
+5. Balance check passes (not updated yet)
+6. Loop repeats until contract empty
+7. Estimated loss: 100% of contract funds
+```
+
+**Immediate fix:**
+```solidity
+// ✅ SECURE: Checks-Effects-Interactions pattern
+function withdraw(uint256 amount) external {
+    require(balances[msg.sender] >= amount);
+    balances[msg.sender] -= amount;  // Update state FIRST
+    (bool success, ) = msg.sender.call{value: amount}("");
+    require(success);
+}
+```
+
+#### High (7-8): Fix before next deployment
+
+```solidity
+// Example AI finding: HIGH (8/10)
+// "Missing access control on mint() allows unlimited token creation"
+
+contract VulnerableToken {
+    mapping(address => uint256) public balanceOf;
+    
+    function mint(address to, uint256 amount) external {
+        // 🚨 HIGH: No onlyOwner modifier
+        balanceOf[to] += amount;
+    }
+}
+```
+
+**Why this is high:**
+- **Exploitability**: Simple (anyone can call it)
+- **Impact**: Complete token devaluation (unlimited minting crashes price)
+- **Reproducibility**: 100%
+
+**AI-recommended fix:**
+```solidity
+// ✅ SECURE: Add access control
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract SecureToken is Ownable {
+    mapping(address => uint256) public balanceOf;
+    
+    constructor() Ownable(msg.sender) {}
+    
+    function mint(address to, uint256 amount) external onlyOwner {
+        balanceOf[to] += amount;
+    }
+}
+```
+
+#### Medium (5-6): Address in refactor or security sprint
+
+```solidity
+// Example AI finding: MEDIUM (6/10)
+// "Missing event emission in critical function reduces transparency"
+
+contract VulnerableGovernance {
+    address public admin;
+    
+    function changeAdmin(address newAdmin) external {
+        require(msg.sender == admin);
+        admin = newAdmin;  // 🚨 MEDIUM: No event emitted
+    }
+}
+```
+
+**Why this is medium:**
+- **Exploitability**: Not directly exploitable
+- **Impact**: Reduces ability to detect compromises and audit changes
+- **Reproducibility**: N/A (design issue)
+
+**AI-recommended fix:**
+```solidity
+// ✅ SECURE: Emit events for state changes
+event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
+
+function changeAdmin(address newAdmin) external {
+    require(msg.sender == admin);
+    address oldAdmin = admin;
+    admin = newAdmin;
+    emit AdminChanged(oldAdmin, newAdmin);
+}
+```
+
+#### Low (1-4): Track for future improvements
+
+```solidity
+// Example AI finding: LOW (3/10)
+// "Function could be marked external instead of public for gas savings"
+
+contract Example {
+    function getValue() public view returns (uint256) {  // 🚨 LOW
+        return 42;
+    }
+}
+```
+
+**Why this is low:**
+- **Exploitability**: None
+- **Impact**: Minor gas inefficiency (~100-200 gas per call)
+- **Reproducibility**: N/A
+
+**AI-recommended optimization:**
+```solidity
+// ✅ OPTIMIZED: Use external for functions not called internally
+function getValue() external view returns (uint256) {
+    return 42;
+}
+```
+
+### 3) Understanding attack scenarios
+
+The AI generates step-by-step attack narratives. Here's how to use them:
+
+#### Example: Integer overflow scenario
+
+**AI finding:**
+```
+SEVERITY: High (8/10)
+VULNERABILITY: Integer overflow in reward calculation
+LOCATION: StakingPool.sol, line 45
+
+ATTACK SCENARIO:
+1. Attacker stakes 1 token (minimizes capital)
+2. Attacker waits for rewardPerToken to reach near-uint256 max
+3. Attacker calls claimRewards()
+4. Multiplication (userStake * rewardPerToken) overflows
+5. Result wraps to small number, bypassing withdrawal limit
+6. Attacker withdraws inflated reward amount
+7. Estimated loss: Up to contract's total reward reserves
+
+AFFECTED CODE:
+function claimRewards() external {
+    uint256 reward = userStake[msg.sender] * rewardPerToken;  // ⚠️ Overflow
+    rewardToken.transfer(msg.sender, reward);
+}
+
+RECOMMENDED FIX:
+Use SafeMath or Solidity 0.8+ checked arithmetic
+```
+
+**How to validate this scenario:**
+
+```javascript
+// Hardhat test reproducing the attack
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+
+describe("Integer Overflow Attack", function() {
+  it("should overflow reward calculation pre-fix", async function() {
+    const [attacker] = await ethers.getSigners();
+    
+    // Deploy vulnerable contract
+    const Staking = await ethers.getContractFactory("VulnerableStaking");
+    const staking = await Staking.deploy();
+    
+    // Set rewardPerToken near uint256 max
+    const maxUint256 = ethers.constants.MaxUint256;
+    await staking.setRewardPerToken(maxUint256.div(2));
+    
+    // Attacker stakes 10 tokens
+    await staking.connect(attacker).stake(10);
+    
+    // Attempt to claim rewards
+    // In vulnerable version: 10 * (max/2) overflows to small number
+    const rewardBefore = await staking.rewardToken().balanceOf(attacker.address);
+    await staking.connect(attacker).claimRewards();
+    const rewardAfter = await staking.rewardToken().balanceOf(attacker.address);
+    
+    // Verify overflow occurred (got more than contract balance)
+    expect(rewardAfter.sub(rewardBefore)).to.be.gt(
+      await staking.rewardToken().balanceOf(staking.address)
+    );
+  });
+});
+```
+
+If the test passes (demonstrates the exploit), the AI finding is confirmed. Implement the fix and verify the test fails with updated code.
+
+**Using Foundry instead of Hardhat?**
+
+If you prefer Foundry for testing (as shown in common-vulnerability-patterns), here's the equivalent test:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "forge-std/Test.sol";
+import "../src/VulnerableStaking.sol";
+
+contract IntegerOverflowAttackTest is Test {
+    VulnerableStaking staking;
+    
+    function setUp() public {
+        staking = new VulnerableStaking();
+    }
+    
+    function testOverflowRewardCalculation() public {
+        uint256 maxUint256 = type(uint256).max;
+        
+        // Set reward per token near max
+        vm.prank(address(this)); // Assume we're admin for setup
+        staking.setRewardPerToken(maxUint256 / 2);
+        
+        // Attacker stakes 10 tokens
+        vm.deal(address(this), 10 ether);
+        staking.stake{value: 10 ether}();
+        
+        // Attempt to claim rewards - should overflow in vulnerable version
+        // In secure version with checked arithmetic, this would revert
+        vm.expectRevert(); // Expect revert in fixed version
+        staking.claimRewards();
+    }
+}
+```
+
+Run with: `forge test --match-test testOverflowRewardCalculation -vv`
+
+**Choose your framework**: Both Hardhat and Foundry are production-ready. Use Hardhat if you prefer JavaScript/TypeScript testing, or Foundry if you prefer Solidity-native tests with better gas reporting.
+
+### 4) Prioritizing fixes with the CVSS framework
+
+When you have multiple findings, use the Common Vulnerability Scoring System (CVSS) logic:
+
+**Priority = Exploitability × Impact × Reproducibility**
+
+**Example: Reentrancy in withdraw()**
+- **Exploitability**: High (3)
+- **Impact**: Critical (3)
+- **Reproducibility**: High (3)
+- **Priority Score**: 27 (FIX NOW)
+
+**Example: Missing access control on mint()**
+- **Exploitability**: High (3)
+- **Impact**: High (2)
+- **Reproducibility**: High (3)
+- **Priority Score**: 18 (FIX SOON)
+
+**Example: No event in changeAdmin()**
+- **Exploitability**: Low (1)
+- **Impact**: Medium (2)
+- **Reproducibility**: High (3)
+- **Priority Score**: 6 (BACKLOG)
+
+**Example: public instead of external**
+- **Exploitability**: None (0)
+- **Impact**: Low (1)
+- **Reproducibility**: N/A (1)
+- **Priority Score**: 0 (OPTIMIZE LATER)
+
+**Triage decision tree:**
+
+```
+Is there direct fund loss? 
+  YES → Is exploit simple (< 10 lines)?
+    YES → CRITICAL: Fix immediately, delay deployment
+    NO → HIGH: Fix before next deployment
+  NO → Does it break core functionality?
+    YES → HIGH: Fix before next deployment
+    NO → MEDIUM/LOW: Schedule for refactor
+```
+
+### 5) Handling false positives
+
+AI models sometimes flag safe patterns. Here's how to verify:
+
+#### Example: False positive on safe external call
+
+**AI finding:**
+```
+SEVERITY: Medium (6/10)
+VULNERABILITY: Unchecked return value from external call
+LOCATION: TokenBridge.sol, line 78
+
+AFFECTED CODE:
+token.transfer(recipient, amount);  // ⚠️ Return value not checked
+```
+
+**Your analysis:**
+```solidity
+// Context AI missed: Using OpenZeppelin's SafeERC20
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+contract TokenBridge {
+    using SafeERC20 for IERC20;
+    
+    function bridgeTokens(address token, address recipient, uint256 amount) external {
+        // SafeERC20 automatically reverts on failure
+        IERC20(token).safeTransfer(recipient, amount);  // ✅ ACTUALLY SAFE
+    }
+}
+```
+
+**How to document false positives:**
+
+```solidity
+// Document why AI flagged this and why it's safe
+/**
+ * @notice Bridges tokens to recipient
+ * @dev Uses SafeERC20.safeTransfer which wraps transfer() and reverts on failure.
+ *      AI security scanner may flag this as unchecked external call, but SafeERC20
+ *      automatically validates return values per ERC20 spec.
+ * @custom:security-review Reviewed 2025-11-10, confirmed safe (OpenZeppelin SafeERC20)
+ */
+function bridgeTokens(address token, address recipient, uint256 amount) external {
+    IERC20(token).safeTransfer(recipient, amount);
+}
+```
+
+> **Learn more**: OpenZeppelin's [SafeERC20 documentation](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#SafeERC20) explains how `safeTransfer` wraps ERC20 calls and reverts on failure, even for non-standard tokens.
+
+**When to accept vs. refactor:**
+
+**Accept the false positive** if:
+- The AI flagged standard library usage (OpenZeppelin SafeERC20, ReentrancyGuard)
+- You've proven it's safe with comprehensive tests
+- Refactoring would make code less readable or gas-inefficient
+- The pattern is widely accepted in production protocols (Uniswap, Aave)
+
+**Refactor to avoid the flag** if:
+- The code is non-standard or clever
+- Future developers might miss the safety reasoning
+- The pattern is uncommon and might indicate actual risk
+- Refactoring improves clarity without significant trade-offs
+
+**Default rule**: If you're not 100% certain it's a false positive, treat it as real and refactor. False negatives (missed vulnerabilities) cost millions; false positives cost only time.
+
+**Test proving it's safe:**
+
+```javascript
+it("should revert when token transfer fails", async function() {
+  const [user] = await ethers.getSigners();
+  
+  // Deploy mock token that returns false on transfer
+  const MockToken = await ethers.getContractFactory("FailingToken");
+  const token = await MockToken.deploy();
+  
+  const Bridge = await ethers.getContractFactory("TokenBridge");
+  const bridge = await Bridge.deploy();
+  
+  // Attempt bridge with failing token
+  await expect(
+    bridge.bridgeTokens(token.address, user.address, 100)
+  ).to.be.revertedWith("SafeERC20: ERC20 operation did not succeed");
+  
+  // ✅ Proves SafeERC20 catches failures correctly
+});
+```
+
+## Hands-on with AI Solidity Reviewer
+
+Submit these three contracts to `/reviewer` and practice interpreting findings. Each exercise includes expected AI output and verification steps.
+
+**Time commitment**: Each exercise takes approximately 15-30 minutes. Plan for 60-90 minutes total to complete all three exercises, including AI Solidity Reviewer submission, analysis, and implementing fixes.
+
+### Exercise 1: Multi-vulnerability contract
+
+**Submit this code:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract VulnerableStaking {
+    mapping(address => uint256) public stakes;
+    mapping(address => uint256) public rewards;
+    uint256 public rewardRate = 100; // 100 tokens per block
+    
+    function stake() external payable {
+        stakes[msg.sender] += msg.value;
+    }
+    
+    function calculateReward(address user) public view returns (uint256) {
+        return stakes[user] * rewardRate * block.number;  // ⚠️ Multiple issues
+    }
+    
+    function claimReward() external {
+        uint256 reward = calculateReward(msg.sender);
+        rewards[msg.sender] += reward;
+        
+        (bool success, ) = msg.sender.call{value: reward}("");  // ⚠️ Reentrancy?
+        require(success, "Transfer failed");
+    }
+    
+    function setRewardRate(uint256 newRate) external {  // ⚠️ Access control?
+        rewardRate = newRate;
+    }
+    
+    function emergencyWithdraw() external {
+        uint256 amount = stakes[msg.sender];
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success);
+        stakes[msg.sender] = 0;  // ⚠️ State update order?
+    }
+}
+```
+
+**Expected AI findings:**
+
+1. **CRITICAL (10/10)**: Reentrancy in `emergencyWithdraw()` (state update after external call)
+2. **HIGH (9/10)**: Integer overflow in `calculateReward()` (stakes × rewardRate × blockNumber can overflow)
+3. **HIGH (8/10)**: Missing access control on `setRewardRate()` (anyone can change reward rate)
+4. **MEDIUM (6/10)**: Reentrancy in `claimReward()` (less severe because rewards mapping updated first)
+5. **MEDIUM (5/10)**: No event emissions for state changes
+
+**Your task:**
+
+1. Read each AI finding carefully
+2. Map findings to specific lines of code
+3. Reproduce at least one attack in a Hardhat test
+4. Implement fixes and re-submit to verify AI clears the issues
+
+**Verification test for finding #1:**
+
+```javascript
+describe("Reentrancy in emergencyWithdraw", function() {
+  it("should allow attacker to drain contract", async function() {
+    // Deploy contracts
+    const Staking = await ethers.getContractFactory("VulnerableStaking");
+    const staking = await Staking.deploy();
+    
+    const Attacker = await ethers.getContractFactory("ReentrancyAttacker");
+    const attacker = await Attacker.deploy(staking.address);
+    
+    // Fund staking contract
+    const [user1] = await ethers.getSigners();
+    await staking.connect(user1).stake({ value: ethers.utils.parseEther("10") });
+    
+    // Attacker stakes 1 ETH
+    await attacker.attack({ value: ethers.utils.parseEther("1") });
+    
+    // Verify contract drained
+    expect(await ethers.provider.getBalance(staking.address)).to.equal(0);
+  });
+});
+```
+
+### Exercise 2: Access control audit
+
+**Submit this code:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract GovernanceToken is ERC20 {
+    address public admin;
+    address public minter;
+    bool public paused;
+    
+    constructor() ERC20("GovToken", "GOV") {
+        admin = msg.sender;
+        minter = msg.sender;
+    }
+    
+    function mint(address to, uint256 amount) external {
+        require(msg.sender == minter, "Not minter");
+        _mint(to, amount);
+    }
+    
+    function setMinter(address newMinter) external {
+        minter = newMinter;  // ⚠️ Who can call this?
+    }
+    
+    function pause() external {
+        require(msg.sender == admin, "Not admin");
+        paused = true;
+    }
+    
+    function unpause() external {
+        // ⚠️ Missing access check
+        paused = false;
+    }
+    
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        require(!paused, "Transfers paused");
+        return super.transfer(to, amount);
+    }
+    
+    function emergencyWithdraw(address token) external {
+        // ⚠️ Who can call this?
+        IERC20(token).transfer(admin, IERC20(token).balanceOf(address(this)));
+    }
+}
+```
+
+**Expected AI findings:**
+
+1. **CRITICAL (9/10)**: `setMinter()` has no access control—anyone can become minter and mint unlimited tokens
+2. **HIGH (8/10)**: `unpause()` has no access control—attacker can unpause after admin emergency pause
+3. **MEDIUM (6/10)**: `emergencyWithdraw()` has no access control but only sends to admin (still dangerous)
+4. **LOW (4/10)**: No events emitted for role changes
+
+**Your task:**
+
+1. Identify which functions should have `onlyAdmin` or `onlyMinter` checks
+2. Write tests proving unauthorized users can call protected functions
+3. Add access control modifiers and re-test
+4. Re-submit to AI Solidity Reviewer and verify all findings cleared
+
+**Fix template:**
+
+```solidity
+// ✅ SECURE: Add access control modifiers
+modifier onlyAdmin() {
+    require(msg.sender == admin, "Not admin");
+    _;
+}
+
+modifier onlyMinter() {
+    require(msg.sender == minter, "Not minter");
+    _;
+}
+
+function setMinter(address newMinter) external onlyAdmin {
+    minter = newMinter;
+    emit MinterChanged(minter, newMinter);
+}
+
+function unpause() external onlyAdmin {
+    paused = false;
+    emit Unpaused(msg.sender);
+}
+
+function emergencyWithdraw(address token) external onlyAdmin {
+    uint256 amount = IERC20(token).balanceOf(address(this));
+    IERC20(token).transfer(admin, amount);
+    emit EmergencyWithdraw(token, amount);
+}
+```
+
+### Exercise 3: Cross-contract interaction audit
+
+**Submit this code:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+interface IPriceOracle {
+    function getPrice(address token) external view returns (uint256);
+}
+
+contract DEXRouter {
+    IPriceOracle public oracle;
+    mapping(address => uint256) public liquidity;
+    
+    constructor(address _oracle) {
+        oracle = IPriceOracle(_oracle);
+    }
+    
+    function addLiquidity(address token) external payable {
+        liquidity[token] += msg.value;
+    }
+    
+    function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
+        // Get prices from oracle
+        uint256 priceIn = oracle.getPrice(tokenIn);  // ⚠️ What if oracle reverts?
+        uint256 priceOut = oracle.getPrice(tokenOut);
+        
+        // Calculate output amount
+        uint256 amountOut = (amountIn * priceIn) / priceOut;  // ⚠️ Overflow? Division by zero?
+        
+        // Execute swap
+        require(liquidity[tokenOut] >= amountOut, "Insufficient liquidity");
+        liquidity[tokenOut] -= amountOut;
+        
+        (bool success, ) = msg.sender.call{value: amountOut}("");  // ⚠️ Reentrancy?
+        require(success, "Transfer failed");
+    }
+    
+    function updateOracle(address newOracle) external {  // ⚠️ Access control?
+        oracle = IPriceOracle(newOracle);
+    }
+}
+```
+
+**Expected AI findings:**
+
+1. **CRITICAL (10/10)**: Reentrancy in `swap()` (external call before state update)
+2. **HIGH (9/10)**: Missing access control on `updateOracle()` (attacker can set malicious oracle)
+3. **HIGH (8/10)**: No validation of oracle return values (oracle can return 0, causing division by zero)
+4. **MEDIUM (7/10)**: Oracle call can revert and DoS entire swap function
+5. **MEDIUM (6/10)**: Integer overflow possible in price calculation
+6. **LOW (4/10)**: No slippage protection for users
+
+**Your task:**
+
+1. Prioritize findings by CVSS score (exploitability × impact)
+2. Fix the top 2 critical/high issues first
+3. Write integration tests for oracle failures
+4. Re-submit and verify improvements
+
+**Fix for finding #1 (reentrancy):**
+
+```solidity
+function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
+    uint256 priceIn = oracle.getPrice(tokenIn);
+    uint256 priceOut = oracle.getPrice(tokenOut);
+    uint256 amountOut = (amountIn * priceIn) / priceOut;
+    
+    require(liquidity[tokenOut] >= amountOut, "Insufficient liquidity");
+    
+    // ✅ SECURE: Update state BEFORE external call
+    liquidity[tokenOut] -= amountOut;
+    
+    (bool success, ) = msg.sender.call{value: amountOut}("");
+    require(success, "Transfer failed");
+}
+```
+
+## Mapping AI findings to Plunder Academy lessons
+
+When the AI flags a vulnerability, reference these lessons for deep dives:
+
+**Reentrancy vulnerability**
+- **Relevant Lesson**: common-vulnerability-patterns
+- **Key Concepts**: Checks-Effects-Interactions, ReentrancyGuard
+
+**Missing access control**
+- **Relevant Lesson**: role-based-access-control
+- **Key Concepts**: Ownable, AccessControl, modifiers
+
+**Integer overflow/underflow**
+- **Relevant Lesson**: common-vulnerability-patterns
+- **Key Concepts**: SafeMath, Solidity 0.8+ checked arithmetic
+
+**Unchecked external call**
+- **Relevant Lesson**: common-vulnerability-patterns
+- **Key Concepts**: require(), try/catch, SafeERC20
+
+**Missing events**
+- **Relevant Lesson**: security-testing-audit-preparation
+- **Key Concepts**: Event logging, transparency patterns
+
+**Oracle manipulation**
+- **Relevant Lesson**: advanced-attack-vectors
+- **Key Concepts**: Chainlink integration, TWAP, sanity checks
+
+**Flash loan attack**
+- **Relevant Lesson**: advanced-attack-vectors
+- **Key Concepts**: Aave/Uniswap flash loans, defense patterns
+
+**Upgradeability risks**
+- **Relevant Lesson**: emergency-response-circuit-breakers
+- **Key Concepts**: Proxy patterns, storage collisions
+
+**DoS vulnerabilities**
+- **Relevant Lesson**: advanced-attack-vectors
+- **Key Concepts**: Gas limits, pull over push, circuit breakers
+
+**Example workflow:**
+
+1. AI flags "Reentrancy in withdraw()" as Critical (10/10)
+2. Review common-vulnerability-patterns, section "Reentrancy: The $150M vulnerability"
+3. Study Checks-Effects-Interactions pattern and ReentrancyGuard
+4. Implement fix using pattern from lesson
+5. Write test based on lesson's attack contract example
+6. Re-submit to AI Solidity Reviewer and verify fix
+
+## Iterative audit workflow
+
+Professional auditors don't rely on a single tool. Use this multi-pass approach:
+
+**Pass 1: AI Solidity Reviewer (15 minutes)**
+
+- Submit contract to `/reviewer`
+- Get instant findings with severity scores
+- Create triage list (Critical → High → Medium → Low)
+
+**Pass 2: Manual code review (30-60 minutes)**
+
+- Read code line-by-line looking for AI-missed issues
+- Check business logic (AI doesn't understand your protocol's economics)
+- Verify access control on every external function
+- Trace fund flows (where can ETH/tokens enter and leave?)
+
+**Pass 3: Test-driven verification (1-2 hours)**
+
+- Write exploit tests for each finding
+- Implement fixes
+- Re-run tests to verify fixes work
+- Add regression tests to prevent re-introduction
+
+**Pass 4: Re-audit (10 minutes)**
+
+- Re-submit fixed code to AI Solidity Reviewer
+- Verify all findings cleared
+- Check for new issues introduced by fixes
+- Document remaining known issues (if any)
+
+**Pass 5: Professional audit (optional, $50K+)**
+
+- Hire Trail of Bits, OpenZeppelin, or ConsenSys Diligence
+- Provide AI audit report as context
+- Focus auditors on complex business logic and economic attacks
+- Implement findings and get re-audit
+
+## Real-world case study: Auditing a DeFi protocol
+
+Let's walk through a real audit scenario using the AI Solidity Reviewer.
+
+**Note**: This case study is based on common patterns found in yield farming protocols like Synthetix (staking rewards), Yearn Finance (vault strategies), and SushiSwap (MasterChef). While the specific code is simplified for learning, the vulnerabilities and fixes mirror real production issues from these protocols' audit reports. After completing this lesson, review published audit reports from:
+
+- [Yearn Finance audits](https://github.com/yearn/yearn-security/tree/master/audits)
+- [Synthetix audits](https://github.com/Synthetixio/synthetix/tree/master/audits)
+- [SushiSwap audits](https://github.com/sushiswap/sushiswap/tree/master/audits)
+
+These real-world reports show how professional auditors structure findings, which complements your AI Solidity Reviewer practice.
+
+**Scenario**: You're launching a yield farming protocol. Users stake LP tokens, earn rewards in your governance token, and can withdraw anytime. You need to audit the core staking contract before launch.
+
+**Step 1: Initial AI scan**
+
+```solidity
+// YieldFarm.sol (pre-audit)
+contract YieldFarm {
+    IERC20 public stakingToken;
+    IERC20 public rewardToken;
+    
+    mapping(address => uint256) public stakes;
+    mapping(address => uint256) public rewards;
+    
+    uint256 public rewardRate = 100; // tokens per second per staked token
+    uint256 public lastUpdateTime;
+    
+    function stake(uint256 amount) external {
+        stakingToken.transferFrom(msg.sender, address(this), amount);
+        rewards[msg.sender] = calculateReward(msg.sender);
+        stakes[msg.sender] += amount;
+        lastUpdateTime = block.timestamp;
+    }
+    
+    function withdraw(uint256 amount) external {
+        require(stakes[msg.sender] >= amount);
+        rewards[msg.sender] = calculateReward(msg.sender);
+        stakes[msg.sender] -= amount;
+        stakingToken.transfer(msg.sender, amount);
+    }
+    
+    function claimRewards() external {
+        uint256 reward = calculateReward(msg.sender);
+        rewards[msg.sender] = 0;
+        rewardToken.transfer(msg.sender, reward);
+    }
+    
+    function calculateReward(address user) public view returns (uint256) {
+        uint256 duration = block.timestamp - lastUpdateTime;
+        return rewards[user] + (stakes[user] * rewardRate * duration);
+    }
+}
+```
+
+**AI Solidity Reviewer findings:**
+
+1. CRITICAL (10/10): Unchecked return value in `stakingToken.transferFrom()` (line 12)
+2. HIGH (8/10): Unchecked return value in `stakingToken.transfer()` (line 21)
+3. HIGH (8/10): Unchecked return value in `rewardToken.transfer()` (line 27)
+4. HIGH (8/10): Integer overflow in `calculateReward()` (stakes × rate × duration)
+5. MEDIUM (6/10): `lastUpdateTime` updated globally but should be per-user
+6. MEDIUM (5/10): No access control on setting `rewardRate`
+
+**Step 2: Prioritize fixes**
+
+Critical and High findings fixed immediately:
+
+```solidity
+// YieldFarm.sol (post-audit, iteration 1)
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract YieldFarm is Ownable {
+    using SafeERC20 for IERC20;  // ✅ Fix findings 1-3
+    
+    IERC20 public stakingToken;
+    IERC20 public rewardToken;
+    
+    mapping(address => uint256) public stakes;
+    mapping(address => uint256) public rewards;
+    mapping(address => uint256) public lastUpdateTime;  // ✅ Fix finding 5
+    
+    uint256 public rewardRate = 100;
+    
+    constructor(address _stakingToken, address _rewardToken) Ownable(msg.sender) {
+        stakingToken = IERC20(_stakingToken);
+        rewardToken = IERC20(_rewardToken);
+    }
+    
+    function stake(uint256 amount) external {
+        stakingToken.safeTransferFrom(msg.sender, address(this), amount);  // ✅ Safe
+        _updateRewards(msg.sender);
+        stakes[msg.sender] += amount;
+    }
+    
+    function withdraw(uint256 amount) external {
+        require(stakes[msg.sender] >= amount, "Insufficient stake");
+        _updateRewards(msg.sender);
+        stakes[msg.sender] -= amount;
+        stakingToken.safeTransfer(msg.sender, amount);  // ✅ Safe
+    }
+    
+    function claimRewards() external {
+        _updateRewards(msg.sender);
+        uint256 reward = rewards[msg.sender];
+        rewards[msg.sender] = 0;
+        rewardToken.safeTransfer(msg.sender, reward);  // ✅ Safe
+    }
+    
+    function setRewardRate(uint256 newRate) external onlyOwner {  // ✅ Fix finding 6
+        rewardRate = newRate;
+    }
+    
+    function _updateRewards(address user) internal {
+        uint256 duration = block.timestamp - lastUpdateTime[user];
+        // ✅ Fix finding 4: Use checked arithmetic (Solidity 0.8+)
+        rewards[user] += (stakes[user] * rewardRate * duration) / 1e18;
+        lastUpdateTime[user] = block.timestamp;
+    }
+}
+```
+
+**Step 3: Re-audit with AI**
+
+Re-submit to AI Solidity Reviewer. Result: All findings cleared ✅
+
+**Step 4: Manual review**
+
+You notice the AI didn't catch:
+- Missing initialization of `lastUpdateTime[user]` on first stake (will calculate from timestamp 0)
+- Reward calculation needs per-user tracking of accrued rewards
+
+**Step 5: Final fixes**
+
+```solidity
+function _updateRewards(address user) internal {
+    if (lastUpdateTime[user] == 0) {
+        lastUpdateTime[user] = block.timestamp;  // ✅ Initialize on first interaction
+        return;
+    }
+    uint256 duration = block.timestamp - lastUpdateTime[user];
+    rewards[user] += (stakes[user] * rewardRate * duration) / 1e18;
+    lastUpdateTime[user] = block.timestamp;
+}
+```
+
+**Step 6: Test suite**
+
+```javascript
+describe("YieldFarm Security", function() {
+  it("should handle zero-balance stakes safely", async function() {
+    await expect(farm.stake(0)).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+  });
+  
+  it("should not allow reward overflow", async function() {
+    await farm.stake(ethers.constants.MaxUint256.div(1000));
+    await ethers.provider.send("evm_increaseTime", [365 * 24 * 60 * 60]);  // 1 year
+    // Should not revert due to overflow
+    await expect(farm.claimRewards()).to.not.be.reverted;
+  });
+  
+  it("should correctly calculate rewards for multiple users", async function() {
+    // Test that per-user lastUpdateTime works correctly
+  });
+});
+```
+
+## Pre-deployment security checklist
+
+Before deploying to mainnet, ensure you've addressed all AI Solidity Reviewer findings and followed security best practices. For a comprehensive pre-audit checklist covering test coverage, documentation, access control, and deployment preparation, see **smart-contract-audit-methodology**.
+
+**Quick AI Solidity Reviewer checklist** (before professional audit):
+
+- [ ] All Critical and High AI findings resolved
+- [ ] Medium findings documented (with justification if not fixed)
+- [ ] False positives tested and documented in code comments
+- [ ] Re-ran AI Solidity Reviewer after fixes (verified issues cleared)
+- [ ] Added regression tests for each vulnerability type identified
+
+**Remember**: The AI Solidity Reviewer is your first line of defense, catching obvious issues before expensive professional audits. But it's not a substitute for:
+
+- Manual code review by experienced developers
+- Comprehensive test coverage (including exploit scenarios)
+- Professional audits for protocols handling significant funds
+- Ongoing monitoring and bug bounties post-launch
+
+For the complete audit preparation process, proceed to smart-contract-audit-methodology after mastering AI audit interpretation in this lesson.
+
+## Wrap-up and next steps
+
+You now know how to use AI security tools effectively: submitting contracts to Plunder Academy's AI Solidity Reviewer, interpreting severity scores, understanding attack scenarios, prioritizing fixes by exploitability and impact, and iterating until all findings are resolved.
+
+**Key skills mastered:**
+- Reading AI audit reports with critical thinking (spotting false positives)
+- Mapping vulnerabilities to code lines and writing exploit tests
+- Implementing fixes without introducing new issues
+- Prioritizing work with CVSS-based triage
+- Documenting security decisions for future auditors
+
+**Next lesson (role-based-access-control)**: Role-Based Access Control Patterns—deep dive into OpenZeppelin's AccessControl, multi-sig patterns, time-locked admin functions, and testing permission boundaries. You'll build a governance system with granular roles and learn to prevent the "missing access control" findings you saw in this lesson.
+
+**Practice challenge**: Before moving on, audit one of your own contracts from Islands 1-4 using the AI Solidity Reviewer. Find at least 3 vulnerabilities, fix them, write exploit tests proving they're resolved, and re-submit for a clean audit report. This will cement the workflow in your muscle memory.
+
+The difference between secure and vulnerable code often comes down to systematic review habits. Make AI-assisted auditing part of your development routine, and you'll catch issues before attackers do.
+

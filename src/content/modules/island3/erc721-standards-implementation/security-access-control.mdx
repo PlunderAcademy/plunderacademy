@@ -1,0 +1,365 @@
+---
+id: "erc721-standards-lesson-3"
+slug: "security-access-control"
+module: "erc721-standards-implementation"
+number: "3.3"
+title: "NFT Security Considerations and Access Control"
+objective: "Implement robust security measures and access control patterns for NFT contracts."
+practicalTakeaway: "Secure NFT collections against common attacks and implement proper permission systems."
+---
+
+# NFT Security Considerations and Access Control
+
+## Set the stage
+
+Picture launching your 10k NFT collection: mint goes live, users rush in, and within hours you discover a critical bug—a malicious actor is minting unlimited tokens, or worse, draining the contract's ETH balance. Without proper access controls and circuit breakers, you're helpless. Every blockchain transaction is permanent; there's no rollback button. The difference between a recoverable incident and a total loss comes down to how you structure permissions and emergency responses before deployment.
+
+Access control isn't just about locking the mint function behind `onlyOwner`. It's about separation of duties: who can mint, who can pause, who can change metadata, who can withdraw funds. A single compromised admin key shouldn't give an attacker total control. Circuit breakers (pausability) let you freeze operations while you investigate. Event logging makes every privileged action transparent and auditable. Negative testing ensures unauthorized users can't bypass your guards.
+
+In this lesson, you'll learn when to use simple `Ownable` vs multi-role `AccessControl`, how to implement pausable mint flows, and how to protect against reentrancy in payable mints. You'll see which admin actions need events, which need timelocks, and which functions should never be pausable (hint: user withdrawals). By the end, you'll have a security checklist that prevents the most common NFT exploits: unauthorized minting, rug pulls via metadata changes, and reentrancy attacks during callbacks. These patterns will carry directly into Module 3's practical deployment, where you'll implement multi-phase minting with admin-controlled reveals and emergency pause controls.
+
+## Conceptual foundations
+
+### Ownable vs AccessControl: when to use which
+
+**Ownable**: Single owner address; all privileged functions use `onlyOwner` modifier. Simple, gas-efficient, easy to audit. **Risk**: Single point of failure—if owner key is compromised or lost, game over. **Use case**: Small collections (&lt;1k tokens), solo creators, prototypes.
+
+**AccessControl**: Role-based permissions with `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, `PAUSER_ROLE`, custom roles. Admins grant/revoke roles; roles can be assigned to multiple addresses or smart contracts (e.g., a multisig for admin, a minting contract for minter). **Cost**: ~2-5k extra gas per role check. **Use case**: Team projects, DAOs, collections with separate operational roles (treasury, marketing, development).
+
+**When to graduate from Ownable to AccessControl**: When you need to delegate specific powers (mint but not pause, pause but not reveal) or when you want multi-signature control over admin functions (grant `DEFAULT_ADMIN_ROLE` to a multisig, not an EOA).
+
+**Anti-pattern**: Using `Ownable` for a team project where multiple people need different permissions. You end up sharing the owner private key (insecure) or building custom role logic (reinventing AccessControl).
+
+### Interactive: Access Control Simulator
+
+Try to access restricted functions with different roles. See how `onlyOwner` or role-based modifiers protect sensitive actions like minting.
+
+<AccessControlVisualizer />
+
+### Pausability: circuit breakers for mint and transfers
+
+**Pausable** adds `whenPaused` / `whenNotPaused` modifiers. Common pattern: pause minting if you detect a bug, investigate, fix, unpause. **Key distinction**: Pause minting, not transfers. Users must always be able to transfer/sell their NFTs; pausing transfers locks their assets and destroys trust.
+
+**Implementation**: Import `Pausable` from OpenZeppelin, add `whenNotPaused` to `mint()` functions, expose `pause()` / `unpause()` to a `PAUSER_ROLE` or owner. Emit `Paused(msg.sender)` and `Unpaused(msg.sender)` events (OpenZeppelin does this automatically).
+
+**When to pause**: Detected exploit, dependency failure (e.g., payment oracle offline), coordinated attack on whitelist. **When NOT to pause**: User complaints about gas fees, marketplace listing issues, FUD on Twitter. Pausing is a crisis tool, not a customer service feature.
+
+**Testing**: Write tests that call `pause()`, then verify minting reverts with `Pausable: paused` error. Verify transfers still work when paused. Verify only authorized role can pause.
+
+### Reentrancy in ERC721: when to worry
+
+Pure ERC721 (no payment, no external calls beyond `_safeMint`) has minimal reentrancy risk. **Where risk appears**: Payable mint functions (`mint() payable`), NFT sales with royalty payments, callbacks to external contracts (`onERC721Received`).
+
+**Attack vector**: User mints an NFT, your contract calls `_safeMint`, which calls `onERC721Received` on the user's malicious contract, which re-enters your mint function before state is finalized. If you haven't updated `_nextId` or marked the user's payment, they can double-mint.
+
+**Defense**: CEI discipline (Checks → Effects → Interactions) + `ReentrancyGuard`. Update all state (`_nextId++`, `balances[msg.sender] -= amount`) before calling `_safeMint`. Add `nonReentrant` modifier to any payable or state-changing function.
+
+**When to skip ReentrancyGuard**: Free mints with no payment, no callbacks, no external calls. Saves ~2-5k gas but only safe if you're certain there's no reentrancy path.
+
+### Event-driven transparency for admin actions
+
+Every privileged action should emit an event: `RoleGranted`, `RoleRevoked`, `Paused`, `Unpaused`, `BaseURIUpdated`, `Revealed`. Events are your public audit log; users and indexers subscribe to them to detect rug pulls or unauthorized changes.
+
+**Pattern**: `event BaseURIUpdated(string oldURI, string newURI, address indexed updater);`. Include old and new values, indexed subjects (who did it), timestamps (block.timestamp is implicit in event logs).
+
+**Why this matters**: If the baseURI suddenly changes from IPFS to a centralized server (rug pull), users see the `BaseURIUpdated` event and can exit before metadata is swapped. Transparency builds trust; hidden admin actions destroy it.
+
+**Test coverage**: For every admin function, assert the correct event is emitted with expected args. Use Hardhat's `expect(...).to.emit(contract, "EventName").withArgs(...)`.
+
+### Supply caps and immutable parameters
+
+**Supply cap**: `MAX_SUPPLY` constant or immutable variable set in constructor. Once deployed, it can't be changed—trustless guarantee to collectors. Compare to a mutable `maxSupply` state variable that the owner can increase later (dilutes rarity, breaks trust).
+
+**Pattern**: `uint256 public immutable MAX_SUPPLY;` set in `constructor(uint256 _maxSupply) { MAX_SUPPLY = _maxSupply; }`. Immutable saves gas (cheaper to read than storage) and signals permanence.
+
+**Other immutable parameters**: `MINT_PRICE`, `REVEAL_TIMESTAMP`, `WHITELIST_MERKLE_ROOT` (if you commit to a fixed whitelist at deploy). **Mutable parameters**: `baseURI` (for reveals), `paused` state, role assignments.
+
+**Rule**: Anything that affects scarcity or economics should be immutable unless you have a strong reason (and document it). Collectors rely on these promises.
+
+### Role separation and principle of least privilege
+
+**Principle**: Each role should have the minimum permissions needed for its job. Minters mint, pausers pause, admins manage roles. No one role should be able to do everything except `DEFAULT_ADMIN_ROLE`, and even that should be a multisig or timelock for high-value collections.
+
+**Example role matrix**:
+| Role | Can Mint | Can Pause | Can Set BaseURI | Can Withdraw Funds | Can Grant Roles |
+|------|----------|-----------|-----------------|--------------------|--------------------|
+| `MINTER_ROLE` | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `PAUSER_ROLE` | ❌ | ✅ | ❌ | ❌ | ❌ |
+| `DEFAULT_ADMIN_ROLE` | ❌ | ❌ | ✅ | ✅ | ✅ |
+
+**Why**: If the minter's key is compromised, attacker can only mint (capped by `MAX_SUPPLY`). They can't pause the contract, change metadata, or steal funds. Limit blast radius.
+
+**Implementation**: Define roles as `bytes32 public constant ROLE_NAME = keccak256("ROLE_NAME");`. Grant roles in constructor. Protect functions with `onlyRole(ROLE_NAME)`. Test that unauthorized users can't call protected functions.
+
+## Guided code walk-throughs
+
+These examples show how to implement secure access control and pausability for NFT collections.
+
+### 1) Multi-role AccessControl with separated duties
+
+This contract uses OpenZeppelin's `AccessControl` to separate minting, pausing, and admin powers. The deployer gets `DEFAULT_ADMIN_ROLE` and can grant other roles to specific addresses. Note that `MINTER_ROLE` can't grant roles or pause—limiting blast radius.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract JungleNFT is ERC721, AccessControl {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    
+    uint256 private _nextId;
+    uint256 public immutable MAX_SUPPLY;
+
+    error ExceedsMaxSupply();
+    
+    event MinterGranted(address indexed minter);
+    event MinterRevoked(address indexed minter);
+
+    constructor(uint256 maxSupply) ERC721("JungleNFT", "JNFT") {
+        MAX_SUPPLY = maxSupply;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    function mint(address to) external onlyRole(MINTER_ROLE) {
+        if (_nextId >= MAX_SUPPLY) revert ExceedsMaxSupply();
+        _safeMint(to, _nextId++);
+    }
+
+    /// @notice Admin grants minter role
+    function grantMinter(address minter) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _grantRole(MINTER_ROLE, minter);
+        emit MinterGranted(minter);
+    }
+
+    /// @dev Required override for AccessControl + ERC721 compatibility
+    function supportsInterface(bytes4 interfaceId) 
+        public 
+        view 
+        override(ERC721, AccessControl) 
+        returns (bool) 
+    {
+        return super.supportsInterface(interfaceId);
+    }
+}
+```
+
+**Takeaway**: Split responsibilities—admins manage roles, minters mint, pausers pause. For Module 3's deployment, you'll grant `MINTER_ROLE` to a whitelist contract and `DEFAULT_ADMIN_ROLE` to a multisig, ensuring no single EOA has total control. Test that unauthorized addresses can't call `mint()` and that role grants emit events.
+
+### 2) Pausable mint with emergency circuit breaker
+
+This example adds `Pausable` to halt minting during incidents. Critically, transfers are NOT paused—users can always move their NFTs. Only the `PAUSER_ROLE` can pause/unpause. The pattern protects against exploits while preserving user liquidity.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract PausableJungleNFT is ERC721, Pausable, AccessControl {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    uint256 private _nextId;
+
+    constructor() ERC721("Jungle", "JNFT") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    /// @notice Mint when not paused; minters only
+    function mint(address to) external onlyRole(MINTER_ROLE) whenNotPaused {
+        _safeMint(to, _nextId++);
+    }
+
+    /// @notice Emergency pause (minting only, not transfers)
+    function pause() external onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    /// @notice Resume minting after incident resolved
+    function unpause() external onlyRole(PAUSER_ROLE) {
+        _unpause();
+    }
+
+    /// @dev ERC721 transfers are NOT paused; users keep liquidity
+    function _update(address to, uint256 tokenId, address auth)
+        internal
+        override
+        returns (address)
+    {
+        // Transfers bypass pausability; only mint is paused
+        return super._update(to, tokenId, auth);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, AccessControl)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+}
+```
+
+**Takeaway**: Circuit breakers give you time to respond without locking user assets. Test that minting reverts when paused but transfers succeed. For production, grant `PAUSER_ROLE` to multiple trusted addresses (multisig + 1-2 EOAs) so you can respond quickly even if one key is unavailable.
+
+### 3) Reentrancy protection for payable mints
+
+When your mint function accepts ETH, combine CEI, `ReentrancyGuard`, and careful payment validation. This example shows safe handling: check payment, update state, then call `_safeMint` (which triggers `onERC721Received`). The `nonReentrant` modifier blocks re-entry even if CEI is violated elsewhere.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract PayableJungleNFT is ERC721, ReentrancyGuard, Ownable {
+    uint256 private _nextId;
+    uint256 public constant MINT_PRICE = 0.05 ether;
+    uint256 public immutable MAX_SUPPLY = 10_000;
+
+    error IncorrectPayment(uint256 sent, uint256 required);
+    error ExceedsMaxSupply();
+
+    constructor(address owner_) ERC721("Jungle", "JNFT") Ownable(owner_) {}
+
+    /// @notice Public mint with payment; CEI + nonReentrant
+    function mint(uint256 qty) external payable nonReentrant {
+        uint256 cost = MINT_PRICE * qty;
+        if (msg.value != cost) revert IncorrectPayment(msg.value, cost); // Checks
+        if (_nextId + qty > MAX_SUPPLY) revert ExceedsMaxSupply();
+
+        // Effects: update state before external calls
+        uint256 startId = _nextId;
+        _nextId += qty;
+
+        // Interactions: calls onERC721Received, but state is already updated
+        for (uint256 i = 0; i < qty; i++) {
+            _safeMint(msg.sender, startId + i);
+        }
+    }
+
+    /// @notice Owner withdraws proceeds; pull pattern
+    function withdraw() external onlyOwner {
+        payable(owner()).transfer(address(this).balance);
+    }
+}
+```
+
+**Takeaway**: Payable mints need `nonReentrant` + CEI. Update `_nextId` before calling `_safeMint` to prevent double-minting via reentrancy. Test with a malicious receiver contract that tries to re-enter `mint()` during `onERC721Received`—should revert with "ReentrancyGuard: reentrant call". For Module 3, you'll add Merkle proof verification to this pattern for whitelist phases.
+
+## Practice and reflection
+
+Apply access control principles to your NFT collection design:
+
+- **Role matrix design**: Create a table with columns: Role, Can Mint, Can Pause, Can Set BaseURI, Can Withdraw Funds, Can Grant Roles. Fill in rows for `MINTER_ROLE`, `PAUSER_ROLE`, `DEFAULT_ADMIN_ROLE`. For each role, justify why it has (or doesn't have) each permission.
+- **Negative testing**: For each privileged function (`mint`, `pause`, `setBaseURI`), write a test case where an unauthorized address (no role) tries to call it. Verify the transaction reverts with the correct error (e.g., `AccessControl: account 0x... is missing role ...`).
+- **Pausability scope**: List which functions in your NFT contract should be pausable (hint: minting, reveals) and which should NEVER be pausable (hint: transfers, withdrawals). Write one sentence explaining why transfers must remain active even during paused state.
+- **Immutability audit**: Review your contract's parameters. Which should be `immutable` or `constant` (`MAX_SUPPLY`, `MINT_PRICE`) and which should be mutable state variables (`baseURI`, `paused`)? For each mutable parameter, document who can change it and what event is emitted.
+- **Reentrancy attack scenario**: Sketch a malicious contract that implements `onERC721Received` and tries to call your `mint()` function again. Explain why CEI discipline prevents the attack even without `ReentrancyGuard`, and why adding `nonReentrant` is still good defense-in-depth.
+- **Multisig deployment strategy**: For a high-value collection (10k NFTs × 0.1 ETH = 1000 ETH proceeds), would you use an EOA or multisig for `DEFAULT_ADMIN_ROLE`? Write two sentences defending your choice, considering the trade-offs (security vs operational complexity).
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"s1","text":"It's safer to use one role for everything","correctAnswer":false,"explanation":"Split duties to reduce blast radius. If one key is compromised, attacker gains limited power."},
+  {"id":"s2","text":"Pausing mint flows can buy time during incidents","correctAnswer":true,"explanation":"Circuit breakers let you halt minting while investigating bugs without locking user assets."},
+  {"id":"s3","text":"Transfers should be pausable to protect users during exploits","correctAnswer":false,"explanation":"Never pause transfers; users must always be able to exit or sell. Only pause minting."},
+  {"id":"s4","text":"ReentrancyGuard is unnecessary if you follow CEI discipline","correctAnswer":false,"explanation":"CEI is primary defense, but nonReentrant adds defense-in-depth. Both together is best practice."}
+]}/>
+
+Short reflection: If your contract's `PAUSER_ROLE` key is lost (device failure, forgotten password), and you need to pause minting during an incident, what's your recovery plan? Write two sentences considering role redundancy and emergency response.
+
+## Security and pitfalls
+
+Access control and pausability are your first line of defense against exploits. Follow these patterns to avoid common pitfalls:
+
+### Unauthorized access and role bypass
+
+**Danger**: Forgetting access control modifiers on privileged functions. Example: `function mint(address to)` without `onlyRole(MINTER_ROLE)` lets anyone mint unlimited tokens. Or using `msg.sender == owner` instead of `onlyOwner`, which breaks if you transfer ownership.
+
+**Mitigation**: Use modifiers consistently: `onlyOwner`, `onlyRole(ROLE_NAME)`, `whenNotPaused`. Write negative tests that call each privileged function from unauthorized addresses (expect revert). Include these tests in CI to catch regressions.
+
+**Rule**: Every privileged function must have an access control modifier. No exceptions. If a function changes state and only certain roles should call it, guard it explicitly.
+
+### Pausing transfers destroys user trust
+
+**Danger**: Adding `whenNotPaused` to `transferFrom` or `safeTransferFrom`. If minting is paused due to a bug, users panic and rush to sell. If transfers are also paused, they're trapped. Trust evaporates, floor price crashes, project is labeled a rug pull.
+
+**Mitigation**: Only pause minting and reveals. Never pause transfers or approvals. Override `_update` (in modern OpenZeppelin ERC721) to bypass pausability: `function _update(...) internal override returns (address) { return super._update(...); }` (no `whenNotPaused`).
+
+**Rule**: Pausability is for operational functions (mint, reveal, claim), never for user-to-user transfers. Test that paused state doesn't block transfers.
+
+### Role renunciation and lockouts
+
+**Danger**: Renouncing `DEFAULT_ADMIN_ROLE` without granting it to another address first. Or granting admin to a contract without an escape hatch. Example: `renounceRole(DEFAULT_ADMIN_ROLE, msg.sender)` when you're the only admin—now no one can manage roles, and the contract is frozen.
+
+**Mitigation**: If you want trustless governance (no admin), renounce roles only after all minting/reveals are complete and contract is feature-complete. Otherwise, always have a backup admin (multisig, timelock, DAO). For critical changes, emit events before renunciation.
+
+**Rule**: Never renounce the last admin role unless you intend permanent immutability. Document your admin strategy in contract comments and external docs.
+
+### Reentrancy in edge cases
+
+**Danger**: Assuming `_safeMint` can't re-enter because "it's just ERC721." But if the recipient is a malicious contract, `onERC721Received` can call back into your mint function. If you haven't updated `_nextId` yet, they mint twice with one payment.
+
+**Mitigation**: Always follow CEI: update `_nextId` and balances before calling `_safeMint`. Add `nonReentrant` to any payable or state-changing function that calls external code. Test with a malicious receiver that tries to re-enter.
+
+**Rule**: Any function that calls external code (including `_safeMint`) needs CEI discipline. If it's payable or moves value, add `nonReentrant`. Don't assume safety; prove it with tests.
+
+### Event manipulation and missing transparency
+
+**Danger**: Changing critical parameters (baseURI, supply cap, roles) without emitting events. Users and indexers can't detect rug pulls. Or emitting events without `indexed` subjects, making off-chain filtering impossible.
+
+**Mitigation**: Define custom events for every admin action: `event BaseURIUpdated(string oldURI, string newURI, address indexed updater);`. Include old and new values, indexed subjects (who did it). Emit before or after the change (document which). Test that events are emitted with correct args.
+
+**Rule**: If a function is access-controlled, it should emit an event. If the event tracks a subject (user, token, role), make it `indexed`. Users trust transparency; hidden changes are assumed malicious.
+
+### Supply cap violations
+
+**Danger**: Checking `_nextId < MAX_SUPPLY` after minting instead of before. Or using `<` when you mean `<=`, causing off-by-one errors. Example: `MAX_SUPPLY = 10000`, last valid tokenId is 9999, but you allow minting at `_nextId = 10000`.
+
+**Mitigation**: Check `_nextId + quantity <= MAX_SUPPLY` before any mint logic. Use `<=` to make the boundary inclusive. Write boundary tests: mint at `_nextId = MAX_SUPPLY - 1` (should succeed), mint at `_nextId = MAX_SUPPLY` (should revert).
+
+**Rule**: Supply caps are immutable promises. Enforce them strictly in code and prove correctness with boundary tests. No off-by-one errors tolerated.
+
+## Security checklist
+
+Before deploying your access-controlled NFT contract:
+
+- [ ] **Access modifiers applied**: Every privileged function has `onlyOwner`, `onlyRole(ROLE_NAME)`, or `whenNotPaused` modifier
+- [ ] **Negative tests written**: Each privileged function tested with unauthorized caller; verified revert with correct error message
+- [ ] **Role separation enforced**: `MINTER_ROLE`, `PAUSER_ROLE`, `DEFAULT_ADMIN_ROLE` defined; each role has minimal permissions for its job
+- [ ] **Pause scope limited**: Only minting and reveals are pausable; transfers and withdrawals are NEVER paused (tested)
+- [ ] **Transfer pausability tested**: While paused, verify `transferFrom` and `safeTransferFrom` still succeed (users can exit)
+- [ ] **Admin role redundancy**: `DEFAULT_ADMIN_ROLE` granted to multisig or multiple trusted addresses (not single EOA for high-value collections)
+- [ ] **Role renunciation strategy**: Document when/if roles will be renounced; never renounce last admin unless intentionally immutable
+- [ ] **Events for admin actions**: Role grants, revokes, pauses, unpauses, baseURI changes all emit events with indexed subjects
+- [ ] **Reentrancy protection**: Payable mint functions have `nonReentrant` modifier; CEI discipline followed (state updated before `_safeMint`)
+- [ ] **Reentrancy test**: Malicious receiver contract tries to re-enter mint during `onERC721Received`; verified transaction reverts
+- [ ] **Supply cap enforcement**: `_nextId + quantity <= MAX_SUPPLY` checked before minting; boundary tested (`_nextId = MAX_SUPPLY - 1` succeeds, `= MAX_SUPPLY` reverts)
+- [ ] **Immutability audit**: Critical parameters (`MAX_SUPPLY`, `MINT_PRICE`) are `immutable` or `constant`; mutable params documented with who can change + events emitted
+- [ ] **supportsInterface override**: If using AccessControl + ERC721, `supportsInterface` correctly overrides both (tested with ERC165 checker)
+- [ ] **Payment validation**: If payable, `msg.value` checked against expected cost; tested with exact, under, and over payment scenarios
+
+## Wrap-up and next steps
+
+You've learned how to secure NFT contracts with role-based access control, emergency pausability, and reentrancy protection. You understand when to use `Ownable` vs `AccessControl`, how to separate duties to limit blast radius, and which functions should never be pausable (transfers, withdrawals). You've seen how to emit events for transparency, enforce supply caps with boundary testing, and protect payable mints with CEI + `ReentrancyGuard`.
+
+The key takeaways for NFT security:
+
+1. **Separation of duties**: Each role has minimal permissions; compromised key = limited damage.
+2. **Pausability for operations only**: Pause minting, not transfers. Users must always be able to exit.
+3. **Defense in depth**: CEI discipline + `nonReentrant` + negative tests = robust protection.
+4. **Transparency via events**: Every admin action emits an event; users can monitor and verify.
+5. **Immutability for trust**: Critical parameters (`MAX_SUPPLY`) are immutable promises; document mutable ones.
+
+Combined with the ERC721 core (Lesson 1) and gas-efficient minting (Lesson 2), you now have a complete toolkit for production-ready NFT collections. You've covered the full spectrum: standard compliance, cost optimization, and security hardening. These three lessons form the foundation for Module 2's advanced features (metadata standards, IPFS integration, reveals, royalties) and Module 3's practical deployment.
+
+In Module 3, you'll deploy a full NFT collection to Zilliqa testnet with multi-phase minting (whitelist + public), Merkle proof verification, IPFS metadata, EIP-2981 royalties, and emergency pause controls. You'll use `AccessControl` to grant `MINTER_ROLE` to a whitelist verifier contract, `PAUSER_ROLE` to a monitoring multisig, and `DEFAULT_ADMIN_ROLE` to a treasury multisig. The security patterns you've learned here will protect that deployment from unauthorized minting, reentrancy attacks, and metadata rug pulls—making your collection trustworthy and audit-ready.
+

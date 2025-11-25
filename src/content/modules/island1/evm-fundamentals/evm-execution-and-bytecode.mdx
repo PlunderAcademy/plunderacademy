@@ -1,0 +1,127 @@
+---
+id: evm-execution-and-bytecode
+module: evm-fundamentals
+number: 2.2
+title: Understanding EVM Execution and Bytecode
+objective: >-
+  Learn how Solidity contracts are compiled into bytecode and executed by the
+  EVM.
+slug: evm-execution-and-bytecode
+---
+
+## The Universal Translator
+
+When you write a smart contract, you write in **Solidity** (or maybe Vyper). It looks like JavaScript or C++—it has variables, functions, and readable logic. But the EVM doesn't speak Solidity. In fact, the EVM doesn't speak any human language at all.
+
+The EVM speaks **Bytecode**.
+
+Bytecode is a stream of hexadecimal numbers that looks like gibberish to us (`0x6080604052...`), but it is poetry to the machine. Before your code can run on the blockchain, it must go through a rigorous transformation process called **Compilation**.
+
+### From Human to Machine: The Compilation Journey
+
+Think of compilation as a translation service that takes your vague human instructions and turns them into a precise military checklist. This isn't a single step; it's a pipeline:
+
+1.  **Lexical Analysis (Tokenization):** The compiler reads your code character by character. It groups them into "tokens"—keywords like `contract`, identifiers like `myVariable`, and symbols like `{`.
+2.  **Syntax Analysis (Parsing):** It checks if your sentence structure is valid. Did you forget a semicolon? Did you try to multiply a string by a number? If so, it throws an error here. It builds an "Abstract Syntax Tree" (AST)—a tree-like structure representing the logic of your program.
+3.  **Semantic Analysis:** This checks for meaning. Does the variable `x` actually exist? Are you allowed to call this private function?
+4.  **Code Generation:** Finally, it translates that tree into the raw **Opcodes** (Operation Codes) of the EVM.
+
+The output is two critical files:
+*   **Bytecode:** The actual hex string that gets deployed.
+*   **ABI (Application Binary Interface):** This is the instruction manual for the outside world. It tells your frontend (or other contracts) exactly how to talk to your bytecode. It's like a menu at a restaurant—it lists the dishes (functions) and the ingredients (parameters) required to order them.
+
+### The Clockwork Execution
+
+Once your bytecode is on the chain, how does it run?
+
+Imagine the EVM is a **Master Chef** in a high-stakes kitchen.
+*   The **Bytecode** is the **Recipe**.
+*   The **Program Counter (PC)** is the Chef's **Finger**.
+
+The Chef puts their finger on the first line of the recipe. They read the instruction. They perform it. They move their finger to the next line. This happens in a loop called the **Execution Cycle**:
+
+1.  **Fetch:** The EVM reads the Opcode at the current PC (Program Counter).
+2.  **Decode:** It looks up what that Opcode means. Is `0x01` an ADD? Is `0x55` an SSTORE?
+3.  **Execute:** It performs the action (e.g., popping numbers from the stack, writing to storage).
+4.  **Update:** It advances the PC and deducts the Gas cost.
+
+This cycle repeats—Fetch, Decode, Execute—thousands of times per second. The Chef never skips a line unless the recipe tells them to (`JUMP` or `JUMPI`). They never improvise. They follow the instructions exactly as written, step by step, until the dish is done or they run out of gas.
+
+### Common Opcodes: The Vocabulary of the EVM
+
+The "Recipe" is written using a specific vocabulary of about 140 instructions. Here are a few you should recognize:
+
+*   **Arithmetic:** `ADD`, `SUB`, `MUL`, `DIV` (Basic math).
+*   **Stack:** `PUSH1` (Put data on stack), `POP` (Remove data), `DUP1` (Duplicate top item).
+*   **Memory:** `MLOAD` (Read from memory), `MSTORE` (Write to memory).
+*   **Storage:** `SLOAD` (Read from permanent storage), `SSTORE` (Write to permanent storage).
+*   **Control Flow:** `JUMP` (Go to line X), `JUMPI` (Go to line X *if* condition is true), `REVERT` (Stop and undo everything).
+
+## The Kitchen Layout: Stack, Memory, and Storage
+
+A Chef needs space to work. The EVM has three distinct areas where it can keep data. Understanding the difference is critical because they have vastly different costs and lifetimes.
+
+### 1. The Stack (The Hands)
+This is the Chef's immediate workspace. They can hold a few items in their hands. It's incredibly fast to work with what you are holding, but you can only hold so much.
+*   **Characteristics:** Max depth of 1024 items. Last-In, First-Out.
+*   **Lifetime:** Transient. Cleared as soon as the function finishes.
+*   **Cost:** Very cheap (3 gas for most operations).
+
+### 2. Memory (The Countertop)
+This is the prep table. The Chef can chop vegetables here, mix sauces, and arrange plates. It's bigger than their hands, but it's still temporary.
+*   **Characteristics:** A linear byte array. You can read/write anywhere.
+*   **Lifetime:** Temporary. It exists only for the duration of the transaction. Once the transaction ends, the memory is wiped clean.
+*   **Cost:** Moderate. It costs gas to expand the memory (the more countertop you use, the more you pay).
+
+### 3. Storage (The Pantry)
+This is the walk-in freezer or the locked pantry. This is where the restaurant keeps its long-term inventory. If you put a bag of flour here, it will still be there tomorrow, next week, or in ten years.
+*   **Characteristics:** A massive key-value store mapping 256-bit keys to 256-bit values.
+*   **Lifetime:** **Permanent.** This data is written to the blockchain itself.
+*   **Cost:** **Extremely Expensive.** Writing to storage (`SSTORE`) costs 20,000 gas for a new value. Reading (`SLOAD`) costs 2,100 gas (for a "cold" read).
+
+Why is Storage so expensive? Because every single node in the network—thousands of computers—must update their hard drives to record your data. You are renting space on the World Computer forever.
+
+### 4. Call Data (The Order Ticket)
+There is one more space: **Call Data**. This is the input for the function call. It is read-only. Think of it like the ticket printing out in the kitchen. The Chef can read the order ("Table 4 wants the Pasta"), but they cannot write on the ticket or change the order.
+
+<MemoryLayoutVisualizer />
+
+### Advanced Execution: Events, Logs, and Reverts
+
+Smart contracts don't just calculate; they communicate.
+
+**Events and Logs:**
+When a transfer happens, how does your wallet know to show a new balance? The contract emits an **Event**.
+`emit Transfer(from, to, amount);`
+This creates a "Log" entry. Logs are cheaper than Storage because contracts cannot read them. They are designed strictly for the outside world (frontends, indexers) to listen to.
+
+**Error Handling (Reverts):**
+What happens if you try to send money you don't have? The contract executes a `require` statement. If this fails, the EVM hits the `REVERT` opcode.
+This is the "Time Travel" button.
+*   The execution stops immediately.
+*   **Every state change made during the transaction is undone.**
+*   The transaction is recorded on the blockchain as "Failed."
+*   You still pay for the Gas used up to that point (the Chef did the work, even if the dish was thrown out).
+
+### An Execution Example: 2 + 2
+
+Let's trace a simple function: `function add(uint a, uint b)`.
+1.  **Setup:** The inputs `a` and `b` are loaded into **Call Data**.
+2.  **Load:** The EVM uses `CALLDATALOAD` to copy `a` onto the Stack. It repeats this for `b`.
+3.  **Compute:** It runs `ADD`. It pops `a` and `b`, calculates the sum, and pushes the result back.
+4.  **Return:** It uses `MSTORE` to put the result into Memory, then `RETURN` to tell the user "The answer is at this memory location."
+
+This dance of moving data from Input -> Stack -> Memory -> Output is the heartbeat of every smart contract.
+
+## 🎮 Interactive Practice
+
+Can you arrange the steps of the Compilation and Execution process in the correct order?
+
+<DragDropPuzzle codeBlocks={[
+  {"id": "step1", "content": "1. Write Solidity Source Code", "correctPosition": 0},
+  {"id": "step2", "content": "2. Compiler generates AST (Abstract Syntax Tree)", "correctPosition": 1},
+  {"id": "step3", "content": "3. Generate Bytecode & ABI", "correctPosition": 2},
+  {"id": "step4", "content": "4. EVM Fetches Instruction at Program Counter", "correctPosition": 3},
+  {"id": "step5", "content": "5. Decode Opcode", "correctPosition": 4},
+  {"id": "step6", "content": "6. Execute Instruction (Modify Stack/Memory/State)", "correctPosition": 5}
+]} />

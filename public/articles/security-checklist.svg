@@ -1,0 +1,21 @@
+<svg width="800" height="320" viewBox="0 0 800 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="320" rx="16" fill="#F5F7FA"/>
+  <text x="24" y="36" font-family="sans-serif" font-size="18" fill="#111827">Security Checklist</text>
+  <g transform="translate(24,64)">
+    <rect width="736" height="40" rx="10" fill="#D1FAE5" stroke="#10B981"/>
+    <text x="16" y="26" font-family="sans-serif" font-size="14" fill="#065F46">Access control & pausability</text>
+  </g>
+  <g transform="translate(24,116)">
+    <rect width="736" height="40" rx="10" fill="#DBEAFE" stroke="#2563EB"/>
+    <text x="16" y="26" font-family="sans-serif" font-size="14" fill="#1E40AF">Reentrancy guards</text>
+  </g>
+  <g transform="translate(24,168)">
+    <rect width="736" height="40" rx="10" fill="#FDE68A" stroke="#D97706"/>
+    <text x="16" y="26" font-family="sans-serif" font-size="14" fill="#7C2D12">Checks-Effects-Interactions</text>
+  </g>
+  <g transform="translate(24,220)">
+    <rect width="736" height="40" rx="10" fill="#FECACA" stroke="#DC2626"/>
+    <text x="16" y="26" font-family="sans-serif" font-size="14" fill="#7F1D1D">Oracle validation</text>
+  </g>
+</svg>
+

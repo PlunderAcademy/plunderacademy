@@ -1,0 +1,452 @@
+---
+slug: island1-glossary
+title: "Island 1 Glossary: Blockchain and EVM Development"
+excerpt: Comprehensive glossary of essential blockchain, EVM, and Solidity terminology for developers learning on Zilliqa and Ethereum-compatible networks.
+level: beginner
+tags:
+  - glossary
+  - terminology
+  - blockchain
+  - evm
+  - solidity
+---
+
+## Introduction
+
+This glossary covers terminology introduced in **Island 1: Blockchain Fundamentals and EVM Development**. As you progress through Island 1's five learning modules, you'll encounter these essential terms:
+
+**Module 1 - Blockchain Fundamentals:** blockchain, decentralization, consensus, nodes, transactions, and network architecture  
+**Module 2 - EVM Fundamentals:** virtual machines, gas, bytecode, smart contract execution, and the contract lifecycle  
+**Module 3 - Solidity Fundamentals:** programming syntax, data structures, functions, visibility, and error handling  
+**Module 4 - ERC-20 Tokens:** token standards, minting, burning, allowances, and token economics  
+**Module 5 - Zilliqa Setup:** wallets, networks, testnets, RPC connections, and development tools
+
+Whether you're completely new to coding or just starting your blockchain journey, these definitions use simple language and real-world examples to build your understanding progressively. Terms are organized alphabetically for easy reference.
+
+---
+
+## A
+
+### Address
+A unique identifier on the blockchain, similar to a bank account number. Addresses are 42 characters long, starting with `0x`, and represent either a user's wallet or a smart contract. Example: `0x742d35Cc6565C42d26A7b4b4c6d3A5c5c5d4e4F4`
+
+### ABI (Application Binary Interface)
+Think of an ABI like a menu at a restaurant. It tells you what functions (like "dishes") are available in a smart contract, what information you need to provide (parameters), and what you'll get back (return values). It's a file that helps applications understand how to talk to a smart contract correctly.
+
+### Approval
+Like giving someone permission to use your credit card, approval lets you authorize another address (like a decentralized exchange) to spend your tokens. You must approve before they can transfer tokens from your account.
+
+### Allowance
+The specific amount of tokens that one address is permitted to spend on behalf of another address. For example, if you approve a decentralized exchange to spend 100 tokens, your allowance for that exchange is 100. The exchange can spend up to that amount but no more. This is checked using the `allowance()` function in ERC-20 tokens.
+
+### Array
+An ordered list of items stored together, like a numbered row of boxes where each box holds a value. Arrays are useful when you need to store multiple items of the same type and access them by position (like "get the 3rd item"). Unlike mappings, you can loop through all items in an array, but arrays can be more expensive to use.
+
+---
+
+## B
+
+### Block
+A container that holds multiple transactions. Each block is cryptographically linked to the previous block, forming an unbreakable chain. Blocks are created at regular intervals (e.g., every 1 second on Zilliqa, ~12 seconds on Ethereum).
+
+### Block Explorer
+A website that lets you look up anything on the blockchain, like a search engine for blockchain data. You can see all transactions, check wallet balances, view smart contracts, and see network activity. Examples include Blockscout (for Zilliqa) and Etherscan (for Ethereum).
+
+### Blockchain
+A digital record book that's stored on thousands of computers around the world instead of one central location. Think of it like a shared Google Doc that everyone has a copy of, but once something is written, it can't be erased. This makes it very secure and transparent.
+
+### Block Time
+The average time it takes to create a new block on the blockchain. Zilliqa has 1-second block times, while Ethereum has ~12-second block times.
+
+### Bytecode
+When you write code in Solidity (which humans can read), it gets converted into bytecode (which only computers can read). Think of it like translating a book into a secret code that machines understand. This bytecode is what actually runs on the blockchain.
+
+### Burnable
+A feature that allows tokens to be permanently destroyed, reducing the total supply. Like throwing money into a fire - once burned, those tokens can never be recovered or used again. Token creators might enable burning to create scarcity, remove tokens from circulation, or as part of specific economic mechanisms.
+
+### Byzantine Fault Tolerance (BFT)
+The ability of a blockchain network to continue operating correctly even when some participants are acting dishonestly or sending conflicting information. Named after the "Byzantine Generals Problem" in computer science, it ensures the network can reach consensus even if some nodes fail or act maliciously.
+
+---
+
+## C
+
+### Consensus Layer
+The part of the blockchain that handles how all nodes agree on what transactions are valid and in what order. It's the "voting system" layer that ensures everyone has the same version of truth, using mechanisms like Proof of Stake or Proof of Work.
+
+### Consensus Mechanism
+The way all computers on a blockchain network agree on what's true. It's like a voting system where everyone must agree before a new transaction is added to the record book. Different blockchains use different methods, like Proof of Work, Proof of Stake, or Zilliqa's fast consensus method.
+
+### Contract Deployment
+Putting your smart contract code onto the blockchain so it can be used. Like publishing a website - once deployed, your contract gets its own address and lives permanently on the network where anyone can interact with it.
+
+### Cryptocurrency
+Digital money that exists only on computers and uses special math (cryptography) to keep it secure. Examples include ZIL (Zilliqa's currency), ETH (Ethereum's currency), and BTC (Bitcoin).
+
+---
+
+## D
+
+### dApp (Decentralized Application)
+A regular app (like a game or social media platform) that runs on the blockchain instead of a company's servers. This means no single company controls it, and it keeps working even if some computers go offline. You interact with dApps through a web browser, just like regular websites.
+
+### Decentralization
+Instead of one person or company being in charge, control is spread across many independent computers. Like Wikipedia (where anyone can edit) versus a traditional encyclopedia (controlled by one company). This means no single person can shut down or control the blockchain.
+
+### Decimals
+How many decimal places a token can be divided into. Most tokens use 18 decimals, which means you can have very tiny fractions of a token. Think of it like cents in a dollar, but much more precise - you could send someone 0.000000000000000001 tokens if needed.
+
+### Deterministic Execution
+This means if you run the same smart contract code with the same inputs, you'll always get the exact same result, no matter which computer runs it or when. It's like a math problem - 2 + 2 always equals 4, everywhere and always. This is crucial so all computers on the network agree.
+
+---
+
+## E
+
+### ERC-20
+A set of rules that all regular tokens follow, like a universal standard. Just like all USB cables work the same way, all ERC-20 tokens work the same way. This means any ERC-20 token can be stored in any wallet, traded on any exchange, and used in any app that supports the standard.
+
+### ERC-721
+A set of rules for creating NFTs (non-fungible tokens). Unlike regular tokens where one is the same as another, each ERC-721 token is unique, like a trading card or a piece of art. You can't split an NFT in half - you either own the whole thing or you don't.
+
+### Ethereum Virtual Machine (EVM)
+Think of the EVM as a universal computer that exists on thousands of computers around the world. It runs smart contract code the same way everywhere, regardless of what type of computer it's running on. This means code written for Ethereum also works on Zilliqa and other compatible blockchains.
+
+### Event
+Like a notification or log entry that a smart contract sends out when something happens. For example, when tokens are transferred, the contract "emits" an event saying "Alice sent 10 tokens to Bob." Apps can listen for these events to track what's happening, and they're cheaper than storing all the details directly on the blockchain.
+
+### Execution Layer
+The part of the blockchain that actually runs the code. When you swap tokens, mint an NFT, or interact with a dApp, the execution layer processes those actions. Think of it as the "engine" that makes everything work - it's where smart contracts execute and state changes happen.
+
+### External
+A visibility level for Solidity functions that means the function can only be called from outside the contract (by users or other contracts), not from within the contract itself. External functions are slightly more gas-efficient than public functions when receiving large amounts of data.
+
+---
+
+## F
+
+### Faucet
+A website or service that gives away free testnet cryptocurrency so developers can test their applications without spending real money. Like a water fountain but for test tokens - you just request some and it sends testnet ZIL to your wallet. These tokens have no real value and only work on test networks.
+
+### Finality
+The point when you know for certain that a transaction is permanent and can't be undone or reversed. On Zilliqa, this happens very quickly (about 1 second), while on Ethereum it takes longer and requires multiple confirmations to be sure. Once finality is reached, you can trust the transaction is completed.
+
+### Fork
+When a blockchain splits into two separate chains, creating two different versions of the history. Like a fork in a road that splits into two paths. Forks can be planned (upgrades) or unplanned (disagreements in the community). Each path continues independently with its own transactions and blocks.
+
+### Function
+A specific action or task that a smart contract can perform. Think of it like a button on a vending machine - each button does something different. Some functions just look up information (like checking your balance), while others actually change things (like transferring tokens).
+
+---
+
+## G
+
+### Gas
+The "fuel" that powers transactions on the blockchain. Every action costs a certain amount of gas, and you pay for it with cryptocurrency. This prevents people from running programs that never stop and ensures everyone pays their fair share for using the network.
+
+### Gas Limit
+The maximum amount you're willing to pay for a transaction, like setting a spending limit on a purchase. If your transaction needs more gas than your limit, it will fail, but you'll still pay for the gas that was used before it failed.
+
+### Gas Price
+How much you're willing to pay for each unit of gas. Like bidding in an auction - if you offer a higher price, your transaction gets processed faster. Your total cost equals how much gas you used times the price you paid per unit.
+
+### Gas Used
+The actual amount of gas your transaction needed. This might be less than your gas limit - you only pay for what you actually use, like only paying for the gas your car actually burned, not the full tank.
+
+### Gwei
+A tiny unit of cryptocurrency. Just like cents are smaller than dollars, gwei is much smaller than ETH or ZIL. One gwei equals 0.000000001 ETH or ZIL. Gas prices are usually shown in gwei because the numbers are easier to work with.
+
+---
+
+## H
+
+### Hash
+A unique fingerprint for any piece of data. Like a barcode that changes completely if you change even one letter. If you hash "Hello" and "hello" (different capitalization), you get completely different results. Blockchains use hashes to link blocks together and make sure nothing has been tampered with.
+
+### Hardhat
+A toolkit for building smart contracts, like a workshop with all the tools you need. It helps you write code, test it, find bugs, and deploy your contracts to the blockchain. It's one of the most popular tools developers use.
+
+---
+
+## I
+
+### Indexed
+A property of event parameters that makes them searchable and filterable. When an event parameter is marked as "indexed," applications can easily search for all events with specific values. Like putting index tabs in a book to quickly find specific topics - it makes searching through millions of events much faster.
+
+### Immutability
+Once something is written to the blockchain, it can't be changed or deleted - it's permanent. Like writing in permanent ink that can't be erased. This creates a trustworthy, unchangeable record of everything that's happened.
+
+### Inheritance
+A way to reuse code in Solidity. Instead of writing everything from scratch, a contract can "inherit" features from another contract, like a child inheriting traits from a parent. This saves time and makes code easier to maintain. The child contract gets all the functions and variables from the parent.
+
+### Interface
+A blueprint that defines what functions a contract must have, but doesn't include the actual code. Like a contract's table of contents without the actual chapters - it tells you what functions exist and how to call them, but the implementation is elsewhere. Interfaces are used to interact with other contracts without needing their full code.
+
+### Internal
+A visibility level for Solidity functions and variables that means they can only be accessed within the current contract and contracts that inherit from it. Like marking something as "for family use only" - it's not available to the public, but can be shared with children contracts.
+
+---
+
+## L
+
+### Ledger
+A record-keeping system that tracks all transactions and balances. A blockchain is essentially a distributed digital ledger where every transaction is recorded permanently and transparently. Like an accounting book that everyone can read but no one can erase or forge.
+
+### Library
+A reusable collection of code functions that multiple contracts can use without copying all the code. Like a toolkit that contracts can borrow from - the library lives at one address, and any contract can call its functions. Libraries help reduce contract size and promote code reuse.
+
+---
+
+## M
+
+### Mainnet
+The "real" blockchain where actual transactions happen with real money. This is the live network people use every day. It's different from testnet, which is like a practice version where the tokens have no real value. For Zilliqa, the mainnet uses Chain ID 32769.
+
+### Mapping
+A data structure that stores key-value pairs, like a dictionary or phone book. You provide a key (like an address), and it instantly gives you the associated value (like a balance). Mappings are the most common way to store data in smart contracts because they're extremely efficient - looking up any value takes the same amount of time, no matter how many entries exist.
+
+### Mempool
+A waiting room for transactions. When you send a transaction, it goes into the mempool (memory pool) until a validator picks it up and adds it to a block. Transactions with higher gas prices usually get picked first, like VIPs getting priority service. On fast blockchains like Zilliqa, transactions don't stay in the mempool for very long.
+
+### Memory
+Temporary storage that only exists while a function is running. Like RAM in your computer or notes on a whiteboard - fast and cheap to use, but everything disappears when you're done. Memory is much cheaper than permanent storage, so smart contracts use it for temporary calculations and data processing.
+
+### Merkle Tree
+A data structure that allows efficient verification of large amounts of data. All transactions in a block are organized into a tree structure and combined into a single "Merkle root" hash. This lets you prove a specific transaction is in a block without downloading all the data - like being able to verify one sentence is in a book by checking a special fingerprint.
+
+### MetaMask
+A digital wallet that works as a browser extension (like an add-on for Chrome or Firefox). It stores your private keys securely and lets you connect to blockchain networks, send transactions, and interact with dApps. It's one of the most popular wallets for beginners.
+
+### Minting
+Creating new tokens, like printing new money. When tokens are minted, the total supply increases. Only people who have permission (usually the contract owner or authorized minters) can create new tokens.
+
+### Modifier
+A security check in Solidity that runs before a function executes. Like a bouncer at a club checking IDs - the modifier checks if you have permission before letting the function run. For example, a modifier might check "only the owner can call this function." Modifiers make code cleaner by putting all the security checks in one reusable place.
+
+### msg.sender
+A special variable in Solidity that tells you who called the current function. It contains the address of the person or contract that initiated the transaction. Like caller ID on your phone - it lets the contract know who's interacting with it. This is crucial for access control and tracking who does what.
+
+### msg.value
+A special variable that tells you how much cryptocurrency (ZIL or ETH) was sent along with the transaction. If someone sends 5 ZIL while calling a function, `msg.value` equals 5. Like checking how much cash someone handed you along with their order form.
+
+---
+
+## N
+
+### Network
+A group of computers all running the same blockchain software and connected together. Examples include Zilliqa Mainnet (the real Zilliqa network), Zilliqa Testnet (for testing), Ethereum Mainnet (the real Ethereum network), and various test networks.
+
+### Node
+A computer that's part of the blockchain network. Each node keeps a copy of the blockchain and helps verify transactions. Some nodes store everything (full nodes), while others store just what they need (light nodes).
+
+### Nonce
+A number that counts your transactions in order. Your first transaction has nonce 0, your second has nonce 1, and so on. This prevents someone from copying and replaying your old transactions, and ensures transactions are processed in the right order.
+
+### NFT (Non-Fungible Token)
+A unique digital item that can't be swapped one-for-one with another token. Unlike regular tokens where one is the same as another, each NFT is one-of-a-kind. They're often used for digital art, collectibles, in-game items, or proof that you own something special.
+
+---
+
+## O
+
+### Opcode
+A low-level instruction that the EVM understands and can execute. When your Solidity code is compiled into bytecode, it becomes a series of opcodes like ADD, MUL, SSTORE, and CALL. Think of opcodes like the basic commands a computer processor understands - they're the simplest operations the EVM can perform.
+
+### OpenZeppelin
+A collection of pre-built, secure smart contract code that developers can use instead of writing everything from scratch. Think of it like LEGO blocks - you can use these proven, safe building blocks to build your own contracts without worrying about security bugs. It includes token standards, access controls, and other common features. It's the most trusted library in the Ethereum ecosystem.
+
+### Out of Gas
+An error that occurs when a transaction runs out of gas before completing. Like running out of fuel halfway through a trip - the transaction fails, but you still pay for the gas that was used. To fix it, you need to increase your gas limit when sending the transaction.
+
+### Override
+A keyword used when a child contract wants to change the behavior of a function inherited from a parent contract. Like customizing a recipe you got from someone else - you keep the basic structure but modify specific steps. The parent function must be marked as "virtual" to allow overriding.
+
+---
+
+## P
+
+### Private Key
+Your secret password that proves you own your cryptocurrency and can spend it. It's like the PIN for your bank account, but much more powerful - if someone gets your private key, they can steal everything. Never share it with anyone, and if you lose it, you lose access to your funds forever.
+
+### Proof of Stake (PoS)
+A way blockchains reach agreement where people who "stake" (lock up) their cryptocurrency get to validate transactions. The more you stake, the more likely you are to be chosen. It's like a lottery where buying more tickets gives you better odds. PoS uses much less energy than Proof of Work and is faster.
+
+### Pausable
+A security feature that allows authorized addresses (usually the contract owner) to temporarily freeze all or certain functions of a smart contract. Like an emergency stop button - if something goes wrong, you can pause token transfers or other operations until the issue is resolved. Once fixed, the contract can be unpaused.
+
+### Payable
+A keyword that indicates a function can receive cryptocurrency (ZIL or ETH) along with the transaction. Without this keyword, if someone tries to send crypto to a function, the transaction will fail. Like marking a cash register as "open" - only payable functions can accept money.
+
+### Pipelined Fast-Hotstuff
+Zilliqa 2.0's advanced consensus mechanism that achieves very fast block times (1 second) while maintaining security. It uses approximately 32 validators and a pipelined approach where multiple blocks are processed simultaneously. This makes Zilliqa much faster and more efficient than traditional consensus mechanisms.
+
+### Private
+A visibility level for Solidity functions and variables that means they can only be accessed within the current contract - not even by child contracts that inherit from it. Like keeping something in a locked safe that only you have the key to. Most restrictive visibility level.
+
+### Proof of Work (PoW)
+A way blockchains reach agreement where computers compete to solve difficult math problems. The first computer to solve the problem gets to create the next block and earn a reward. It's like a race where everyone is trying to solve a puzzle first. PoW uses a lot of electricity but is very secure. Bitcoin uses Proof of Work.
+
+### Public
+A visibility level for Solidity functions and variables that means they can be accessed from anywhere - by users, other contracts, and even from within the contract itself. Like putting something on display in a shop window - anyone can see and interact with it. This is the default visibility if you don't specify otherwise.
+
+### Public Key
+A key that's created from your private key but can be shared safely with others. It's used to create your wallet address and to verify that transactions were signed by you. Think of it like your public email address - people can send you things, but they can't access your account.
+
+### Pure
+A function modifier that indicates the function doesn't read or modify any blockchain data - it only works with the parameters passed to it. Like a pure math function that always gives the same output for the same input (2 + 2 always equals 4). Pure functions are predictable and gas-free when called directly.
+
+---
+
+## R
+
+### Recovery Phrase
+See **Seed Phrase**. Same thing, different name - the 12 or 24 word phrase that gives access to your wallet and funds.
+
+### require
+A Solidity statement that checks if a condition is true, and if not, stops the transaction and reverts all changes. Like a security checkpoint - if the condition fails, everything stops and an error message is returned. Used extensively for input validation and access control. For example: `require(balance >= amount, "Insufficient balance")`.
+
+### Revert
+When a transaction fails and all state changes are undone, as if the transaction never happened. However, the gas used before the revert is still consumed and paid for. Like a failed bank transaction that bounces - nothing changes, but processing fees still apply. Reverts happen when `require` statements fail or other errors occur.
+
+### Remix IDE
+A website where you can write, test, and deploy smart contracts right in your browser - no installation needed! It's like Google Docs but for writing smart contract code. Perfect for beginners because you can start coding immediately without setting up complicated software.
+
+### Role-Based Access Control (RBAC)
+A system where different addresses are assigned different roles (like MINTER, ADMIN, PAUSER), and each role has specific permissions. Like employee roles in a company - managers can do certain things that regular employees cannot. OpenZeppelin provides RBAC functionality that makes managing complex permissions much easier than simple owner-only patterns.
+
+### RPC (Remote Procedure Call)
+A way for applications to talk to the blockchain. Think of it like a phone line - your app calls the blockchain through an RPC endpoint to ask questions (like "what's this address's balance?") or send transactions. It's the connection between your app and the blockchain network.
+
+### RPC Endpoint / RPC URL
+The specific web address (URL) your application uses to connect to a blockchain network. For example, Zilliqa Testnet's RPC endpoint is `https://api.testnet.zilliqa.com`. Like a phone number for the blockchain - you need the correct endpoint to connect to the correct network.
+
+---
+
+## S
+
+### SafeMath
+A library (now mostly obsolete in Solidity 0.8+) that prevented integer overflow and underflow errors in mathematical operations. Older Solidity versions would allow numbers to "wrap around" if they got too big or too small, causing serious security bugs. Solidity 0.8 and newer has these protections built in automatically.
+
+### Seed Phrase
+Your secret 12 or 24 word phrase that gives complete access to your cryptocurrency wallet and all funds within it. Like a master key or password that can recreate your entire wallet. If someone gets your seed phrase, they can steal everything. If you lose it, your funds are gone forever. Never share it, never store it digitally, and write it down on paper in a safe place.
+
+### Sharding
+A scaling technique where the blockchain is split into multiple parallel chains (shards) that process transactions simultaneously. Like having multiple checkout lines at a store instead of one - it increases throughput. Note: Zilliqa 2.0 does not use sharding, achieving high performance through efficient consensus instead.
+
+### Smart Contract
+A computer program that lives on the blockchain and runs automatically when certain conditions are met. Like a vending machine - you put money in, and it automatically gives you a snack. No person needs to be involved. Smart contracts enable trustless interactions because the code always runs the same way, no matter what.
+
+### Solidity
+The main programming language used to write smart contracts. It's similar to JavaScript but designed specifically for blockchain. When you write code in Solidity, it gets compiled (converted) into bytecode that the blockchain can understand and execute.
+
+### Stack
+A data structure used by the EVM where items are added and removed from the top only, like a stack of plates. The EVM uses a stack-based architecture to perform calculations - values are pushed onto the stack, operations are performed on the top items, and results are pushed back. This simple design makes the EVM predictable and secure.
+
+### Staking
+The process of locking up tokens to participate in network security (Proof of Stake) or to earn rewards. Like putting money in a fixed-term deposit - your tokens are locked for a period, and you earn rewards for participating. Staked tokens usually can't be transferred until they're unstaked.
+
+### State Variable
+A variable declared at the contract level that's stored permanently on the blockchain. Like writing something in a permanent record book - it persists between function calls and costs gas to modify. State variables represent the contract's memory of information like balances, ownership, and configuration.
+
+### Storage
+Permanent storage on the blockchain - like a hard drive that never forgets. Saving data to storage costs gas (money) because it's stored forever on thousands of computers. This is different from memory, which is temporary (like RAM) and much cheaper to use. Each contract has its own storage space.
+
+### Struct
+A custom data type that groups related variables together under one name. Like a form with multiple fields - instead of tracking first name, last name, age, and address separately, you create a "Person" struct that holds all this information together. Structs help organize complex data in smart contracts.
+
+---
+
+## T
+
+### Testnet
+A practice version of the blockchain where you can test everything without using real money. The tokens on testnet have no value - they're like play money. Developers use testnets to try out their code and make sure it works before deploying to the real network where real money is at stake.
+
+### Token
+A digital item on the blockchain that can represent money, ownership, membership, or other things of value. Like digital coins or cards. Some tokens are interchangeable (one is the same as another, like dollars), while others are unique (like collectible trading cards).
+
+### Transaction
+An action on the blockchain, like sending cryptocurrency or calling a smart contract function. Every transaction includes who sent it, who receives it, how much, and a digital signature proving it's authorized. Once submitted, transactions wait to be added to a block.
+
+### Transaction Confirmation
+The process of a transaction being included in a block and added to the blockchain. Each new block added after your transaction is an additional confirmation. On Zilliqa, transactions confirm very quickly (around 1 second). More confirmations mean higher certainty that the transaction is permanent.
+
+### Transaction Hash
+A unique ID number for each transaction, like a tracking number for a package. It's a long string of letters and numbers (66 characters starting with 0x) that you can use to look up your transaction on a block explorer to see if it went through and check all its details.
+
+### transferFrom
+An ERC-20 function that allows approved addresses to transfer tokens on behalf of the token owner. After Alice approves Bob to spend 100 tokens, Bob can use `transferFrom` to move tokens from Alice's account to someone else. This is essential for DEXes and DeFi protocols to work with your tokens.
+
+---
+
+## U
+
+### Unchecked
+A Solidity keyword that disables automatic overflow/underflow checking for arithmetic operations inside its block. Used for gas optimization when you're certain overflow can't happen. Like removing safety rails for speed - only use it when you're absolutely sure it's safe.
+
+---
+
+## V
+
+### Validator
+A computer (or person running a computer) that helps run the blockchain by checking transactions and creating new blocks. Validators are chosen based on the network's rules - for example, in Proof of Stake, people who stake more cryptocurrency are more likely to be chosen as validators. Validators earn rewards for honest participation and risk penalties for misbehavior.
+
+### Vesting
+A system where tokens are locked and released gradually over time. Like a salary that's paid out monthly instead of all at once - team members or investors receive their tokens in scheduled installments over months or years. This prevents large holders from selling everything immediately and ensures long-term commitment.
+
+### View Function
+A function that only looks up information without changing anything. Like checking your bank balance - you're just reading information, not making a withdrawal. View functions are usually free when you call them directly from outside the blockchain, but they do cost gas if called as part of a transaction that changes things.
+
+### Virtual
+A keyword that indicates a function can be overridden by child contracts. Like marking something as "customizable" - child contracts that inherit this function can change its behavior. The parent marks it virtual, and the child uses override to change it.
+
+### Visibility
+The access level of a function or variable - who can see and use it. The four visibility levels are: public (anyone), external (only from outside), internal (this contract and children), and private (only this contract). Like different security clearance levels determining who can access what.
+
+---
+
+## W
+
+### Wallet
+An app or device that stores your private keys and lets you interact with the blockchain. Like a digital wallet for cryptocurrency - it holds your keys, lets you send and receive money, and connects to dApps. Wallets can be software (apps) or hardware (physical devices).
+
+### Wei
+The tiniest unit of cryptocurrency, like a penny is the smallest unit of a dollar. One ZIL equals 1,000,000,000,000,000,000 wei (that's 18 zeros!). Gas prices are usually measured in wei or gwei (which is 1 billion wei) because the numbers are easier to work with.
+
+### World State
+The complete set of all account balances and smart contract data at a specific point in time. Like a snapshot of the entire blockchain's current status - who owns what, what each contract stores, and all the current values. Every transaction changes the world state, and all nodes must agree on this state.
+
+---
+
+## Z
+
+### Zilliqa
+A fast and affordable blockchain that works with all Ethereum tools and code. Zilliqa creates new blocks every second (much faster than Ethereum's ~12 seconds) and charges very low fees. If you know how to develop for Ethereum, you already know how to develop for Zilliqa!
+
+### ZIL
+The official cryptocurrency of the Zilliqa blockchain. You use ZIL to pay for transaction fees (gas) when you send transactions or interact with smart contracts. You can also send ZIL to other addresses, just like sending money.
+
+---
+
+## Additional Resources
+
+For more detailed explanations of these concepts, refer to the relevant modules in Plunder Academy:
+
+- **Blockchain Fundamentals**: Learn about decentralization, consensus, and blockchain architecture
+- **EVM Fundamentals**: Understand how the Ethereum Virtual Machine executes smart contracts
+- **Solidity Fundamentals**: Master the Solidity programming language
+- **ERC-20 Tokens**: Build and deploy your own tokens
+- **Zilliqa Ecosystem**: Set up your development environment and deploy to Zilliqa
+
+### Related Glossaries
+
+As you progress through Plunder Academy, additional glossaries cover advanced concepts:
+
+- **Island 2 Glossary**: Advanced Solidity patterns, staking architecture, testing methodologies - [View Island 2 Glossary](/glossary/island2-glossary)
+- **Island 3 Glossary**: NFT standards (ERC-721, ERC-1155), metadata, IPFS - [View Island 3 Glossary](/glossary/island3-glossary)
+- **Island 4 Glossary**: Proxy patterns, oracle integration, DeFi mechanics - [View Island 4 Glossary](/glossary/island4-glossary)
+- **Island 5 Glossary**: Security patterns, frontend development, dApp integration - [View Island 5 Glossary](/glossary/island5-glossary)
+
+---
+
+*This glossary covers foundational terminology from Island 1. Terms are continuously updated as new concepts are introduced. If you encounter a term not listed here, check the relevant module content or the other island glossaries.*
+

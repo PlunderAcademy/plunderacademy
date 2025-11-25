@@ -1,0 +1,266 @@
+---
+id: evm-fundamentals-quiz
+slug: evm-fundamentals-quiz
+module: evm-fundamentals
+title: "Module 2: EVM Fundamentals - Interactive Quiz"
+description: "Test your knowledge of Ethereum Virtual Machine, gas mechanisms, contract lifecycle, and developer tools"
+totalQuestions: 14
+passingScore: 80
+timeLimit: 18
+---
+
+# Module 2: EVM Fundamentals - Interactive Quiz
+
+## Instructions
+- **Total Questions:** 14
+- **Time Limit:** 18 minutes  
+- **Passing Score:** 80%
+- **Question Types:** Multiple choice
+
+---
+
+## Questions
+
+### Question 1
+**Type:** Multiple Choice  
+**Points:** 7  
+**Lesson:** 2.1 & 2.2 Ethereum Virtual Machine and Execution
+
+What does EVM provide?
+
+**Options:**
+- A) A centralized server to run smart contracts
+- B) A decentralized sandboxed environment where smart contracts execute identically on all nodes
+- C) A database for storing Ethereum transactions
+- D) A programming language for creating websites
+
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1 & 2.2 Ethereum Virtual Machine and Execution
+
+Why is deterministic execution critical in EVM operations?
+
+**Options:**
+- A) So contracts produce different results on different nodes
+- B) So all nodes compute the same contract output ensuring consensus
+- C) To speed up contract compilation
+- D) To reduce storage requirements on the blockchain
+
+---
+
+### Question 3
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1 & 2.2 Ethereum Virtual Machine and Execution
+
+EVM processes instructions using which primary data structure?
+
+**Options:**
+- A) Linked list for sequential processing
+- B) Queue with first-in-first-out access
+- C) Stack with last-in-first-out access pattern
+- D) Hash table for random access
+
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1 & 2.2 Ethereum Virtual Machine and Execution
+
+What holds the contract state persistently between transactions in EVM?
+
+**Options:**
+- A) Memory that gets cleared after execution
+- B) Storage that persists permanently on the blockchain
+- C) Calldata that contains function parameters
+- D) Stack that holds temporary computation values
+
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.1 & 2.2 Ethereum Virtual Machine and Execution
+
+What role does ABI (Application Binary Interface) serve in contract interaction?
+
+**Options:**
+- A) Defines how external applications interact with contract functions and their parameters
+- B) Encrypts smart contract code for security
+- C) Acts as a gas meter for transaction costs
+- D) Stores the contract's source code on the blockchain
+
+---
+
+### Question 6
+**Type:** Concept Matching
+**Points:** 8
+**Lesson:** 2.3 Gas Mechanism
+
+Match each EVM concept with its definition:
+
+**Interactive Data:**
+```json
+{
+  "concepts": [
+    {"id": "gas", "text": "Gas", "category": "execution"},
+    {"id": "wei", "text": "Wei", "category": "currency"},
+    {"id": "opcode", "text": "Opcode", "category": "execution"},
+    {"id": "storage", "text": "Storage", "category": "memory"}
+  ],
+  "definitions": [
+    {"id": "def-gas", "text": "Unit that measures computational work on EVM"},
+    {"id": "def-wei", "text": "Smallest denomination of ether (10^-18 ETH)"},
+    {"id": "def-opcode", "text": "Basic instruction in EVM bytecode"},
+    {"id": "def-storage", "text": "Permanent key-value data store for contracts"}
+  ]
+}
+```
+
+---
+
+### Question 7
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.3 Gas Mechanism
+
+What happens if a transaction exceeds its gas limit?
+
+**Options:**
+- A) The transaction proceeds without limits
+- B) The transaction is reverted and no state changes occur, but gas is still consumed
+- C) The transaction is paused and resumed later
+- D) The transaction completes but costs extra fees
+
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.3 Gas Mechanism
+
+Which token is used to pay gas fees on Zilliqa?
+
+**Options:**
+- A) ETH (Ethereum's native token)
+- B) ZIL (Zilliqa's native token)
+- C) BTC (Bitcoin)
+- D) USDC (USD Coin stablecoin)
+
+---
+
+### Question 9
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.4 Contract Lifecycle
+
+What is the first step in a contract's lifecycle?
+
+**Options:**
+- A) Deploy the contract to the blockchain
+- B) Compile the contract to bytecode
+- C) Write the contract code in Solidity
+- D) Test the contract on mainnet
+
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.4 Contract Lifecycle
+
+Deployment involves:
+
+**Options:**
+- A) Sending a special transaction with bytecode to the blockchain
+- B) Sending a simple payment transaction
+- C) Importing code to a local database
+- D) Uploading files to a centralized server
+
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 7
+**Lesson:** 2.4 Contract Lifecycle
+
+Can deployed contracts be changed?
+
+**Options:**
+- A) Yes, by directly editing blockchain data
+- B) Generally no, they are immutable by default, but upgrade patterns exist
+- C) Yes, anyone can modify them freely
+- D) Only the original developer can edit them
+
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 2.5 Developer Tools
+
+Which tool lets you develop Solidity contracts in-browser without setup?
+
+**Options:**
+- A) Hardhat framework
+- B) Remix IDE
+- C) Foundry toolkit
+- D) Visual Studio Code
+
+---
+
+### Question 13
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 2.5 Developer Tools
+
+What is Hardhat primarily used for?
+
+**Options:**
+- A) Managing cryptocurrency wallets
+- B) Local development, testing, and scripting deployments
+- C) Monitoring gas fees across networks
+- D) Creating user interfaces for dApps
+
+---
+
+### Question 14
+**Type:** Multiple Choice
+**Points:** 8
+**Lesson:** 2.5 Developer Tools
+
+How do OpenZeppelin contracts help developers?
+
+**Options:**
+- A) Reduce gas fees for all transactions
+- B) Provide secure, audited reusable contract templates and standards
+- C) Speed up compilation time significantly
+- D) Automatically deploy contracts to mainnet
+
+---
+
+## Answer Key Summary
+
+| Question | Lesson | Points |
+|----------|--------|---------|
+| 1 | 2.1 & 2.2 | 7 |
+| 2 | 2.1 & 2.2 | 7 |
+| 3 | 2.1 & 2.2 | 7 |
+| 4 | 2.1 & 2.2 | 7 |
+| 5 | 2.1 & 2.2 | 7 |
+| 6 | 2.3 | 7 |
+| 7 | 2.3 | 7 |
+| 8 | 2.3 | 7 |
+| 9 | 2.4 | 7 |
+| 10 | 2.4 | 7 |
+| 11 | 2.4 | 7 |
+| 12 | 2.5 | 8 |
+| 13 | 2.5 | 8 |
+| 14 | 2.5 | 8 |
+
+**Total Points:** 100  
+**Passing Score:** 80 points

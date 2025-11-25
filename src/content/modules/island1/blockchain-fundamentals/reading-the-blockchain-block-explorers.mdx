@@ -1,0 +1,206 @@
+---
+id: reading-the-blockchain-block-explorers
+module: blockchain-fundamentals
+number: 1.7
+title: Reading the Blockchain with Block Explorers
+objective: >-
+  Master the use of block explorers to investigate transactions, analyze smart
+  contract interactions, and troubleshoot blockchain activities using Zilliqa's
+  Blockscout explorer.
+practicalTakeaway: >-
+  Block explorers are essential tools for understanding blockchain activity.
+  Learning to read transaction data, analyze gas usage, and investigate contract
+  interactions will make you a more effective blockchain user and developer.
+slug: reading-the-blockchain-block-explorers
+---
+
+## The Digital Detective
+
+Imagine you are a private investigator in a city where every single action—every purchase, every contract signed, every letter mailed—is recorded in a public, indestructible archive. There are no secrets here. If someone buys a coffee, it's in the archive. If a mayor signs a new law, it's in the archive.
+
+This archive is the **Blockchain**, and your tool for searching it is the **Block Explorer**.
+
+As a blockchain developer, you are part detective. You will spend a significant amount of time digging through these archives to verify payments, debug broken code, and track down where money went. In the Zilliqa ecosystem, your primary investigative tool is **Blockscout**.
+
+### The Public Archives
+
+A block explorer like Blockscout is a search engine for the blockchain. It indexes the raw data from the network and presents it in a readable format. Without it, you'd be staring at raw hexadecimal code—like trying to read a book written in binary.
+
+**Your Investigative Toolkit:**
+1.  **The Search Bar:** Your magnifying glass. You can search by address, transaction hash, block number, or token name.
+2.  **The Feed:** The ticker tape of the city. It shows blocks and transactions happening in real-time.
+3.  **The Ledger:** The detailed history of any account or contract.
+
+> [!TIP]
+> **Zilliqa Blockscout**
+> You can access the official Zilliqa explorer at [https://zilliqa.blockscout.com/](https://zilliqa.blockscout.com/). Keep this bookmarked; it's your source of truth.
+
+---
+
+## The Fingerprint: Transaction Hashes
+
+In our digital city, every single event has a unique fingerprint called a **Transaction Hash** (or Tx Hash). It looks like a long string of random characters, usually starting with `0x`.
+
+`0xabcd1234567890ef...`
+
+This string is the key to finding any specific event. If you send money to a friend and they ask for proof, you don't send a screenshot; you send the Tx Hash. It is the undeniable receipt of what happened.
+
+### Anatomy of a Transaction
+
+When you look up a transaction hash, you're opening the case file for that specific event. Here's what you'll find inside:
+
+<BlockExplorerMockup />
+
+**The Case File Details:**
+*   **Status:** The verdict. `Success` ✅ means it happened. `Failed` ❌ means it was rejected (maybe out of gas or bad code). `Pending` ⏳ means it's still waiting in the mempool.
+*   **From:** The sender. The address that initiated the action and paid the gas fee.
+*   **To:** The destination. This could be another user (for a payment) or a smart contract (to trigger code).
+*   **Value:** The amount of native currency (ZIL) transferred directly.
+*   **Transaction Fee:** The cost of the investigation. Calculated as `Gas Used * Gas Price`.
+
+---
+
+## The Suspects: Analyzing Addresses
+
+In your investigations, you'll encounter two types of "suspects" (addresses): **User Wallets** (EOAs) and **Smart Contracts**. They look the same—both are 42-character hexadecimal strings—but they behave differently.
+
+### 1. The User Wallet (EOA)
+Think of this as a personal bank account.
+*   **Behavior:** It initiates transactions. It does not have code.
+*   **What to look for:**
+    *   **Balance:** How much ZIL and tokens it holds.
+    *   **History:** A chronological list of everything it has ever done.
+    *   **Token Transfers:** A specific tab showing movement of assets like ERC-20s or NFTs.
+
+### 2. The Smart Contract
+Think of this as a vending machine or an automated robot.
+*   **Behavior:** It reacts to transactions. It has code and storage.
+*   **What to look for:**
+    *   **Contract Tab:** If the code is verified, you can read the actual Solidity source code here. This is crucial for trust—you can see exactly what the contract does before you interact with it.
+    *   **Read/Write Contract:** You can often interact with the contract directly through the explorer (e.g., checking a balance or calling a function) without needing a separate frontend.
+
+> [!NOTE]
+> **Verified vs. Unverified**
+> Always check if a contract is **Verified**. A verified contract has a green checkmark on the Code tab, meaning the source code matches the bytecode on the blockchain. If it's unverified, you're flying blind—proceed with extreme caution.
+
+---
+
+## The Case Files: Blocks
+
+Every transaction is eventually filed into a folder called a **Block**. While you usually search for specific transactions, sometimes you need to look at the block itself to understand the context.
+
+**Inside a Block:**
+*   **Block Number:** The sequential ID (e.g., Block #100 comes after #99).
+*   **Timestamp:** The exact second the block was created.
+*   **Transactions:** A list of all events included in this folder.
+*   **Gas Used:** How "full" the block was. If blocks are consistently full, gas prices go up.
+
+---
+
+## Forensics: Input Data and Event Logs
+
+Sometimes, the basic details aren't enough. You need to know *exactly* what happened. For this, we dig into the forensics: **Input Data** and **Event Logs**.
+
+### Input Data: The Instructions
+The "Input Data" field tells you what function the sender tried to call and what arguments they passed.
+*   **Standard Transfer:** Might just say `transfer(to, amount)`.
+*   **Complex Swap:** Might show `swapExactTokensForTokens` with a path of token addresses.
+
+Block explorers try to decode this for you. Instead of raw hex, you'll see `Function: approve(spender, amount)`. This is how you confirm that a transaction actually did what the UI said it would do.
+
+**Pro Tip: Decoding the Matrix (Method IDs)**
+Sometimes the explorer can't decode the data and shows you raw hex like `0xa9059cbb...`.
+*   **Method ID:** The first 4 bytes (`0xa9059cbb`) are the "Method ID". This tells the contract *which* function to run.
+*   **Parameters:** The rest of the data is the arguments (who you are sending to, how much, etc).
+Experienced developers can recognize common Method IDs (like `a9059cbb` for `transfer`) at a glance.
+
+### Event Logs: The Evidence
+Smart contracts emit **Events** when important things happen. These are like log entries in a diary.
+*   **Example:** An ERC-20 transfer emits a `Transfer` event containing `from`, `to`, and `value`.
+*   **Why it matters:** The "Value" field of a transaction only shows ZIL. If you sent 1,000 USDC, the "Value" would be 0 ZIL, but the **Event Logs** would show a `Transfer` of 1,000 USDC.
+
+**Detective Tip:** If a transaction succeeded but the outcome looks wrong (e.g., you didn't get your tokens), check the **Logs** tab. It reveals the internal operations of the contract.
+
+---
+
+## Cold Cases: Troubleshooting Failures
+
+Not every case is open-and-shut. Sometimes, transactions fail. As a developer, the block explorer is your best debugger.
+
+### Common Causes of Death (for Transactions)
+
+1.  **Out of Gas:**
+    *   **The Clue:** The status is `Failed`, and "Gas Used" equals "Gas Limit" (e.g., 100%).
+    *   **The Diagnosis:** The transaction ran out of fuel before finishing.
+    *   **The Fix:** Increase the gas limit.
+
+2.  **Reverted (Execution Reverted):**
+    *   **The Clue:** The status is `Failed`, and there might be an error message like `execution reverted: insufficient balance`.
+    *   **The Diagnosis:** The smart contract logic rejected the transaction. Maybe you tried to send more tokens than you have, or you aren't the owner of the NFT you tried to sell.
+    *   **The Fix:** Check the contract requirements (balances, approvals, permissions).
+
+3.  **Pending (Stuck):**
+    *   **The Clue:** The transaction doesn't show up as Success or Failed; it just spins.
+    *   **The Diagnosis:** Your gas price was too low, and miners are ignoring your transaction in favor of higher-paying ones.
+    *   **The Fix:** "Speed up" the transaction by submitting a replacement with a higher gas price (same Nonce).
+
+---
+
+## Private Eye Ethics: Privacy & API
+
+### Privacy Considerations
+Just because the blockchain is public doesn't mean you know everything.
+*   **Pseudonymity:** You see addresses (`0x...`), not names. Unless someone links their identity to an address (e.g., via ENS or a public post), they remain anonymous.
+*   **The "Wiretap" Limit:** You cannot see private keys, passwords, or off-chain messages. You only see what is written to the ledger.
+
+### Automating the Investigation (API)
+Professional detectives don't search manually forever. Blockscout provides an **API** (Application Programming Interface) that lets you write code to fetch data.
+*   **Use Case:** Building a portfolio tracker that automatically updates your balance.
+*   **Use Case:** A Discord bot that alerts you when a "Whale" moves funds.
+
+---
+
+## Practical Exercise: The Investigator's Quiz
+
+Let's test your detective skills. Can you distinguish fact from fiction in the world of block explorers?
+
+<TrueFalse
+  statements={[
+    {
+      id: "be-1",
+      text: "A block explorer can show you the private key of any address.",
+      correctAnswer: false,
+      explanation: "False! Private keys are never revealed on the blockchain or by explorers. They stay on your device."
+    },
+    {
+      id: "be-2",
+      text: "If a transaction status is 'Success', it cannot be reversed.",
+      correctAnswer: true,
+      explanation: "True! Once a transaction is confirmed and in a block (with sufficient confirmations), it is immutable."
+    },
+    {
+      id: "be-3",
+      text: "You can read the source code of every smart contract on Blockscout.",
+      correctAnswer: false,
+      explanation: "False. You can only read the code if the developer has 'Verified' the contract. Otherwise, you only see bytecode."
+    },
+    {
+      id: "be-4",
+      text: "A transaction with 'Value: 0 ZIL' means no money was moved.",
+      correctAnswer: false,
+      explanation: "False! The 'Value' field only tracks ZIL. Tokens (like USDT or NFTs) are moved via internal contract calls and show up in the Logs."
+    },
+    {
+      id: "be-5",
+      text: "The 'Gas Limit' is exactly how much you will pay for the transaction.",
+      correctAnswer: false,
+      explanation: "False. Gas Limit is the maximum you are willing to pay. You only pay for the actual 'Gas Used'."
+    }
+  ]}
+/>
+
+## Conclusion
+
+The Block Explorer is the lens through which we view the blockchain. It turns an opaque stream of data into a transparent, searchable history. Whether you are verifying a payment, debugging a smart contract, or just watching the ecosystem grow, mastering this tool is the mark of a true blockchain native.
+
+Now that you know how to read the map, it's time to start building the roads. In the next module, we will dive into the **EVM** and start writing our own smart contracts.

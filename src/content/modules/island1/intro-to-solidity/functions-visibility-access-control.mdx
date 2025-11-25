@@ -1,0 +1,276 @@
+---
+id: functions-visibility-access-control
+module: intro-to-solidity
+number: 3.2
+title: 'Functions, Visibility, and Access Control'
+objective: >-
+  Learn how to define functions and implement access control patterns in
+  Solidity.
+slug: functions-visibility-access-control
+---
+
+## Understanding Functions in Token Contracts
+
+Functions are the verbs of your contract. They make things happen. Variables store data; functions change it.
+
+### The Anatomy of a Function
+
+Let's dissect a standard Solidity function line by line.
+
+```solidity
+function transfer(address to, uint256 amount) public returns (bool) {
+    // Logic goes here
+}
+```
+
+**Syntax Decoder:**
+
+1.  **`function`**: Keyword starting the definition.
+2.  **`transfer`**: The name. Use camelCase (e.g., `myFunction`).
+3.  **`(address to, uint256 amount)`**: The **Parameters** (Inputs). "I need an address named 'to' and a number named 'amount' to do my job."
+4.  **`public`**: The **Visibility**. "Anyone is allowed to call this."
+5.  **`returns (bool)`**: The **Output**. "When I'm done, I will give you back a True/False answer."
+
+### Visibility: Who Invited You?
+
+This is a critical security concept. You don't want everyone to be able to call every function (e.g., `mint` or `deleteUser`).
+
+| Keyword | Who can call it? | Analogy | Gas Note |
+| :--- | :--- | :--- | :--- |
+| **`public`** | **Everyone**. (Users, other contracts, this contract) | The front door of a shop. Open to all. | Can be expensive if receiving large data (arrays). |
+| **`external`** | **Only Outsiders**. (Users, other contracts) | The drive-thru window. You can't use it if you're already inside the building. | **Gas Efficient.** Use this for functions users call directly. |
+| **`internal`** | **Family Only**. (This contract + inheriting contracts) | The staff break room. Only employees (and their children/inheritors) allowed. | Useful for helper functions reused by children. |
+| **`private`** | **Me Only**. (This contract ONLY) | Your personal diary. Not even your children (inheriting contracts) can read it. | Only visible within this specific file. |
+
+Use the interactive diagram below to explore which contexts can access functions with different visibility levels.
+
+<FunctionVisibilityDiagram />
+
+### 🧠 Application Check: Role Play
+
+You are designing a **Casino** contract. Which visibility should these functions have?
+
+1.  `placeBet()`: Users need to call this to play.
+2.  `calculateOdds()`: A complex math formula used by `placeBet`, but users shouldn't call it directly or see it easily.
+3.  `withdrawProfits()`: Only the owner should call this. (Hint: Visibility + Access Control).
+
+<details>
+<summary>Click to reveal answers</summary>
+
+1.  **`placeBet`**: `external` (Ideally `external` to save gas as it is only called from outside).
+2.  **`calculateOdds`**: `private` or `internal`. If you want to hide the logic implementation from other contracts, keep it private.
+3.  **`withdrawProfits`**: `public` or `external`, BUT protected with `onlyOwner` (we'll learn this next!).
+
+</details>
+
+### State Mutability: Read vs. Write
+
+Solidity is strict about what functions can do to the blockchain data.
+
+#### 1. `view`: The Reader
+Reads data but **cannot change it**. Free to call (no gas) if called externally.
+```solidity
+// "I just look at the balance, I don't touch it."
+function getBalance(address user) public view returns (uint256) {
+    return balances[user];
+}
+```
+
+#### 2. `pure`: The Calculator
+Does not read OR write data. It only uses its inputs.
+```solidity
+// "I don't need the blockchain. 2+2 is always 4."
+function add(uint256 a, uint256 b) public pure returns (uint256) {
+    return a + b;
+}
+```
+
+#### 3. (Default): The Writer
+If you don't write `view` or `pure`, the function can **change the state** (write to database). This costs Gas.
+```solidity
+// "I am writing new data to the blockchain."
+function updateScore(uint256 newScore) public {
+    score = newScore; // Costs GAS!
+}
+```
+
+Use the comparator below to see the differences in capabilities and gas costs for each type.
+
+<StateMutabilityComparator />
+
+### Access Control: The Bouncer
+
+Visibility controls *where* a call comes from. Access Control controls *who* is calling.
+
+The most common pattern is **Modifiers**. Think of them as a security checkpoint before the function body executes.
+
+```solidity
+modifier onlyOwner() {
+    require(msg.sender == owner, "You are not the owner!");
+    _; // <--- This weird underscore means "Now run the actual function"
+}
+
+function mint(uint256 amount) public onlyOwner {
+    // This code ONLY runs if the modifier passes
+    totalSupply += amount;
+}
+```
+
+Watch the animation below to see how the execution flows through the modifiers before reaching the function body.
+
+<ModifierExecutionFlow />
+
+### Leveling Up: Role-Based Access Control (RBAC)
+
+While `onlyOwner` is great for simple contracts, large apps need teams. You might want a "Minter" who can *only* mint tokens, and a "Admin" who can *only* pause the contract.
+
+```solidity
+// Define a "Role" (it's just a hash!)
+bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+function mint(address to, uint256 amount) public {
+    // Check if the caller has the specific role
+    require(hasRole(MINTER_ROLE, msg.sender), "Caller is not a minter");
+    _mint(to, amount);
+}
+```
+
+**Why use RBAC?**
+1.  **Security**: If the Minter key is stolen, the hacker can't delete the contract (Admin role).
+2.  **Scalability**: You can have multiple Minters (e.g., the Game Contract, the Staking Contract).
+
+### Advanced: Overriding Functions
+
+When you use libraries like OpenZeppelin, you often want to change how a standard function works. This is called **Overriding**.
+
+```solidity
+// 'virtual' means "This function can be changed by a child"
+// 'override' means "I am changing the parent's function"
+
+function transfer(address to, uint256 amount) public override returns (bool) {
+    // Custom Logic: Take a fee? Log a metric?
+    require(amount < 1000, "Transfer limit exceeded");
+    
+    // 'super' calls the original parent function
+    return super.transfer(to, amount);
+}
+```
+
+### Common Token Function Patterns
+
+Understanding these patterns is essential for working with ERC-20 tokens.
+
+#### 1. The Approve/TransferFrom Pattern
+Used when you want a DApp (like Uniswap) to spend tokens on your behalf.
+
+```solidity
+// Step 1: User authorizes Spender
+function approve(address spender, uint256 amount) public returns (bool) {
+    _allowances[msg.sender][spender] = amount;
+    emit Approval(msg.sender, spender, amount);
+    return true;
+}
+
+// Step 2: Spender takes the tokens
+function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
+    uint256 currentAllowance = _allowances[sender][msg.sender];
+    require(currentAllowance >= amount, "Transfer amount exceeds allowance");
+    
+    _allowances[sender][msg.sender] -= amount; // Reduce allowance
+    _transfer(sender, recipient, amount);      // Move tokens
+    return true;
+}
+```
+
+#### 2. The Mint/Burn Pattern
+Managing token supply.
+
+```solidity
+function mint(address to, uint256 amount) public onlyOwner {
+    _mint(to, amount); // Increases totalSupply
+}
+
+function burn(uint256 amount) public {
+    _burn(msg.sender, amount); // Decreases totalSupply
+}
+```
+
+### Security Best Practices
+
+#### 1. Reentrancy Protection
+When calling other contracts, they can sometimes call *back* into your contract before you finish.
+**Fix:** Use the "Checks-Effects-Interactions" pattern or `ReentrancyGuard`.
+
+```solidity
+// BAD: Sending money before updating balance
+// msg.sender.call{value: amount}("");
+// balances[msg.sender] -= amount;
+
+// GOOD: Update balance first (Effect), then send (Interaction)
+balances[msg.sender] -= amount;
+msg.sender.call{value: amount}("");
+```
+
+#### 2. Input Validation
+Always validate inputs at the start.
+```solidity
+require(to != address(0), "Invalid address");
+require(amount > 0, "Invalid amount");
+```
+
+#### 3. Gas Optimization: Storage vs. Memory
+
+Reading from the blockchain ("Storage") is expensive. Reading from local variables ("Memory") is cheap.
+
+```solidity
+// EXPENSIVE: Reads 'totalSupply' from storage 3 times
+function expensiveSum() public view returns (uint256) {
+    return totalSupply + totalSupply + totalSupply;
+}
+
+// CHEAP: Reads 'totalSupply' once, stores in memory, uses memory
+function cheapSum() public view returns (uint256) {
+    uint256 supply = totalSupply; // Read once
+    return supply + supply + supply; // Use memory
+}
+```
+
+### 🛠️ Try It Yourself: Secure the Vault
+
+Here is an insecure contract. Users can steal funds!
+
+```solidity
+contract Vault {
+    address public owner;
+    
+    constructor() {
+        owner = msg.sender;
+    }
+
+    // VULNERABILITY: Anyone can call this!
+    function withdrawAll() public {
+        payable(msg.sender).transfer(address(this).balance);
+    }
+}
+```
+
+**Challenge:** How would you fix the `withdrawAll` function?
+
+<details>
+<summary>Solution</summary>
+
+Add a `require` statement or a modifier!
+
+```solidity
+function withdrawAll() public {
+    require(msg.sender == owner, "Not the owner!"); // The Fix
+    payable(msg.sender).transfer(address(this).balance);
+}
+```
+</details>
+
+### Summary
+1.  **`msg.sender`**: Always use this to know who is calling.
+2.  **`require()`**: Use this at the start of functions to validate inputs.
+3.  **`external` vs `public`**: Use `external` for functions mainly called by users to save gas.
+4.  **Patterns**: Master `approve`/`transferFrom` for DeFi integration.

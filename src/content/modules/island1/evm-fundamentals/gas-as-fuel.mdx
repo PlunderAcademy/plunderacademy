@@ -1,0 +1,126 @@
+---
+id: gas-as-fuel
+module: evm-fundamentals
+number: 2.3
+title: Gas as the Fuel of EVM
+objective: >-
+  Understand how gas quantifies computational effort and resource usage on the
+  EVM.
+slug: gas-as-fuel
+---
+
+## The Engine's Fuel and the Network's Immune System
+
+In the physical world, energy is not free. You pay for the electricity that powers your computer and the fuel that drives your car. In the digital world of the EVM, this energy is called **Gas**.
+
+Gas is often misunderstood as just a "fee," a nuisance that users have to pay. But in reality, Gas is the single most important security mechanism of the EVM. It is the network's immune system.
+
+Gas solves two fundamental problems in computer science that plagued decentralized networks before Ethereum.
+
+### 1. The Halting Problem (Stopping the Infinite)
+In computer science, there is a famous paradox called the Halting Problem: it is mathematically impossible to predict if a program will run forever or eventually stop just by looking at its code.
+
+Imagine a malicious programmer writes a loop that runs forever: `while(true) { print("Hello"); }`. On a normal server, this would freeze the machine until an admin manually killed it.
+If this happened on a blockchain, where every node runs every instruction, **every computer in the network would freeze simultaneously.** The entire blockchain would die.
+
+Gas solves this elegantly. Every single instruction (**Opcode**) costs a tiny amount of Gas.
+*   `ADD` costs 3 Gas.
+*   `SSTORE` costs 20,000 Gas.
+
+When you send a transaction, you must send a prepaid amount of Gas with it. As the EVM executes your code, it deducts from this balance like a taxi meter running. The moment that tank runs dry, the EVM pulls the plug. The execution stops immediately, all state changes are reverted, but—and this is key—**the miner keeps the fees**.
+This guarantees that no program can run forever. It *must* halt when the money runs out.
+
+### 2. The Spam Filter
+Without Gas, I could send a billion meaningless transactions to the network for free, clogging it up so no one else could use it. This is a Denial of Service (DoS) attack.
+By attaching a real monetary cost to every action, the network creates a natural economic barrier against spam. Attacking the network becomes prohibitively expensive. To clog the network for even an hour would cost millions of dollars.
+
+## The Cost of Computation: A Menu of Prices
+
+Not all actions are created equal. The EVM prices operations based on the "burden" they place on the network.
+
+*   **Cheap: Computational Operations**
+    *   Basic math (`ADD`, `SUB`, `MUL`) costs **3 Gas**.
+    *   These only use the Stack, which is fast and transient.
+*   **Moderate: Memory Operations**
+    *   `MLOAD`/`MSTORE` cost **3 Gas** initially, but scale up.
+    *   Expanding Memory costs more the larger it gets.
+*   **Expensive: Storage Operations**
+    *   Writing a new value to Storage (`SSTORE`) costs **20,000 Gas**.
+    *   Why? Because this data must be stored permanently on the hard drives of thousands of nodes forever. It is the most "burdensome" action you can take.
+*   **Base Fee:** Just sending a transaction costs **21,000 Gas** (before any code even runs). This covers the cost of verifying your signature and nonce.
+
+<GasCostComparison />
+
+## Units of Value: Wei and Gwei
+
+To understand gas prices, we must understand the units of value. The EVM does not use decimals; it uses integers.
+
+*   **Wei:** The smallest denomination of value. 1 ETH (or 1 ZIL) equals $10^{18}$ Wei.
+*   **Gwei:** A common unit for Gas Prices. 1 Gwei equals $10^9$ Wei.
+
+**Native Tokens:**
+*   On Ethereum, you pay gas in **ETH**.
+*   On Zilliqa, you pay gas in **ZIL**.
+
+## The Fee Market: Limit vs. Price
+
+New developers often confuse "Gas Limit" and "Gas Price." Think of it like driving a car.
+
+### Gas Limit (The Tank Size)
+This is the maximum amount of work you are willing to let the EVM do. It is a safety cap.
+*   **Analogy:** "I am filling my tank with 10 gallons. I might not need it all, but I definitely won't use more."
+*   **Mechanics:** If your transaction finishes early, **you get a refund** for the unused Gas. If it hits the limit, it fails ("Out of Gas"), and you lose the fees (because the work was done).
+*   **Standard:** A simple transfer requires 21,000. A complex DeFi swap might require 200,000.
+
+### Gas Price (The Bribe)
+This is how much you are willing to pay for each unit of Gas. Validators (the network's record keepers) are profit-seeking entities. They have a pool of thousands of pending transactions (the "Mempool"), but a block can only hold a few. Who do they pick?
+They pick the transactions that pay the highest price per unit.
+*   **Analogy:** "I will pay you $5 per gallon if you let me skip the line."
+*   **Mechanics:** High demand = High Gas Price.
+
+**Total Fee = Gas Used x Gas Price**
+
+## Advanced Concepts: Refunds and Stipends
+
+The gas system has some hidden quirks that can trip up beginners.
+
+*   **Gas Refunds:** The EVM encourages good hygiene. If you clear a storage slot (reset a value to 0) or delete a contract, you actually get a **Refund** of 15,000 Gas. This incentivizes cleaning up the state to keep the blockchain size smaller.
+*   **Gas Stipends:** When you send ETH/ZIL to a contract, the EVM provides a tiny "Stipend" of 2,300 Gas. This is just enough to log an event ("I received money!"), but usually not enough to execute complex logic. This prevents reentrancy attacks where a malicious contract calls back into the sender.
+
+## Master Class: Optimization Strategies
+
+Because Gas translates directly to money, "Gas Optimization" is a competitive sport for Solidity developers. Saving 100 Gas might save users thousands of dollars over the lifetime of a contract.
+
+### Strategy 1: Cache Storage in Memory
+Reading from Storage (`SLOAD`) costs ~2,100 gas (cold) or 100 gas (warm). Reading from Memory (`MLOAD`) costs 3 gas.
+*   **Bad:** Reading `users[msg.sender].balance` inside a loop 10 times.
+*   **Good:** Reading it once into a local variable (`uint balance = ...`), using that variable in the loop, and writing it back to storage only once at the end.
+
+### Strategy 2: Variable Packing
+Storage is organized in 32-byte slots. If you have two `uint128` variables (16 bytes each), the compiler can pack them into a single slot.
+*   **Optimization:** Writing to one slot costs 20,000 Gas. Writing to two slots costs 40,000 Gas. Packing variables can cut storage costs in half.
+
+### Strategy 3: Use Events for Data
+If you need to store data (like a transaction history) but don't need to access it *inside* the smart contract logic, use **Events**. Storing data in logs is roughly 10x cheaper than storing it in contract state variables.
+
+## Real-World Cost Examples
+
+How much does this actually cost? Let's compare.
+
+| Action | Gas Used (Approx) | Cost on Ethereum ($50 gas price) | Cost on Zilliqa ($0.001 gas price) |
+| :--- | :--- | :--- | :--- |
+| **Simple Transfer** | 21,000 | ~$3.00 | ~$0.001 |
+| **Token Approval** | 45,000 | ~$6.50 | ~$0.002 |
+| **DeFi Swap** | 150,000 | ~$22.00 | ~$0.007 |
+| **NFT Mint** | 200,000 | ~$30.00 | ~$0.010 |
+
+This table illustrates why **Zilliqa 2.0** is transformative. By keeping gas prices low through efficient consensus, it makes high-frequency interactions (like gaming) economically viable.
+
+## 🎮 Interactive Practice
+
+Unscramble the term that describes the economic force that keeps the network secure and spam-free.
+
+<WordJumble 
+  word="INCENTIVES" 
+  hint="The economic reason validators process transactions and attackers don't spam." 
+/>

@@ -1,0 +1,214 @@
+---
+slug: zilliqa-addresses-and-zrc2-proxies
+title: "Zilliqa Addresses (Scilla vs EVM) and ZRC-2 Proxies: A Complete Guide"
+excerpt: Understand zil1 vs 0x addresses on Zilliqa, receive-only twins, safe transfers between sides, and how ZRC-2 proxy contracts enable Scilla-native tokens to be used on EVM - with vetted proxy address tables.
+level: intermediate
+tags:
+  - zilliqa
+  - evm
+  - wallets
+  - zrc-2
+  - tokens
+  - bridging
+---
+
+Zilliqa operates across two execution environments: the legacy Scilla side and the EVM (Ethereum-compatible) side. This guide explains how your wallet addresses work on both sides, what "receive-only twin" addresses are, how to move assets safely, and how Scilla-native ZRC-2 tokens become usable on EVM via proxy contracts.
+
+## Zilliqa's Two Execution Environments
+
+- **Scilla (Legacy)**: Uses `zil1...` addresses and the Scilla smart-contract language.
+- **Zilliqa EVM**: Uses `0x...` addresses and the Ethereum Virtual Machine. You can use any EVM-compatible wallet like MetaMask, Rabby, or WalletConnect-enabled wallets to interact with Zilliqa EVM.
+
+You typically control both sides with the same private key, resulting in two primary addresses.
+
+## Your Two Operating Addresses
+
+- **Main Scilla address**: Your `zil1...` address for Scilla-side transactions and Scilla dApps.
+- **Main EVM address**: Your `0x...` address for EVM-compatible dApps on Zilliqa EVM - the same format used in MetaMask, Rabby, or any other EVM wallet.
+
+## Receive-Only "Twin" Representations
+
+Each main address has a "twin" representation on the other side, used strictly as a receiving destination:
+
+- Your main `zil1...` (Scilla) address has a corresponding `0x` twin representation.
+  - **Purpose**: Destination address when sending assets to your Scilla wallet from the EVM side.
+  - **Limitation**: Cannot initiate EVM transactions.
+- Your main `0x...` (EVM) address has a corresponding `zil1` twin representation.
+  - **Purpose**: Destination address when sending assets to your EVM wallet from the Scilla side or from centralized exchanges (Binance, KuCoin) that use `zil1` addresses for Zilliqa withdrawals.
+  - **Limitation**: Cannot initiate Scilla transactions.
+
+Twins function as receive-only mailboxes - they accept incoming tokens but cannot send outbound transactions.
+
+## The Golden Rule
+
+- To transact on Scilla, use your **main `zil1...`** address.
+- To transact on EVM, use your **main `0x...`** address.
+
+Twins are receive-only - do not attempt to use them for dApp interactions or outbound transfers.
+
+### Practical Example
+
+Here's how the address relationships work in practice:
+
+```
+Your Main Addresses (for transactions):
+  Main Scilla:  zil1abc123...xyz789
+  Main EVM:     0x123def...456abc
+
+Receive-Only Twin Addresses:
+  0x twin of your Scilla address: 0x789ghi...012jkl
+    (used as destination when sending TO Scilla FROM EVM)
+  
+  zil1 twin of your EVM address: zil1mno456...pqr890
+    (used as destination when sending TO EVM FROM Scilla or CEX)
+```
+
+You can only initiate transactions from your main addresses, never from twins.
+
+## Moving Assets Between Sides
+
+### From Scilla (`zil1`) to EVM (`0x`)
+1. Send ZIL or ZRC-2 tokens from your main `zil1...` address.
+2. Use the **`zil1` twin of your `0x` EVM address** as the destination.
+3. Assets will be associated with your main `0x...` address on EVM.
+
+### From EVM (`0x`) to Scilla (`zil1`)
+1. Send ZIL from your main `0x...` EVM address.
+2. Use the **`0x` twin of your `zil1` address** as the destination.
+3. Assets will appear under your main `zil1...` address on Scilla.
+
+### From Centralized Exchanges (CEX)
+Most centralized exchanges (Binance, KuCoin, etc.) use `zil1...` format for Zilliqa withdrawals:
+- To receive in your **Scilla wallet**: Use your main `zil1...` address.
+- To receive in your **EVM wallet**: Use the `zil1` twin of your `0x...` EVM address.
+
+> Note: ZRC-2 token flows from EVM back to Scilla are handled at the protocol/bridge level. Always verify token type, destination format, and fees before sending.
+
+## Using Scilla-Native ZRC-2 Tokens on EVM
+
+Scilla-native tokens (ZRC-2) become usable on EVM through dedicated proxy contracts:
+
+1. Send the ZRC-2 token from your Scilla wallet (main `zil1...`) to the **`zil1` twin** of your EVM wallet.
+2. The token is represented on EVM through a specific **proxy contract** (`0x...` address).
+3. Add the proxy address as a custom token in your EVM wallet to see your balance and interact with EVM dApps.
+
+## Adding ZRC-2 Proxy Tokens to Your Wallet
+
+1. Find the EVM proxy contract address for your token in the tables below.
+2. In your EVM wallet (MetaMask, Rabby, etc.), select "Add token" or "Import token."
+3. Paste the proxy `0x...` address. The wallet auto-populates token details.
+4. Confirm to see your balance and use with EVM dApps.
+
+> Important: Only use proxy addresses that you trust. Unvetted proxies may not represent real assets.
+
+## Vetted ZRC-2 Proxy Addresses
+
+The following addresses are created or vetted by the PlunderSwap team. All contracts are open-source and verified on Sourcify. Do not use proxy addresses not listed here.
+
+### Testnet
+
+**ZRC**
+- EVM Proxy: `0x453b11386FBd54bC532892c0217BBc316fc7b918`
+- Scilla: `zil1rrs6mpxd5gaj3ue603rupdnjq604jueaeae9ga`
+
+### Mainnet
+
+**zUSDT**
+- EVM Proxy: `0x2274005778063684fbB1BfA96a2b725dC37D75f9`
+- Scilla: `zil1sxx29cshups269ahh5qjffyr58mxjv9ft78jqy`
+
+**XSGD**
+- EVM Proxy: `0x598FbD8B68a8B7e75b8B7182c750164f348907Bc`
+- Scilla: `zil180v66mlw007ltdv8tq5t240y7upwgf7djklmwh`
+
+**zWBTC**
+- EVM Proxy: `0x2938fF251Aecc1dfa768D7d0276eB6d073690317`
+- Scilla: `zil1wha8mzaxhm22dpm5cav2tepuldnr8kwkvmqtjq`
+
+**zETH**
+- EVM Proxy: `0x17D5af5658A24bd964984b36d28e879a8626adC3`
+- Scilla: `zil19j33tapjje2xzng7svslnsjjjgge930jx0w09v`
+
+**XCAD**
+- EVM Proxy: `0xCcF3Ea256d42Aeef0EE0e39Bfc94bAa9Fa14b0Ba`
+- Scilla: `zil1z5l74hwy3pc3pr3gdh3nqju4jlyp0dzkhq2f5y`
+
+**GARY**
+- EVM Proxy: `0xc6F3dede529Af9D98a11C5B32DbF03Bf34272ED5`
+- Scilla: `zil1w5hwupgc9rxyuyd742g2c9annwahugrx80fw9h`
+
+**STREAM**
+- EVM Proxy: `0x7D2fF48c6b59229d448473D267a714d29F078D3E`
+- Scilla: `zil1504065pp76uuxm7s9m2c4gwszhez8pu3mp6r8c`
+
+**Lunr**
+- EVM Proxy: `0xE9D47623bb2B3C497668B34fcf61E101a7ea4058`
+- Scilla: `zil1xxl6yp2twxvljdnn87g9fk7wykdrcv66xdy4rc`
+
+**gZIL**
+- EVM Proxy: `0x03A79429acc808e4261a68b0117aCD43Cb0FdBfa`
+- Scilla: `zil14pzuzq6v6pmmmrfjhczywguu0e97djepxt8g3e`
+
+**stZIL**
+- EVM Proxy: `0x097C26F8A93009fd9d98561384b5014D64ae17C2`
+- Scilla: `zil1umc54ly88xjw4599gtq860le0qvsuwuj72s246`
+
+**ZOGE**
+- EVM Proxy: `0x01035e423c40a9ad4F6be2E6cC014EB5617c8Bd6`
+- Scilla: `zil19zkpv4krrql0j4jtrqlfh7nt67r6gazxttnk5x`
+
+**ZILPEPE**
+- EVM Proxy: `0x9C3fE3f471d8380297e4fB222eFb313Ee94DFa0f`
+- Scilla: `zil1tyc45he8tp96tkyv2372le02tc0hch9p8cxws8`
+
+**SEED**
+- EVM Proxy: `0xe64cA52EF34FdD7e20C0c7fb2E392cc9b4F6D049`
+- Scilla: `zil1lgj5uykg9lmzjecctjc5fkehdrghd7a9enmwg9`
+
+**VOID**
+- EVM Proxy: `0x20Dd5D5B5d4C72676514A0eA1052d0200003d69D`
+- Scilla: `zil17slttkmqchmcpev4yps8mguu8rkhv5g4ucu7a6`
+
+**ZHIB**
+- EVM Proxy: `0xbfDe2156aF75a29d36614bC1F8005DD816Bd9200`
+- Scilla: `zil1xsgeu8a89w29plxx7sa5pp88v93rmhcwy0dsc6`
+
+**ZWAP**
+- EVM Proxy: `0x55F05eF8AbbAc38e6F663449aD332d495662C3E8`
+- Scilla: `zil1p5suryq6q647usxczale29cu3336hhp376c627`
+
+> Addresses are subject to change. Always verify token and proxy details through official channels before transacting.
+
+## Critical Warnings
+
+- Never send EVM-native ERC-20 tokens to a `zil1...` Scilla address. They will be lost.
+- Use your main addresses for transactions; twins are receive-only.
+- Confirm token type (ZIL, ZRC-2, ERC-20), destination format (`zil1` vs `0x`), and fees before sending.
+
+## Quick Reference
+
+- **Transact on Scilla**: Use main `zil1...` address
+- **Transact on EVM**: Use main `0x...` address
+- **Receive from Scilla to EVM**: Use the `zil1` twin of your `0x` address
+- **Receive from EVM to Scilla**: Use the `0x` twin of your `zil1` address
+- **Use ZRC-2 tokens on EVM**: Add the token's proxy contract as a custom token
+
+## Wallet Options
+
+### EVM-Only Wallets (MetaMask, Rabby, WalletConnect)
+
+Standard EVM wallets like MetaMask, Rabby, or any WalletConnect-enabled wallet can be used for Zilliqa EVM:
+- Simply add the Zilliqa EVM network to your wallet configuration.
+- These wallets will only display and use your `0x...` EVM address.
+- To interact with Scilla-side assets or move funds between sides, you'll need to manually manage address conversions and understand the twin address system described above.
+
+### Dual-Support Wallets (Torch)
+
+Wallets like Torch Browser Wallet support both Scilla and Zilliqa EVM from a single private key:
+
+- **EVM Mode**: Displays and uses your **main `0x...` EVM address**.
+- **Scilla Mode**: Displays and uses your **main `zil1...` Scilla address**.
+
+These wallets automatically switch between addresses based on your selected network. Twin addresses work behind the scenes for cross-side transfers.
+
+

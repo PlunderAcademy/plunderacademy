@@ -1,0 +1,297 @@
+---
+slug: island2-glossary
+title: "Island 2 Glossary: Advanced Solidity, Staking, and Testing"
+excerpt: Comprehensive glossary of advanced Solidity concepts, staking patterns, testing methodologies, and error handling introduced in Island 2.
+level: intermediate
+tags:
+  - glossary
+  - terminology
+  - solidity
+  - staking
+  - testing
+---
+
+## Introduction
+
+This glossary covers terminology introduced in **Island 2: Advanced Solidity Foundations, Staking, and Testing** (also known as Frost Peak). As you progress through Island 2's five modules, you'll encounter these advanced terms:
+
+**Module 1 - Advanced Solidity Foundations:** inheritance patterns, abstract contracts, interfaces, events, libraries, and contract-to-contract interactions  
+**Module 2 - Advanced Data Structures & Error Handling:** nested mappings, struct packing, storage optimization, custom errors, and security patterns (reentrancy guards, CEI)  
+**Module 3 - Testing Fundamentals:** test frameworks (Hardhat), unit testing patterns, fixtures, mocks, and security-focused testing  
+**Module 4 - Staking Concepts & Time-Based Logic:** staking architecture (unified vs modular), reward calculations, time-based logic, and lock periods  
+**Module 5 - Staking Contract Practical:** complete staking contract deployment with duration tiers, APY rewards, and comprehensive testing
+
+Island 2 builds upon the blockchain and Solidity fundamentals from [Island 1](/glossary/island1-glossary), adding production-grade patterns you'll use to build secure, gas-optimized smart contracts.
+
+Terms are organized alphabetically with beginner-friendly explanations. For foundational blockchain and EVM terms, refer to the [Island 1 Glossary](/glossary/island1-glossary).
+
+---
+
+## A
+
+### Abstract Contract
+Think of it like a blueprint or template that says "you must have these functions" without providing the actual code. An abstract contract defines what functions must exist, but child contracts provide the implementation. Like a job description that lists required skills without saying how to do the job. Used to create flexible, swappable modules (like reward policies in staking systems where different contracts can calculate rewards differently).
+
+### AAA Pattern (Arrange-Act-Assert)
+A testing structure that organizes tests into three clear sections: **Arrange** (set up test data), **Act** (call the function being tested), **Assert** (verify the results). This makes tests easy to read and understand, like following a recipe step-by-step.
+
+### Access Control
+Security mechanisms that restrict who can call certain functions. Common patterns include `onlyOwner` (only the contract owner), role-based access (different roles have different permissions), and multi-signature requirements (multiple approvals needed). Prevents unauthorized users from changing critical settings.
+
+### Accrual
+The process of rewards building up over time. In staking contracts, your rewards accrue (accumulate) continuously based on how long you've staked and your APY rate. Like interest building up in a savings account; every second that passes, you earn a tiny bit more. Rewards are calculated when you claim or withdraw, based on the total accrued amount since your last action.
+
+### APY (Annual Percentage Yield)
+The yearly interest rate you earn on staked tokens, expressed as a percentage. If you stake 1000 tokens at 10% APY for a full year, you'd earn 100 tokens in rewards. Higher APY = more rewards. In staking contracts, longer lock periods usually offer higher APY (like 10% for 30 days, 15% for 60 days, 27% for 120 days) to incentivize longer commitment.
+
+### Assertion
+A test statement that checks if something is true. If the assertion fails, the test fails. Like checking your work in math; you assert that 2+2 equals 4, and if it doesn't, something is wrong. Common assertions: `expect(balance).to.equal(1000)`, `expect(transaction).to.emit(event)`, `expect(call).to.be.revertedWith(error)`. Assertions make tests precise and automated.
+
+---
+
+## B
+
+### block.timestamp
+A special variable in Solidity that tells you the current time in seconds since January 1, 1970 (Unix time). Used in staking contracts to track when deposits happened, calculate how much time has elapsed, and enforce lock periods. Like checking a clock to see if 30 days have passed since someone staked. **Important:** Don't use `==` to compare timestamps; always use `>=` or `>` because block times can vary slightly.
+
+### Bounded Array
+An array with a maximum size limit enforced by the contract. Unlike unbounded arrays (which can grow forever and cause expensive loops), bounded arrays have a cap like "maximum 100 items." Safer because you can't accidentally create arrays so large that gas costs make them unusable. For example, limiting users to 50 deposits per address prevents one user from making gas costs explode for everyone.
+
+---
+
+## C
+
+### Call
+A low-level function that calls another contract and forwards all remaining gas. Returns a boolean success flag and any return data. Unlike high-level calls (like `token.transfer()`), `call` doesn't automatically revert on failure; you must check the return value yourself. Used when you need maximum flexibility or to call functions without knowing their exact signature. Always check: `(bool success, bytes memory data) = target.call{value: amount}("")`.
+
+### Calldata
+A read-only, temporary location where function parameters are stored. When you call a function, the arguments are passed in calldata. Reading from calldata is extremely cheap (~3 gas per word) compared to memory or storage. For external functions that take arrays or structs, always use `calldata` instead of `memory` to save gas. Like reading directly from a letter instead of copying it to your desk first.
+
+### CEI Pattern (Checks-Effects-Interactions)
+A security pattern that ensures functions execute in this order: **Checks** (validate inputs), **Effects** (update state), **Interactions** (call external contracts). This prevents reentrancy attacks by updating balances before sending tokens. Like locking your door before leaving the house.
+
+### Chai
+An assertion library used with Hardhat for testing. Provides readable test syntax like `expect(balance).to.equal(1000)`, `expect(tx).to.emit(event)`, and `expect(call).to.be.revertedWith(error)`. Makes tests read like English sentences. Chai is the "grammar" that lets you express what you expect to happen in tests clearly and precisely.
+
+### Cold Storage Access
+The first time your transaction reads from a storage slot, it costs 2,100 gas (cold SLOAD). Subsequent reads of the same slot in the same transaction cost only 100 gas (warm SLOAD). This is why reading a variable multiple times in one function is relatively cheap after the first read. Good contracts minimize cold reads by caching storage values in memory.
+
+### Composite Key
+A single lookup key created by combining multiple pieces of information (like user address + pool ID). Instead of nested mappings like `mapping(address => mapping(uint => Position))`, you hash the values together into one key: `bytes32 key = keccak256(abi.encode(user, poolId))`. Useful when tracking 3+ dimensions of data, though nested mappings are usually clearer for 2 dimensions. Like creating a unique ID by combining someone's name and birthday together.
+
+### Custom Error
+A named, typed way to report failures in Solidity. Much cheaper than string messages and easier for frontends to handle. Example: `error InsufficientBalance(uint256 requested, uint256 available)` instead of `require(false, "Insufficient balance")`. Like error codes in traditional programming, but with typed data.
+
+---
+
+## D
+
+### Delegatecall
+⚠️ **Advanced and dangerous.** A special type of function call that executes another contract's code but uses YOUR contract's storage. Like borrowing someone's recipe but cooking with ingredients from your own kitchen; they could swap your salt for sugar! Used in proxy upgrade patterns to allow contracts to be upgraded. The called contract can completely modify your storage, so only use with trusted libraries or carefully audited proxy patterns. One mistake can let another contract steal all your funds.
+
+### Diamond Inheritance
+When a contract inherits from multiple parent contracts that share a common ancestor. Solidity uses C3 linearization to determine the order functions execute. Requires explicit override lists like `override(Parent1, Parent2)` to resolve conflicts.
+
+### Duration Tier
+Different lock period options in a staking contract, each with its own reward rate. Common tiers: 30 days at 10% APY, 60 days at 15% APY, 120 days at 27% APY. Like choosing between short-term, medium-term, and long-term CDs at a bank; longer commitment earns higher interest. Users pick the tier that matches their goals: flexibility vs higher returns.
+
+---
+
+## E
+
+### Event-Over-Storage Pattern
+A gas-saving pattern where you store historical data in events instead of storage. Events are much cheaper (375 gas vs 20,000 gas per storage slot) and can be read by wallets, explorers, and frontends. Use storage only for data your contract needs to read on-chain. Like keeping digital receipts instead of storing every purchase detail in an expensive database; you can look up the receipts when needed, but they don't take up costly space.
+
+### Error Selector
+The first 4 bytes of a custom error's signature, used to identify which error was thrown. Like a fingerprint for each error type. When a contract reverts with `error InsufficientBalance(uint256, uint256)`, the EVM calculates the selector as `bytes4(keccak256("InsufficientBalance(uint256,uint256)"))`. Frontends use this selector to decode the error and show users what went wrong.
+
+### Explicit Override
+When multiple parent contracts define the same function, you must list all of them: `override(Parent1, Parent2)`. This documents which contracts you're overriding and prevents ambiguity. Required for diamond inheritance patterns.
+
+---
+
+## F
+
+### Fixture
+A reusable setup function in tests that deploys contracts and prepares initial state. Instead of deploying contracts in every test (slow), you create a fixture once, take a snapshot of the blockchain state, and restore that snapshot before each test (fast). Like meal prep; cook once, eat many times. Fixtures make test suites run 10-100x faster and ensure every test starts from identical conditions.
+
+### Fail-Closed Policy
+A safety principle: when external data is questionable (like an old price from an oracle, or a failed token balance check), stop the transaction rather than guess or use bad data. Like refusing to drive if your brakes might be faulty; it's safer to stop than continue with unreliable information. The opposite approach (fail-open) would continue anyway, which is dangerous in DeFi. Always fail-closed when money is involved.
+
+---
+
+## I
+
+### Impersonation
+A testing technique where you pretend to be another address to test role-based functions. Hardhat's `impersonateAccount()` lets you send transactions as if you were the contract owner, a specific user, or even another contract. Like trying on someone else's badge to test if security checks work. Essential for testing access control without needing the real private keys.
+
+### Initializer Pattern
+A function that sets up an upgradeable contract's initial state, replacing constructors. Must be called once after deployment and protected from re-initialization attacks. Like a setup wizard that runs once when you first install software. Common in upgradeable contracts where constructors don't work (proxies execute logic contract code with proxy storage). Usually protected with a flag like `bool private initialized` to prevent running setup twice.
+
+### Interface
+A contract that defines function signatures without implementation. Like a contract that says "any contract implementing me must have these functions." Used to create flexible, swappable modules. Different from abstract contracts: interfaces can't have state variables or implement functions.
+
+### Invariant
+A property that must always be true about your contract, no matter what functions are called. For staking: "total staked balance ≤ vault token balance" is an invariant. If this ever becomes false, there's a bug. Security tests check invariants before and after every action to catch logic errors that might not trigger explicit reverts. Like checking that a bank's total deposits always equal the sum of all account balances.
+
+---
+
+## L
+
+### Library
+A reusable collection of functions that can be used by multiple contracts without duplicating code. Libraries have no storage and can't receive Ether, making them safe and gas-efficient. Often used for math operations, data conversions, or common utilities. You attach libraries to types using `using LibName for Type`, which lets you call functions like methods: `amount.calculateFee()` instead of `FeeLib.calculateFee(amount)`. OpenZeppelin provides many battle-tested libraries.
+
+### Linearization (C3)
+The order Solidity uses to decide which parent function gets called when a contract inherits from multiple parents. Like a family tree that determines who gets asked first when multiple relatives have advice. Understanding linearization helps predict function execution order in complex inheritance. In Solidity, this follows the C3 algorithm to ensure consistency; basically, it goes from most specific (child) to most general (base), and left-to-right in your inheritance list.
+
+### Lock Period
+The required duration tokens must stay staked before you can withdraw without penalty. Common lock periods: 30 days, 60 days, 120 days. Like a term deposit at a bank; if you withdraw early, you lose rewards or pay a penalty. After the lock period ends, you can withdraw with full rewards. Longer lock periods usually offer higher APY to compensate for reduced liquidity.
+
+### Low-Level Call
+Direct calls to contracts using `call`, `delegatecall`, or `staticcall`. More flexible but less safe than high-level function calls. Use only when necessary (like forwarding arbitrary data or implementing proxies). Always check return values.
+
+---
+
+## M
+
+### Mock Contract
+A simplified version of a contract used in testing. Returns controlled values so you can test your contract without deploying complex dependencies. Like a fake credit card reader for testing payment systems. Also called test doubles or stubs in other programming contexts. Mocks let you test one contract in isolation without needing the real token contracts, oracles, or external services.
+
+### Modular Architecture
+Breaking a system into separate, swappable contracts. For staking: one contract handles deposits (vault), another calculates rewards (policy), another distributes tokens (distributor). Easier to upgrade and test, but more complex to deploy. **Note:** Most production staking contracts use unified architecture (single contract) for simplicity. Modular is better for very large protocols with teams of 5+ developers where different people work on different modules.
+
+---
+
+## N
+
+### Negative Testing
+Testing that things fail correctly. Instead of just testing that deposits work, you test that deposits fail when amount is zero, when contract is paused, when token transfer fails, etc. Negative tests prove your contract rejects bad inputs and malicious actions. Essential for security; positive tests prove what works, negative tests prove what's prevented.
+
+### Nested Mapping
+A mapping inside another mapping, like `mapping(address => mapping(uint256 => Position))`. Allows two-dimensional lookups (user × pool ID). More readable than hashing keys together, but adds slight gas cost per nesting level.
+
+### Nonce (Transaction)
+A sequential number that counts your transactions. Prevents replay attacks and ensures proper ordering. Your first transaction has nonce 0, second has nonce 1, etc. If you skip a number, transactions wait until the gap is filled.
+
+---
+
+## O
+
+### Operator Approval
+Giving another address permission to transfer all your tokens from a collection. More convenient than per-token approvals but riskier; malicious operators can drain everything. Use carefully and only with trusted contracts.
+
+### Override
+Implementing or modifying a function from a parent contract. The child contract's version runs instead of the parent's. Use `virtual` in the parent to allow overrides, and `override` in the child to mark the replacement.
+
+---
+
+## P
+
+### Penalty
+A fee charged for withdrawing staked tokens before the lock period ends. For example: stake for 30 days, withdraw after 15 days, lose 5% of your principal plus all rewards. Penalties discourage early withdrawals and protect the protocol's liquidity planning. Some contracts send penalties to a treasury, others burn them. Always clearly documented so users know the cost of early exit.
+
+### Position
+A data structure tracking a user's staking details: how much they staked, when they staked it, what APY they're earning, and when their lock period ends. Each user can have multiple positions if they stake at different times. Like having multiple CDs at a bank; each one has its own amount, start date, and maturity date. Stored in structs within mappings: `mapping(address => Position[])`.
+
+### Pull Pattern
+Users call a function to claim their rewards or withdraw funds. Safer than push patterns because failures only affect one user, not batches. Like users picking up their mail instead of the post office delivering to everyone at once. Gas efficient because each user pays their own gas to claim. If the contract tried to send rewards to 1,000 users (push pattern), one transaction would cost enormous gas and if any single transfer failed, the entire batch would fail.
+
+### Push Pattern
+The contract automatically sends tokens to users in the same transaction. Convenient but risky; if one transfer fails, the whole batch fails. Use only for trusted recipients or small batches.
+
+---
+
+## R
+
+### Reentrancy
+An attack where an external contract calls back into your contract before your function finishes, exploiting stale state. Like someone calling you back while you're still on the phone with them. Prevented with CEI pattern and `ReentrancyGuard`.
+
+### ReentrancyGuard
+A modifier from OpenZeppelin that prevents reentrancy attacks. Sets a lock during function execution; if someone tries to re-enter, the call reverts. Like a "do not disturb" sign that blocks interruptions.
+
+### Reward Policy
+A contract or function that calculates how much reward a user earns based on their stake amount and time. Can be swapped without changing the main staking contract. Like a formula that determines interest rates.
+
+---
+
+## S
+
+### Safe Transfer
+Token transfers that check if the recipient can handle tokens. For NFTs, `safeTransferFrom` checks if the recipient implements `onERC721Received`. Prevents tokens from being sent to contracts that can't handle them.
+
+### SLOAD / SSTORE
+The EVM opcodes for reading (SLOAD) and writing (SSTORE) storage. SLOAD costs 2,100 gas for cold access or 100 gas for warm access. SSTORE costs 20,000 gas to initialize a slot, 5,000 gas to update, or refunds ~4,800 gas when setting to zero. These are the most expensive operations in smart contracts, which is why gas optimization focuses heavily on minimizing storage access.
+
+### Staking Core
+The main contract that tracks user positions and balances. Owns all storage and coordinates with policy and distributor modules. Like the central hub that manages everything.
+
+### Staticcall
+A low-level call that reads from another contract without allowing state changes. Like `call` but guarantees the called contract can't modify storage or send Ether. Used to safely query external contracts when you only want to read data, not execute state-changing operations. View and pure functions use staticcall under the hood.
+
+### Storage Slot
+A 256-bit (32-byte) unit of storage in a contract. Each state variable occupies one or more slots. Small variables (`uint128`, `bool`, `address`) can be packed into the same slot to save gas. Storage slots are numbered 0, 1, 2, etc. Reading or writing costs gas based on whether the slot is cold (first access) or warm (subsequent access).
+
+### Struct Packing
+Combining small data types (`uint128`, `uint64`, `bool`) into a single 256-bit storage slot. Saves gas by reducing storage operations. Like packing a suitcase efficiently to fit more items.
+
+### Super
+A keyword that calls the parent contract's version of a function. Allows you to extend parent behavior rather than replace it. Like calling a parent class method in object-oriented programming.
+
+---
+
+## T
+
+### Table-Driven Tests
+Tests that loop over a table of test cases instead of writing separate tests for each scenario. Makes it easy to add new edge cases and see all scenarios at once. Like testing a calculator with a spreadsheet of inputs and expected outputs.
+
+### Test-Driven Development (TDD)
+A development approach where you write tests before writing the actual code. The cycle: write a failing test → write minimal code to pass it → refactor → repeat. TDD helps catch bugs early and ensures every feature has test coverage from day one. Popular in smart contract development because fixing bugs after deployment is expensive or impossible.
+
+### Time-Lock
+A delay before certain actions can execute. Used for upgrades and critical changes to give users time to review or exit. Like a waiting period before a major decision takes effect.
+
+### Try/Catch
+A way to handle errors from external contracts without your entire transaction failing. Like a safety net; if calling another contract fails, you can catch the error and do something else instead of reverting everything. For example, if a reward token transfer fails, you can mark it as 'failed' and let the user retry later instead of blocking their entire withdrawal. Similar to try/catch in JavaScript or Python. Only works with external contract calls, not internal function calls.
+
+---
+
+## U
+
+### Unified Architecture
+A single contract that handles all functionality (deposits, rewards, withdrawals). Simpler than modular architecture but harder to upgrade. Perfect for learning and most production use cases.
+
+### Using For
+A Solidity directive that attaches library functions to a type, letting you call them like methods. `using SafeMath for uint256` allows `amount.add(10)` instead of `SafeMath.add(amount, 10)`. Makes code more readable when you frequently use library functions. Like adding custom methods to built-in types in other programming languages.
+
+---
+
+## V
+
+### Virtual
+A keyword that marks a function as overridable by child contracts. Like marking a method as "extensible" so children can customize it. Required for functions you want to allow overrides.
+
+---
+
+## W
+
+### Warm Storage Access
+After the first read of a storage slot in a transaction (cold access = 2,100 gas), subsequent reads of that same slot cost only 100 gas (warm access). This is why caching storage variables in memory at the start of a function can save gas if you read them multiple times. The EVM tracks which slots have been "warmed up" during the current transaction.
+
+### Withdrawal
+The process of removing your staked tokens from a staking contract. **Early withdrawal** (before lock period ends) usually incurs penalties and forfeits rewards. **Normal withdrawal** (after lock period) returns your full principal plus earned rewards, minus any exit fees (typically 2-5%). Some contracts have separate functions for emergency withdrawals (high penalty) vs regular withdrawals.
+
+---
+
+## Additional Resources
+
+For foundational blockchain and EVM terms, see the [Island 1 Glossary](/glossary/island1-glossary).
+
+For advanced concepts introduced in later islands:
+- **Island 3**: NFT standards, metadata, IPFS - [Island 3 Glossary](/glossary/island3-glossary)
+- **Island 4**: Proxies, oracles, DeFi patterns - [Island 4 Glossary](/glossary/island4-glossary)
+- **Island 5**: Security patterns, frontend development - [Island 5 Glossary](/glossary/island5-glossary)
+
+---
+
+*This glossary covers terminology introduced in Island 2. Terms are continuously updated as new concepts are introduced.*
+

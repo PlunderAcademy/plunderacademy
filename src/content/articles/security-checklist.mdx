@@ -1,0 +1,367 @@
+---
+slug: security-checklist
+title: Smart Contract Security Checklist
+excerpt: Comprehensive security guide covering common vulnerabilities, best practices, and pre-deployment verification steps.
+level: advanced
+tags:
+  - security
+  - audits
+  - best-practices
+  - vulnerabilities
+---
+
+Smart contract security isn't just about avoiding hacks — it's about building user trust and protecting value. This comprehensive checklist covers the most critical security considerations for Solidity contracts, with practical examples and verification steps.
+
+
+## Critical Vulnerability Categories
+
+### 1. Access Control & Authorization
+
+**The Risk:** Unauthorized users calling privileged functions can drain funds, manipulate state, or break contract logic.
+
+**Best Practices:**
+```solidity
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract SecureTreasure is Ownable, AccessControl {
+    bytes32 public constant CAPTAIN_ROLE = keccak256("CAPTAIN_ROLE");
+    bytes32 public constant CREW_ROLE = keccak256("CREW_ROLE");
+    
+    modifier onlyCaptainOrCrew() {
+        require(
+            hasRole(CAPTAIN_ROLE, msg.sender) || hasRole(CREW_ROLE, msg.sender),
+            "Unauthorized: Not captain or crew"
+        );
+        _;
+    }
+    
+    function distributeTreasure(address[] calldata recipients, uint256[] calldata amounts) 
+        external 
+        onlyCaptainOrCrew 
+    {
+        // Critical function protected by role-based access
+        require(recipients.length == amounts.length, "Array length mismatch");
+        for (uint256 i = 0; i < recipients.length; i++) {
+            _transfer(recipients[i], amounts[i]);
+        }
+    }
+}
+```
+
+**Verification Steps:**
+- [ ] All privileged functions have appropriate access modifiers
+- [ ] Role assignments are properly initialized in constructor
+- [ ] Role changes are logged with events
+- [ ] Consider time delays for critical role changes
+
+### 2. Reentrancy Attacks
+
+**The Risk:** External calls can re-enter your contract before state updates complete, potentially draining funds.
+
+**Best Practices:**
+```solidity
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract SecureWithdrawal is ReentrancyGuard {
+    mapping(address => uint256) public balances;
+    
+    // BAD: Vulnerable to reentrancy
+    function vulnerableWithdraw() external {
+        uint256 amount = balances[msg.sender];
+        require(amount > 0, "No balance");
+        
+        // External call before state update - DANGEROUS!
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Transfer failed");
+        balances[msg.sender] = 0; // Too late!
+    }
+    
+    // GOOD: Reentrancy-safe withdrawal
+    function secureWithdraw() external nonReentrant {
+        uint256 amount = balances[msg.sender];
+        require(amount > 0, "No balance");
+        
+        // Update state BEFORE external call
+        balances[msg.sender] = 0;
+        
+        // External call after state update
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+}
+```
+
+**Verification Steps:**
+- [ ] All external calls follow Checks-Effects-Interactions pattern
+- [ ] Use `ReentrancyGuard` for functions with external calls
+- [ ] State updates happen before external calls
+- [ ] Consider using `call` with proper error handling over `transfer`
+
+### 3. Integer Overflow & Underflow
+
+**The Risk:** Arithmetic operations can wrap around, leading to unexpected values.
+
+**Best Practices:**
+```solidity
+// Solidity 0.8+ has built-in overflow protection
+contract SafeArithmetic {
+    mapping(address => uint256) public balances;
+    
+    function deposit() external payable {
+        // Safe: Will revert on overflow in Solidity 0.8+
+        balances[msg.sender] += msg.value;
+    }
+    
+    function withdraw(uint256 amount) external {
+        // Safe: Will revert on underflow
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+        
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+    
+    // For gas optimization in loops (when overflow is impossible)
+    function batchProcess(address[] calldata users) external {
+        for (uint256 i = 0; i < users.length;) {
+            // Process user...
+            unchecked { ++i; } // Safe optimization
+        }
+    }
+}
+```
+
+**Verification Steps:**
+- [ ] Use Solidity 0.8+ for automatic overflow protection
+- [ ] Only use `unchecked` when overflow is mathematically impossible
+- [ ] Test edge cases with maximum values
+- [ ] Consider SafeMath for older Solidity versions
+
+### 4. External Call Safety
+
+**The Risk:** Calls to external contracts can fail, consume unexpected gas, or be malicious.
+
+**Best Practices:**
+```solidity
+contract SafeExternalCalls {
+    event TransferFailed(address indexed recipient, uint256 amount);
+    
+    // GOOD: Safe external call with error handling
+    function safeTransfer(address recipient, uint256 amount) internal returns (bool) {
+        (bool success, ) = payable(recipient).call{value: amount}("");
+        if (!success) {
+            emit TransferFailed(recipient, amount);
+            // Consider alternative action (e.g., store for later withdrawal)
+        }
+        return success;
+    }
+    
+    // GOOD: Pull payment pattern (safer than push)
+    mapping(address => uint256) public pendingWithdrawals;
+    
+    function withdraw() external {
+        uint256 amount = pendingWithdrawals[msg.sender];
+        require(amount > 0, "No pending withdrawal");
+        
+        pendingWithdrawals[msg.sender] = 0;
+        
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+}
+```
+
+**Verification Steps:**
+- [ ] Handle failed external calls gracefully
+- [ ] Use pull payment pattern when possible
+- [ ] Set reasonable gas limits for external calls
+- [ ] Validate external contract addresses
+
+### 5. Oracle & Price Feed Security
+
+**The Risk:** Manipulated or stale price data can be exploited for profit.
+
+**Best Practices:**
+```solidity
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
+contract SecurePriceOracle {
+    AggregatorV3Interface internal priceFeed;
+    uint256 public constant PRICE_STALE_THRESHOLD = 3600; // 1 hour
+    uint256 public constant MAX_PRICE_DEVIATION = 1000; // 10%
+    
+    constructor(address _priceFeed) {
+        priceFeed = AggregatorV3Interface(_priceFeed);
+    }
+    
+    function getSecurePrice() external view returns (uint256) {
+        (
+            uint80 roundId,
+            int256 price,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        ) = priceFeed.latestRoundData();
+        
+        // Validate price data
+        require(price > 0, "Invalid price");
+        require(updatedAt > 0, "Round not complete");
+        require(block.timestamp - updatedAt <= PRICE_STALE_THRESHOLD, "Price data stale");
+        require(answeredInRound >= roundId, "Stale price data");
+        
+        return uint256(price);
+    }
+}
+```
+
+**Verification Steps:**
+- [ ] Validate price data freshness
+- [ ] Check for reasonable price ranges
+- [ ] Use multiple oracle sources when possible
+- [ ] Implement circuit breakers for extreme price movements
+
+## Pre-Deployment Security Checklist
+
+### Code Review & Testing
+- [ ] **Comprehensive test coverage** (aim for >90% line coverage)
+- [ ] **Fuzz testing** for edge cases and unexpected inputs
+- [ ] **Invariant testing** to ensure properties always hold
+- [ ] **Integration tests** with external contracts
+- [ ] **Gas optimization** review for DoS resistance
+
+### Static Analysis
+- [ ] **Slither analysis** for automated vulnerability detection
+- [ ] **MythX scanning** for comprehensive security analysis
+- [ ] **Manual code review** by experienced developers
+- [ ] **Formal verification** for critical functions (if applicable)
+
+### Access Control Verification
+- [ ] **Role assignments** are correct and minimal
+- [ ] **Multi-signature** requirements for critical functions
+- [ ] **Time delays** for sensitive operations
+- [ ] **Emergency pause** mechanisms where appropriate
+
+### Economic Security
+- [ ] **Incentive alignment** analysis
+- [ ] **MEV resistance** considerations
+- [ ] **Flash loan attack** resistance
+- [ ] **Economic exploit** scenario testing
+
+## Advanced Security Patterns
+
+### Circuit Breakers & Pausability
+```solidity
+import "@openzeppelin/contracts/security/Pausable.sol";
+
+contract EmergencyPausable is Pausable, Ownable {
+    uint256 public constant MAX_DAILY_WITHDRAWAL = 100 ether;
+    mapping(uint256 => uint256) public dailyWithdrawals; // day => amount
+    
+    function withdraw(uint256 amount) external whenNotPaused {
+        uint256 today = block.timestamp / 86400;
+        
+        // Circuit breaker: Pause if daily limit exceeded
+        if (dailyWithdrawals[today] + amount > MAX_DAILY_WITHDRAWAL) {
+            _pause();
+            revert("Daily withdrawal limit exceeded - contract paused");
+        }
+        
+        dailyWithdrawals[today] += amount;
+        // Process withdrawal...
+    }
+    
+    function emergencyPause() external onlyOwner {
+        _pause();
+    }
+    
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+}
+```
+
+### Upgrade Safety
+```solidity
+// For upgradeable contracts using OpenZeppelin
+contract UpgradeableSecure {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+    
+    function initialize() public initializer {
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+    }
+    
+    function _authorizeUpgrade(address newImplementation) 
+        internal 
+        onlyOwner 
+        override 
+    {}
+}
+```
+
+## AI-Assisted Security Review
+
+*Note: This section prepares for integration with Plunder Academy's upcoming AI Auditor tool.*
+
+When using AI tools for security analysis:
+
+1. **Automated Scanning:** AI can quickly identify common patterns like reentrancy, access control issues, and arithmetic problems
+2. **Code Quality:** AI can suggest gas optimizations and style improvements
+3. **Educational Feedback:** AI can explain why certain patterns are dangerous and suggest fixes
+4. **Continuous Monitoring:** AI can track security metrics across your codebase
+
+**Remember:** AI tools complement but don't replace human security expertise. Always combine AI analysis with manual review and professional audits for critical contracts.
+
+## Professional Audits & Reviews
+
+### Internal Review Process
+1. **Peer review** by team members
+2. **Security-focused** code walkthrough
+3. **Threat modeling** sessions
+4. **Red team** attack simulations
+
+### External Audits
+- **Choose reputable firms** with Solidity expertise
+- **Provide comprehensive documentation** and test cases
+- **Address all findings** before deployment
+- **Document remediation** for transparency
+- **Consider bug bounty programs** post-deployment
+
+### Documentation Requirements
+- [ ] **Architecture overview** and design decisions
+- [ ] **Security assumptions** and trust boundaries  
+- [ ] **Known limitations** and risks
+- [ ] **Deployment and upgrade procedures**
+- [ ] **Emergency response plan**
+
+## Post-Deployment Security
+
+### Monitoring & Alerting
+- [ ] **Transaction monitoring** for unusual patterns
+- [ ] **Balance tracking** for critical accounts
+- [ ] **Event monitoring** for security-relevant actions
+- [ ] **Gas usage** monitoring for DoS attacks
+
+### Incident Response
+- [ ] **Emergency contacts** and procedures
+- [ ] **Pause mechanisms** ready to activate
+- [ ] **Communication plan** for users and stakeholders
+- [ ] **Recovery procedures** documented and tested
+
+## Conclusion
+
+Security is not a one-time checklist but an ongoing practice. The blockchain's immutable nature means mistakes are expensive and often irreversible. By following these practices and staying updated with the latest security research, you can build contracts that users can trust with their valuable assets.
+
+Remember: **Security is everyone's responsibility** on the development team, not just the security specialist's. Make security reviews a standard part of your development process, and never rush critical contract deployments.
+
+For the most current security practices and emerging threats, regularly consult resources like:
+- **OpenZeppelin Security Blog**
+- **ConsenSys Diligence Blog** 
+- **Trail of Bits Security Research**
+- **Immunefi Bug Bounty Reports**
+
+Stay vigilant, captain! 🏴‍☠️⚔️

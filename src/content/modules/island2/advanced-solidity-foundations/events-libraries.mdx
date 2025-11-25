@@ -1,0 +1,326 @@
+---
+id: events-libraries
+module: advanced-solidity-foundations
+number: 2.1.3
+title: "Events and Libraries: Clean APIs and Cheaper State"
+objective: >-
+  Emit analytics‑friendly events and use stateless libraries to cut storage costs while keeping staking logic modular and testable.
+slug: events-libraries
+---
+
+## Set the stage
+
+Imagine your staking protocol as a ship's voyage: events are the ship's log—permanent, public records that watchers (frontends, explorers, analytics) use to reconstruct what happened. Libraries are the ship's toolkit—reusable instruments (compass, sextant, rope knots) that every crew member uses the same way. Without clear logs, no one trusts your voyage. Without standard tools, every sailor invents their own math and bugs multiply.
+
+In staking, events let users track their deposit history, reward claims, and rate changes without querying expensive on-chain state. Libraries centralize formulas (APR calculations, fee math, time conversions) so one audit covers all uses. Together they make your protocol observable, testable, and gas-efficient. This lesson shows you how to design event schemas that won't break dashboards and libraries that won't bloat storage.
+
+## Conceptual foundations
+
+### Events: your protocol's public API
+
+Events are **write-only logs** emitted during transactions. They live in transaction receipts (off-chain data structures) but are cryptographically tied to blocks. Clients subscribe to events via filters (e.g., "all `Deposited` events where `account == 0x...`"). The EVM allows up to three `indexed` parameters per event; indexed fields become searchable topics. Non-indexed fields go into the event's data blob, which is cheaper but requires scanning.
+
+**Why indexed parameters cost more:** When you mark a parameter as `indexed`, the EVM hashes the value using keccak256 and stores it as a separate **topic** in the log entry. Topics are stored in a way that enables efficient filtering by nodes and indexers. This hashing and separate storage costs approximately **375 gas per indexed parameter**, compared to ~8 gas per byte for non-indexed data. The trade-off: you pay upfront for efficient queries later. Index the fields you'll filter by (addresses, token IDs); leave amounts and timestamps non-indexed unless you specifically need to filter by exact values.
+
+For staking, you'll emit events like:
+- `Deposited(address indexed account, uint256 amount, uint256 timestamp)`
+- `RewardClaimed(address indexed account, uint256 rewardAmount)`
+- `RewardRateChanged(uint256 oldRate, uint256 newRate, address indexed updatedBy)`
+
+Each event documents a state transition. Frontends listen for these to update balances without constant RPC calls. Analytics pipelines index them to build leaderboards and APR charts. Auditors review them to verify that critical actions (pauses, rate changes) were authorized.
+
+### Mental model: events vs storage
+
+| Concern | Storage (`mapping`, `uint256`) | Events (`emit MyEvent(...)`) |
+|---------|-------------------------------|------------------------------|
+| **On-chain reads** | Yes (via `view` functions) | No (off-chain only) |
+| **Cost** | ~20k gas per new slot | ~375 gas per topic + data |
+| **Historical queries** | Must re-run at every block | Indexed logs are efficient |
+| **Mutability** | Can be updated | Immutable once emitted |
+| **Use case** | Current state (balances, rates) | Historical state (deposit log, claim history) |
+
+**Heuristic**: If your contract needs to read it on-chain, store it. If only off-chain consumers need it (dashboards, explorers), emit an event.
+
+### Libraries: stateless, reusable logic
+
+A Solidity library is a contract with no storage and no `receive`/`fallback`. Its functions are typically `internal pure` or `internal view`, meaning they're inlined into your contract's bytecode (no external calls). This keeps gas low and logic portable. You attach libraries to types via `using LibName for Type;`, which lets you call `myUint.doSomething()` instead of `LibName.doSomething(myUint)`.
+
+For staking, common library patterns:
+- **Math**: APR calculations, safe arithmetic, time conversions
+- **Normalization**: Convert between token decimals, scale basis points
+- **Encoding**: Pack/unpack data for efficient storage or off-chain signatures
+
+Libraries have **no state**, so they can't accidentally corrupt your contract's storage layout. This makes them audit-friendly and testable in isolation.
+
+### When to use `using for`
+
+`using LibName for Type;` is syntactic sugar. It makes code more readable:
+
+```solidity
+// Without using for:
+uint256 fee = FeeMath.computeFee(amount, bps);
+
+// With using for:
+using FeeMath for uint256;
+uint256 fee = amount.computeFee(bps);
+```
+
+Use it when:
+- You call the same library functions repeatedly
+- The library naturally extends a type (e.g., `SafeMath` for `uint256`, `Strings` for `string`)
+- Readability improves (method chaining feels natural)
+
+Don't use it when:
+- The library is rarely called (no benefit)
+- Function names are ambiguous without the namespace (e.g., `process()` could mean anything)
+
+## Guided code walk-throughs
+
+These examples show how to design robust event schemas and extract math into libraries. Each ties directly to staking needs.
+
+### 1) Analytics-friendly event design with indexed subjects
+
+We define a staking vault's events with clear verbs (past tense), `indexed` subjects for filtering, and stable payloads. Notice how we index the two fields most likely to be queried (`account`, `token`) and leave numeric amounts non-indexed (cheaper, rarely filtered).
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+contract StakingVault {
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable stakingToken;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => uint256) public lastDepositTime;
+
+    /// @notice Emitted when a user deposits tokens
+    /// @param account The staker's address (indexed for filtering)
+    /// @param token The staking token address (indexed for multi-token vaults)
+    /// @param amount The deposit amount (not indexed; rarely filtered)
+    /// @param timestamp Block timestamp (for analytics; not indexed)
+    event Deposited(address indexed account, address indexed token, uint256 amount, uint256 timestamp);
+
+    /// @notice Emitted when a user withdraws tokens
+    event Withdrawn(address indexed account, address indexed token, uint256 amount, uint256 timestamp);
+
+    constructor(IERC20 _stakingToken) { stakingToken = _stakingToken; }
+
+    function deposit(uint256 amount) external {
+        require(amount > 0, "ZERO_AMOUNT");
+        balanceOf[msg.sender] += amount;
+        lastDepositTime[msg.sender] = block.timestamp;
+        stakingToken.safeTransferFrom(msg.sender, address(this), amount);
+        emit Deposited(msg.sender, address(stakingToken), amount, block.timestamp);
+    }
+
+    function withdraw(uint256 amount) external {
+        require(amount > 0 && amount <= balanceOf[msg.sender], "INVALID_AMOUNT");
+        balanceOf[msg.sender] -= amount;
+        stakingToken.safeTransfer(msg.sender, amount);
+        emit Withdrawn(msg.sender, address(stakingToken), amount, block.timestamp);
+    }
+}
+```
+
+**Takeaway**: Choose `indexed` subjects you'll filter by (account, token); leave amounts and timestamps non-indexed. Consistent past-tense verbs (`Deposited`, `Withdrawn`) make dashboards easier to build. Include `timestamp` in the payload so off-chain indexers don't need to query blocks separately.
+
+### 2) Centralized math library for staking calculations
+
+This `StakingMath` library provides basis-point fee calculations and simple linear APR. By centralizing formulas, you can fuzz-test them once and reuse them across your vault, rewards module, and governance contracts.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+library StakingMath {
+    uint256 internal constant BPS_DENOMINATOR = 10_000;
+    uint256 internal constant SECONDS_PER_YEAR = 365 days;
+
+    /// @notice Compute fee in basis points
+    /// @param amount The gross amount
+    /// @param feeBps Fee in basis points (e.g., 250 = 2.5%)
+    /// @return The fee amount
+    function applyFee(uint256 amount, uint256 feeBps) internal pure returns (uint256) {
+        return (amount * feeBps) / BPS_DENOMINATOR;
+    }
+
+    /// @notice Compute simple linear reward (no compounding)
+    /// @param principal The staked amount
+    /// @param aprBps Annual percentage rate in basis points (e.g., 1000 = 10%)
+    /// @param secondsStaked Duration of the stake
+    /// @return The reward amount
+    function linearReward(uint256 principal, uint256 aprBps, uint256 secondsStaked)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (principal * aprBps * secondsStaked) / (BPS_DENOMINATOR * SECONDS_PER_YEAR);
+    }
+}
+
+contract RewardsCalculator {
+    using StakingMath for uint256;
+
+    event RewardComputed(address indexed account, uint256 principal, uint256 reward);
+
+    function previewReward(address account, uint256 principal, uint256 aprBps, uint256 secondsStaked)
+        external
+        returns (uint256)
+    {
+        uint256 reward = StakingMath.linearReward(principal, aprBps, secondsStaked);
+        emit RewardComputed(account, principal, reward);
+        return reward;
+    }
+}
+```
+
+**Takeaway**: Pure library functions are easy to test (no state setup) and cheap to inline. One source of truth for formulas prevents copy-paste bugs. In your staking system, this library will power reward previews, claim amounts, and fee deductions.
+
+### 3) Gas trade-offs: events vs storage with data packing
+
+Sometimes you must choose between storing data on-chain (expensive, queryable) or emitting it (cheap, off-chain only). Here we show a hybrid: store current total deposits (needed on-chain), but emit per-user deposit history (only needed off-chain).
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract HybridStakingLog {
+    uint256 public totalDeposited; // on-chain state
+    mapping(address => uint256) public userBalance; // on-chain state
+
+    /// @notice Per-deposit event for off-chain history
+    /// @dev Cheaper than storing an array of Deposit structs
+    event DepositRecorded(
+        address indexed account,
+        uint256 indexed depositId,
+        uint256 amount,
+        uint256 timestamp
+    );
+
+    uint256 private _nextDepositId;
+
+    function deposit(uint256 amount) external {
+        require(amount > 0, "ZERO_AMOUNT");
+        userBalance[msg.sender] += amount;
+        totalDeposited += amount;
+        emit DepositRecorded(msg.sender, _nextDepositId++, amount, block.timestamp);
+    }
+
+    /// @notice View function: on-chain data only
+    function getTotalDeposited() external view returns (uint256) {
+        return totalDeposited;
+    }
+}
+```
+
+**Takeaway**: Store aggregates (`totalDeposited`) on-chain for contract logic; emit granular events (`DepositRecorded`) for dashboards. This pattern cuts storage costs ~95% for historical data while keeping your contract's view functions fast.
+
+### Gas cost comparison
+
+Here's a rough comparison for a single deposit operation:
+
+| Approach | Storage cost | Event cost | Total | Off-chain queryable? |
+|----------|--------------|------------|-------|----------------------|
+| **Store deposit array** | ~20k gas (new slot) + ~5k per field | - | ~30k+ | Yes (via `view`) |
+| **Emit event only** | - | ~375 gas per topic + ~8 gas/byte data | ~1.5k | Yes (via logs) |
+| **Hybrid (aggregate storage + event)** | ~5k (update existing slot) | ~1.5k | ~6.5k | Aggregate on-chain, history off-chain |
+
+**Recommendation for staking**: Use hybrid. Store `totalDeposited`, `rewardRate`, and `lastClaimTime` (needed for on-chain logic). Emit events for per-user history, rate changes, and claims (needed for UX).
+
+<svg viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      {`.box { fill: var(--background); stroke: var(--border); stroke-width: 2; rx: 6; }
+        .expensive { fill: var(--destructive); fill-opacity: 0.1; stroke: var(--destructive); }
+        .cheap { fill: var(--primary); fill-opacity: 0.1; stroke: var(--primary); }
+        .label { fill: var(--foreground); font-size: 13px; font-family: ui-monospace, monospace; }
+        .cost { fill: var(--muted-foreground); font-size: 11px; font-weight: 600; }
+        .arrow { stroke: var(--foreground); stroke-width: 2; fill: none; }`}
+    </style>
+  </defs>
+  {/* Storage (expensive) */}
+  <rect className="expensive" x="50" y="40" width="200" height="80" />
+  <text className="label" x="150" y="70" textAnchor="middle">Storage</text>
+  <text className="label" x="150" y="90" textAnchor="middle">(mapping, arrays)</text>
+  <text className="cost" x="150" y="110" textAnchor="middle">~20k gas per slot</text>
+  {/* Events (cheap) */}
+  <rect className="cheap" x="350" y="40" width="200" height="80" />
+  <text className="label" x="450" y="70" textAnchor="middle">Events</text>
+  <text className="label" x="450" y="90" textAnchor="middle">(emit logs)</text>
+  <text className="cost" x="450" y="110" textAnchor="middle">~1.5k gas total</text>
+  {/* Use cases */}
+  <rect className="box" x="50" y="160" width="200" height="60" />
+  <text className="label" x="150" y="185" textAnchor="middle">Use for:</text>
+  <text className="label" x="150" y="205" textAnchor="middle">Current state</text>
+  <rect className="box" x="350" y="160" width="200" height="60" />
+  <text className="label" x="450" y="185" textAnchor="middle">Use for:</text>
+  <text className="label" x="450" y="205" textAnchor="middle">Historical data</text>
+</svg>
+
+## Practice and reflection
+
+Now cement your understanding with hands-on design tasks:
+
+- **Event schema design**: Sketch an event schema for `RewardClaimed` with two `indexed` subjects (account and token) and two non-indexed values (reward amount and new total claimed). Write one sentence explaining why you indexed those two fields.
+- **Storage audit**: Review your staking vault's state variables. Identify one variable that could be removed if you emitted an event instead. What would off-chain consumers lose if you made that change?
+- **Library extraction**: Pick one formula your staking contract computes in multiple places (e.g., time-weighted reward, fee calculation). Sketch a library with one `pure` function that centralizes it. Name the library and function.
+- **Gas optimization**: Estimate the gas saved by emitting one `DepositRecorded` event instead of storing a `Deposit` struct in an array. Show your work (use ~20k gas per new storage slot, ~1.5k gas per event).
+
+{/* Word Jumble */}
+<WordJumble 
+  word="INDEXED" 
+  hint="Event topic used to filter by address or token" 
+/>
+
+Short reflection: Name one event you would add to your staking dashboard (beyond `Deposited`/`Withdrawn`/`RewardClaimed`) and explain why in two sentences. Consider operations, analytics, or governance use cases.
+
+## Security and pitfalls
+
+Events and libraries are low-risk primitives, but misuse can break integrations or hide vulnerabilities.
+
+### Event pitfalls
+
+- **Never rely on events for on-chain logic**: Events aren't accessible in contract code; they're for off-chain consumers only. Don't gate authorization or state transitions on event emission.
+- **Privacy**: Events are public and permanent. Don't emit sensitive data (private keys, plaintext secrets).
+- **Schema stability**: Once dashboards depend on your event structure, renaming fields or reordering parameters is a breaking change. Version events (`DepositedV2`) if you must change them.
+- **Over-indexing**: You can index up to 3 parameters per event. Indexing costs ~375 gas per topic because the EVM must hash the value (keccak256) and store it as a searchable topic. Don't index fields you'll never filter by (e.g., amounts, timestamps). Rule of thumb: index addresses and IDs; leave numeric values non-indexed.
+- **Under-indexing**: If you don't index the primary subject (e.g., `account`), off-chain queries become slow (must scan all events). Without indexed topics, clients must download and decode every event of that type to find matches—expensive for high-volume contracts.
+- **Gas cost**: Emitting many events per transaction adds up. Prefer one well-structured event over multiple tiny ones (e.g., `DepositedWithReward` instead of `Deposited` + `RewardAccrued`).
+- **Delivery guarantees**: Events are not guaranteed to be delivered to off-chain systems in real-time or at all if your infrastructure fails. Node crashes, network partitions, or RPC rate limits can cause missed events. Production systems must implement retry logic, maintain event cursors (last processed block), and handle reorgs. Never assume an off-chain listener caught every event—design for "at-least-once" delivery with idempotent handlers. For critical operations, combine events with periodic state reconciliation (e.g., re-sync balances every hour from on-chain storage).
+
+### Library pitfalls
+
+- **Trust but verify**: Even OpenZeppelin libraries can have edge cases. Read the source and write tests before depending on a library.
+- **No state assumptions**: Libraries can't read your contract's storage. If a library function needs contract state, pass it as a parameter.
+- **Integer overflow/underflow**: Solidity 0.8+ has built-in overflow checks, but custom math libraries might disable them for gas savings. Audit carefully.
+- **Delegatecall risk**: If you call a library via `delegatecall` (rare), it runs in your contract's context and can write to your storage. This is almost always a mistake—use `internal` library functions instead.
+- **Inline vs deployed**: `internal` library functions are inlined; `public`/`external` functions require a separate deployed library and `delegatecall`. For staking, stick with `internal pure` functions (cheaper, safer).
+
+### Upgrade considerations
+
+If you plan to upgrade your staking contract via proxies (covered in Island 4):
+- **Event schemas must remain stable**: Proxied contracts can't change event structures between versions without breaking indexers. Add new events (`RewardClaimedV2`) rather than modifying existing ones.
+- **Library addresses**: If using deployed libraries (rare), store the library address in upgradeable storage so you can swap libraries without redeploying the main contract.
+
+## Security checklist
+
+Before shipping:
+
+- [ ] **Indexed subjects chosen**: Events have up to 3 `indexed` parameters; you've picked the fields clients will filter by (usually `account`, `token`)
+- [ ] **Event schemas documented**: Each event has a NatSpec comment explaining its purpose and when it's emitted
+- [ ] **No sensitive data in events**: Private or secret information is never emitted
+- [ ] **Libraries are pure/view**: No unexpected state writes; all library functions are `internal pure` or `internal view`
+- [ ] **Math audited**: Core formulas (APR, fees) are tested with fuzz inputs and edge cases (zero, max uint256)
+- [ ] **No logic in events**: Events document state changes but don't gate them; all authorization happens before `emit`
+- [ ] **Schema versioning plan**: If you must break an event, you'll add a new one (`EventV2`) rather than renaming the old one
+- [ ] **Gas costs measured**: You've profiled event emission and library calls; no surprises in production
+
+## Wrap-up and next steps
+
+You've learned how to design analytics-friendly event schemas with `indexed` subjects, centralize reusable logic in stateless libraries, and choose between storage and events based on gas and query needs. Events make your staking protocol observable for dashboards and explorers; libraries make your math consistent and testable.
+
+Next, you'll tackle contract-to-contract interactions. You'll call external tokens, reward modules, and routers safely using interfaces, `try/catch`, and the CEI pattern. Combined with the events and libraries from this lesson, you'll build a staking system that is observable, modular, and resilient to external failures.
+

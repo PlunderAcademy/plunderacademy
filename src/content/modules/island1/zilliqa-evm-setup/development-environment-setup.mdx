@@ -1,0 +1,476 @@
+---
+id: development-environment-setup
+module: zilliqa-evm-setup
+number: 4.3
+title: Complete Development Environment Setup
+objective: >-
+  Set up a professional Zilliqa development environment with VS Code, Node.js, 
+  and Hardhat 3 from scratch on Windows.
+slug: development-environment-setup
+---
+
+## ⚠️ Important: Required Setup for All Future Modules
+
+**This setup is required for all subsequent modules in this course.** Taking the time to properly configure your development environment now will save you hours of troubleshooting later. All future smart contract development, token creation, and deployment modules assume you have completed this setup successfully.
+
+## Creating Your Professional Development Environment
+
+### Overview: What We're Building
+
+**Real-world analogy:** Setting up a development environment is like organizing a professional workshop. You need the right tools (VS Code), the power source (Node.js), and the specialized equipment (Hardhat) all working together seamlessly.
+
+By the end of this guide, you'll have a complete development setup that enables you to:
+- **Write smart contracts** with syntax highlighting and error detection
+- **Compile and test** contracts locally before deployment
+- **Deploy to Zilliqa** networks with confidence
+- **Debug issues** efficiently with professional tools
+- **Manage projects** with version control and package management
+
+**What we'll install:**
+1. **WSL2 (Windows only)** - Linux environment for optimal development
+2. **VS Code** - Your primary development interface
+3. **Node.js 22.10+** - The runtime environment for development tools
+4. **Hardhat 3** - The professional framework for smart contract development
+5. **Hardhat VS Code Extension** - Advanced Solidity support
+
+## Windows Users: WSL2 Setup (REQUIRED)
+
+### Why WSL2 for Blockchain Development?
+
+**⚠️ CRITICAL FOR WINDOWS USERS:** WSL2 (Windows Subsystem for Linux) is **REQUIRED** for this course, not optional. According to the [official Hardhat documentation](https://hardhat.org/docs/getting-started#installation), WSL2 on Windows is essential for proper blockchain development. Without WSL2, you will encounter compatibility issues and errors in future modules.
+
+**Benefits of WSL2:**
+- **Better compatibility** with Node.js and npm packages
+- **Faster file system operations** for compilation and testing
+- **Linux-native tooling** that most blockchain tools are designed for
+- **Better performance** for complex development workflows
+- **Consistent environment** matching production deployments
+
+**macOS and Linux users can skip this section** as they already have native Unix environments.
+
+### Installing WSL2
+
+1. **Open PowerShell as Administrator** (Right-click Start button → Windows PowerShell (Admin))
+2. **Enable WSL feature:**
+   ```powershell
+   dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+   ```
+3. **Enable Virtual Machine Platform:**
+   ```powershell
+   dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+   ```
+4. **Install WSL2**
+   ```powershell
+   wsl.exe --install
+   ```
+
+---
+
+### 🔴 CRITICAL: RESTART YOUR COMPUTER NOW
+
+**⚠️ You MUST restart your computer at this point for WSL2 to install properly.**
+
+**If you see any message like "changes will not be effective until next reboot" or similar, RESTART IMMEDIATELY before proceeding.**
+
+After restarting, continue with the next steps:
+
+---
+
+6. **Open PowerShell as Administrator again** (Right-click Start button → Windows PowerShell (Admin))
+7. **Install Ubuntu**
+   ```powershell
+   wsl.exe --install Ubuntu
+   ```
+8. **Create user account** when prompted (this will be your Linux user - choose a simple username and password you'll remember)
+9. **Navigate to your home directory:**
+   ```bash
+   cd $HOME
+   ```
+10. **Update the system:**
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   ```
+
+### Understanding WSL Command Prompts
+
+**What you'll see after WSL is installed:**
+
+When you successfully enter WSL, your command prompt will change to show a **`$`** symbol (bash prompt), which looks like this:
+```bash
+username@computername:~$
+```
+
+**Important notes about using WSL:**
+- Every time you open a new terminal or command prompt window, you'll start in Windows PowerShell
+- To enter WSL, simply type `wsl` and press Enter
+- You'll know you're in WSL when you see the `$` bash prompt
+- All commands in this course that show `bash` code blocks should be run in the WSL bash prompt (after typing `wsl`)
+
+**Example of entering WSL:**
+```powershell
+# Windows PowerShell prompt looks like:
+PS C:\Users\YourName>
+
+# Type wsl and press Enter:
+PS C:\Users\YourName> wsl
+
+# Now you're in WSL bash (notice the $ prompt):
+username@computername:~$
+```
+
+### Troubleshooting: "Windows Subsystem for Linux has no installed distributions"
+
+**If you run `wsl` and see this error message:**
+
+```
+Windows Subsystem for Linux has no installed distributions.
+Distributions can be installed by visiting the Microsoft Store:
+https://aka.ms/wslstore
+```
+
+**Solution:**
+1. **Restart your computer again** (WSL installation may not have completed)
+2. **After restart, open PowerShell as Administrator**
+3. **Run step 7 again:**
+   ```powershell
+   wsl.exe --install Ubuntu
+   ```
+4. **Wait for Ubuntu to fully install and create your user account**
+
+## Installing Visual Studio Code
+
+### Why VS Code for Blockchain Development?
+
+**VS Code advantages for smart contract development:**
+- **Excellent Solidity support** with syntax highlighting and error detection
+- **Integrated terminal** for running blockchain commands
+- **Git integration** for version control
+- **Extensions ecosystem** specifically for blockchain development
+- **IntelliSense** for code completion and documentation
+- **Debugging support** for complex development workflows
+
+### AI-Powered Development Enhancement
+
+**For developers who want AI assistance while coding:**
+
+If you'd like VS Code with built-in AI capabilities to accelerate your smart contract development, consider these options:
+
+**GitHub Copilot for VS Code:**
+- **AI code completion** directly in VS Code
+- **Smart contract suggestions** based on context
+- **Solidity pattern recognition** for common blockchain patterns
+- **Installation:** Search for "GitHub Copilot" in VS Code extensions
+- **Subscription required** but offers free trial
+- **Can be enabled once you open VS.Code**
+
+**Cursor.com Alternative:**
+- **AI-first code editor** built on VS Code foundation
+- **Chat with your codebase** for contextual assistance
+- **Advanced AI refactoring** and code generation
+- **Blockchain-aware suggestions** for smart contract development
+- **Free tier available** with premium features for advanced usage
+- **Instead of installing Vs.Code, download cursor from cursor.com instead**
+
+Both options can significantly speed up development by providing intelligent code suggestions, explaining complex blockchain concepts, and helping debug smart contract logic.
+
+### Installation Process
+
+#### Download VS Code
+
+1. **Visit the official download page:** https://code.visualstudio.com/Download
+2. **Select Windows** - the page should automatically detect your system
+3. **Choose "User Installer"** (recommended for single-user Windows installations)
+4. **Click the download button** for the appropriate architecture:
+   - **x64** for most modern Windows computers
+   - **Arm64** only if you have an ARM-based Windows device
+
+#### Install VS Code
+
+1. **Run the downloaded installer** (`VSCodeUserSetup-{version}.exe`)
+2. **Accept the license agreement**
+3. **Choose installation location** (default is usually fine)
+4. **Select additional tasks** - recommended selections:
+   - ✅ **Add "Open with Code" action to Windows Explorer file context menu**
+   - ✅ **Add "Open with Code" action to Windows Explorer directory context menu**
+   - ✅ **Register Code as an editor for supported file types**
+   - ✅ **Add to PATH** (this enables `code` command in terminal)
+5. **Click Install** and wait for completion
+6. **Launch VS Code** when installation finishes
+
+#### Verify Installation
+
+1. **Open VS Code**
+2. **Check version:** Help → About (should be version 1.85 or newer)
+3. **Test terminal:** View → Terminal (should open integrated terminal)
+4. **Test command palette:** Ctrl+Shift+P (should open command search)
+
+#### Configure VS Code for WSL2
+
+1. **Install "WSL" extension** in VS Code by Microsoft
+2. **Connect to WSL:** Click the remote connection button (bottom-left corner) → "New WSL Window"
+3. **Verify connection:** Terminal should show Linux prompt, not Windows
+
+### Using the Terminal in VS Code
+
+**VS Code has a built-in terminal that's perfect for running commands:**
+
+1. **Open the terminal:** View → Terminal (or press Ctrl+`)
+2. **If you see PowerShell prompt** (PS C:\...), type `wsl` and press Enter
+3. **You should now see the bash $ prompt** where you can run all Linux commands
+
+**Quick tip:** Once you open a WSL window in VS Code (using the remote connection button), the integrated terminal will automatically open in WSL bash - no need to type `wsl` each time!
+
+**All subsequent steps in this guide should be performed in WSL2 Ubuntu terminal** if you're on Windows. You can use either:
+- The VS Code integrated terminal (View → Terminal, then type `wsl` if needed)
+- A standalone terminal where you type `wsl` to enter bash
+
+### 💾 Critical VS Code Tip: Always Save Your Files!
+
+**This is the #1 mistake beginners make in VS Code - not saving files before compiling or running commands.**
+
+**How to know if a file needs saving:**
+- Look at the file tab at the top - if you see a **white dot** next to the filename, the file is **NOT saved**
+- An **X** (close button) means the file is saved and up to date
+
+**Ways to save files:**
+- **Single file:** Press **Ctrl+S** (Windows/Linux) or **Cmd+S** (Mac)
+- **All open files:** Press **Ctrl+K** then **S**, or use **File → Save All** from the menu
+- **Enable auto-save:** File → Preferences → Settings → search for "Auto Save" → select "afterDelay"
+
+**Why this matters for smart contract development:**
+- ❌ Edit a contract without saving → compile command runs on old code → you'll be confused why your changes aren't working
+- ❌ Edit `.env` file without saving → deployment fails with wrong credentials
+- ❌ Edit config files without saving → settings don't take effect
+- ❌ Edit scripts without saving → old version runs
+
+**Pro tip:** Get in the habit of using **File → Save All** (Ctrl+K then S) before running any terminal command. This simple habit will save you hours of debugging!
+
+## Installing Node.js 22.10+
+
+### Why Node.js for Blockchain Development?
+
+**Node.js provides:**
+- **npm package manager** for installing development tools
+- **JavaScript runtime** for Hardhat and other development frameworks
+- **Build tools** for compiling and deploying smart contracts
+- **Testing frameworks** for comprehensive contract testing
+- **Development servers** for local blockchain simulation
+
+### Installation Process
+
+#### For WSL2 Users (Windows with WSL2)
+
+**Install Node.js via Node Version Manager (NVM) - Recommended:**
+
+1. **Open your WSL2 Ubuntu terminal**
+2. **Install curl if not already installed:**
+   ```bash
+   sudo apt install curl -y
+   ```
+3. **Install NVM:**
+   ```bash
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+   ```
+4. **Restart your terminal or reload bash profile:**
+   ```bash
+   source ~/.bashrc
+   ```
+5. **Install Node.js 22.10+:**
+   ```bash
+   nvm install 22
+   nvm use 22
+   nvm alias default 22
+   ```
+
+#### For macOS and Linux Users
+
+**Install Node.js via Node Version Manager (NVM) - Recommended:**
+
+Follow the same NVM installation steps as WSL2 users above.
+
+#### Verify Installation
+
+**For all users (WSL2, macOS, Linux):**
+
+**Open your terminal** (WSL2 Ubuntu for Windows, regular terminal for Mac/Linux)
+
+**Check Node.js version:**
+   ```bash
+   node --version
+   ```
+   Should show v22.10.0 or higher
+
+**Check npm version:**
+   ```bash
+   npm --version
+   ```
+   Should show 10.0.0 or higher
+
+**Test npm functionality:**
+   ```bash
+   npm --help
+   ```
+   Should display npm help information
+
+## Installing Hardhat VS Code Extension
+
+### Why the Hardhat Extension?
+
+**The official Hardhat extension provides:**
+- **Solidity syntax highlighting** with error detection
+- **Code completion** for Solidity keywords and functions
+- **Inline error reporting** while you type
+- **Go-to-definition** for imported contracts
+- **Integration with Hardhat tasks** from VS Code
+- **Debugging support** for smart contracts
+
+### Installation Steps
+
+1. **Open VS Code extensions:** Ctrl+Shift+X
+2. **Search for "Solidity"**
+3. **Install "Solidity"** by Nomicfoundation
+4. **Reload VS Code** if prompted
+
+## Verifying Your Installation
+
+Let's quickly verify that all the prerequisites are installed correctly:
+
+### Check Node.js Installation
+
+**Verify Node.js version** (run in your WSL bash terminal):
+```bash
+node --version
+```
+
+**Expected output:** `v22.10.0` or higher
+
+✅ **Success!** Node.js is installed correctly.
+
+❌ **Errors?** Go back to the Node.js installation section and ensure it's installed properly.
+
+### Check npm Installation
+
+**Verify npm version:**
+```bash
+npm --version
+```
+
+**Expected output:** `10.0.0` or higher
+
+✅ **Success!** npm package manager is working.
+
+### All Set!
+
+If both commands above work correctly, your development environment is ready! You have:
+- ✅ **WSL2** configured (Windows users)
+- ✅ **VS Code** installed with WSL integration
+- ✅ **Node.js 22.10+** installed and working
+- ✅ **npm** package manager functional
+- ✅ **Solidity extension** installed in VS Code
+
+**You're now ready to create your first smart contract project in the next module!**
+
+## What's Next?
+
+**🎉 Congratulations!** Your development environment is ready.
+
+You'll learn about deployment, testing workflows, and MetaMask integration in the upcoming modules where you'll build your first token. For now, you have everything you need installed and verified.
+
+### Quick Reference: Development Workflow
+
+**You'll follow this cycle in future modules:**
+1. Write smart contracts in VS Code
+2. Compile with `npx hardhat compile`
+3. Test with `npx hardhat test`
+4. Deploy (covered in token creation modules)
+
+### Security Best Practices
+
+**Always remember:**
+- ✅ **Never commit private keys** to version control (keep `.env` in `.gitignore`)
+- ✅ **Use different wallets** for development and production
+- ✅ **Keep testnet and mainnet keys separate**
+- ✅ **Regular backups** of your `.env` file in a secure location
+- ✅ **Use hardware wallets** for mainnet deployments with real funds
+
+## Troubleshooting Common Issues
+
+### Node.js Issues
+
+**"node is not recognized" or "command not found":**
+- Restart your terminal after Node.js installation
+- Run `source ~/.bashrc` to reload your bash profile
+- Verify NVM is installed: `nvm --version`
+- Try installing Node again: `nvm install 22`
+
+**"npm: command not found":**
+- npm comes with Node.js, so reinstall Node: `nvm install 22`
+- Verify with `which npm` to see if it's in your PATH
+
+### WSL-Specific Issues (Windows Users)
+
+**"wsl: command not found":**
+- Ensure WSL2 is fully installed (see installation section)
+- Restart your computer after WSL2 installation
+- Open PowerShell as Administrator and run: `wsl --status`
+
+**"Windows Subsystem for Linux has no installed distributions":**
+- Restart your computer
+- Open PowerShell as Administrator
+- Run: `wsl.exe --install Ubuntu`
+- Wait for Ubuntu to fully install
+
+**"Cannot find module" or path errors:**
+- Make sure you're running commands inside WSL (you should see the `$` prompt)
+- Type `wsl` in your terminal to enter WSL
+- Stay in the WSL file system (~/), not Windows drives (`/mnt/c/...`)
+
+**VS Code not connecting to WSL:**
+- Install the "WSL" extension by Microsoft
+- Click the remote connection button (bottom-left corner)
+- Select "New WSL Window"
+- Restart VS Code if needed
+
+### VS Code Issues
+
+**Extensions not working:**
+- Make sure you installed extensions in the WSL remote window, not locally
+- Look for "WSL: Ubuntu" in the bottom-left corner of VS Code
+- Reinstall extensions if needed
+
+**Terminal not opening:**
+- Go to View → Terminal (or press Ctrl+`)
+- If it opens in PowerShell, type `wsl` to enter bash
+- Alternatively, open a new WSL window (remote connection button)
+
+## 🎉 Setup Complete!
+
+**You now have a professional blockchain development foundation!**
+
+You've successfully installed and verified:
+- ✅ **WSL2** (Windows) - Required Linux environment for blockchain development
+- ✅ **VS Code** - Your primary code editor with WSL integration
+- ✅ **Node.js 22.10+** - Runtime for development tools
+- ✅ **npm** - Package manager for installing development tools
+- ✅ **Solidity extension** - Syntax highlighting and error detection
+
+### What You Can Do Now
+
+Your environment is ready to:
+- Install Hardhat and other blockchain development tools
+- Write smart contracts with syntax highlighting
+- Use npm to manage project dependencies
+- Run commands in a proper Unix environment
+
+### Next Steps
+
+**In the next module** (Creating Your First ERC-20 Token), you'll use this setup to:
+1. **Create a Hardhat project** for your first smart contract
+2. **Write your token contract** using OpenZeppelin
+3. **Test and compile** your contracts
+4. **Deploy to Zilliqa testnet** and see it live
+5. **Interact with your token** using MetaMask
+
+All the tools you just installed will be used to make this happen!
+
+**Important:** Keep your VS Code and WSL terminal open - you'll need them for all future modules.

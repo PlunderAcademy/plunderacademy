@@ -1,0 +1,266 @@
+---
+id: data-structures
+module: intro-to-solidity
+number: 3.3
+title: 'Data Structures: Structs, Arrays, Mappings'
+objective: >-
+  Learn about complex data structures in Solidity including structs, arrays, and
+  mappings.
+slug: data-structures
+---
+
+## Data Structures in Token Contracts
+
+In Solidity, you have three main ways to organize data: **Mappings**, **Arrays**, and **Structs**. Choosing the right one is the "Architecture" part of being a Smart Contract Architect.
+
+### 1. Mappings: The "Key-Value" Store
+
+**Think of it like:** A coat check at a club. You give a ticket number (Key), they give you a specific coat (Value). You cannot ask "Give me all the coats." You must know the ticket number.
+
+**Syntax:**
+```solidity
+mapping(KeyType => ValueType) public name;
+```
+
+**Example:**
+```solidity
+// Store the balance of every user
+mapping(address => uint256) public balances;
+
+// How to use it:
+function setBalance(address user, uint256 amount) public {
+    balances[user] = amount; // Set value
+}
+
+function checkBalance(address user) public view returns (uint256) {
+    return balances[user]; // Get value
+}
+```
+
+Observe how the mapping instantly finds the data for a specific address in the visualizer below.
+
+<MappingLookupVisualizer />
+
+**Pros:**
+- Cheapest gas cost.
+- Instant lookup (O(1)).
+**Cons:**
+- You cannot iterate (loop) over it. You can't say "List all users."
+
+### 2. Arrays: The "List"
+
+**Think of it like:** A guest list on a clipboard. It has an order (1st, 2nd, 3rd). You can read the whole list from top to bottom.
+
+**Syntax:**
+```solidity
+// A dynamic list of addresses (can grow)
+address[] public guests;
+
+// A fixed size list of 5 numbers
+uint256[5] public topScores;
+```
+
+**Example:**
+```solidity
+address[] public users;
+
+function addUser(address newUser) public {
+    users.push(newUser); // Adds to the end of list
+}
+
+function getUserCount() public view returns (uint256) {
+    return users.length; // How many items?
+}
+```
+
+**Pros:**
+- Can be iterated (looped) over.
+**Cons:**
+- Expensive gas cost if the list gets big. Loops can hit gas limits!
+- **Removing items is tricky.**
+
+#### 💡 Mechanic's Tip: The "Swap and Pop" Trick
+Removing an item from the middle of an array creates a "gap". Shifting all items to fill the gap is very expensive (Gas!).
+
+The efficient way is:
+1.  Copy the **last** item into the spot you want to delete.
+2.  Delete (pop) the last item.
+
+```solidity
+function removeUser(uint256 index) public {
+    // 1. Move the last user to the 'index' spot
+    users[index] = users[users.length - 1];
+    // 2. Remove the last slot
+    users.pop();
+}
+```
+*Note: This changes the order of the list!*
+
+### 3. Structs: The "Custom Object"
+
+**Think of it like:** A standard form. It groups different types of data (Name, Age, ID) into one single "Person" packet.
+
+**Syntax:**
+```solidity
+struct Person {
+    string name;
+    uint256 age;
+    bool isStudent;
+}
+```
+
+**Example: Vesting Schedule**
+This is a very common pattern in Token contracts. Instead of 4 different mappings, use one Struct.
+
+```solidity
+struct VestingSchedule {
+    uint256 totalAmount;    // Total tokens
+    uint256 releaseTime;    // When they unlock
+    bool claimed;           // Have they been withdrawn?
+}
+
+mapping(address => VestingSchedule) public schedules;
+
+function createSchedule(address user, uint256 amount) public {
+    schedules[user] = VestingSchedule({
+        totalAmount: amount,
+        releaseTime: block.timestamp + 365 days,
+        claimed: false
+    });
+}
+```
+
+### 🧠 Architect's Corner: Choose Your Tool
+
+You are building a **Voting System**. How should you store the data?
+
+**Scenario A:** You need to know if a specific person has voted or not.
+**Scenario B:** You want to display a list of all candidate names on the website.
+**Scenario C:** You need to store details about a proposal: Title, Description, Deadline, VoteCount.
+
+<details>
+<summary>Click to reveal answers</summary>
+
+**Scenario A (Has Voted?): Mapping**
+`mapping(address => bool) hasVoted;`
+*Why? You want instant lookup. "Has Alice voted?" -> True/False.*
+
+**Scenario B (List of Candidates): Array**
+`string[] public candidateNames;`
+*Why? You need to list them all to show on the UI.*
+
+**Scenario C (Proposal Details): Struct**
+```solidity
+struct Proposal {
+    string title;
+    string description;
+    uint256 deadline;
+    uint256 voteCount;
+}
+```
+*Why? It groups related mixed data together.*
+
+</details>
+
+### Nested Data Structures
+
+You can combine these! This is where Solidity gets powerful (and tricky).
+
+#### Array of Structs
+Used to keep a list of complex items, like a list of all People in a system.
+
+```solidity
+struct Person {
+    string name;
+    uint256 age;
+}
+
+// A list of people: Person[] public people;
+Person[] public people;
+
+function addPerson(string memory _name, uint256 _age) public {
+    people.push(Person(_name, _age));
+}
+```
+
+#### Mapping of Mappings (The "Nested" Lookup)
+Used often for **Allowances** (ERC-20).
+"Does Alice allow Bob to spend her tokens?"
+
+```solidity
+// Owner => Spender => Amount
+mapping(address => mapping(address => uint256)) public allowance;
+
+// Usage:
+allowance[alice][bob] = 100; // Alice lets Bob spend 100
+```
+
+#### Mapping of Structs
+Used for user profiles.
+
+```solidity
+struct User {
+    uint256 balance;
+    bool isActive;
+}
+
+mapping(address => User) public users;
+
+// Usage:
+users[msg.sender].isActive = true;
+```
+
+### 🛠️ Try It Yourself: Bug Hunt
+
+Look at this code. Why might it fail if 10,000 people join?
+
+```solidity
+address[] public allUsers;
+
+function distributeRewards() public {
+    // Loop through EVERY user to give them 1 token
+    for(uint256 i = 0; i < allUsers.length; i++) {
+        transfer(allUsers[i], 1);
+    }
+}
+```
+
+<details>
+<summary>Answer</summary>
+**Gas Limit Issue.**
+Loops in Solidity cost gas for every step. If `allUsers` has 10,000 items, the transaction might cost more gas than the block limit allows. The transaction will fail, and the funds will be stuck forever!
+**Fix:** Use a "Pull Pattern" (let users claim rewards themselves) instead of "Push" (sending to everyone).
+</details>
+
+### Best Practices & Gas Optimization
+
+#### 1. Packed Structs (Advanced Tip)
+Solidity stores data in 32-byte "slots". If you arrange variables carefully, you can fit multiple small variables into ONE slot to save massive amounts of gas.
+
+```solidity
+// BAD: Takes 3 Slots
+struct Bad {
+    uint128 a; // Slot 1
+    uint256 b; // Slot 2 (Too big to share)
+    uint128 c; // Slot 3
+}
+
+// GOOD: Takes 2 Slots
+struct Good {
+    uint128 a; // Slot 1 (16 bytes)
+    uint128 c; // Slot 1 (16 bytes) - Fits!
+    uint256 b; // Slot 2
+}
+```
+
+The visualizer below demonstrates how efficient struct packing (grouping small variables) can save storage space and gas.
+
+<MemoryLayoutVisualizer />
+
+#### 2. Prefer Mappings
+For core data (balances, ownership), mappings are safer and cheaper than arrays.
+
+#### 3. Use Arrays Sparingly
+Avoid loops over unbounded arrays. If an array can grow forever, iterating over it will eventually break your contract.
+
+Understanding these data structure patterns will help you read existing token contracts and design efficient storage for your own tokens. The key is choosing the right structure for your specific use case!

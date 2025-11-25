@@ -1,0 +1,440 @@
+---
+slug: gas-optimizations
+title: Practical Gas Optimizations
+excerpt: Real-world micro-optimizations that actually matter in 2025, with before/after benchmarks and practical examples.
+level: intermediate
+tags:
+  - evm
+  - gas
+  - solidity
+  - optimization
+  - performance
+---
+
+Gas optimization is about finding the sweet spot between code clarity and efficiency. This guide focuses on practical optimizations that provide measurable gas savings without sacrificing readability or security.
+
+## The Gas Optimization Mindset
+
+### Rule #1: Measure First, Optimize Second
+
+Don't optimize blindly. Use tools to identify actual gas consumption patterns:
+
+```bash
+# Foundry gas reporting
+forge test --gas-report
+
+# Hardhat gas reporting
+npx hardhat test --gas-reporter
+```
+
+### Rule #2: Focus on Hot Paths
+
+Optimize code that executes frequently or in loops. A 100-gas saving in a function called once is negligible. The same saving in a function called 1000 times per transaction is significant.
+
+## Storage Optimizations
+
+Storage operations are the most expensive. Focus here first.
+
+### 1. Storage Packing
+
+**Impact: High** | **Difficulty: Low**
+
+```solidity
+// ❌ Bad: 3 storage slots = ~60,000 gas
+contract Unoptimized {
+    address owner;        // Slot 0 (20 bytes)
+    bool isActive;        // Slot 1 (1 byte) 
+    uint256 balance;      // Slot 2 (32 bytes)
+}
+
+// ✅ Good: 2 storage slots = ~40,000 gas  
+contract Optimized {
+    uint256 balance;      // Slot 0 (32 bytes)
+    address owner;        // Slot 1 (20 bytes)
+    bool isActive;        // Slot 1 (1 byte) - packed!
+}
+```
+
+**Savings: ~20,000 gas per deployment + ongoing savings**
+
+### 2. Minimize Storage Writes
+
+**Impact: High** | **Difficulty: Medium**
+
+```solidity
+// ❌ Bad: Multiple storage writes
+function badTransfer(address to, uint256 amount) external {
+    balances[msg.sender] -= amount;  // SSTORE ~5,000 gas
+    balances[to] += amount;          // SSTORE ~20,000 gas
+    totalTransfers++;                // SSTORE ~5,000 gas
+    emit Transfer(msg.sender, to, amount);
+}
+
+// ✅ Good: Batch storage operations
+function goodTransfer(address to, uint256 amount) external {
+    uint256 senderBalance = balances[msg.sender]; // SLOAD ~200 gas
+    uint256 receiverBalance = balances[to];       // SLOAD ~200 gas
+    
+    balances[msg.sender] = senderBalance - amount;  // SSTORE ~5,000 gas
+    balances[to] = receiverBalance + amount;        // SSTORE ~5,000 gas
+    
+    // Consider: Do we need to track totalTransfers?
+    // totalTransfers++; // Save 5,000 gas by removing if unnecessary
+    
+    emit Transfer(msg.sender, to, amount);
+}
+```
+
+### 3. Use Events Instead of Storage for Logs
+
+**Impact: Medium** | **Difficulty: Low**
+
+```solidity
+// ❌ Expensive: Storage for historical data
+mapping(uint256 => Transaction) public transactions;
+uint256 public transactionCount;
+
+function recordTransaction(address to, uint256 amount) internal {
+    transactions[transactionCount] = Transaction(to, amount, block.timestamp);
+    transactionCount++; // ~25,000 gas total
+}
+
+// ✅ Cheaper: Events for historical data
+event TransactionRecorded(
+    uint256 indexed id,
+    address indexed to, 
+    uint256 amount, 
+    uint256 timestamp
+);
+
+uint256 private transactionCount; // Private, no getter
+
+function recordTransaction(address to, uint256 amount) internal {
+    emit TransactionRecorded(transactionCount++, to, amount, block.timestamp);
+    // ~2,000 gas total
+}
+```
+
+**Savings: ~23,000 gas per transaction**
+
+## Arithmetic Optimizations
+
+### 1. Unchecked Arithmetic
+
+**Impact: Medium** | **Difficulty: Low**
+
+```solidity
+// ✅ Safe unchecked usage
+function batchProcess(uint256[] calldata data) external {
+    uint256 length = data.length;
+    
+    for (uint256 i = 0; i < length;) {
+        // Process data[i]...
+        
+        unchecked { ++i; } // Save ~30 gas per iteration
+    }
+}
+
+// ✅ Safe unchecked in known-safe operations
+function calculateFee(uint256 amount) internal pure returns (uint256) {
+    unchecked {
+        return amount * FEE_RATE / 10000; // Safe if FEE_RATE < 10000
+    }
+}
+```
+
+**When to use unchecked:**
+- Loop counters that can't overflow
+- Mathematical operations where overflow is impossible
+- Subtraction where you've already checked `a >= b`
+
+### 2. Bit Operations for Powers of 2
+
+**Impact: Low-Medium** | **Difficulty: Low**
+
+```solidity
+// ❌ Expensive division/multiplication
+function expensiveCalc(uint256 value) internal pure returns (uint256) {
+    return value / 8;  // ~5 gas
+}
+
+// ✅ Cheap bit shifting
+function cheapCalc(uint256 value) internal pure returns (uint256) {
+    return value >> 3; // ~3 gas (8 = 2^3)
+}
+
+// ✅ Modulo with powers of 2
+function checkEven(uint256 value) internal pure returns (bool) {
+    return value & 1 == 0; // Instead of value % 2 == 0
+}
+```
+
+## Function and Variable Optimizations
+
+### 1. Function Visibility
+
+**Impact: Low** | **Difficulty: Low**
+
+```solidity
+// ❌ Unnecessary public functions create getters
+uint256 public totalSupply;     // Creates getter ~500 gas
+mapping(address => uint256) public balances; // Creates getter ~2,000 gas
+
+// ✅ Use private/internal when possible
+uint256 internal totalSupply;   // No getter
+mapping(address => uint256) internal balances;
+
+// Add explicit getters only when needed
+function getTotalSupply() external view returns (uint256) {
+    return totalSupply;
+}
+```
+
+### 2. Short-Circuit Logic
+
+**Impact: Low** | **Difficulty: Low**
+
+```solidity
+// ✅ Put cheaper conditions first
+function isValidTransfer(address to, uint256 amount) internal view returns (bool) {
+    return amount > 0 &&                    // Cheap check first
+           to != address(0) &&              // Medium check
+           balances[msg.sender] >= amount;  // Expensive storage read last
+}
+```
+
+### 3. Custom Errors vs Require Strings
+
+**Impact: Medium** | **Difficulty: Low**
+
+```solidity
+// ❌ Expensive string storage
+require(balance >= amount, "Insufficient balance");
+
+// ✅ Cheap custom errors
+error InsufficientBalance(uint256 available, uint256 required);
+
+if (balance < amount) {
+    revert InsufficientBalance(balance, amount);
+}
+```
+
+**Savings: ~50 gas per revert**
+
+## External Call Optimizations
+
+### 1. Cache External Contract Calls
+
+**Impact: High** | **Difficulty: Medium**
+
+```solidity
+// ❌ Multiple external calls
+function badLiquidityCheck(address token) external view returns (bool) {
+    IToken tokenContract = IToken(token);
+    
+    return tokenContract.balanceOf(address(this)) > 0 &&    // ~2,600 gas
+           tokenContract.totalSupply() > 1000000 &&         // ~2,600 gas  
+           tokenContract.decimals() == 18;                   // ~2,600 gas
+}
+
+// ✅ Batch external calls
+interface ITokenBatch {
+    function getTokenInfo() external view returns (uint256 balance, uint256 supply, uint8 decimals);
+}
+
+function goodLiquidityCheck(address token) external view returns (bool) {
+    (uint256 balance, uint256 supply, uint8 decimals) = ITokenBatch(token).getTokenInfo();
+    
+    return balance > 0 && supply > 1000000 && decimals == 18; // ~2,600 gas total
+}
+```
+
+### 2. Use Call Instead of Transfer
+
+**Impact: Medium** | **Difficulty: Medium**
+
+```solidity
+// ❌ Limited gas, can fail with smart contract recipients
+payable(recipient).transfer(amount); // 2300 gas limit
+
+// ✅ Flexible gas, better compatibility
+(bool success, ) = payable(recipient).call{value: amount}("");
+require(success, "Transfer failed");
+```
+
+## Advanced Optimizations
+
+### 1. Assembly for Critical Paths
+
+**Impact: High** | **Difficulty: High**
+
+Use sparingly and only for critical, well-tested code:
+
+```solidity
+// ✅ Assembly for keccak256 optimization
+function efficientHash(bytes32 a, bytes32 b) internal pure returns (bytes32 result) {
+    assembly {
+        mstore(0x00, a)
+        mstore(0x20, b)
+        result := keccak256(0x00, 0x40)
+    }
+}
+
+// Equivalent Solidity: abi.encodePacked() + keccak256()
+// Assembly version: ~200 gas savings
+```
+
+### 2. Precomputed Constants
+
+**Impact: Medium** | **Difficulty: Low**
+
+```solidity
+// ❌ Runtime computation
+uint256 constant PRECISION = 10 ** 18;
+
+// ✅ Precomputed constant
+uint256 constant PRECISION = 1000000000000000000;
+
+// ❌ Complex computation every time
+bytes32 constant DOMAIN_SEPARATOR = keccak256("EIP712Domain");
+
+// ✅ Precomputed hash
+bytes32 constant DOMAIN_SEPARATOR = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
+```
+
+## Zilliqa-Specific Optimizations
+
+On Zilliqa, gas is cheaper, which enables different optimization strategies:
+
+### 1. Favor Readability Over Micro-Optimizations
+
+```solidity
+// On Ethereum: Every gas matters
+function ethereumOptimized(uint256[] calldata data) external {
+    uint256 length = data.length; // Cache length
+    for (uint256 i; i < length;) {
+        // Process...
+        unchecked { ++i; }
+    }
+}
+
+// On Zilliqa: Clarity can be more valuable
+function zilliqaOptimized(uint256[] calldata data) external {
+    for (uint256 i = 0; i < data.length; i++) {
+        // Process... (clearer, small gas penalty acceptable)
+    }
+}
+```
+
+### 2. Enable More Complex Logic
+
+```solidity
+// Affordable on Zilliqa: Rich validation logic
+function validateComplexTransaction(
+    Transaction calldata tx
+) external view returns (bool) {
+    // Multiple validation steps that would be too expensive on Ethereum
+    return validateSignature(tx) &&
+           validateNonce(tx) &&
+           validateBalance(tx) &&
+           validatePermissions(tx) &&
+           validateRateLimit(tx) &&
+           validateCompliance(tx);
+}
+```
+
+## Benchmarking and Testing
+
+### 1. Set Up Gas Reporting
+
+**Foundry:**
+```toml
+# foundry.toml
+[profile.default]
+gas_reports = ["*"]
+gas_reports_ignore = ["test/**/*"]
+```
+
+**Hardhat:**
+```javascript
+// hardhat.config.js
+require("hardhat-gas-reporter");
+
+module.exports = {
+  gasReporter: {
+    enabled: true,
+    currency: "USD",
+    gasPrice: 20, // gwei
+    coinmarketcap: process.env.CMC_API_KEY
+  }
+};
+```
+
+### 2. Create Optimization Tests
+
+```solidity
+contract GasOptimizationTest is Test {
+    function testTransferGasUsage() public {
+        uint256 gasStart = gasleft();
+        
+        // Execute optimized function
+        token.optimizedTransfer(recipient, amount);
+        
+        uint256 gasUsed = gasStart - gasleft();
+        console.log("Gas used:", gasUsed);
+        
+        // Assert gas usage is within expected range
+        assertLt(gasUsed, 50000, "Transfer too expensive");
+    }
+}
+```
+
+### 3. Compare Before/After
+
+```bash
+# Benchmark original
+forge test --match-test testTransfer --gas-report > before.txt
+
+# Apply optimizations
+# ...
+
+# Benchmark optimized
+forge test --match-test testTransfer --gas-report > after.txt
+
+# Compare results
+diff before.txt after.txt
+```
+
+## Optimization Checklist
+
+### High Impact (>1,000 gas savings)
+- [ ] **Storage packing** - Group related variables
+- [ ] **Minimize storage writes** - Batch operations
+- [ ] **Use events over storage** for logs
+- [ ] **Custom errors** instead of require strings
+- [ ] **Cache external calls** - Batch when possible
+
+### Medium Impact (100-1,000 gas savings)
+- [ ] **Unchecked arithmetic** in safe contexts
+- [ ] **Function visibility** - Use private/internal when possible
+- [ ] **Short-circuit logic** - Cheap conditions first
+- [ ] **Precomputed constants** instead of runtime calculation
+
+### Low Impact (<100 gas savings)
+- [ ] **Bit operations** for powers of 2
+- [ ] **Variable ordering** for optimal packing
+- [ ] **Loop optimizations** - Cache length, use unchecked increments
+
+## Best Practices Summary
+
+1. **Measure first** - Use gas reporting tools
+2. **Focus on hot paths** - Optimize frequently called functions
+3. **Storage is expensive** - Pack variables, minimize writes
+4. **Events are cheap** - Use for historical data
+5. **Test optimizations** - Ensure they actually save gas
+6. **Don't sacrifice security** - Never optimize away safety checks
+7. **Consider context** - Zilliqa's cheap gas enables different trade-offs
+
+Remember: The best optimization is often not needing the operation at all. Question whether expensive operations are truly necessary before optimizing them.
+
+Gas optimization is a continuous process. As your contract evolves, new optimization opportunities will emerge. Keep measuring, keep improving, and always prioritize security and readability over marginal gas savings.

@@ -1,0 +1,232 @@
+---
+id: events-and-error-handling
+module: intro-to-solidity
+number: 3.4
+title: Events and Error Handling
+objective: Learn how to emit events and handle errors in Solidity smart contracts.
+slug: events-and-error-handling
+---
+
+## Events: The "Console Log" of Blockchain
+
+Solidity doesn't have `console.log` in production. Instead, we have **Events**.
+
+### What are Events?
+When something important happens (a token transfer, a purchase), your contract can "Emit" an event.
+- **On Blockchain:** It saves a small log in the transaction receipt.
+- **Off Blockchain:** Your website (Frontend) listens for these logs to update the UI.
+
+**Real-world analogy:** A store receipt. The store (Contract) keeps the money, but gives you a receipt (Event) to prove the transaction happened.
+
+### How to Use Events
+
+**Step 1: Declare it**
+```solidity
+// Define the "shape" of the event
+event Transfer(address indexed from, address indexed to, uint256 amount);
+```
+
+**Step 2: Emit it**
+```solidity
+function sendToken(address recipient, uint256 amount) public {
+    // ... do the transfer logic ...
+    
+    // Shout it to the world!
+    emit Transfer(msg.sender, recipient, amount);
+}
+```
+
+### The "Indexed" Keyword
+You saw `address indexed from`. What does that mean?
+- **Indexed**: "Make this field searchable."
+- **Example**: A frontend can ask the blockchain: "Give me all `Transfer` events where `from` is equal to `Alice`."
+- You can have up to **3 indexed parameters** per event.
+
+Watch the flow of an event from the contract to the outside world in the animation below.
+
+<EventFlowAnimator />
+
+> **Key Insight:** Events are **write-only** from the contract's perspective. Once emitted, they become part of the transaction receipt but cannot be read by other smart contracts. They are exclusively for off-chain applications to monitor blockchain activity.
+
+### The Standards: Transfer & Approval
+
+If you are building a Token, you **must** use the standard events. Why? Because Metamask, Etherscan, and Zilliqa explorers are pre-programmed to listen for *exactly* these events.
+
+If you create a `event MyCustomTransfer()`, the user's wallet **will not update** when they receive tokens.
+
+```solidity
+// The Gold Standard Events
+event Transfer(address indexed from, address indexed to, uint256 value);
+event Approval(address indexed owner, address indexed spender, uint256 value);
+```
+
+---
+
+## Error Handling: The Guard Rails
+
+Smart contracts handle millions of dollars. You need strict rules. If a rule is broken, the transaction must **Revert**.
+
+**What is a Revert?**
+- The transaction stops immediately.
+- All changes made so far are **undone** (rolled back).
+- Remaining gas is returned to the user.
+- An error message is shown.
+
+### The Big Three: `require`, `revert`, `assert`
+
+#### 1. `require()` - The Bouncer (Use this 99% of the time)
+Used to validate inputs and conditions *before* doing work.
+
+```solidity
+function withdraw(uint256 amount) public {
+    // 1. Check Input
+    require(amount > 0, "Cannot withdraw zero");
+    
+    // 2. Check State
+    require(balances[msg.sender] >= amount, "Insufficient funds");
+    
+    // ... do the logic ...
+}
+```
+
+**Syntax:** `require(condition, "Error Message String");`
+
+#### 2. `revert()` - The Custom Error
+Used to check for complex logic flows or custom errors (gas efficient).
+
+```solidity
+if (amount > limit) {
+    revert("Amount exceeds limit");
+}
+```
+
+**Modern Solidity Tip: Custom Errors**
+In newer Solidity versions (0.8.4+), `revert("String")` is considered expensive because storing strings costs gas. Use **Custom Errors** instead!
+
+```solidity
+// Define error at top of file
+error InsufficientFunds(uint256 available, uint256 required);
+
+function withdraw(uint256 amount) public {
+    if (balances[msg.sender] < amount) {
+        // Revert with specific data (Cheaper than string!)
+        revert InsufficientFunds(balances[msg.sender], amount);
+    }
+}
+```
+
+#### 3. `assert()` - The "Impossible" Check
+Used to check for internal bugs. If `assert` fails, it means your code is broken (invariant violation). You should rarely use this in standard logic.
+
+```solidity
+// After transfer, total supply should be unchanged
+assert(totalSupply == oldTotalSupply); 
+```
+
+Test your understanding by trying to "withdraw" funds in the simulator below. Change the amount and balance to see when it fails (reverts) and when it succeeds.
+
+<RevertVisualizer />
+
+### 🕵️ Detective Work: Debugging
+
+You are a blockchain detective. A user says their transaction failed. Look at the code and the error.
+
+**The Code:**
+```solidity
+mapping(address => uint256) public balances;
+
+function transfer(address to, uint256 amount) public {
+    require(to != address(0), "Invalid address");
+    require(balances[msg.sender] >= amount, "No money");
+    
+    balances[msg.sender] -= amount;
+    balances[to] += amount;
+    
+    emit Transfer(msg.sender, to, amount);
+}
+```
+
+**Scenario 1:**
+User calls `transfer(0x123..., 50)`.
+Error: `"No money"`
+**Diagnosis:** The user (msg.sender) has less than 50 tokens in the `balances` mapping.
+
+**Scenario 2:**
+User calls `transfer(0x0000000000000000000000000000000000000000, 50)`.
+Error: `"Invalid address"`
+**Diagnosis:** The user tried to send to the Zero Address (burning tokens), which this function forbids.
+
+### Best Practices for Error Messages
+
+1.  **Be Descriptive:** `require(x > 5, "Error")` is bad. `require(x > 5, "Value must be over 5")` is good.
+2.  **Check Early:** Put all `require` statements at the top of the function. This saves gas! If it fails early, it doesn't waste gas running the rest of the code.
+
+---
+
+## 🏆 Final Challenge: Putting It All Together (The SimpleBank)
+
+Let's combine everything you've learned in this module—Variables, Mappings, Functions, Visibility, Events, and Errors—to build a **SimpleBank** contract.
+
+### The Goal
+Build a contract where:
+1.  Users can deposit Ether/ZIL.
+2.  The contract tracks everyone's balance.
+3.  Users can withdraw their money.
+4.  Every action is logged.
+
+### The Code
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract SimpleBank {
+    // 1. DATA STRUCTURE: Who owns what?
+    // We use a mapping because we need instant lookup of balances.
+    mapping(address => uint256) public balances;
+
+    // 2. EVENTS: Shout to the frontend!
+    // Events allow external apps to track deposits/withdrawals.
+    event Deposit(address indexed user, uint256 amount);
+    event Withdrawal(address indexed user, uint256 amount);
+
+    // 3. FUNCTION: Deposit
+    // 'payable' allows this function to accept real crypto
+    function deposit() public payable {
+        require(msg.value > 0, "Must send money");
+        
+        balances[msg.sender] += msg.value;
+        
+        emit Deposit(msg.sender, msg.value);
+    }
+
+    // 4. FUNCTION: Withdraw
+    function withdraw(uint256 amount) public {
+        // Safety Check 1: Do they have enough?
+        require(balances[msg.sender] >= amount, "Insufficient funds");
+        
+        // Update State BEFORE sending money (Prevents Reentrancy attacks - advanced topic!)
+        balances[msg.sender] -= amount;
+        
+        // Interaction: Send the money
+        payable(msg.sender).transfer(amount);
+        
+        emit Withdrawal(msg.sender, amount);
+    }
+}
+```
+
+### How to Test This?
+To verify this works, you would typically use:
+1.  **Remix IDE**: An online code editor.
+2.  **MetaMask**: Your wallet to sign transactions.
+3.  **Zilliqa Testnet**: To run it without spending real money.
+
+### Summary Checklist
+
+Before you deploy a function, ask:
+1.  **Validation:** Did I `require` that inputs are valid?
+2.  **Conditions:** Did I `require` that the user has permission/funds?
+3.  **Visibility:** Did I emit an `Event` so the frontend updates?
+
+Events and error handling are the foundation of user experience and debugging in token contracts. Well-designed events enable rich interfaces, while comprehensive error handling protects users!

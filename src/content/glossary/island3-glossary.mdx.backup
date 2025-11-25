@@ -1,0 +1,263 @@
+---
+slug: island3-glossary
+title: "Island 3 Glossary: NFT Standards and Implementation"
+excerpt: Comprehensive glossary of NFT concepts, ERC-721, ERC-1155, metadata standards, IPFS, and collection management introduced in Island 3.
+level: intermediate
+tags:
+  - glossary
+  - terminology
+  - nft
+  - erc721
+  - erc1155
+  - metadata
+---
+
+## Introduction
+
+This glossary covers terminology introduced in **Island 3: NFT Standards and Collection Development** (also known as Desert Bluff). As you progress through Island 3's three modules, you'll encounter these intermediate NFT development terms:
+
+**Module 1 - ERC721 Standards & Implementation:** ERC721 core interface, token ownership tracking, safe transfers, approval patterns, gas-efficient minting, batch operations, access control, and pausability  
+**Module 2 - Advanced NFT Features:** metadata standards, IPFS integration, reveal mechanics, EIP-2981 royalties, multi-phase minting, Merkle proof whitelists, and ERC-1155 multi-token standard  
+**Module 3 - NFT Collection Practical:** complete collection deployment with paid minting, supply caps, metadata setup, and testnet verification
+
+Island 3 builds upon the Solidity fundamentals and testing patterns from [Island 2](/glossary/island2-glossary), adding NFT-specific standards and production deployment skills you'll use to launch real collections.
+
+Terms are organized alphabetically with beginner-friendly explanations. For foundational blockchain and EVM terms, refer to the [Island 1 Glossary](/glossary/island1-glossary).
+
+---
+
+## A
+
+### Access Control
+A security pattern that restricts who can call certain functions using role-based permissions. Unlike simple `Ownable` (one owner), `AccessControl` allows multiple roles with specific permissions like `MINTER_ROLE`, `PAUSER_ROLE`, or `DEFAULT_ADMIN_ROLE`. Like giving different team members different keys; minters can mint but can't pause, pausers can pause but can't change metadata. Essential for team-managed collections to limit damage if one key is compromised. More gas-expensive than `Ownable` (~2-5k gas per check) but worth it for production collections with multiple administrators.
+
+### Approve
+Granting permission for another address to transfer one specific NFT you own. When you call `approve(spender, tokenId)`, that spender can transfer your token #42, but nothing else. Common use: auction contracts that need permission to transfer your NFT when bidding ends. Automatically revoked if you transfer that token to someone else. Safer than operator approval (which grants permission for ALL your tokens), but less convenient for marketplaces where you list multiple tokens.
+
+---
+
+## B
+
+### Balance Of
+An ERC-721 function that returns how many NFTs from a collection an address owns: `balanceOf(address) returns (uint256)`. Unlike ERC-20 (which tracks fungible amounts), this just counts unique tokens; if you own tokens #5, #17, and #42, your balance is 3. Wallets use this to show "You own 3 NFTs from this collection." Doesn't tell you which specific token IDs you own; for that, you need enumeration or off-chain indexers.
+
+### Base URI
+Like a folder path that points to where all your NFT images and data are stored; the street address for your collection where each token adds its own house number. Combined with token ID to create the complete path: `baseURI + tokenId + ".json"`. Example: base URI `"ipfs://QmHash/"` + token 42 = `"ipfs://QmHash/42.json"`. Can be immutable (set once, trustless) or mutable (changeable for reveals, requires user trust). Most collections use IPFS base URIs for decentralized, permanent hosting.
+
+### Batch Minting
+Minting multiple NFTs in a single transaction by looping inside one function call. Instead of users submitting 10 separate transactions (expensive, slow, 21k base gas × 10), they call `mintBatch(quantity: 10)` once. Saves gas by amortizing transaction overhead across all tokens. Must guard against block gas limits (~30M); if someone tries to mint 1,000 at once, the transaction fails and wastes gas. Common pattern: cap batches at 10-20 tokens per call for safety. Essential for efficient public mints and airdrops.
+
+### Batch Transfer
+An ERC-1155 feature that transfers multiple token types in one transaction: `safeBatchTransferFrom(from, to, [id1, id2, id3], [amount1, amount2, amount3])`. Like packing multiple items in one shipping box instead of sending separate packages. Saves ~40% gas compared to transferring tokens individually. Not available in ERC-721 (which requires one transfer per token). One reason to choose ERC-1155 over ERC-721 for gaming inventories or multi-type collections.
+
+### Burn
+Permanently destroying an NFT by removing it from circulation, like shredding a concert ticket so it can never be used again. The token ID is deleted from ownership tracking and total supply decreases. Once burned, that token ID can never be minted again; it's gone forever. Used for redemption mechanics (burn NFT to claim physical item), deflationary collections (reduce supply to increase rarity), or failed mints that need cleanup. Emits a `Transfer(owner, address(0), tokenId)` event to signal the burn to indexers.
+
+---
+
+## C
+
+### Content Identifier (CID)
+The unique fingerprint (hash) that identifies files on IPFS, like a barcode that points to specific content instead of a location. Example: `QmX7M9CiYXjVnrzqW5nEJx8nQz4c2pZQxY3k6R8tGfHb2P`. CIDs are derived from file content, so the same file always produces the same CID, and any change to the file produces a completely different CID. This makes IPFS storage immutable; once you upload metadata with a CID, nobody can secretly swap the content. Your NFT base URI typically looks like `ipfs://QmHash/` where `QmHash` is the CID of your metadata folder.
+
+---
+
+## E
+
+### Enumerable Extension
+An optional ERC-721 feature (`ERC721Enumerable`) that adds on-chain functions to list all tokens or iterate through a user's tokens: `tokenOfOwnerByIndex`, `tokenByIndex`, `totalSupply`. Like adding an index to a database; convenient but expensive. Costs an extra ~20-30k gas per mint because it maintains `_allTokens` and `_ownedTokens` arrays. Modern collections usually skip this because off-chain indexers (The Graph, Alchemy) provide the same data for free. Only use if you need on-chain iteration for game logic or composability with other contracts.
+
+### ERC-1155
+A Swiss Army knife token standard that handles both unique items (like rare swords) and stackable items (like health potions) in one contract, instead of needing separate contracts for each. Supports fungible, non-fungible, and semi-fungible tokens. Uses `mapping(uint256 id => mapping(address account => uint256 balance))` so each token ID can have multiple copies. More gas-efficient for batch operations; transfer 10 different tokens in one call. Perfect for gaming items, achievement badges, event tickets, or any collection with multiple token types. Choose this over ERC-721 when you need batch operations or semi-fungible tokens; stick with ERC-721 for pure collectibles where marketplace compatibility matters most.
+
+### ERC-2981
+The royalty standard that tells marketplaces how much to pay creators on secondary sales. Implements `royaltyInfo(tokenId, salePrice)` which returns `(receiver address, royalty amount)`. Example: if you set 5% royalties (500 basis points), a 1 ETH sale returns 0.05 ETH to the creator. Enforcement is voluntary; marketplaces like OpenSea honor it, but anyone can write a custom marketplace that ignores royalties. Like putting a suggested tip on a restaurant bill: it signals intent but doesn't force compliance. Set once in constructor or per-token if needed.
+
+### ERC-4906
+A metadata update event standard that tells indexers and marketplaces to refresh cached NFT data. Emits `MetadataUpdate(tokenId)` or `BatchMetadataUpdate(fromTokenId, toTokenId)` when metadata changes. Without this, marketplaces might show stale images for hours or days because they aggressively cache `tokenURI` responses. Use after reveals, trait updates, or any baseURI changes. Like clicking "refresh" to force a browser to fetch new content instead of showing the cached version.
+
+### ERC-721
+The universal rulebook that makes NFTs work across all platforms and marketplaces; like how USB ports work the same way on any computer. Each token has a unique `tokenId` and cannot be divided, unlike ERC-20 tokens where 1 coin equals any other coin. Tracks ownership per token, supports safe transfers (prevents lost tokens), and defines approval patterns for marketplaces. The foundation of the NFT ecosystem; every PFP, art piece, and collectible uses this standard. Without ERC-721, every project would be incompatible and marketplaces couldn't exist.
+
+### ERC-721 Receiver
+A safety interface (`IERC721Receiver`) that contracts implement to prove they can handle incoming NFTs, like a "certified to receive fragile packages" stamp. Must have an `onERC721Received` function that returns a magic value (the function selector) to confirm receipt. When you use `safeTransferFrom`, the contract calls this function on the recipient; if it doesn't exist or returns the wrong value, the transfer reverts and your NFT stays safe. Prevents tokens from being permanently locked in contracts that don't know how to handle them (like sending NFTs to a token bridge that only handles ERC-20). Staking vaults, auction contracts, and marketplaces implement this.
+
+---
+
+## F
+
+### Free Mint
+Minting NFTs without payment; users only pay gas fees. Common for community rewards, airdrops, or promotional campaigns. Implementation: same as paid mint but skip the `require(msg.value == MINT_PRICE)` check and don't mark function as `payable`. Still need supply caps, access control, and per-wallet limits to prevent abuse. Like free samples at a store; limits prevent one person from taking everything. Often combined with whitelists to reward early supporters or restrict who can claim.
+
+### Fungibility
+The property of being interchangeable and identical, like dollar bills where any $1 equals any other $1. ERC-20 tokens are fungible; 1 USDC has the same value as any other USDC. ERC-721 tokens are non-fungible; your CryptoPunk #3100 is unique and not interchangeable with CryptoPunk #7804. Semi-fungible tokens (ERC-1155) are fungible within their type (all gold coins are the same) but non-fungible across types (gold coin ≠ silver coin). Understanding fungibility helps you choose the right token standard for your use case.
+
+---
+
+## G
+
+### Gateway
+A web server that translates IPFS addresses into HTTP URLs so browsers can display IPFS content. When you see `ipfs://QmHash/1.json`, wallets fetch it via a gateway like `https://ipfs.io/ipfs/QmHash/1.json` or `https://cloudflare-ipfs.com/ipfs/QmHash/1.json`. Like a translator that converts a decentralized address into something your browser understands. Always use `ipfs://` URIs in your contract (protocol-agnostic), not hardcoded gateway URLs. Users and apps can choose their preferred gateway, and if one gateway goes down, they can switch to another without your contract needing updates.
+
+---
+
+## I
+
+### Immutable
+A Solidity keyword that marks variables as unchangeable after contract deployment, creating trustless guarantees. Set once in the constructor, then locked forever; even the contract owner can't modify them. Like carving a promise in stone instead of writing it in erasable pencil. Common immutable parameters in NFT contracts: `MAX_SUPPLY` (collection size cap), `MINT_PRICE` (if fixed), `ROYALTY_RECEIVER` (creator address). Immutable variables are cheaper to read than storage (~100 gas vs 2,100 for cold SLOAD) and signal permanence to collectors. Use for anything affecting scarcity or economics.
+
+### Indexed Event Parameter
+An event parameter marked with `indexed` that creates a searchable filter for that value, like adding a database index. Allows block explorers and dapps to efficiently query events: "show me all Transfers where `from` equals Alice's address." Example: `event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)`. Limited to 3 indexed parameters per event. Indexed parameters are stored in log topics (fast lookup) instead of log data (sequential scan). Essential for tracking specific token transfers, ownership changes, and user-specific activity. Every ERC-721 Transfer event indexes all three parameters for maximum queryability.
+
+### IPFS (InterPlanetary File System)
+Like BitTorrent for your NFT images and metadata; instead of one company hosting files that could disappear, thousands of computers worldwide store copies, making storage decentralized and resilient. Files are identified by content (CID hash), not location, so once uploaded with a specific hash, the content is permanent and can't be secretly changed; if you modify even one pixel, the hash changes completely. Compare to AWS S3: centralized (one company controls it), mutable (files at a URL can be swapped), requires ongoing payment. IPFS: decentralized, immutable content addressing, and files persist as long as someone pins them. The standard for NFT metadata and images.
+
+---
+
+## J
+
+### JSON Schema
+The standardized format for NFT metadata files that marketplaces expect, like a form with required fields everyone fills out the same way. Must include: `name` (token name), `description` (text), `image` (IPFS URL or HTTP URL), and optional `attributes` array for traits. Example: `{"name": "Desert Nomad #42", "image": "ipfs://QmHash/42.png", "attributes": [{"trait_type": "Rarity", "value": "Legendary"}]}`. Keep trait names and spelling stable; if you change "Background" to "BG" later, rarity tools and filters break. Wallets and marketplaces cache these files aggressively, so use ERC-4906 events to signal updates.
+
+---
+
+## M
+
+### Max Supply
+The ironclad promise of how many NFTs will ever exist; like a limited print run of 10,000 posters numbered and guaranteed. Enforced in code with `require(_nextTokenId <= MAX_SUPPLY)` so even the contract owner can't break the promise and secretly mint extra tokens later (which would dilute rarity and destroy value). Creates scarcity and trust; collectors know the supply is fixed forever. Set as `immutable` or `constant` to make it unchangeable and gas-efficient. Without a max supply, creators could inflate the collection endlessly, making tokens worthless.
+
+### Merkle Proof
+A cryptographic receipt that proves you're on a whitelist without revealing the entire list; like showing a passport stamp that proves citizenship without listing all citizens. The contract stores one 32-byte Merkle root (commitment to the list), and whitelisted users submit a proof (array of hashes) with their mint transaction. The contract hashes your address with the proof to reconstruct the root; if it matches, you're verified. Gas-efficient: stores O(1) data on-chain, verification costs O(log n) gas. Generate the Merkle tree off-chain, publish the root on-chain, and distribute proofs to whitelisted users. Used in presale phases to reward early supporters without expensive on-chain storage.
+
+### Merkle Root
+A single 32-byte hash that represents an entire whitelist of thousands of addresses, like a fingerprint for a list. Generated by hashing addresses in pairs repeatedly until you get one root hash. Store this on-chain (~20k gas), then users submit Merkle proofs to verify they're on the list. Changing even one address in the list produces a completely different root (tamper-proof). Used in multi-phase minting: set root for presale whitelist, anyone with a valid proof can mint early. After presale, switch to public minting or set a new root for phase 2. Off-chain tools like `merkletreejs` generate roots from address lists.
+
+### Metadata
+The ID card and photo for your NFT; a JSON file that tells wallets and marketplaces what to display: name, image, description, and traits (like "Red Hat" or "Rare" rarity). Stored off-chain (usually IPFS) to avoid expensive on-chain storage, while keeping data decentralized and accessible forever. On-chain, your contract only stores the pointer (`tokenURI`) to this file. When someone views your NFT on OpenSea, they fetch `tokenURI(42)`, download the JSON, and display the image and attributes. Rich metadata makes NFTs valuable; without it, tokens are just empty numbers.
+
+### Metadata Standards
+The agreed-upon format for NFT JSON files that ensures marketplaces can display your collection correctly; like following a recipe format so all cookbooks look the same. OpenSea's standard includes fields like `name`, `description`, `image`, `external_url`, and `attributes` (array of trait objects). If you use different field names ("picture" instead of "image"), your NFTs won't display properly. Keep trait naming consistent across your collection; changing "Rarity: Legendary" to "Legendary Rarity" breaks filters and analytics tools. Following standards ensures compatibility with wallets, marketplaces, and rarity tools without custom integrations.
+
+### Mint Price
+The amount users must pay (in ETH or native token) to mint one NFT, like the ticket price for admission. Set as a public variable (`uint256 public MINT_PRICE`) and validated with `require(msg.value >= MINT_PRICE * quantity)` in payable mint functions. Can be immutable (fixed forever, trustless) or mutable (owner can adjust for market conditions, requires trust). Multi-phase mints often have different prices: presale 0.05 ETH, public 0.08 ETH. The contract collects payments, and the owner withdraws them later via a withdrawal function. Always validate exact payment or handle refunds for overpayment to avoid loss or reentrancy risks.
+
+### Minting
+Creating a new NFT and assigning it to an address, like printing a new collectible card and giving it to someone. Each mint increases total supply by 1, assigns a unique token ID, updates ownership mappings, and emits a `Transfer(address(0), to, tokenId)` event. Can be public (anyone pays to mint), whitelisted (Merkle proof required), or owner-only (free mints for giveaways). Most collections use sequential token IDs (0, 1, 2...) for simplicity. Always check supply caps before minting to enforce scarcity. Use `_safeMint` instead of `_mint` to prevent tokens from being lost to contracts that can't handle them.
+
+### Multi-Phase Minting
+Splitting a sale into multiple stages with different rules, like a concert with VIP early access, fan club presale, then general admission. Phase 1: whitelist (Merkle proof required, 0.05 ETH, max 5 per wallet). Phase 2: public (anyone can mint, 0.08 ETH, max 10 per wallet). Each phase controlled by state machine (enum or flags), explicit admin triggers, or time-based transitions. Phases prevent gas wars, reward early supporters, and create structured launches. Requires careful testing: ensure phase transitions are one-way, per-wallet caps reset or accumulate as intended, and supply guards work across all phases.
+
+---
+
+## N
+
+### Non-Fungible Token (NFT)
+A unique digital asset that cannot be divided or exchanged one-for-one like currency; your CryptoPunk #7804 is distinct and not equivalent to CryptoPunk #3100, even though both are CryptoPunks. Like collectible trading cards where each card has different rarity, artwork, and value. Powered by the ERC-721 standard, which gives each token a unique ID and tracks individual ownership. Used for art, collectibles, game items, memberships, domain names, and any digital asset where uniqueness and provenance matter. The opposite of fungible tokens (ERC-20) where 1 USDC equals any other USDC.
+
+---
+
+## O
+
+### Operator Approval
+⚠️ **Powerful and risky.** Giving another address permission to transfer ALL your NFTs from a collection with one approval: `setApprovalForAll(operator, true)`. Like handing someone a master key to your entire collection instead of one specific NFT. Convenient for marketplaces; approve OpenSea once, then list/sell any token without individual approvals. But malicious marketplaces or phishing sites can drain your entire collection if you grant operator approval to the wrong address. Always verify the contract address before approving. Use per-token approval (`approve(spender, tokenId)`) for one-off transfers if you want more control. Revoke operator approvals when done: `setApprovalForAll(operator, false)`.
+
+### Owner Of
+An ERC-721 function that returns which address currently owns a specific token: `ownerOf(tokenId) returns (address)`. The core of NFT ownership tracking; every token has exactly one owner at a time (or address(0) if burned). Marketplaces query this before sales to verify the seller actually owns the token. Reverts if the token doesn't exist or was burned. Unlike `balanceOf` (which counts total tokens), `ownerOf` identifies the specific owner of token #42. Essential for transfer validation, marketplace listings, and provenance tracking.
+
+---
+
+## P
+
+### Pausable
+A circuit breaker pattern that lets admins freeze minting (but NOT transfers) in emergencies, like pulling a fire alarm to stop operations while you investigate a problem. Adds `whenNotPaused` modifier to mint functions; if paused, all mints revert until unpaused. Critical: only pause minting and admin functions, never user transfers or withdrawals. If you pause transfers, users can't sell or move their assets, destroying trust and trapping funds. Use for detected exploits, oracle failures, or coordinated whitelist attacks. Emit `Paused(msg.sender)` and `Unpaused(msg.sender)` events for transparency. Test that minting fails when paused, transfers still work, and only authorized roles can pause.
+
+### Per-Wallet Cap
+A limit on how many NFTs one address can mint, preventing whales from dominating the sale and ensuring fair distribution. Enforced with `mapping(address => uint256) public minted` that tracks each wallet's mint count: `require(minted[msg.sender] + quantity <= MAX_PER_WALLET)`. Like a "limit 2 per customer" sign at a store sale. Essential for community-focused launches where you want broad distribution instead of a few collectors buying everything. Can vary by phase (presale: 5 max, public: 10 max). Note: sophisticated actors can bypass this with multiple wallets (Sybil attack), so combine with other mechanisms (whitelist, pricing, time delays) for best results.
+
+### Phase
+A distinct stage in a minting schedule with specific rules, like boarding groups for an airplane: Group 1 (first class), Group 2 (economy plus), Group 3 (general boarding). Implemented as an enum: `enum Phase { Closed, Presale, Public }`. Each phase has different eligibility (whitelist vs anyone), pricing (0.05 vs 0.08 ETH), and per-wallet caps. Admin triggers phase transitions or use time-based logic (`block.timestamp >= PRESALE_START`). Emit `PhaseChanged(Phase newPhase)` events for transparency and frontend synchronization. Prevents gas wars by staggering access, rewards early supporters with lower prices, and creates structured launches that feel fair.
+
+### Pinning
+Keeping IPFS files available by telling nodes "don't delete this file, keep hosting it forever," like bookmarking content so it stays accessible. IPFS files persist only as long as at least one node stores them; unpinned files eventually get garbage collected. Use pinning services (Pinata, NFT.Storage, Infura) to ensure your NFT metadata and images stay available. Pin all metadata JSON files and images before reveal, then pin the folder CID. Without pinning, your NFTs could become "dead" links if nodes drop the content. Best practice: use multiple pin providers and track all CIDs in a manifest for re-pinning if needed.
+
+### Provenance Hash
+A pre-published commitment (hash) to your collection's token ordering or metadata, proving you didn't manipulate rarity after seeing who minted which tokens. Like sealing an envelope with a prediction before an event; you can prove later you didn't cheat. Before mint, you publish `keccak256(metadata_order + salt)` on-chain or Twitter. After reveal, you publish the actual ordering and salt so anyone can verify the hash matches. Prevents creators from giving rare tokens to insider wallets or swapping metadata post-mint. Essential for high-value generative collections where rarity distribution affects prices. Used by major projects (CryptoPunks, Bored Apes) to build trust.
+
+---
+
+## R
+
+### Reveal Mechanics
+Like opening a pack of trading cards; everyone mints blindly seeing a placeholder image, then the collection reveals simultaneously so nobody can snipe rare items during minting. Uses a hidden baseURI during mint (everyone sees `hidden.json`), then admin calls `reveal()` to switch to the real IPFS folder: `ipfs://QmRealHash/`. Creates fairness (prevents sniping), anticipation (mystery boxes are fun), and prevents rarity-based front-running. One-way operation: once revealed, can't re-hide. Emit `Revealed(string baseCID)` event and consider ERC-4906 `BatchMetadataUpdate` to tell marketplaces to refresh cached metadata. Test that pre-reveal shows placeholder, post-reveal shows real metadata, and only owner can trigger reveal.
+
+### Role
+A named permission set in `AccessControl` that grants specific capabilities to addresses, like job titles that determine what you're allowed to do. Example roles: `MINTER_ROLE` (can mint tokens), `PAUSER_ROLE` (can pause contract), `DEFAULT_ADMIN_ROLE` (can grant/revoke other roles). Defined as `bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE")`. Grant roles in constructor or via admin: `_grantRole(MINTER_ROLE, minterAddress)`. Protect functions with `onlyRole(ROLE_NAME)` modifier. Principle of least privilege: each role gets minimum permissions needed. If a minter key is compromised, attacker can only mint (capped by supply), not steal funds or change metadata. More flexible and secure than single `Ownable` owner for team projects.
+
+### Royalties
+A percentage of secondary sales that flows back to the original creator every time the NFT is resold, like a musician earning royalties when their song plays on the radio. Set via ERC-2981: `_setDefaultRoyalty(creatorAddress, 500)` where 500 = 5% (in basis points). When someone resells your NFT for 10 ETH, marketplaces that honor ERC-2981 send 0.5 ETH to the creator automatically. Enforcement is voluntary; OpenSea and most major marketplaces honor it, but anyone can build a marketplace that ignores royalties. Creates ongoing creator economics instead of one-time mint revenue. Typical rates: 5-10%. Too high (>15%) and collectors avoid your collection due to resale friction.
+
+---
+
+## S
+
+### Safe Mint
+Minting an NFT with recipient safety checks built in; uses `_safeMint(to, tokenId)` which verifies the recipient can handle NFTs before transferring. If `to` is a contract, calls `onERC721Received` and requires the magic return value; if `to` doesn't implement this or returns wrong value, the mint reverts and your NFT stays safe. Prevents tokens from being permanently locked in contracts that don't know how to handle them (like a token bridge that only supports ERC-20). Always use `_safeMint` for user-facing mints. Only use `_mint` (unsafe) when you control the recipient and know it's an EOA or compatible contract, like owner minting to themselves during setup.
+
+### Safe Transfer
+Transferring NFTs with recipient safety checks: `safeTransferFrom(from, to, tokenId)` verifies `to` can handle NFTs before completing the transfer. Like certified mail with delivery confirmation instead of dropping packages on any doorstep. If recipient is a contract, checks for `IERC721Receiver` interface; if missing or returns wrong value, transfer reverts. Prevents NFTs from being lost to incompatible contracts (custodial exchanges, random contracts, bridges). Always use `safeTransferFrom` for user-facing transfers. The unsafe `transferFrom` skips checks; only use if you're certain the recipient is compatible (saves ~5k gas but risky).
+
+### Semi-Fungible Token
+A hybrid token type that's fungible within its category but non-fungible across categories, like concert tickets: all "Section A" tickets are interchangeable (fungible), but "Section A" ≠ "Section B" (non-fungible across sections). Implemented with ERC-1155 where token ID represents the category and balance represents quantity. Example: game items; all iron swords (ID 1) are identical and stackable, but iron sword ≠ gold sword (ID 2). Use when you have multiple token types with quantities of each type. Provides flexibility between pure fungibility (ERC-20) and pure uniqueness (ERC-721).
+
+### Sequential Minting
+Assigning token IDs in order (0, 1, 2, 3...) as tokens are minted, like numbering pages in a book. Simplest and most gas-efficient approach: `uint256 private _nextTokenId` increments with each mint. Predictable for users (easy to know which token you're getting), indexer-friendly (continuous range), and no extra randomness logic needed. Downside: no built-in rarity reveal; users know their token number before metadata is revealed. Pair with reveal mechanics to add mystery. Alternative: randomized assignment (shuffle array, VRF) adds fairness but costs more gas. For beginners and most collections, start with sequential + reveal.
+
+### Soulbound Token
+A non-transferable NFT permanently bound to the wallet that received it, like a diploma or certification that can't be sold or given away. Implemented by overriding `_transfer` to always revert: `function _transfer(...) internal override { revert("Soulbound: transfer not allowed"); }`. Plunder Academy uses ERC-1155 soulbound tokens for achievement badges; you earn them by completing lessons, but can't buy/sell them. Use cases: credentials, memberships, attendance proofs, reputation systems. Note: can still burn (user deletes their own) if you allow it. Requires special marketplace handling since standard NFT platforms assume transferability.
+
+### Supply Cap
+The maximum number of NFTs that can be minted, enforced in code to create scarcity and trust. Set as `uint256 public constant MAX_SUPPLY = 10000` or `immutable` (set in constructor). Check before every mint: `require(_nextTokenId + quantity <= MAX_SUPPLY, "Sold out")`. Once deployed, this limit is unchangeable; even the owner can't inflate supply later. Like a limited edition print numbered 1-10,000 with a guarantee no more will ever be made. Without a supply cap, creators could mint infinite tokens, destroying rarity and value. Essential for collectors to trust the economics of your collection.
+
+---
+
+## T
+
+### Token ID
+A unique identifier for each NFT in a collection, like a serial number on a collectible coin. Typically sequential (0, 1, 2...) but can be any `uint256` value. Used to look up ownership (`ownerOf(tokenId)`), fetch metadata (`tokenURI(tokenId)`), and distinguish one NFT from another. Unlike ERC-20 where all tokens are identical, ERC-721 tracks each token individually by ID. If you own tokens #5, #17, and #42 from a collection, your balance is 3, but the specific IDs you own matter; token #42 might be rare while #5 is common. Core to NFT uniqueness and value differentiation.
+
+### Token URI
+A URL or IPFS hash pointing to an NFT's metadata JSON file, returned by `tokenURI(tokenId)`. Marketplaces fetch this to display the NFT's name, image, description, and attributes. Usually constructed as `baseURI + tokenId + ".json"`, so token 42 with base `"ipfs://QmHash/"` returns `"ipfs://QmHash/42.json"`. That JSON contains `{"name": "...", "image": "ipfs://...", "attributes": [...]}`. If `tokenURI` changes or returns nothing, your NFT shows as broken in wallets. Keep URIs stable and permanent (IPFS, not mutable servers). Emit ERC-4906 events when URIs change to refresh marketplace caches.
+
+### Transfer From
+The basic ERC-721 transfer function that moves a token from one address to another: `transferFrom(from, to, tokenId)`. Requires the caller to be owner, approved for that specific token, or an approved operator. Unlike `safeTransferFrom`, this doesn't check if the recipient can handle NFTs; it's faster (~5k less gas) but risky if `to` is a contract that doesn't support ERC-721. Use `safeTransferFrom` for user-facing transfers. `transferFrom` is mainly for known-safe recipients or gas-critical paths. Emits `Transfer(from, to, tokenId)` event. Updates ownership mappings and balances automatically.
+
+---
+
+## U
+
+### URI Substitution
+An ERC-1155 metadata pattern where the `uri()` function returns a template with `{id}` placeholder that clients replace with the actual token ID. Example: contract returns `"https://api.example.com/token/{id}.json"`, client substitutes `{id}` → `42` → `"https://api.example.com/token/42.json"`. More flexible than ERC-721's `baseURI + tokenId` because you can use the ID anywhere in the URL. Allows dynamic metadata servers that generate JSON on-demand based on token ID. Convention from EIP-1155; clients must support substitution or use the URL as-is. Most IPFS-based collections use static folders instead.
+
+---
+
+## W
+
+### Whitelist
+A VIP guest list that gets early access to mint before the public sale, like concert pre-sale tickets for fan club members. Instead of storing thousands of addresses on-chain (expensive), uses Merkle proofs: contract stores one 32-byte Merkle root (commitment to the list), and whitelisted users submit a proof with their mint transaction. The contract verifies the proof matches the root, confirming eligibility without revealing the entire list. Prevents gas wars during public launch, rewards early community members and supporters, and creates structured distribution. Generate Merkle tree off-chain, publish root on-chain, distribute proofs to whitelisted addresses. Used in presale/allowlist phases before public minting.
+
+---
+
+## Additional Resources
+
+For foundational concepts:
+- **Island 1**: Blockchain basics, EVM, Solidity fundamentals - [Island 1 Glossary](/glossary/island1-glossary)
+- **Island 2**: Advanced Solidity, inheritance, testing - [Island 2 Glossary](/glossary/island2-glossary)
+
+For advanced concepts:
+- **Island 4**: Proxies, oracles, DeFi - [Island 4 Glossary](/glossary/island4-glossary)
+- **Island 5**: Security, frontend development - [Island 5 Glossary](/glossary/island5-glossary)
+
+---
+
+*This glossary covers terminology introduced in Island 3. Terms are continuously updated as new concepts are introduced.*
+

@@ -1,0 +1,476 @@
+---
+id: exploring-and-interacting
+module: creating-erc20-tokens
+number: 5.4
+title: Exploring and Interacting with Your Token
+objective: >-
+  Learn how to deploy, verify, and interact with your token using Hardhat, 
+  MetaMask, and Zilliqa's block explorer.
+practicalTakeaway: >-
+  Hands-on experience with token deployment, verification, and real-world 
+  interaction builds confidence and understanding of the complete token lifecycle.
+slug: exploring-and-interacting
+---
+
+## Interacting Your Simple Token
+
+Let's start interacting with your simple token on Zilliqa testnet!
+
+## Adding Your Token to MetaMask
+
+### Step-by-Step Token Addition
+
+**Manual addition process:**
+
+**Open MetaMask** and ensure you're on Zilliqa EVM Testnet
+
+**Go to Assets tab** and click "Import tokens"
+
+**Select "Custom Token"**
+
+**Enter token details:**
+   - **Token Contract Address:** Your deployed contract address
+   - **Token Symbol:** (should auto-populate)
+   - **Token Decimals:** (should auto-populate)
+
+**Click "Add Custom Token"** then "Import Tokens"
+
+**Your token should now appear in MetaMask!** You should see your balance of 1,000,000 MFT tokens.
+
+## Verifying Your Token on Block Explorer
+
+### Automated Verification with Hardhat
+
+**First, ensure your `hardhat.config.ts` has the verification configuration:**
+
+```typescript
+import type { HardhatUserConfig } from "hardhat/config";
+
+import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import hardhatVerifyPlugin from "@nomicfoundation/hardhat-verify";
+import { configVariable } from "hardhat/config";
+import "dotenv/config";
+
+const config: HardhatUserConfig = {
+  plugins: [hardhatToolboxViemPlugin, hardhatVerifyPlugin],
+  solidity: {
+    profiles: {
+      default: {
+        version: "0.8.28",
+        settings: {
+          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+        },
+      },
+      production: {
+        version: "0.8.28",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+        },
+      },
+    },
+  },
+  networks: {
+    hardhatMainnet: {
+      type: "edr-simulated",
+      chainType: "l1",
+    },
+    hardhatOp: {
+      type: "edr-simulated",
+      chainType: "op",
+    },
+    zilliqaMainnet: {
+      type: "http",
+      chainType: "l1",
+      chainId: 32769,
+      url: "https://api.zilliqa.com",
+      accounts: [configVariable("ZILLIQA_MAINNET_PRIVATE_KEY")]
+    },
+    zilliqaTestnet: {
+      type: "http",
+      chainType: "l1",
+      chainId: 33101,
+      url: "https://api.testnet.zilliqa.com",
+      accounts: [configVariable("ZILLIQA_TESTNET_PRIVATE_KEY")]
+    },
+  },
+  verify: {
+    // Disable Etherscan since we're using Zilliqa networks
+    etherscan: {
+      enabled: false,
+    },
+    // Blockscout verification (no API key needed)
+    blockscout: {
+      enabled: true,
+    },
+  },
+  // Add custom chain descriptors for Zilliqa networks
+  chainDescriptors: {
+    // Zilliqa Mainnet
+    32769: {
+      name: "Zilliqa",
+      blockExplorers: {
+        blockscout: {
+          name: "Zilliqa Explorer",
+          url: "https://zilliqa.blockscout.com",
+          apiUrl: "https://zilliqa.blockscout.com/api",
+        },
+      },
+    },
+    // Zilliqa Testnet
+    33101: {
+      name: "Zilliqa Testnet",
+      blockExplorers: {
+        blockscout: {
+          name: "Zilliqa Testnet Explorer",
+          url: "https://testnet.zilliqa.blockscout.com",
+          apiUrl: "https://testnet.zilliqa.blockscout.com/api",
+        },
+      },
+    },
+  },
+};
+
+export default config;
+```
+
+### Simple One-Command Verification
+
+**Verify your contract with a single command:**
+
+```bash
+npx hardhat verify --network zilliqaTestnet CONTRACT_ADDRESS CLAIMANT_ADDRESS
+```
+
+**Replace with your actual values:**
+```bash
+npx hardhat verify --network zilliqaTestnet 0x564498e20b1d239d038d6c214f826a44527d6c77 0x47830f1be175a7f8b2906eff6e252b5d4fa3cc91
+```
+
+**Expected verification output:**
+```
+=== Blockscout ===
+
+📤 Submitted source code for verification on Zilliqa Testnet Explorer:
+
+  contracts/MyFirstToken.sol:MyFirstToken
+  Address: 0x564498e20b1d239d038d6c214f826a44527d6c77
+
+⏳ Waiting for verification result...
+
+The initial verification attempt for contracts/MyFirstToken.sol:MyFirstToken failed using the minimal compiler input.
+
+Trying again with the full solc input used to compile and deploy the contract.
+Unrelated contracts may be displayed on Zilliqa Testnet Explorer as a result.
+
+📤 Submitted source code for verification on Zilliqa Testnet Explorer:
+
+  contracts/MyFirstToken.sol:MyFirstToken
+  Address: 0x564498e20b1d239d038d6c214f826a44527d6c77
+
+⏳ Waiting for verification result...
+
+✅ Contract verified successfully on Zilliqa Testnet Explorer!
+
+  contracts/MyFirstToken.sol:MyFirstToken
+  Explorer: https://testnet.zilliqa.blockscout.com/address/0x564498e20b1d239d038d6c214f826a44527d6c77#code
+```
+
+**Success!** Your contract is now verified and publicly viewable with source code on the Zilliqa block explorer.
+
+## Creating Transfer Scripts
+
+### Basic Transfer Script
+
+**Create `scripts/transfer-tokens.ts`:**
+
+```typescript
+import { network } from "hardhat";
+import { formatEther, parseEther } from "viem";
+
+async function main() {
+  // Configuration - replace with your values
+  const contractAddress = process.env.CONTRACT_ADDRESS;
+  const recipientAddress = process.env.RECIPIENT_ADDRESS;
+  
+  if (!contractAddress || !recipientAddress) {
+    console.error("❌ Please provide CONTRACT_ADDRESS and RECIPIENT_ADDRESS environment variables");
+    console.log("Usage: CONTRACT_ADDRESS=0x... RECIPIENT_ADDRESS=0x... npm run transfer");
+    process.exit(1);
+  }
+
+  const networkName = process.env.HARDHAT_NETWORK || "localhost";
+  console.log(`Transferring tokens on ${networkName}...`);
+  
+  try {
+    const { viem } = await network.connect({
+      network: networkName,
+    });
+
+    const publicClient = await viem.getPublicClient();
+    const [walletClient] = await viem.getWalletClients();
+    
+    // Get the contract instance
+    const token = await viem.getContractAt("MyFirstToken", contractAddress as `0x${string}`);
+    
+    // Transfer amount (100 MFT)
+    const amount = parseEther("100");
+    
+    console.log("=== Token Transfer ===");
+    console.log(`From: ${walletClient.account.address}`);
+    console.log(`To: ${recipientAddress}`);
+    console.log(`Amount: ${formatEther(amount)} MFT`);
+    
+    // Check sender balance
+    const senderBalance = await token.read.balanceOf([walletClient.account.address]);
+    console.log(`Sender balance: ${formatEther(senderBalance)} MFT`);
+    
+    if (senderBalance < amount) {
+      console.error("❌ Insufficient balance!");
+      return;
+    }
+    
+    // Execute transfer
+    console.log("\n⏳ Sending transaction...");
+    const transferTx = await token.write.transfer([recipientAddress as `0x${string}`, amount]);
+    console.log(`Transaction hash: ${transferTx}`);
+    
+    // Wait for confirmation
+    console.log("⏳ Waiting for confirmation...");
+    const receipt = await publicClient.waitForTransactionReceipt({ 
+      hash: transferTx 
+    });
+    console.log(`✅ Transfer confirmed in block ${receipt.blockNumber}`);
+    console.log(`Gas used: ${receipt.gasUsed}`);
+    
+    // Show updated balances
+    const newSenderBalance = await token.read.balanceOf([walletClient.account.address]);
+    const recipientBalance = await token.read.balanceOf([recipientAddress as `0x${string}`]);
+    
+    console.log("\n📊 Updated Balances:");
+    console.log(`Sender: ${formatEther(newSenderBalance)} MFT`);
+    console.log(`Recipient: ${formatEther(recipientBalance)} MFT`);
+    
+    console.log(`\n🔍 View on Explorer:`);
+    console.log(`https://testnet.zilliqa.blockscout.com/tx/${transferTx}`);
+    
+  } catch (error) {
+    console.error("❌ Transfer failed:", error);
+    process.exit(1);
+  }
+}
+
+main().catch(console.error);
+```
+
+💾 **CRITICAL: SAVE THE FILE!** 
+- Press **Ctrl+S** (Windows/Linux) or **Cmd+S** (Mac) to save `scripts/transfer-tokens.ts`
+- Scripts won't work if not saved!
+
+### Add npm Scripts for Convenience
+
+**Add these scripts to your `package.json`:**
+
+```json
+{
+  "scripts": {
+    "transfer:local": "npx hardhat run scripts/transfer-tokens.ts",
+    "transfer:testnet": "HARDHAT_NETWORK=zilliqaTestnet npx hardhat run scripts/transfer-tokens.ts --network zilliqaTestnet",
+    "stats:local": "npx hardhat run scripts/token-stats.ts",
+    "stats:testnet": "HARDHAT_NETWORK=zilliqaTestnet npx hardhat run scripts/token-stats.ts --network zilliqaTestnet"
+  }
+}
+```
+
+💾 **CRITICAL: SAVE THE FILE!** 
+- Press **Ctrl+S** (Windows/Linux) or **Cmd+S** (Mac) to save `package.json`
+
+**Run the transfer:**
+
+```bash
+# Replace with your contract and recipient addresses
+CONTRACT_ADDRESS=0x564498e20b1d239d038d6c214f826a44527d6c77 RECIPIENT_ADDRESS=0x47830f1be175a7f8b2906eff6e252b5d4fa3cc91 npm run transfer:testnet
+```
+
+## Token Analytics
+
+### Basic Token Stats
+
+**Create `scripts/token-stats.ts`:**
+
+```typescript
+import { network } from "hardhat";
+import { formatEther } from "viem";
+
+async function main() {
+  const contractAddress = process.env.CONTRACT_ADDRESS;
+  const networkName = process.env.HARDHAT_NETWORK || "localhost";
+  
+  if (!contractAddress) {
+    console.error("❌ Please provide CONTRACT_ADDRESS environment variable");
+    console.log("Usage: CONTRACT_ADDRESS=0x... npm run stats");
+    process.exit(1);
+  }
+
+  console.log(`Analyzing token on ${networkName}...`);
+  
+  try {
+    const { viem } = await network.connect({
+      network: networkName,
+    });
+
+    const [walletClient] = await viem.getWalletClients();
+    const token = await viem.getContractAt("MyFirstToken", contractAddress as `0x${string}`);
+    
+    console.log("📊 My First Token Analytics");
+    console.log("============================");
+    
+    // Basic token info
+    console.log("\n🪙 Token Information:");
+    const name = await token.read.name();
+    const symbol = await token.read.symbol();
+    const decimals = await token.read.decimals();
+    const totalSupply = await token.read.totalSupply();
+    const claimant = await token.read.claimant();
+    
+    console.log(`Name: ${name}`);
+    console.log(`Symbol: ${symbol}`);
+    console.log(`Decimals: ${decimals.toString()}`);
+    console.log(`Total Supply: ${formatEther(totalSupply)} MFT`);
+    console.log(`Claimant: ${claimant}`);
+    
+    // Contract info
+    console.log("\n📋 Contract Information:");
+    console.log(`Address: ${contractAddress}`);
+    console.log(`Explorer: https://testnet.zilliqa.blockscout.com/address/${contractAddress}`);
+    
+    // Current user info
+    console.log("\n👤 Current User Information:");
+    console.log(`Address: ${walletClient.account.address}`);
+    const userBalance = await token.read.balanceOf([walletClient.account.address]);
+    console.log(`Balance: ${formatEther(userBalance)} MFT`);
+    console.log(`Percentage: ${((Number(userBalance) / Number(totalSupply)) * 100).toFixed(2)}%`);
+    
+    // Claimant info
+    console.log("\n🏆 Claimant Information:");
+    const claimantBalance = await token.read.balanceOf([claimant]);
+    console.log(`Balance: ${formatEther(claimantBalance)} MFT`);
+    console.log(`Percentage: ${((Number(claimantBalance) / Number(totalSupply)) * 100).toFixed(2)}%`);
+    
+    // Distribution summary
+    console.log("\n📊 Supply Distribution:");
+    const userBalanceFormatted = Number(formatEther(userBalance));
+    const claimantBalanceFormatted = Number(formatEther(claimantBalance));
+    const totalSupplyFormatted = Number(formatEther(totalSupply));
+    const otherBalance = totalSupplyFormatted - userBalanceFormatted - claimantBalanceFormatted;
+    
+    console.log(`Current User: ${userBalanceFormatted.toLocaleString()} MFT`);
+    console.log(`Claimant: ${claimantBalanceFormatted.toLocaleString()} MFT`);
+    console.log(`Others: ${otherBalance.toLocaleString()} MFT`);
+    console.log(`Total: ${totalSupplyFormatted.toLocaleString()} MFT`);
+    
+  } catch (error) {
+    console.error("❌ Analytics failed:", error);
+    process.exit(1);
+  }
+}
+
+main().catch(console.error);
+```
+
+💾 **CRITICAL: SAVE THE FILE!** 
+- Press **Ctrl+S** (Windows/Linux) or **Cmd+S** (Mac) to save `scripts/token-stats.ts`
+
+**Run the analytics:**
+
+```bash
+# Replace with your contract address
+CONTRACT_ADDRESS=0x564498e20b1d239d038d6c214f826a44527d6c77 npm run stats:testnet
+```
+
+## Exploring the Block Explorer
+
+### Understanding Your Token's Page
+
+**Visit your token on Blockscout:**
+`https://testnet.zilliqa.blockscout.com/address/YOUR_CONTRACT_ADDRESS`
+
+**Key sections to explore:**
+
+**Overview Tab:**
+   - Contract balance and transaction count
+   - Contract creation details
+   - Recent transactions and transfers
+
+**Transactions Tab:**
+   - All interactions with your token
+   - Transfer events and gas usage
+   - Internal transactions
+
+**Contract Tab:**
+   - Verified source code (after running hardhat verify)
+   - Read/Write contract functions
+   - Contract ABI and bytecode
+
+**Events Tab:**
+   - Transfer events showing token movements
+   - Event details and transaction hashes
+   - Event filters and search
+
+### Reading Contract Functions
+
+**After verification, try these read functions on the explorer:**
+
+1. **name()** → "My First Token"
+2. **symbol()** → "MFT"
+3. **decimals()** → 18
+4. **totalSupply()** → 1000000000000000000000000 (1M tokens in wei)
+5. **balanceOf(address)** → Check any address balance
+6. **claimant()** → Your training portal wallet address
+
+### Using the Write Functions
+
+**Connect your MetaMask to interact with write functions:**
+
+1. **Navigate to the Contract tab**
+2. **Click "Connect Wallet"**
+3. **Select MetaMask and connect**
+4. **Use the transfer() function** to send tokens directly from the explorer
+5. **Monitor transactions** in real-time
+
+## What You've Accomplished! 🎉
+
+Congratulations! You've successfully:
+
+✅ **Deployed your first token** to Zilliqa testnet \
+✅ **Added your token to MetaMask** for easy management \
+✅ **Transferred tokens** between addresses \
+✅ **Verified your contract** on the block explorer \
+✅ **Created interaction scripts** for token management \
+✅ **Explored the block explorer** to understand your token's activity
+
+### Your Token is Now Live and Functional!
+
+Your simple 10-line token contract is:
+- 🌐 **Deployed on Zilliqa testnet**
+- 🔍 **Verified and transparent**
+- 🦊 **Compatible with MetaMask**
+- 💱 **Ready for trading and integration**
+- 📊 **Trackable on the block explorer**
+
+### Next Steps for Learning
+
+Now that you have a working token, consider:
+
+1. **🔧 Add advanced features** from the previous module
+2. **🏦 Integrate with DeFi protocols**
+3. **💱 Create liquidity pools** for trading
+4. **🎮 Build a dApp frontend** for your token
+5. **👥 Start a community** around your project
+6. ** Continue the EVM training on plunderacademy.com in the next modules!
+
+You've mastered the fundamentals of ERC-20 token development on Zilliqa! Verify your contract below or if you didn't setup your 
+dev env (Required for all future islands and modules!), you can also use the simple token factory contract we have setup.

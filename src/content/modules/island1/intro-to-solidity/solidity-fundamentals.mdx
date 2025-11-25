@@ -1,0 +1,283 @@
+---
+id: solidity-fundamentals
+module: intro-to-solidity
+number: 3.1
+title: 'Solidity Fundamentals: Getting Started'
+objective: >-
+  Learn the basics of Solidity syntax, data types, and foundational constructs
+  for building robust and secure decentralized applications.
+slug: solidity-fundamentals
+---
+
+## What is Solidity?
+
+### The Language of Smart Contracts
+
+**Real-world analogy:** Think of Solidity like the legal language used to write contracts, but instead of lawyers interpreting them, computer programs execute them automatically and exactly as written.
+
+Solidity is the primary programming language for writing smart contracts on Ethereum and all EVM-compatible blockchains, including Zilliqa. It is statically typed and contract-oriented, meaning every piece of data has a specific type that's checked before the contract runs.
+
+**Why Solidity exists:**
+- **Deterministic execution:** The same code always produces the same result
+- **Security-focused:** Built-in features to prevent common programming mistakes
+- **EVM compatibility:** Works on all Ethereum-compatible blockchains
+- **Rich ecosystem:** Extensive libraries and tools available
+
+<Callout type="info">
+**Key Insight:** Solidity is specifically designed for blockchain development. Unlike general-purpose languages, it includes built-in features for handling cryptocurrency, managing state on a distributed ledger, and ensuring security in trustless environments.
+</Callout>
+
+### Building a Contract Block by Block
+
+Instead of overwhelming you with a massive file, let's build a contract from scratch to understand every line.
+
+#### 1. The Pragma: Setting the Rules
+
+Every Solidity file starts with a "pragma". This tells the compiler which version of Solidity to use.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+```
+
+**Syntax Decoder:**
+- `// SPDX...`: A comment telling the world this code is open source (MIT license).
+- `pragma solidity`: "I am writing Solidity code."
+- `^0.8.0`: "Use version 0.8.0 or any newer version that doesn't break things (like 0.8.19)."
+  - The caret `^` allows upgrades to 0.8.x but prevents dangerous jumps to 0.9.0.
+
+#### 2. The Contract Container
+
+Next, we define the contract itself. This is like a `class` in other languages—a container for all your variables and functions.
+
+```solidity
+contract MyFirstToken {
+    // Everything happens inside these curly braces
+}
+```
+
+### Storing Data: The Building Blocks
+
+In Solidity, data stored in the contract is **permanent**. It lives on the blockchain forever. This is called "State".
+
+#### Integers (Numbers)
+
+Solidity doesn't use `int` by default. It uses `uint256`.
+
+```solidity
+// Unsigned integers (no negative numbers)
+uint256 public totalSupply = 1000000;
+
+// Signed integers (can be negative)
+int256 public temperature = -10;
+```
+
+**Syntax Breakdown:**
+- **`uint`**: Unsigned Integer (cannot be negative).
+- **`int`**: Signed Integer (can be negative).
+- **`256`**: The size in bits. It's huge (can store numbers up to $10^{77}$). This is the standard size for the EVM.
+- **`public`**: Automatically creates a function for anyone to read this value.
+
+<Callout type="tip">
+**Gas Optimization Tip:** While `uint8` exists (smaller number), it is often *more expensive* than `uint256` because the EVM is optimized for 256-bit operations. Stick to `uint256` unless you are packing structs (which we cover in Data Structures).
+</Callout>
+
+#### Addresses (Identities)
+
+Blockchains don't have usernames; they have addresses.
+
+```solidity
+address public owner;
+address public constant ZERO_ADDRESS = address(0); // 0x000...
+```
+
+- **`address`**: A special type holding a 20-byte value (like `0x123...`).
+- **`address payable`**: A variation that allows the address to receive ETH/ZIL transfers.
+
+#### Strings vs Bytes
+
+Text handling in Solidity is unique because text takes up a lot of space.
+
+```solidity
+string public name = "My Token";    // Expensive, variable length
+bytes32 public hash;                // Cheap, fixed length (32 bytes)
+```
+
+- **`string`**: Use for human-readable text (Names, URLs). Expensive to store.
+- **`bytes32`**: Use for fixed-size data (Hashes, IDs). Much cheaper and gas-efficient.
+
+#### Mappings (The Database)
+
+This is the most important data structure in Solidity. It's like a hash table or a dictionary.
+
+```solidity
+mapping(address => uint256) public balances;
+```
+
+**How to read this syntax:**
+"I am mapping an **`address`** (the key) to a **`uint256`** (the value)."
+- If you ask "What is the balance of `0xAlice`?", it returns a number.
+- If `0xBob` has never used the contract, it returns `0` (default value).
+
+### 🧠 Application Check: Designing Data
+
+Imagine you are building a "Crypto School" contract. You need to store the following information. What Solidity data types would you use?
+
+1.  **The total number of students enrolled.**
+2.  **The address of the headmaster.**
+3.  **A way to look up a student's grade (number) using their wallet address.**
+4.  **The school's motto (text).**
+
+<details>
+<summary>Click to reveal answers</summary>
+
+1.  **Total students:** `uint256` (Number, can't be negative).
+2.  **Headmaster:** `address` (Ideally `address public headmaster`).
+3.  **Grades:** `mapping(address => uint256)` (Maps a student ID to a grade).
+4.  **Motto:** `string` (Variable length text).
+
+</details>
+
+### Essential Variables & Global Context
+
+Solidity gives you special global variables to interact with the blockchain.
+
+#### `msg.sender`: The Caller
+This is the most used variable. It represents "Who is running this function right now?"
+
+```solidity
+function storeMyAddress() public {
+    // If Alice calls this, user = Alice's address
+    address user = msg.sender;
+}
+```
+
+#### `msg.value`: The Money
+This represents "How much ETH/ZIL was sent with this transaction?"
+
+```solidity
+function buyToken() public payable {
+    // amountSent is the number of native tokens (Wei/Qa)
+    uint256 amountSent = msg.value;
+}
+```
+
+#### `block.timestamp`: The Time
+Used for time-dependent logic (like locking tokens).
+
+```solidity
+uint256 public unlockTime;
+// Current block timestamp in seconds since Unix epoch
+uint256 public nowTime = block.timestamp;
+```
+
+### Common Contract Patterns
+
+You will see these patterns in almost every token contract.
+
+#### 1. Supply Management
+```solidity
+contract MintableToken {
+    uint256 public totalSupply;
+    uint256 public constant MAX_SUPPLY = 1000000 * 10**18; // Hard cap
+    
+    // Constants save gas! They are replaced at compile time.
+}
+```
+
+#### 2. The Constructor (The "Setup" Function)
+
+The `constructor` is a special function that runs **only once** when the contract is first deployed. It's used to set up the initial state, like minting the initial supply or setting the owner.
+
+```solidity
+address public owner;
+
+constructor() {
+    // This code runs ONCE during deployment
+    owner = msg.sender; // Set deployer as owner
+}
+```
+
+#### 3. Access Control (Owner Pattern)
+```solidity
+address public owner;
+
+constructor() {
+    owner = msg.sender; // Set deployer as owner
+}
+```
+
+#### 3. Pausable Functionality
+A "circuit breaker" to stop transfers in an emergency.
+```solidity
+bool public paused = false;
+```
+
+### 🛠️ Try It Yourself: Reading Syntax
+
+Look at this snippet from a real contract. Can you identify the purpose of each line?
+
+```solidity
+// 1.
+uint256 public constant PRICE = 100;
+
+// 2.
+mapping(address => bool) public hasPaid;
+
+// 3.
+function pay() public payable {
+    require(msg.value == PRICE, "Wrong amount");
+    hasPaid[msg.sender] = true;
+}
+```
+
+**Analysis:**
+1.  **`uint256 public constant`**: A number that never changes (`constant`). It saves gas!
+2.  **`mapping(address => bool)`**: A checklist. `address` -> `true/false`. "Has this person paid?"
+3.  **`msg.sender`**: The person calling the `pay` function. We mark *them* as having paid.
+
+### Best Practices for Beginners
+
+#### 1. Always Use Latest Solidity Version
+```solidity
+pragma solidity ^0.8.19; // Use recent stable version
+```
+
+#### 2. Import from OpenZeppelin
+Don't write security code yourself. Import it.
+```solidity
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+```
+
+#### 3. Use Descriptive Variable Names
+Code is read more often than it is written.
+- **Bad:** `uint x;`
+- **Good:** `uint256 public unlockTimestamp;`
+
+#### 4. Handle Edge Cases
+Always validate inputs.
+```solidity
+require(to != address(0), "Cannot transfer to zero address");
+```
+
+### Summary
+You've learned the building blocks:
+- **Pragma**: The rules.
+- **Contract**: The container.
+- **uint256**: The numbers (use constant where possible).
+- **Address**: The people.
+- **Mapping**: The database.
+- **msg.sender**: The current user.
+
+In the next lesson, we'll make these variables *do* things using Functions.
+
+## 🎮 Interactive Practice
+
+Test your Solidity knowledge by identifying these statements:
+
+<TrueFalse statements={[
+  {"id": "sol-1", "text": "Solidity is statically typed - you must declare variable types like uint256 explicitly.", "correctAnswer": true, "explanation": "Correct! Unlike JavaScript, you must tell Solidity exactly what type of data a variable holds."},
+  {"id": "sol-2", "text": "The 'public' keyword hides the variable from the world.", "correctAnswer": false, "explanation": "Incorrect. 'public' automatically creates a 'getter' function so anyone can read the value."},
+  {"id": "sol-3", "text": "msg.sender is the address of the contract itself.", "correctAnswer": false, "explanation": "Incorrect. msg.sender is the address of the PERSON (or contract) calling the function."},
+  {"id": "sol-4", "text": "A mapping is like a database linking keys (like addresses) to values (like balances).", "correctAnswer": true, "explanation": "Spot on! Mappings are the primary way to store associations in Solidity."}
+]} />

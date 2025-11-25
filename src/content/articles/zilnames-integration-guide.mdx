@@ -1,0 +1,1080 @@
+---
+slug: zilnames-integration-guide
+title: "ZilNames Integration Guide: Human-Readable Addresses on Zilliqa"
+excerpt: "Learn how to integrate ZilNames, Zilliqa's ENS-compatible name service, into your dApp. This practical guide covers name resolution, avatars, and React implementation using Viem."
+level: intermediate
+tags:
+  - zilliqa
+  - zilnames
+  - ens
+  - name-service
+  - integration
+  - viem
+  - wagmi
+---
+
+## What is ZilNames?
+
+ZilNames is Zilliqa's domain name service that replaces complex wallet addresses with human-readable names ending in `.zil`. Similar to Ethereum Name Service (ENS), ZilNames makes blockchain interactions more user-friendly and less error-prone.
+
+**Example:**
+- Instead of: `0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1`
+- Use: `alice.zil`
+
+### Why Use ZilNames?
+
+**For Users:**
+- **Memorable**: Easy-to-remember names instead of 42-character addresses
+- **Safer**: Reduces typo risk in transactions
+- **Identity**: Consistent identity across Zilliqa dApps
+- **Portable**: Works across all Zilliqa applications
+
+**For Developers:**
+- **Better UX**: Improve user experience with readable addresses
+- **ENS Compatible**: Works with standard Viem ENS functions
+- **Easy Integration**: Single line of code for basic resolution
+- **Rich Features**: Avatars, text records, and reverse resolution
+
+## Features
+
+- ✅ **Forward Resolution**: Convert `name.zil` → `0x...address`
+- ✅ **Reverse Resolution**: Convert `0x...address` → `name.zil`
+- ✅ **Avatar Support**: Display profile images
+- ✅ **Text Records**: Store additional metadata (URLs, descriptions, etc.)
+- ✅ **Full ENS Compatibility**: Works with Viem's built-in ENS functions
+- ✅ **Cross-App Support**: Names work across the entire Zilliqa ecosystem
+
+## Contract Addresses
+
+ZilNames uses multiple smart contracts. For most integrations, you only need the **UniversalResolver** contract address, which is already configured in Viem's chain setup.
+
+### Testnet Contracts
+
+**BaseRegistrar**
+- Address: `0x6d6999EB499E7A4aaD0B462045CaE82907A1D30A`
+- [View on Otterscan](https://otterscan.testnet.zilliqa.com/address/0x6d6999EB499E7A4aaD0B462045CaE82907A1D30A)
+
+**L2Resolver**
+- Address: `0x579C72c5377a5a4A8Ce6d43A1701F389c8FDFC8e`
+- [View on Otterscan](https://otterscan.testnet.zilliqa.com/address/0x579C72c5377a5a4A8Ce6d43A1701F389c8FDFC8e)
+
+**RegistrarController**
+- Address: `0xC228acc2f1B177a486abd5be0FA513Dc96F14A6f`
+- [View on Otterscan](https://otterscan.testnet.zilliqa.com/address/0xC228acc2f1B177a486abd5be0FA513Dc96F14A6f)
+
+**Registry**
+- Address: `0x716c7e7dC02f7E0FD44343C720233DB57896Fb1b`
+- [View on Otterscan](https://otterscan.testnet.zilliqa.com/address/0x716c7e7dC02f7E0FD44343C720233DB57896Fb1b)
+
+**ReverseRegistrar**
+- Address: `0xBA0478582F6B119c8F9EB71b28927467E5e75357`
+- [View on Otterscan](https://otterscan.testnet.zilliqa.com/address/0xBA0478582F6B119c8F9EB71b28927467E5e75357)
+
+**Multicall3**
+- Address: `0x3c2ffc98284b2f6e1035eaeed75e9273b5b63223`
+- [View on Otterscan](https://otterscan.testnet.zilliqa.com/address/0x3c2ffc98284b2f6e1035eaeed75e9273b5b63223)
+
+### Mainnet Contracts
+
+**BaseRegistrar**
+- Address: `0x34f1A58c54B543D6cb82FC63fBc2D39F749099Df`
+- [View on Otterscan](https://otterscan.zilliqa.com/address/0x34f1A58c54B543D6cb82FC63fBc2D39F749099Df)
+
+**L2Resolver**
+- Address: `0x5c0c7BFd25efCAE366fE62219fD5558305Ffc46F`
+- [View on Otterscan](https://otterscan.zilliqa.com/address/0x5c0c7BFd25efCAE366fE62219fD5558305Ffc46F)
+
+**RegistrarController**
+- Address: `0x7c588d2128B8A68DDDEf59fF6E4EdEE5435371EF`
+- [View on Otterscan](https://otterscan.zilliqa.com/address/0x7c588d2128B8A68DDDEf59fF6E4EdEE5435371EF)
+
+**Registry**
+- Address: `0x2196b67Ca97bBcA07C01c7Bdf4f35209CC615389`
+- [View on Otterscan](https://otterscan.zilliqa.com/address/0x2196b67Ca97bBcA07C01c7Bdf4f35209CC615389)
+
+**ReverseRegistrar**
+- Address: `0x228242c33D0D0825a3B31B2f4c2f10b7Cb64B788`
+- [View on Otterscan](https://otterscan.zilliqa.com/address/0x228242c33D0D0825a3B31B2f4c2f10b7Cb64B788)
+
+**UniversalResolver**
+- Address: `0x2b6a7953c510392aE88c7C302a984460Daa8AF24`
+- [View on Otterscan](https://otterscan.zilliqa.com/address/0x2b6a7953c510392aE88c7C302a984460Daa8AF24)
+
+**Multicall3**
+- Address: `0x38899efb93d5106d3adb86662c557f237f6ecf57`
+- [View on Otterscan](https://otterscan.zilliqa.com/address/0x38899efb93d5106d3adb86662c557f237f6ecf57)
+
+## Quick Start with Viem
+
+The simplest way to integrate ZilNames is using Viem's built-in ENS functions. Viem automatically handles the complex DNS encoding and contract interactions.
+
+### Prerequisites
+
+```bash
+npm install viem wagmi @tanstack/react-query
+```
+
+### Chain Configuration
+
+Your Zilliqa chain configuration must include ENS contract addresses:
+
+```typescript
+// src/lib/wagmi.ts
+import { type Chain } from "viem";
+
+export const zilliqaMainnet: Chain = {
+  id: 32769,
+  name: "Zilliqa",
+  nativeCurrency: { name: "Zilliqa", symbol: "ZIL", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["https://api.zilliqa.com"] },
+  },
+  blockExplorers: {
+    default: { name: "Blockscout", url: "https://zilliqa.blockscout.com" },
+  },
+  contracts: {
+    // These addresses enable Viem's ENS functions
+    ensUniversalResolver: {
+      address: "0x2b6a7953c510392aE88c7C302a984460Daa8AF24",
+    },
+    ensRegistry: {
+      address: "0x2196b67Ca97bBcA07C01c7Bdf4f35209CC615389",
+    },
+    multicall3: {
+      address: "0x38899efb93d5106d3adb86662c557f237f6ecf57",
+      blockCreated: 5313022,
+    },
+  },
+};
+```
+
+### Basic Usage
+
+#### 1. Forward Resolution (Name → Address)
+
+Convert a `.zil` name to an Ethereum address:
+
+```typescript
+import { createPublicClient, http } from 'viem'
+import { normalize } from 'viem/ens'
+import { zilliqaMainnet } from '@/lib/wagmi'
+
+// Create a public client
+const publicClient = createPublicClient({
+  chain: zilliqaMainnet,
+  transport: http(),
+})
+
+async function resolveZilName(name: string) {
+  try {
+    // IMPORTANT: Always normalize names to prevent homograph attacks
+    // This ensures 'Example.zil' and 'example.zil' resolve the same way
+    const normalizedName = normalize(name)
+    
+    // Viem handles all the complex DNS encoding automatically
+    const address = await publicClient.getEnsAddress({
+      name: normalizedName,
+    })
+    
+    return address // Returns '0x...' or null if not found
+  } catch (error) {
+    console.error('Error resolving name:', error)
+    return null
+  }
+}
+
+// Usage
+const address = await resolveZilName('alice.zil')
+console.log(address) // '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1'
+```
+
+**Key Points:**
+- Always use `normalize()` to prevent homograph attacks (visually similar characters from different alphabets)
+- Viem uses the UniversalResolver contract configured in your chain
+- Returns `null` if the name doesn't exist
+
+#### 2. Reverse Resolution (Address → Name)
+
+Convert an Ethereum address back to its primary `.zil` name:
+
+```typescript
+import { createPublicClient, http, type Address } from 'viem'
+import { zilliqaMainnet } from '@/lib/wagmi'
+
+const publicClient = createPublicClient({
+  chain: zilliqaMainnet,
+  transport: http(),
+})
+
+async function resolveAddress(address: Address) {
+  try {
+    // Get the primary name for this address
+    const name = await publicClient.getEnsName({
+      address: address,
+    })
+    
+    return name // Returns 'alice.zil' or null if no reverse record set
+  } catch (error) {
+    console.error('Error resolving address:', error)
+    return null
+  }
+}
+
+// Usage
+const name = await resolveAddress('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1')
+console.log(name) // 'alice.zil'
+```
+
+**Note**: Reverse resolution only works if the address owner has set a reverse record. Not all addresses have one.
+
+#### 3. Get Avatar
+
+Retrieve the avatar URL associated with a `.zil` name:
+
+```typescript
+import { createPublicClient, http } from 'viem'
+import { normalize } from 'viem/ens'
+import { zilliqaMainnet } from '@/lib/wagmi'
+
+const publicClient = createPublicClient({
+  chain: zilliqaMainnet,
+  transport: http(),
+})
+
+async function getZilNameAvatar(name: string) {
+  try {
+    const avatarUrl = await publicClient.getEnsAvatar({
+      name: normalize(name),
+    })
+    
+    // Viem automatically handles IPFS URLs and NFT avatars
+    return avatarUrl // Returns full URL or null
+  } catch (error) {
+    console.error('Error fetching avatar:', error)
+    return null
+  }
+}
+
+// Usage
+const avatar = await getZilNameAvatar('alice.zil')
+if (avatar) {
+  console.log(`<img src="${avatar}" alt="Avatar" />`)
+}
+```
+
+**Avatar Types Supported:**
+- HTTP/HTTPS URLs
+- IPFS (automatically converted to gateway URLs)
+- NFT avatars (ERC721/ERC1155)
+
+#### 4. Get Text Records
+
+Retrieve custom text records like Twitter handles, URLs, or descriptions:
+
+```typescript
+import { createPublicClient, http } from 'viem'
+import { normalize } from 'viem/ens'
+import { zilliqaMainnet } from '@/lib/wagmi'
+
+const publicClient = createPublicClient({
+  chain: zilliqaMainnet,
+  transport: http(),
+})
+
+async function getTextRecord(name: string, key: string) {
+  try {
+    const value = await publicClient.getEnsText({
+      name: normalize(name),
+      key: key, // Common keys: 'url', 'description', 'com.twitter', 'com.github'
+    })
+    
+    return value
+  } catch (error) {
+    console.error('Error fetching text record:', error)
+    return null
+  }
+}
+
+// Usage examples
+const website = await getTextRecord('alice.zil', 'url')
+const twitter = await getTextRecord('alice.zil', 'com.twitter')
+const description = await getTextRecord('alice.zil', 'description')
+```
+
+**Common Text Record Keys:**
+- `url` - Website URL
+- `email` - Email address
+- `description` - Profile description
+- `com.twitter` - Twitter username
+- `com.github` - GitHub username
+- `com.discord` - Discord username
+
+## React Integration
+
+For React applications, create reusable hooks that integrate with Wagmi and React Query for optimal caching and state management.
+
+### Hook: Resolve Address to Name
+
+```typescript
+// src/hooks/useZilliqaEnsName.ts
+import { type Address, isAddress } from "viem"
+import { useQuery } from "@tanstack/react-query"
+import { usePublicClient } from "wagmi"
+import { zilliqaMainnet } from "@/lib/wagmi"
+
+interface UseZilliqaEnsNameProps {
+  address?: Address
+  /** Enable/disable the query. Default: true */
+  enabled?: boolean
+}
+
+interface UseZilliqaEnsNameReturn {
+  /** The resolved .zil name, or null if not found */
+  name: string | null
+  /** True while the initial query is loading */
+  isLoading: boolean
+  /** True while any query (including refetch) is in flight */
+  isFetching: boolean
+  /** Error if the query failed */
+  error: Error | null
+}
+
+/**
+ * Hook to resolve an Ethereum address to its primary ZilName
+ * 
+ * @example
+ * const { name, isLoading } = useZilliqaEnsName({ 
+ *   address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1' 
+ * })
+ * // name: 'alice.zil' or null
+ */
+export function useZilliqaEnsName({
+  address,
+  enabled = true,
+}: UseZilliqaEnsNameProps): UseZilliqaEnsNameReturn {
+  const publicClient = usePublicClient({ chainId: zilliqaMainnet.id })
+
+  const { data, isLoading, isFetching, error } = useQuery({
+    queryKey: ['zilname', address, zilliqaMainnet.id],
+    queryFn: async () => {
+      // Guard clause: ensure we have valid inputs
+      if (!address || !publicClient || !isAddress(address)) {
+        return null
+      }
+      
+      try {
+        // Perform reverse resolution (address → name)
+        const name = await publicClient.getEnsName({ address })
+        return name
+      } catch (error) {
+        console.error('Error fetching ZilName:', error)
+        return null
+      }
+    },
+    // Only run query if address is valid and enabled
+    enabled: enabled && !!address && !!publicClient && isAddress(address),
+    // Cache for 5 minutes (ENS records don't change frequently)
+    staleTime: 5 * 60 * 1000,
+    // Keep in cache for 10 minutes after last use
+    gcTime: 10 * 60 * 1000,
+  })
+
+  return {
+    name: data ?? null,
+    isLoading,
+    isFetching,
+    error: error as Error | null,
+  }
+}
+```
+
+### Hook: Resolve Name to Address
+
+```typescript
+// src/hooks/useZilliqaEnsAddress.ts
+import { type Address } from "viem"
+import { normalize } from "viem/ens"
+import { useQuery } from "@tanstack/react-query"
+import { usePublicClient } from "wagmi"
+import { zilliqaMainnet } from "@/lib/wagmi"
+
+interface UseZilliqaEnsAddressProps {
+  name?: string
+  /** Enable/disable the query. Default: true */
+  enabled?: boolean
+}
+
+interface UseZilliqaEnsAddressReturn {
+  /** The resolved Ethereum address, or null if not found */
+  address: Address | null
+  /** True while the initial query is loading */
+  isLoading: boolean
+  /** True while any query (including refetch) is in flight */
+  isFetching: boolean
+  /** Error if the query failed */
+  error: Error | null
+}
+
+/**
+ * Hook to resolve a ZilName to its Ethereum address
+ * 
+ * @example
+ * const { address, isLoading, error } = useZilliqaEnsAddress({ 
+ *   name: 'alice.zil' 
+ * })
+ * // address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1' or null
+ */
+export function useZilliqaEnsAddress({
+  name,
+  enabled = true,
+}: UseZilliqaEnsAddressProps): UseZilliqaEnsAddressReturn {
+  const publicClient = usePublicClient({ chainId: zilliqaMainnet.id })
+
+  const { data, isLoading, isFetching, error } = useQuery({
+    queryKey: ['ziladdress', name, zilliqaMainnet.id],
+    queryFn: async () => {
+      // Guard clause: validate inputs
+      if (!name || !publicClient || !name.trim()) {
+        return null
+      }
+      
+      try {
+        // Normalize the name (critical for security)
+        const normalizedName = normalize(name.trim())
+        
+        // Perform forward resolution (name → address)
+        const address = await publicClient.getEnsAddress({
+          name: normalizedName,
+        })
+        
+        return address
+      } catch (error) {
+        console.error('Error resolving address:', error)
+        // Re-throw so React Query can handle it
+        throw error
+      }
+    },
+    // Only run if name exists and is enabled
+    enabled: enabled && !!name && !!publicClient && name.trim().length > 0,
+    // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    // Retry only once on failure (names either exist or don't)
+    retry: 1,
+  })
+
+  return { 
+    address: data ?? null, 
+    isLoading, 
+    isFetching,
+    error: error as Error | null,
+  }
+}
+```
+
+### Hook: Get Avatar
+
+```typescript
+// src/hooks/useZilEnsAvatar.ts
+import { type Address } from "viem"
+import { normalize } from "viem/ens"
+import { useQuery } from "@tanstack/react-query"
+import { usePublicClient } from "wagmi"
+import { zilliqaMainnet } from "@/lib/wagmi"
+import { useZilliqaEnsName } from "./useZilliqaEnsName"
+
+interface UseZilEnsAvatarProps {
+  /** Ethereum address to get avatar for */
+  address?: Address
+  /** Enable/disable the query. Default: true */
+  enabled?: boolean
+}
+
+interface UseZilEnsAvatarReturn {
+  /** The avatar URL, or null if not set */
+  avatar: string | null
+  /** True while loading (includes name resolution) */
+  isLoading: boolean
+  /** True while any query is in flight */
+  isFetching: boolean
+  /** Error if the query failed */
+  error: Error | null
+}
+
+/**
+ * Hook to get the avatar for a ZilName
+ * First resolves the address to a name, then fetches the avatar
+ * 
+ * @example
+ * const { avatar, isLoading } = useZilEnsAvatar({ 
+ *   address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1' 
+ * })
+ * // avatar: 'https://...' or null
+ */
+export function useZilEnsAvatar({
+  address,
+  enabled = true,
+}: UseZilEnsAvatarProps): UseZilEnsAvatarReturn {
+  const publicClient = usePublicClient({ chainId: zilliqaMainnet.id })
+  
+  // First, resolve the address to get the name
+  const { name, isLoading: isNameLoading } = useZilliqaEnsName({ 
+    address,
+    enabled,
+  })
+
+  // Then fetch the avatar for that name
+  const { data, isLoading: isAvatarLoading, isFetching, error } = useQuery({
+    queryKey: ['zilavatar', name, zilliqaMainnet.id],
+    queryFn: async () => {
+      // Guard clause
+      if (!name || !publicClient) {
+        return null
+      }
+      
+      try {
+        // Fetch avatar URL
+        const avatar = await publicClient.getEnsAvatar({
+          name: normalize(name),
+        })
+        
+        return avatar
+      } catch (error) {
+        console.error('Error fetching avatar:', error)
+        return null
+      }
+    },
+    // Only fetch avatar after we have a name
+    enabled: enabled && !!name && !isNameLoading && !!publicClient,
+    // Cache avatars for 10 minutes (they change rarely)
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  })
+
+  return {
+    avatar: data ?? null,
+    // Consider loading if either name or avatar is loading
+    isLoading: isNameLoading || isAvatarLoading,
+    isFetching,
+    error: error as Error | null,
+  }
+}
+```
+
+### Complete Component Example
+
+Full working example demonstrating forward resolution, reverse resolution, and avatar display:
+
+```tsx
+// app/zilnames-demo/page.tsx
+'use client'
+
+import { useState } from 'react'
+import { isAddress, type Address } from 'viem'
+import { useZilliqaEnsName } from '@/hooks/useZilliqaEnsName'
+import { useZilliqaEnsAddress } from '@/hooks/useZilliqaEnsAddress'
+import { useZilEnsAvatar } from '@/hooks/useZilEnsAvatar'
+
+export default function ZilNamesDemo() {
+  // State for user inputs
+  const [nameInput, setNameInput] = useState('')
+  const [addressInput, setAddressInput] = useState('')
+  
+  // Resolve name to address
+  const { 
+    address: resolvedAddress, 
+    isLoading: loadingAddress, 
+    error: addressError 
+  } = useZilliqaEnsAddress({
+    name: nameInput.trim() || undefined,
+  })
+
+  // Resolve address to name
+  const { 
+    name: resolvedName, 
+    isLoading: loadingName 
+  } = useZilliqaEnsName({
+    address: isAddress(addressInput.trim()) 
+      ? (addressInput.trim() as Address)
+      : undefined,
+  })
+
+  // Get avatar for the resolved address from name input
+  const { 
+    avatar, 
+    isLoading: loadingAvatar 
+  } = useZilEnsAvatar({
+    address: resolvedAddress ?? undefined,
+  })
+
+  return (
+    <div className="container mx-auto max-w-4xl p-6">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">ZilNames Resolver</h1>
+        <p className="text-muted-foreground">
+          Resolve .zil names and Ethereum addresses
+        </p>
+      </header>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Name to Address Section */}
+        <section className="border rounded-lg p-6 space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold mb-1">Name to Address</h2>
+            <p className="text-sm text-muted-foreground">
+              Forward resolution: Convert .zil name to address
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="name-input" className="text-sm font-medium">
+              ZilName
+            </label>
+            <input
+              id="name-input"
+              type="text"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              placeholder="alice.zil"
+              className="w-full px-3 py-2 border rounded-md"
+            />
+          </div>
+
+          {/* Loading state */}
+          {loadingAddress && (
+            <p className="text-sm text-muted-foreground">Resolving...</p>
+          )}
+
+          {/* Success state */}
+          {resolvedAddress && !loadingAddress && (
+            <div className="space-y-3 p-4 bg-green-50 dark:bg-green-950 rounded-md">
+              <div>
+                <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                  Resolved Address
+                </p>
+                <code className="text-xs break-all text-green-700 dark:text-green-300">
+                  {resolvedAddress}
+                </code>
+              </div>
+              
+              {/* Show avatar if available */}
+              {avatar && !loadingAvatar && (
+                <div>
+                  <p className="text-sm font-medium text-green-900 dark:text-green-100 mb-2">
+                    Avatar
+                  </p>
+                  <img 
+                    src={avatar} 
+                    alt="Profile avatar" 
+                    className="w-16 h-16 rounded-full border-2 border-green-200"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Error state */}
+          {addressError && !loadingAddress && (
+            <p className="text-sm text-red-600 dark:text-red-400">
+              {addressError.message}
+            </p>
+          )}
+
+          {/* No result state */}
+          {!resolvedAddress && !loadingAddress && !addressError && nameInput.trim() && (
+            <p className="text-sm text-muted-foreground">
+              No address found for this name
+            </p>
+          )}
+        </section>
+        
+        {/* Address to Name Section */}
+        <section className="border rounded-lg p-6 space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold mb-1">Address to Name</h2>
+            <p className="text-sm text-muted-foreground">
+              Reverse resolution: Convert address to .zil name
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="address-input" className="text-sm font-medium">
+              Ethereum Address
+            </label>
+            <input
+              id="address-input"
+              type="text"
+              value={addressInput}
+              onChange={(e) => setAddressInput(e.target.value)}
+              placeholder="0x..."
+              className="w-full px-3 py-2 border rounded-md font-mono text-sm"
+            />
+          </div>
+
+          {/* Validation message */}
+          {addressInput.trim() && !isAddress(addressInput.trim()) && (
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              Please enter a valid Ethereum address
+            </p>
+          )}
+
+          {/* Loading state */}
+          {loadingName && isAddress(addressInput.trim()) && (
+            <p className="text-sm text-muted-foreground">Resolving...</p>
+          )}
+
+          {/* Success state */}
+          {resolvedName && !loadingName && (
+            <div className="p-4 bg-green-50 dark:bg-green-950 rounded-md">
+              <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                Resolved Name
+              </p>
+              <p className="text-lg font-semibold text-green-700 dark:text-green-300">
+                {resolvedName}
+              </p>
+            </div>
+          )}
+
+          {/* No result state */}
+          {!resolvedName && !loadingName && isAddress(addressInput.trim()) && (
+            <p className="text-sm text-muted-foreground">
+              No ZilName set for this address
+            </p>
+          )}
+        </section>
+      </div>
+
+      {/* Help Section */}
+      <section className="mt-8 p-6 bg-muted rounded-lg">
+        <h3 className="font-semibold mb-2">💡 Quick Tips</h3>
+        <ul className="space-y-2 text-sm text-muted-foreground">
+          <li>• Forward resolution works for any registered .zil name</li>
+          <li>• Reverse resolution only works if the owner has set a primary name</li>
+          <li>• Results are cached for 5 minutes to improve performance</li>
+          <li>• Register your own .zil name at <a href="https://zilnames.com" target="_blank" rel="noopener" className="text-primary hover:underline">zilnames.com</a></li>
+        </ul>
+      </section>
+    </div>
+  )
+}
+```
+
+## Best Practices
+
+### 1. Always Normalize Names
+
+Prevents homograph attacks using visually similar characters from different alphabets.
+
+```typescript
+// ❌ Vulnerable
+const address = await client.getEnsAddress({ name: userInput })
+
+// ✅ Protected
+import { normalize } from 'viem/ens'
+const address = await client.getEnsAddress({ 
+  name: normalize(userInput) 
+})
+```
+
+**Homograph example:**
+```
+'аlice.zil'  // Cyrillic 'а' (U+0430)
+'alice.zil'  // Latin 'a' (U+0061)
+```
+These look identical but resolve differently. `normalize()` standardizes the input.
+
+### 2. Validate Input
+
+Always validate user input before attempting resolution:
+
+```typescript
+import { isAddress } from 'viem'
+
+function validateZilName(name: string): boolean {
+  return (
+    name.endsWith('.zil') || 
+    name.endsWith('.test.zil')
+  )
+}
+
+function validateAddress(addr: string): boolean {
+  return isAddress(addr)
+}
+
+// Usage
+if (validateZilName(nameInput)) {
+  const address = await resolveZilName(nameInput)
+}
+```
+
+### 3. Handle Errors Gracefully
+
+Names may not exist or networks may fail. Return `null` instead of throwing:
+
+```typescript
+async function safeResolveAddress(name: string): Promise<Address | null> {
+  try {
+    const address = await publicClient.getEnsAddress({
+      name: normalize(name),
+    })
+    return address ?? null
+  } catch (error) {
+    console.error('Resolution failed:', error)
+    return null
+  }
+}
+```
+
+### 4. Cache Results
+
+Configure React Query to minimize RPC calls:
+
+```typescript
+const { data } = useQuery({
+  queryKey: ['zilname', address],
+  queryFn: () => resolveAddress(address),
+  staleTime: 5 * 60 * 1000, // Don't refetch for 5 minutes
+  gcTime: 10 * 60 * 1000,   // Keep in cache for 10 minutes
+  retry: 1,                  // Only retry once
+})
+```
+
+### 5. Display Fallbacks
+
+Always show a fallback if resolution fails:
+
+```tsx
+function AddressDisplay({ address }: { address: Address }) {
+  const { name, isLoading } = useZilliqaEnsName({ address })
+  
+  if (isLoading) {
+    return <span>Loading...</span>
+  }
+  
+  // Show name if available, otherwise show shortened address
+  return (
+    <span>
+      {name || `${address.slice(0, 6)}...${address.slice(-4)}`}
+    </span>
+  )
+}
+```
+
+### 6. Use Efficient Caching
+
+React Query's caching prevents excessive RPC requests:
+
+```typescript
+const { data } = useQuery({
+  queryKey: ['zilname', address],
+  queryFn: () => resolveAddress(address),
+  staleTime: 5 * 60 * 1000,   // Don't refetch for 5 minutes
+  gcTime: 10 * 60 * 1000,      // Keep in cache for 10 minutes
+  retry: 1,                     // Only retry once
+})
+```
+
+## Security Considerations
+
+### Input Validation
+
+```typescript
+if (!name || name.length > 255) {
+  throw new Error('Invalid name length')
+}
+
+if (!name.endsWith('.zil') && !name.endsWith('.test.zil')) {
+  throw new Error('Invalid name format')
+}
+```
+
+### Always Normalize
+
+```typescript
+// ✅ Safe
+import { normalize } from 'viem/ens'
+const safe = normalize(userInput)
+
+// ❌ Vulnerable to homograph attacks
+const unsafe = userInput
+```
+
+### Verify Resolved Addresses
+
+```typescript
+import { isAddress } from 'viem'
+
+const resolved = await client.getEnsAddress({ name: normalize(name) })
+
+if (resolved && isAddress(resolved)) {
+  await sendTransaction({ to: resolved, ... })
+} else {
+  throw new Error('Invalid resolved address')
+}
+```
+
+## Working with Different Networks
+
+ZilNames supports both mainnet and testnet:
+
+```typescript
+import { zilliqaMainnet, zilliqaTestnet } from '@/lib/wagmi'
+
+function getChainForZilName(name: string) {
+  // .test.zil names are on testnet
+  return name.endsWith('.test.zil') ? zilliqaTestnet : zilliqaMainnet
+}
+
+// Usage in a hook
+export function useZilNameNetwork(name?: string) {
+  const chain = name ? getChainForZilName(name) : zilliqaMainnet
+  const publicClient = usePublicClient({ chainId: chain.id })
+  
+  return { chain, publicClient }
+}
+```
+
+## Registering a ZilName
+
+To register your own `.zil` name:
+
+1. Visit [zilnames.com](https://zilnames.com)
+2. Connect your Zilliqa wallet
+3. Search for available names
+4. Register and pay the registration fee in ZIL
+5. Set your address, avatar, and text records
+6. Configure reverse resolution (optional but recommended)
+
+**Pricing**:
+- Short names (3-4 characters): Premium pricing
+- Standard names (5+ characters): Base pricing
+- Annual renewal required
+
+## Troubleshooting
+
+### "Name not found" (`getEnsAddress` returns `null`)
+
+- Verify registration at zilnames.com
+- Check network (mainnet vs testnet)
+- Ensure the name has an address configured
+
+### "Address not found" (`getEnsName` returns `null`)
+
+- Address owner must set a reverse record
+- Configure "Primary Name" at zilnames.com
+- Not all addresses have reverse records
+
+### Slow Resolution
+
+- Use React Query caching (examples above)
+- Configure appropriate `staleTime`
+- Show loading states clearly
+
+### CORS Errors
+
+- Use Wagmi's providers (handle CORS automatically)
+- For server-side resolution, use Next.js API routes
+
+## Quick Reference
+
+### Viem Functions
+
+<table>
+  <thead>
+    <tr>
+      <th>Function</th>
+      <th>Purpose</th>
+      <th>Returns</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>getEnsAddress(name)</code></td>
+      <td>Name → Address</td>
+      <td><code>Address | null</code></td>
+    </tr>
+    <tr>
+      <td><code>getEnsName(address)</code></td>
+      <td>Address → Name</td>
+      <td><code>string | null</code></td>
+    </tr>
+    <tr>
+      <td><code>getEnsAvatar(name)</code></td>
+      <td>Get avatar URL</td>
+      <td><code>string | null</code></td>
+    </tr>
+    <tr>
+      <td><code>getEnsText(name, key)</code></td>
+      <td>Get text record</td>
+      <td><code>string | null</code></td>
+    </tr>
+    <tr>
+      <td><code>getEnsResolver(name)</code></td>
+      <td>Get resolver address</td>
+      <td><code>Address | null</code></td>
+    </tr>
+  </tbody>
+</table>
+
+### Key Imports
+
+```typescript
+// Viem core
+import { createPublicClient, http, isAddress, type Address } from 'viem'
+
+// ENS utilities
+import { normalize } from 'viem/ens'
+
+// Wagmi + React Query
+import { usePublicClient } from 'wagmi'
+import { useQuery } from '@tanstack/react-query'
+
+// Your chain config
+import { zilliqaMainnet } from '@/lib/wagmi'
+```
+
+### Chain IDs
+
+- **Zilliqa Mainnet**: `32769`
+- **Zilliqa Testnet**: `33101`
+
+### Contract Addresses
+
+- **Mainnet UniversalResolver**: `0x2b6a7953c510392aE88c7C302a984460Daa8AF24`
+- **Testnet UniversalResolver**: `0x579C72c5377a5a4A8Ce6d43A1701F389c8FDFC8e`
+
+## Glossary
+
+**ENS (Ethereum Name Service)**: The original name service for Ethereum. ZilNames is compatible with ENS standards.
+
+**Forward Resolution**: Converting a name (alice.zil) to an address (0x...).
+
+**Reverse Resolution**: Converting an address (0x...) to a name (alice.zil). Requires the owner to set a "primary name".
+
+**Normalization**: Converting a name to a standard format using UTS-46 to prevent security issues.
+
+**Homograph Attack**: Using visually similar characters from different alphabets to create fake names.
+
+**UniversalResolver**: A smart contract that simplifies ENS resolution by handling multiple resolution methods.
+
+**Text Record**: Custom key-value data stored with a name (like social media handles or website URLs).
+
+**Namehash**: A hash of a domain name used internally by ENS contracts (you don't need to calculate this manually when using Viem).
+
+## Additional Resources
+
+- **ZilNames Website**: [zilnames.com](https://zilnames.com)
+- **Viem ENS Documentation**: [viem.sh/docs/ens](https://viem.sh/docs/ens/actions/getEnsAddress)
+- **ENS Documentation**: [docs.ens.domains](https://docs.ens.domains)
+- **Zilliqa Developer Docs**: [dev.zilliqa.com](https://dev.zilliqa.com)
+- **Plunder Academy Discord**: Get help from the community
+
+## Summary
+
+ZilNames provides human-readable addresses for Zilliqa using ENS-compatible infrastructure. Integration requires three components:
+
+1. **Chain configuration** with ENS contract addresses
+2. **Name normalization** using `normalize()` for security
+3. **Caching strategy** with React Query for efficiency
+
+Viem's built-in ENS functions handle the complex protocol details, letting you resolve names and addresses with simple function calls. The hooks and examples in this guide provide a production-ready foundation for integrating ZilNames into React applications.
