@@ -78,6 +78,8 @@ import {
   TransactionLifecycleVisualizer,
   Web3ArchitectureVisualizer,
   WalletConnectionVisualizer,
+  AIArchitectureFlow,
+  InferenceSpeedVisualizer,
 } from "@/components/interactive-elements/mdx-components";
 
 import { Bip39SeedPhraseGenerator } from "@/components/interactive-elements/bip39-seed-phrase-generator";
@@ -535,6 +537,8 @@ const components = {
   TransactionLifecycleVisualizer,
   Web3ArchitectureVisualizer,
   WalletConnectionVisualizer,
+  AIArchitectureFlow,
+  InferenceSpeedVisualizer,
   InteractiveBip39Generator: Bip39SeedPhraseGenerator,
 
   LLMProcessAnimation,

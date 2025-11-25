@@ -50,6 +50,10 @@ export { default as TransactionLifecycleVisualizer } from "./island5/transaction
 export { default as Web3ArchitectureVisualizer } from "./island5/web3-architecture-visualizer";
 export { default as WalletConnectionVisualizer } from "./island5/wallet-connection-visualizer";
 
+// Technical Article Visualizers
+export { default as AIArchitectureFlow } from "./ai-architecture-flow";
+export { default as InferenceSpeedVisualizer } from "./inference-speed-visualizer";
+
 // Word Jumble MDX Component
 export function WordJumble({ word, hint, scrambled }: { word: string; hint: string; scrambled?: string }) {
   const data: WordJumbleData = { word, hint, scrambled };
