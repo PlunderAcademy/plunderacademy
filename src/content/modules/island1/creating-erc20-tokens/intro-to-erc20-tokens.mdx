@@ -1,0 +1,283 @@
+---
+id: intro-to-erc20-tokens
+module: creating-erc20-tokens
+number: 5.1
+title: Professional ERC-20 Token Development
+objective: >-
+  Master ERC-20 token development using professional tools and OpenZeppelin 
+  libraries, building on your Hardhat 3 development environment.
+slug: intro-to-erc20-tokens
+---
+
+## Understanding ERC-20 Tokens
+
+### What Is the ERC-20 Standard?
+
+**Real-world analogy:** Think of ERC-20 like a universal standard for coins in an arcade. Just as every arcade game accepts the same standard tokens, every wallet, exchange, and dApp can work with any ERC-20 token because they all follow the same interface rules.
+
+**ERC-20 is the most important token standard** on Ethereum and EVM-compatible blockchains like Zilliqa. It defines a common interface that ensures any compliant token can be:
+- **Stored** in any wallet that supports the standard
+- **Traded** on any decentralized exchange
+- **Used** by any DeFi protocol or dApp
+- **Tracked** by any block explorer or portfolio app
+
+### Why ERC-20 Matters for Developers
+
+**Universal compatibility:** When you build an ERC-20 token, you automatically gain compatibility with the entire DeFi ecosystem:
+- **Wallets:** MetaMask, Trust Wallet, Coinbase Wallet, hardware wallets
+- **Exchanges:** Uniswap, SushiSwap, 1inch, and centralized exchanges
+- **DeFi protocols:** Lending platforms, yield farms, liquidity pools
+- **Analytics:** CoinGecko, CoinMarketCap, DeFiLlama integration
+
+## The ERC-20 Interface Deep Dive
+
+### Required Functions
+
+Every ERC-20 token must implement these exact functions:
+
+#### Core Information Functions
+
+```solidity
+// Returns the name of the token (e.g., "Ethereum")
+function name() public view returns (string memory);
+
+// Returns the symbol of the token (e.g., "ETH")
+function symbol() public view returns (string memory);
+
+// Returns the number of decimals the token uses (usually 18)
+function decimals() public view returns (uint8);
+
+// Returns the total token supply in circulation
+function totalSupply() public view returns (uint256);
+```
+
+#### Balance and Transfer Functions
+
+```solidity
+// Returns the token balance of a specific address
+function balanceOf(address account) public view returns (uint256);
+
+// Transfers tokens from the caller to another address
+function transfer(address to, uint256 amount) public returns (bool);
+
+// Returns how much the spender is allowed to spend on behalf of owner
+function allowance(address owner, address spender) public view returns (uint256);
+
+// Allows spender to withdraw from your account, multiple times, up to amount
+function approve(address spender, uint256 amount) public returns (bool);
+
+// Transfers tokens from one address to another (requires prior approval)
+function transferFrom(address from, address to, uint256 amount) public returns (bool);
+```
+
+### Required Events
+
+ERC-20 tokens must emit these events for external applications to track activity:
+
+```solidity
+// Emitted when tokens are transferred
+event Transfer(address indexed from, address indexed to, uint256 value);
+
+// Emitted when an approval is made
+event Approval(address indexed owner, address indexed spender, uint256 value);
+```
+
+### Understanding Token Decimals
+
+**Real-world analogy:** Just like US dollars have cents (2 decimal places), tokens have decimals. Most tokens use 18 decimals, meaning 1 token = 1,000,000,000,000,000,000 base units.
+
+**Why 18 decimals?**
+- **Ethereum standard:** Ether uses 18 decimals (1 ETH = 1e18 wei)
+- **Precision:** Allows for very small fractions without floating point issues
+- **Compatibility:** Most DeFi protocols expect 18 decimals
+
+**Example calculation:**
+```
+User wants to send 1.5 tokens
+With 18 decimals: 1.5 * 10^18 = 1,500,000,000,000,000,000 base units
+```
+
+## Real-World ERC-20 Examples
+
+### Stablecoins
+
+**USDC (USD Coin):**
+- **Purpose:** 1:1 USD-backed stablecoin
+- **Decimals:** 6 (not 18!)
+- **Features:** Pausable, blacklistable, upgradeable
+- **Use case:** DeFi trading pairs, payments
+
+**DAI (MakerDAO):**
+- **Purpose:** Decentralized stablecoin backed by crypto collateral
+- **Decimals:** 18
+- **Features:** Governance token integration, stability mechanisms
+- **Use case:** Decentralized lending, savings
+
+### Utility Tokens
+
+**UNI (Uniswap):**
+- **Purpose:** Governance token for Uniswap DEX
+- **Features:** Voting rights, fee distribution
+- **Use case:** Protocol governance, incentive rewards
+
+**LINK (Chainlink):**
+- **Purpose:** Payment for oracle services
+- **Features:** Standard ERC-20 with oracle integration
+- **Use case:** Paying for off-chain data feeds
+
+## Setting Up Your Token Development Project
+
+### Prerequisites Check
+
+Before we start, ensure you have completed the previous module and have:
+- ✅ **Development environment set up** (VS Code, Node.js, Hardhat 3)
+- ✅ **WSL2 configured** (Windows users)
+- ✅ **MetaMask configured** with Zilliqa networks
+- ✅ **Testnet ZIL** in your wallet
+- ✅ **Working Hardhat project** from the previous module
+
+### Project Structure for Token Development
+
+We'll build our professional token project with this structure:
+
+```
+my-zilliqa-token/
+├── contracts/
+│   ├── MyToken.sol          # Main token contract
+│   ├── MyToken.t.sol        # Solidity tests
+│   └── interfaces/          # Custom interfaces
+├── test/
+│   ├── unit/                # Unit tests
+│   ├── integration/         # Integration tests
+│   └── MyToken.test.ts      # TypeScript tests
+├── ignition/
+│   └── modules/
+│       ├── MyToken.ts       # Deployment module
+│       └── TokenUtils.ts    # Utility deployments
+├── scripts/
+│   ├── deploy.ts            # Deployment scripts
+│   ├── verify.ts            # Verification scripts
+│   └── interact.ts          # Interaction scripts
+└── docs/
+    ├── tokenomics.md        # Token economics
+    └── deployment.md        # Deployment guide
+```
+
+### OpenZeppelin: Your Security Foundation
+
+**Why use OpenZeppelin?**
+- **Battle-tested:** Used by thousands of projects with billions in value
+- **Secure by default:** Written by security experts and audited extensively
+- **Modular design:** Pick only the features you need
+- **Regular updates:** Maintained and improved continuously
+- **Community support:** Extensive documentation and community
+
+**Key OpenZeppelin contracts we'll use:**
+- **ERC20.sol:** Base ERC-20 implementation
+- **Ownable.sol:** Access control for administrative functions
+- **Pausable.sol:** Emergency pause functionality
+- **ERC20Burnable.sol:** Token burning capabilities
+- **ERC20Capped.sol:** Maximum supply limits
+- **AccessControl.sol:** Role-based permissions
+
+### Planning Your Token Features
+
+Before writing code, consider these questions:
+
+#### Basic Properties
+- **Name and Symbol:** What will your token be called?
+- **Total Supply:** How many tokens will exist?
+- **Decimals:** Will you use 18 decimals (recommended)?
+- **Initial Distribution:** Who gets tokens when deployed?
+
+#### Advanced Features
+- **Minting:** Can new tokens be created after deployment?
+- **Burning:** Can tokens be permanently destroyed?
+- **Pausable:** Should you be able to pause all transfers?
+- **Access Control:** Who can perform administrative actions?
+- **Supply Cap:** Is there a maximum number of tokens?
+
+#### Security Considerations
+- **Ownership:** Will there be an owner with special privileges?
+- **Upgradability:** Will the contract be upgradeable?
+- **Time locks:** Should critical functions have delays?
+- **Multi-sig:** Should important functions require multiple signatures?
+
+## Token Development Best Practices
+
+### Security First
+
+**Always prioritize security:**
+- ✅ **Use OpenZeppelin:** Don't reinvent security-critical code
+- ✅ **Test thoroughly:** Both unit and integration tests
+- ✅ **Audit before mainnet:** Get professional security audits
+- ✅ **Start simple:** Add complexity gradually and carefully
+- ✅ **Follow standards:** Stick to established patterns
+
+### Gas Optimization
+
+**Design for efficiency:**
+- ✅ **Pack structs:** Minimize storage slots used
+- ✅ **Use events:** Cheaper than storing data on-chain
+- ✅ **Batch operations:** Combine multiple actions when possible
+- ✅ **Choose appropriate data types:** Use uint256 for gas efficiency
+
+### User Experience
+
+**Make your token user-friendly:**
+- ✅ **Clear naming:** Descriptive name and symbol
+- ✅ **Standard decimals:** Use 18 unless you have a good reason not to
+- ✅ **Good documentation:** Clear explanation of features
+- ✅ **Predictable behavior:** Follow ERC-20 standard exactly
+
+### Legal and Compliance
+
+**Consider regulatory requirements:**
+- ⚖️ **Securities laws:** Understand if your token might be a security
+- ⚖️ **KYC/AML:** Consider if you need identity verification
+- ⚖️ **Tax implications:** Understand tax treatment in your jurisdiction
+- ⚖️ **Legal advice:** Consult lawyers for complex tokenomics
+
+## What We'll Build
+
+In this module, we'll create a comprehensive, production-ready ERC-20 token with:
+
+### Module 5.2: Professional Token Contract
+- **Full-featured ERC-20** using OpenZeppelin libraries
+- **Access control** with owner and minter roles
+- **Supply management** with capping and burning
+- **Security features** like pausable transfers
+- **Gas-optimized** implementation
+
+### Module 5.3: Comprehensive Testing & Deployment
+- **Solidity unit tests** using Forge-style testing
+- **TypeScript integration tests** with realistic scenarios
+- **Hardhat 3 deployment** with parameter management
+- **Multi-network deployment** (local, testnet, mainnet)
+- **Contract verification** on block explorer
+
+### Module 5.4: Production Integration
+- **MetaMask integration** for user interactions
+- **Block explorer verification** and interaction
+- **Frontend integration examples** using viem
+- **Security best practices** and deployment checklist
+
+By the end of this module, you'll have built a professional-grade token contract and understand how to deploy, verify, and interact with it across different networks. You'll also have the knowledge to customize tokens for specific use cases while maintaining security and compatibility standards.
+
+Ready to build your first professional token? Let's dive into the development process!
+
+## 🎮 Interactive Practice
+
+Arrange these ERC-20 function implementations in the correct order for a typical token contract:
+
+<DragDropPuzzle codeBlocks={[
+  {"id": "block-1", "content": "pragma solidity ^0.8.19;", "correctPosition": 0},
+  {"id": "block-2", "content": "import \"@openzeppelin/contracts/token/ERC20/ERC20.sol\";", "correctPosition": 1},
+  {"id": "block-3", "content": "contract MyToken is ERC20 {", "correctPosition": 2},
+  {"id": "block-4", "content": "    constructor() ERC20(\"MyToken\", \"MTK\") {", "correctPosition": 3},
+  {"id": "block-5", "content": "        _mint(msg.sender, 1000000 * 10**decimals());", "correctPosition": 4},
+  {"id": "block-6", "content": "    }", "correctPosition": 5},
+  {"id": "block-7", "content": "}", "correctPosition": 6}
+]} />
+
+This interactive exercise shows you the basic structure of an ERC-20 token contract that you'll be building in this module.

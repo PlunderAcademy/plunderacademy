@@ -1,0 +1,488 @@
+---
+id: data-structures
+module: intro-to-solidity
+number: 3.3
+title: 'Data Structures: Structs, Arrays, Mappings'
+objective: >-
+  Learn about complex data structures in Solidity including structs, arrays, and
+  mappings.
+slug: data-structures
+---
+
+## Data Structures in Token Contracts
+
+Understanding how to organize and store data efficiently is crucial for building secure and gas-optimized token contracts. Let's explore the main data structures used in token development.
+
+### Mappings: The Heart of Token Contracts
+
+**Real-world analogy:** Think of mappings like a massive filing cabinet where each drawer has a unique label (key) and contains specific documents (value). You can instantly find any document if you know the drawer label, but you can't easily list all the drawers.
+
+#### Basic Balance Mapping
+
+```solidity
+// The fundamental data structure of any token
+mapping(address => uint256) private _balances;
+
+// Example usage:
+function balanceOf(address account) public view returns (uint256) {
+    return _balances[account];
+}
+
+function _transfer(address from, address to, uint256 amount) internal {
+    _balances[from] -= amount;
+    _balances[to] += amount;
+}
+```
+
+**Why mappings are perfect for token balances:**
+- **O(1) lookup time:** Instant access to any address's balance
+- **Dynamic storage:** Automatically handles unlimited addresses
+- **Gas efficient:** Only stores addresses that have balances
+- **Secure:** No way to accidentally overwrite wrong data
+
+#### Nested Mappings: The Allowance System
+
+```solidity
+// Maps owner -> spender -> amount
+mapping(address => mapping(address => uint256)) private _allowances;
+
+// Example: Alice allows Bob to spend 100 tokens on her behalf
+// _allowances[alice][bob] = 100
+
+function allowance(address owner, address spender) 
+    public 
+    view 
+    returns (uint256) 
+{
+    return _allowances[owner][spender];
+}
+
+function approve(address spender, uint256 amount) public returns (bool) {
+    _allowances[msg.sender][spender] = amount;
+    emit Approval(msg.sender, spender, amount);
+    return true;
+}
+```
+
+**Understanding nested mappings:**
+- **Two-level lookup:** `_allowances[owner][spender]`
+- **Independent permissions:** Each owner can set different allowances for each spender
+- **Essential for DeFi:** Enables smart contracts to spend tokens on your behalf
+
+#### Advanced Mapping Patterns
+
+```solidity
+contract AdvancedToken {
+    // Basic token data
+    mapping(address => uint256) private _balances;
+    mapping(address => mapping(address => uint256)) private _allowances;
+    
+    // Permission systems
+    mapping(address => bool) public minters;
+    mapping(address => bool) public blacklisted;
+    mapping(bytes32 => mapping(address => bool)) public roles;
+    
+    // Rate limiting
+    mapping(address => uint256) public lastTransferTime;
+    mapping(address => uint256) public dailyTransferAmount;
+    
+    // Staking and rewards
+    mapping(address => uint256) public stakingBalance;
+    mapping(address => uint256) public rewardDebt;
+    
+    // Vesting schedules
+    mapping(address => VestingSchedule) public vestingSchedules;
+}
+```
+
+### Structs: Organizing Complex Data
+
+**Real-world analogy:** Structs are like forms or records that group related information together. If mappings are filing cabinets, structs are the standardized forms you put in each drawer.
+
+#### Token Metadata Struct
+
+```solidity
+struct TokenInfo {
+    string name;
+    string symbol;
+    uint8 decimals;
+    uint256 totalSupply;
+    uint256 maxSupply;
+    bool mintingEnabled;
+    bool burningEnabled;
+}
+
+TokenInfo public tokenInfo;
+
+constructor() {
+    tokenInfo = TokenInfo({
+        name: "My Token",
+        symbol: "MTK",
+        decimals: 18,
+        totalSupply: 0,
+        maxSupply: 1000000 * 10**18,
+        mintingEnabled: true,
+        burningEnabled: false
+    });
+}
+```
+
+#### Vesting Schedule Struct
+
+```solidity
+struct VestingSchedule {
+    uint256 totalAmount;        // Total tokens to be vested
+    uint256 startTime;          // When vesting starts
+    uint256 cliffDuration;      // Time before any tokens can be claimed
+    uint256 vestingDuration;    // Total vesting period
+    uint256 claimedAmount;      // How much has been claimed
+    bool revocable;             // Can the schedule be cancelled
+}
+
+mapping(address => VestingSchedule) public vestingSchedules;
+
+function createVestingSchedule(
+    address beneficiary,
+    uint256 amount,
+    uint256 cliffDuration,
+    uint256 vestingDuration
+) public onlyOwner {
+    require(beneficiary != address(0), "Invalid beneficiary");
+    require(amount > 0, "Amount must be positive");
+    
+    vestingSchedules[beneficiary] = VestingSchedule({
+        totalAmount: amount,
+        startTime: block.timestamp,
+        cliffDuration: cliffDuration,
+        vestingDuration: vestingDuration,
+        claimedAmount: 0,
+        revocable: true
+    });
+}
+```
+
+#### Staking Information Struct
+
+```solidity
+struct StakeInfo {
+    uint256 amount;           // Amount staked
+    uint256 startTime;        // When staking started
+    uint256 lastRewardTime;   // Last time rewards were calculated
+    uint256 accumulatedRewards; // Unclaimed rewards
+    bool isActive;            // Is stake currently active
+}
+
+mapping(address => StakeInfo) public stakes;
+
+function stake(uint256 amount) public {
+    require(amount > 0, "Must stake positive amount");
+    require(_balances[msg.sender] >= amount, "Insufficient balance");
+    
+    // Update existing stake or create new one
+    StakeInfo storage userStake = stakes[msg.sender];
+    
+    if (userStake.isActive) {
+        // Calculate pending rewards before adding to stake
+        _updateRewards(msg.sender);
+        userStake.amount += amount;
+    } else {
+        // Create new stake
+        stakes[msg.sender] = StakeInfo({
+            amount: amount,
+            startTime: block.timestamp,
+            lastRewardTime: block.timestamp,
+            accumulatedRewards: 0,
+            isActive: true
+        });
+    }
+    
+    // Transfer tokens to contract
+    _transfer(msg.sender, address(this), amount);
+}
+```
+
+### Arrays: Managing Collections
+
+**When arrays are useful in tokens:**
+- **Limited collections:** When you need to store a bounded list
+- **Iteration requirements:** When you need to loop through all items
+- **Order matters:** When sequence is important
+
+#### Shareholder Management
+
+```solidity
+contract ShareholderToken {
+    address[] public shareholders;
+    mapping(address => bool) public isShareholder;
+    mapping(address => uint256) public shares;
+    
+    function addShareholder(address shareholder, uint256 shareAmount) public onlyOwner {
+        require(!isShareholder[shareholder], "Already a shareholder");
+        
+        shareholders.push(shareholder);
+        isShareholder[shareholder] = true;
+        shares[shareholder] = shareAmount;
+        
+        _mint(shareholder, shareAmount);
+    }
+    
+    function distributeRewards() public onlyOwner {
+        uint256 totalRewards = address(this).balance;
+        uint256 totalShares = totalSupply();
+        
+        for (uint256 i = 0; i < shareholders.length; i++) {
+            address shareholder = shareholders[i];
+            uint256 shareholderReward = (totalRewards * shares[shareholder]) / totalShares;
+            
+            payable(shareholder).transfer(shareholderReward);
+        }
+    }
+    
+    // Remove shareholder (gas-intensive operation)
+    function removeShareholder(address shareholder) public onlyOwner {
+        require(isShareholder[shareholder], "Not a shareholder");
+        
+        // Find and remove from array
+        for (uint256 i = 0; i < shareholders.length; i++) {
+            if (shareholders[i] == shareholder) {
+                shareholders[i] = shareholders[shareholders.length - 1];
+                shareholders.pop();
+                break;
+            }
+        }
+        
+        isShareholder[shareholder] = false;
+        shares[shareholder] = 0;
+    }
+}
+```
+
+#### Transaction History (Limited)
+
+```solidity
+struct Transaction {
+    address from;
+    address to;
+    uint256 amount;
+    uint256 timestamp;
+}
+
+contract TokenWithHistory {
+    Transaction[] public recentTransactions;
+    uint256 public constant MAX_HISTORY = 100;
+    
+    function _transfer(address from, address to, uint256 amount) internal override {
+        super._transfer(from, to, amount);
+        
+        // Add to history
+        recentTransactions.push(Transaction({
+            from: from,
+            to: to,
+            amount: amount,
+            timestamp: block.timestamp
+        }));
+        
+        // Keep only recent transactions
+        if (recentTransactions.length > MAX_HISTORY) {
+            // Remove oldest transaction
+            for (uint256 i = 0; i < recentTransactions.length - 1; i++) {
+                recentTransactions[i] = recentTransactions[i + 1];
+            }
+            recentTransactions.pop();
+        }
+    }
+    
+    function getRecentTransactions() public view returns (Transaction[] memory) {
+        return recentTransactions;
+    }
+}
+```
+
+### Gas-Efficient Data Structure Patterns
+
+#### Packed Structs for Gas Optimization
+
+```solidity
+// Inefficient: Uses 3 storage slots
+struct BadUserInfo {
+    uint256 balance;      // 32 bytes - slot 1
+    bool isActive;        // 1 byte - slot 2 (wastes 31 bytes)
+    uint8 level;          // 1 byte - slot 3 (wastes 31 bytes)
+}
+
+// Efficient: Uses 2 storage slots
+struct GoodUserInfo {
+    uint256 balance;      // 32 bytes - slot 1
+    bool isActive;        // 1 byte  \
+    uint8 level;          // 1 byte   } slot 2 (30 bytes left)
+    uint8 category;       // 1 byte  /
+    // 29 bytes still available in slot 2
+}
+
+mapping(address => GoodUserInfo) public users;
+```
+
+#### Using Smaller Integer Types
+
+```solidity
+contract OptimizedToken {
+    // Standard token data
+    mapping(address => uint256) private _balances;
+    
+    // Packed user metadata
+    struct UserData {
+        uint128 lockedBalance;    // Enough for most token amounts
+        uint64 lastTransferTime;  // Unix timestamp fits in uint64
+        uint32 transferCount;     // 4 billion transfers should be enough
+        uint16 level;             // 65k levels
+        uint8 category;           // 256 categories
+        bool isVerified;          // 1 bit
+        // Still 7 bits available in this slot
+    }
+    
+    mapping(address => UserData) public userData;
+    
+    function updateUserData(address user, uint16 newLevel) public {
+        UserData storage data = userData[user];
+        data.level = newLevel;
+        data.lastTransferTime = uint64(block.timestamp);
+        data.transferCount++;
+    }
+}
+```
+
+### Advanced Data Structure Combinations
+
+#### Token with Complex State
+
+```solidity
+contract ComplexToken {
+    // Core token data
+    mapping(address => uint256) private _balances;
+    mapping(address => mapping(address => uint256)) private _allowances;
+    
+    // User profiles with packed data
+    struct UserProfile {
+        uint128 stakingBalance;
+        uint128 vestingBalance;
+        uint64 joinTime;
+        uint32 reputationScore;
+        uint16 tier;
+        uint8 flags; // Packed boolean flags
+        bool isActive;
+    }
+    mapping(address => UserProfile) public profiles;
+    
+    // Role management
+    mapping(bytes32 => mapping(address => bool)) private _roles;
+    bytes32[] public roleList;
+    
+    // Time-based restrictions
+    mapping(address => uint256) public lastTransferTime;
+    mapping(address => uint256) public dailyTransferAmount;
+    
+    // Governance data
+    struct Proposal {
+        string description;
+        uint256 votesFor;
+        uint256 votesAgainst;
+        uint256 deadline;
+        bool executed;
+        mapping(address => bool) hasVoted;
+    }
+    mapping(uint256 => Proposal) public proposals;
+    uint256 public proposalCount;
+    
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        // Update user profiles
+        profiles[msg.sender].lastTransferTime = uint64(block.timestamp);
+        
+        // Check daily limits
+        uint256 today = block.timestamp / 1 days;
+        if (lastTransferTime[msg.sender] / 1 days != today) {
+            dailyTransferAmount[msg.sender] = 0;
+        }
+        
+        require(
+            dailyTransferAmount[msg.sender] + amount <= getDailyLimit(msg.sender),
+            "Daily transfer limit exceeded"
+        );
+        
+        dailyTransferAmount[msg.sender] += amount;
+        lastTransferTime[msg.sender] = block.timestamp;
+        
+        return super.transfer(to, amount);
+    }
+}
+```
+
+### Best Practices for Token Data Structures
+
+#### 1. Use Appropriate Data Types
+
+```solidity
+// Good: Use appropriate sizes
+uint256 public totalSupply;    // Need full 256 bits for token amounts
+uint128 public maxSupply;      // 128 bits usually enough for max supply
+uint64 public deployTime;     // Unix timestamp fits in 64 bits
+uint32 public version;        // Version numbers fit in 32 bits
+uint8 public decimals;        // Decimals never exceed 255
+```
+
+#### 2. Pack Structs Efficiently
+
+```solidity
+// Pack related data together to save gas
+struct TokenMetrics {
+    uint128 totalTransfers;   // Large number
+    uint64 lastUpdateTime;    // Timestamp
+    uint32 activeUsers;       // User count
+    uint16 majorVersion;      // Version number
+    uint8 minorVersion;       // Version number
+    bool isActive;            // Boolean flag
+    // Total: exactly 32 bytes = 1 storage slot
+}
+```
+
+#### 3. Consider Access Patterns
+
+```solidity
+// If you frequently need to iterate, use arrays
+address[] public stakeholders;
+
+// If you need fast lookups, use mappings
+mapping(address => bool) public isStakeholder;
+
+// Often you need both for different use cases
+function addStakeholder(address addr) public {
+    require(!isStakeholder[addr], "Already stakeholder");
+    
+    stakeholders.push(addr);
+    isStakeholder[addr] = true;
+}
+```
+
+#### 4. Handle Edge Cases
+
+```solidity
+function getBalance(address account) public view returns (uint256) {
+    // Handle zero address explicitly
+    if (account == address(0)) {
+        return 0;
+    }
+    
+    // Mapping returns 0 for non-existent keys, which is correct for balances
+    return _balances[account];
+}
+
+function getAllowance(address owner, address spender) public view returns (uint256) {
+    // Handle zero addresses
+    if (owner == address(0) || spender == address(0)) {
+        return 0;
+    }
+    
+    return _allowances[owner][spender];
+}
+```
+
+Understanding these data structure patterns will help you read existing token contracts and design efficient storage for your own tokens. The key is choosing the right structure for your specific use case while optimizing for gas costs!

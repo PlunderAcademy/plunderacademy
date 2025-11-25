@@ -1,0 +1,1452 @@
+---
+id: "dapp-security-lesson-3"
+slug: "role-based-access-control"
+module: "advanced-security"
+number: "5.14"
+title: "Role-Based Access Control Patterns"
+objective: "Master enterprise-grade access control patterns using OpenZeppelin's AccessControl, multi-sig wallets, and time-locked admin functions."
+practicalTakeaway: "Build governance systems with granular permissions, eliminate single points of failure, and prevent the 'missing access control' vulnerabilities that drain billions from DeFi."
+---
+
+# Role-Based Access Control Patterns
+
+## Why this matters now
+
+In ai-auditor-findings-interpretation, the AI Reviewer flagged "missing access control" as a High-severity finding in multiple contracts. Specifically, it identified functions like `mint()`, `setFeeRecipient()`, and `pause()` that lacked role checks—allowing any address to perform privileged operations. This vulnerability has enabled some of DeFi's most devastating hacks: the Poly Network exploit ($611M), Nomad Bridge initialization bug ($190M), and countless rug pulls where anonymous teams retain admin keys to drain liquidity.
+
+Simple `onlyOwner` modifiers are insufficient for production protocols. You need role-based access control (RBAC) where different addresses have granular permissions: MINTER_ROLE can mint tokens but not pause, PAUSER_ROLE can emergency-stop but not upgrade, and DEFAULT_ADMIN_ROLE can grant/revoke roles but operates through a multi-sig or timelock to prevent abuse.
+
+This lesson teaches you to architect access control like enterprise DeFi: OpenZeppelin's AccessControl for fine-grained roles, Gnosis Safe integration for multi-sig operations, Timelock controllers for governance delays, and upgradeability patterns that balance security with flexibility. You'll also master testing role boundaries—the difference between secure and exploitable often comes down to one missing `require()`.
+
+## Conceptual foundations for access control
+
+**Definition — Role-Based Access Control (RBAC)**: Permission system where addresses are assigned roles (e.g., ADMIN, MINTER, BURNER), and functions check callers' roles instead of single-owner checks. **When to use it**: Any protocol with multiple administrative functions, team-based operations, or DAO governance. Scales better than Ownable for complex systems.
+
+**Definition — Multi-signature (multi-sig) wallet**: Contract requiring M-of-N signatures to execute transactions (e.g., 3-of-5 team members must approve). **When to use it**: Admin functions in production protocols, treasury management, and upgrade approvals. Eliminates single points of compromise and enforces consensus on critical actions.
+
+**Definition — Timelock**: Delay between announcing an administrative action and executing it (e.g., 48-hour wait for upgrades). **When to use it**: Protocol upgrades, parameter changes, and any action users need time to react to. Gives users warning to exit if they disagree with changes.
+
+**Definition — Access control bypass**: Vulnerability where unauthorized addresses can call privileged functions due to missing checks, logic errors, or front-running vulnerabilities (attacker executes privileged function in same block as role grant, before role is revoked). **Why it's Critical**: Attacker can mint unlimited tokens, pause protocols, steal funds, or brick contracts.
+
+**Mental model — Principle of least privilege**: Grant each role the minimum permissions needed for its function. MINTER_ROLE shouldn't be able to pause. PAUSER_ROLE shouldn't be able to mint. ADMIN shouldn't be a single EOA. This limits blast radius when keys are compromised.
+
+**Anti-pattern — "God mode" admin**: Single address with unrestricted control over all functions. **Why it fails**: Single point of failure (key compromise = total loss), no accountability (admin can rug pull instantly), no user protection (no warning before malicious actions).
+
+**Zilliqa-specific consideration**: Zilliqa 2.0 is fully EVM-compatible, so all OpenZeppelin AccessControl patterns work identically. However, when deploying multi-sig wallets or timelocks, verify gas costs for signature aggregation—Zilliqa's lower gas prices make multi-sig operations more economical than on Ethereum mainnet, so you can afford more signers (5-of-9 instead of 3-of-5) for additional security without prohibitive costs.
+
+## Guided code walk-throughs
+
+### 1) OpenZeppelin AccessControl deep dive
+
+OpenZeppelin's `AccessControl` provides battle-tested RBAC. Here's how to use it effectively:
+
+#### Basic role setup
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract GovernanceToken is ERC20, AccessControl {
+    // Define role identifiers (bytes32 hash of role name)
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    // Note: OpenZeppelin convention is to store keccak256 hash of role name
+    // This allows off-chain tools to compute role identifiers without reading contract state
+    
+    bool private _paused;
+    
+    constructor() ERC20("Governance Token", "GOV") {
+        // Grant DEFAULT_ADMIN_ROLE to deployer
+        // Admin can grant/revoke all roles including itself
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        
+        // Grant MINTER_ROLE to deployer initially
+        _grantRole(MINTER_ROLE, msg.sender);
+    }
+    
+    /**
+     * @notice Mints tokens to specified address
+     * @dev Only callable by addresses with MINTER_ROLE
+     * @param to Recipient address
+     * @param amount Token amount to mint
+     */
+    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
+        require(!_paused, "Contract is paused");
+        _mint(to, amount);
+    }
+    
+    /**
+     * @notice Burns tokens from specified address
+     * @dev Only callable by addresses with BURNER_ROLE
+     * @param from Address to burn from (requires approval)
+     * @param amount Token amount to burn
+     */
+    function burn(address from, uint256 amount) external onlyRole(BURNER_ROLE) {
+        _burn(from, amount);
+    }
+    
+    /**
+     * @notice Emergency pause for all operations
+     * @dev Only callable by addresses with PAUSER_ROLE
+     */
+    function pause() external onlyRole(PAUSER_ROLE) {
+        _paused = true;
+        emit Paused(msg.sender);
+    }
+    
+    /**
+     * @notice Unpause contract operations
+     * @dev Only callable by addresses with PAUSER_ROLE
+     */
+    function unpause() external onlyRole(PAUSER_ROLE) {
+        _paused = false;
+        emit Unpaused(msg.sender);
+    }
+    
+    /**
+     * @notice Checks if contract is paused
+     */
+    function paused() external view returns (bool) {
+        return _paused;
+    }
+    
+    // Override _update to enforce pause on transfers
+    function _update(address from, address to, uint256 amount) internal virtual override {
+        require(!_paused, "Token transfers paused");
+        super._update(from, to, amount);
+    }
+    
+    event Paused(address indexed account);
+    event Unpaused(address indexed account);
+}
+```
+
+**Key AccessControl features:**
+
+1. **`onlyRole(bytes32 role)` modifier**: Reverts if caller doesn't have specified role
+2. **`hasRole(bytes32 role, address account)` view**: Check if address has role
+3. **`grantRole(bytes32 role, address account)`**: Admin-only function to assign roles
+4. **`revokeRole(bytes32 role, address account)`**: Admin-only function to remove roles
+5. **`renounceRole(bytes32 role, address account)`**: Let caller remove their own role
+6. **`getRoleAdmin(bytes32 role)`**: Get which role can manage this role
+7. **`DEFAULT_ADMIN_ROLE`**: Built-in role (0x00) that can manage all roles
+
+#### Advanced: Role hierarchies
+
+```solidity
+contract AdvancedGovernance is AccessControl {
+    bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    bytes32 public constant EMERGENCY_ROLE = keccak256("EMERGENCY_ROLE");
+    
+    constructor() {
+        // Grant DEFAULT_ADMIN_ROLE to multi-sig
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        
+        // Set role admins: GOVERNANCE_ROLE can manage OPERATOR_ROLE
+        _setRoleAdmin(OPERATOR_ROLE, GOVERNANCE_ROLE);
+        
+        // GOVERNANCE_ROLE can manage EMERGENCY_ROLE
+        _setRoleAdmin(EMERGENCY_ROLE, GOVERNANCE_ROLE);
+        
+        // DEFAULT_ADMIN_ROLE remains admin of GOVERNANCE_ROLE
+    }
+    
+    /**
+     * @notice Operators can perform routine actions
+     * @dev GOVERNANCE_ROLE can add/remove operators
+     */
+    function routineOperation() external onlyRole(OPERATOR_ROLE) {
+        // Daily operations
+    }
+    
+    /**
+     * @notice Emergency responders can pause in crisis
+     * @dev GOVERNANCE_ROLE can add/remove emergency responders
+     */
+    function emergencyPause() external onlyRole(EMERGENCY_ROLE) {
+        // Emergency actions
+    }
+    
+    /**
+     * @notice Governance can change protocol parameters
+     * @dev Only DEFAULT_ADMIN can add/remove governance members
+     */
+    function setParameter(uint256 newValue) external onlyRole(GOVERNANCE_ROLE) {
+        // Governance decisions
+    }
+}
+```
+
+**Role hierarchy best practices:**
+
+- **Top tier**: DEFAULT_ADMIN_ROLE → Multi-sig or DAO (3-of-5, 48hr timelock)
+- **Middle tier**: GOVERNANCE_ROLE → Protocol governors (can manage operators)
+- **Bottom tier**: OPERATOR_ROLE, PAUSER_ROLE → Service accounts (limited actions)
+- **Isolation**: MINTER_ROLE and BURNER_ROLE never on same address (limits damage from key compromise)
+
+### 2) Multi-sig patterns with Safe (formerly Gnosis Safe)
+
+Single-owner admins are single points of failure. Multi-sigs require M-of-N approvals, distributing trust. We'll use Safe (the most battle-tested smart contract wallet, formerly known as Gnosis Safe) for these examples.
+
+#### Integrating Safe as admin
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+
+/**
+ * @title MultisigControlledVault
+ * @notice Treasury vault controlled by Gnosis Safe multi-sig
+ * @dev Admin functions require 3-of-5 multi-sig approval
+ */
+contract MultisigControlledVault is AccessControl, UUPSUpgradeable {
+    bytes32 public constant TREASURER_ROLE = keccak256("TREASURER_ROLE");
+    
+    address public gnosisSafe;  // Multi-sig address
+    uint256 public dailyWithdrawLimit;
+    uint256 public lastWithdrawTime;
+    uint256 public withdrawnToday;
+    
+    event Withdrawal(address indexed to, uint256 amount, address indexed approver);
+    event LimitUpdated(uint256 oldLimit, uint256 newLimit);
+    event SafeUpdated(address indexed oldSafe, address indexed newSafe);
+    
+    constructor(address _gnosisSafe, uint256 _dailyLimit) {
+        require(_gnosisSafe != address(0), "Invalid safe address");
+        
+        gnosisSafe = _gnosisSafe;
+        dailyWithdrawLimit = _dailyLimit;
+        
+        // Grant DEFAULT_ADMIN_ROLE to Gnosis Safe
+        // All admin actions require multi-sig approval
+        _grantRole(DEFAULT_ADMIN_ROLE, _gnosisSafe);
+        
+        // Grant TREASURER_ROLE to multi-sig for routine withdrawals
+        _grantRole(TREASURER_ROLE, _gnosisSafe);
+    }
+    
+    /**
+     * @notice Withdraw funds within daily limit
+     * @dev Requires TREASURER_ROLE (multi-sig)
+     * @param to Recipient address
+     * @param amount Withdrawal amount
+     */
+    function withdraw(address to, uint256 amount) external onlyRole(TREASURER_ROLE) {
+        require(to != address(0), "Invalid recipient");
+        
+        // Reset daily limit if new day
+        if (block.timestamp >= lastWithdrawTime + 1 days) {
+            withdrawnToday = 0;
+            lastWithdrawTime = block.timestamp;
+        }
+        
+        require(withdrawnToday + amount <= dailyWithdrawLimit, "Daily limit exceeded");
+        
+        withdrawnToday += amount;
+        
+        (bool success, ) = to.call{value: amount}("");
+        require(success, "Transfer failed");
+        // Note: In production, add ReentrancyGuard or Checks-Effects-Interactions pattern
+        
+        emit Withdrawal(to, amount, msg.sender);
+    }
+    
+    /**
+     * @notice Update daily withdrawal limit
+     * @dev Requires DEFAULT_ADMIN_ROLE (multi-sig)
+     * @param newLimit New daily limit in wei
+     */
+    function setDailyLimit(uint256 newLimit) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        uint256 oldLimit = dailyWithdrawLimit;
+        dailyWithdrawLimit = newLimit;
+        emit LimitUpdated(oldLimit, newLimit);
+    }
+    
+    /**
+     * @notice Update Gnosis Safe address
+     * @dev Requires DEFAULT_ADMIN_ROLE (old multi-sig)
+     * @param newSafe New Gnosis Safe address
+     */
+    function updateSafe(address newSafe) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newSafe != address(0), "Invalid safe address");
+        
+        address oldSafe = gnosisSafe;
+        
+        // Revoke roles from old safe
+        _revokeRole(DEFAULT_ADMIN_ROLE, oldSafe);
+        _revokeRole(TREASURER_ROLE, oldSafe);
+        
+        // Grant roles to new safe
+        _grantRole(DEFAULT_ADMIN_ROLE, newSafe);
+        _grantRole(TREASURER_ROLE, newSafe);
+        
+        gnosisSafe = newSafe;
+        emit SafeUpdated(oldSafe, newSafe);
+    }
+    
+    /**
+     * @notice Authorize upgrade to new implementation
+     * @dev Required by UUPSUpgradeable, restricted to admin
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    
+    receive() external payable {}
+}
+```
+
+**How multi-sig approval works:**
+
+1. Team member proposes `setDailyLimit(100 ether)` in Gnosis Safe UI
+2. Safe creates transaction payload: `vault.setDailyLimit(100 ether)`
+3. 3 of 5 signers review and sign the transaction off-chain
+4. Any signer submits the transaction with aggregated signatures
+5. Safe validates signatures and calls `vault.setDailyLimit(100 ether)`
+6. Vault checks `msg.sender == gnosisSafe` and `hasRole(DEFAULT_ADMIN_ROLE, gnosisSafe)`
+7. Transaction executes ✅
+
+**Benefits:**
+- No single point of compromise (need 3 of 5 keys)
+- Off-chain coordination (gas paid once for execution)
+- Transparent on-chain record (all actions logged)
+- Revocable access (remove compromised signers)
+
+#### Frontend integration: Connecting to Safe
+
+```tsx
+// components/MultisigAdmin.tsx
+'use client';
+
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther } from 'viem';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { useState } from 'react';
+
+const VAULT_ADDRESS = '0x...' as const; // Your vault contract
+const GNOSIS_SAFE_ADDRESS = '0x...' as const; // Your multi-sig
+
+// ABI for the vault contract
+const vaultABI = [
+  {
+    name: 'setDailyLimit',
+    type: 'function',
+    inputs: [{ name: 'newLimit', type: 'uint256' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+] as const;
+
+export default function MultisigAdmin() {
+  const { address } = useAccount();
+  const [newLimit, setNewLimit] = useState('');
+  
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  
+  // Check if connected wallet is a Safe signer
+  const isSafeSigner = address === GNOSIS_SAFE_ADDRESS; // Simplified check
+  
+  const proposeSetLimit = async () => {
+    if (!newLimit) return;
+    
+    try {
+      writeContract({
+        address: VAULT_ADDRESS,
+        abi: vaultABI,
+        functionName: 'setDailyLimit',
+        args: [parseEther(newLimit)],
+      });
+    } catch (err) {
+      console.error('Failed to propose limit change:', err);
+    }
+  };
+  
+  return (
+    <Card className="p-6">
+      <h2 className="text-2xl font-bold mb-4">Multi-sig Admin</h2>
+      
+      {!isSafeSigner && (
+        <div className="bg-yellow-100 dark:bg-yellow-900 p-4 rounded mb-4">
+          <p className="text-sm">
+            ⚠️ Connected wallet is not the multi-sig. Admin functions require
+            3-of-5 approvals via Safe.
+          </p>
+        </div>
+      )}
+      
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            New Daily Limit (ETH)
+          </label>
+          <Input
+            type="number"
+            value={newLimit}
+            onChange={(e) => setNewLimit(e.target.value)}
+            placeholder="100"
+            disabled={isPending || isConfirming}
+          />
+        </div>
+        
+        <Button 
+          onClick={proposeSetLimit} 
+          disabled={!newLimit || isPending || isConfirming}
+        >
+          {isPending ? 'Confirming...' : isConfirming ? 'Processing...' : isSafeSigner ? 'Propose to Multi-sig' : 'Submit via Safe UI'}
+        </Button>
+        
+        {error && (
+          <div className="bg-red-100 dark:bg-red-900 p-4 rounded text-sm">
+            ❌ Error: {error.message}
+          </div>
+        )}
+        
+        {isSuccess && (
+          <div className="bg-green-100 dark:bg-green-900 p-4 rounded">
+            ✅ Proposal submitted. Pending {isSafeSigner ? '3 of 5' : 'multi-sig'} approvals.
+          </div>
+        )}
+      </div>
+      
+      <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded">
+        <h3 className="font-semibold mb-2">How Multi-sig Works:</h3>
+        <ol className="list-decimal list-inside space-y-1 text-sm">
+          <li>Any signer proposes a transaction</li>
+          <li>3 of 5 signers review and approve off-chain</li>
+          <li>Last signer submits transaction with aggregated signatures</li>
+          <li>Safe validates signatures and executes</li>
+        </ol>
+      </div>
+    </Card>
+  );
+}
+```
+
+### 3) Time-locked admin functions
+
+Timelocks add delays between announcing and executing admin actions, giving users time to react.
+
+#### OpenZeppelin TimelockController integration
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/governance/TimelockController.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+/**
+ * @title TimelockedProtocol
+ * @notice Protocol upgrades require 48-hour delay
+ * @dev Uses OpenZeppelin TimelockController for governance delays
+ */
+contract TimelockedProtocol is AccessControl {
+    bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
+    bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
+    
+    TimelockController public timelock;
+    uint256 public protocolFee;  // Parameter we want to protect
+    
+    event FeeChanged(uint256 oldFee, uint256 newFee, uint256 executeTime);
+    
+    constructor(address _timelock) {
+        require(_timelock != address(0), "Invalid timelock");
+        timelock = TimelockController(payable(_timelock));
+        
+        // Grant admin role to timelock (not EOA)
+        _grantRole(DEFAULT_ADMIN_ROLE, _timelock);
+    }
+    
+    /**
+     * @notice Change protocol fee (time-locked)
+     * @dev Can only be called by timelock after delay
+     * @param newFee New fee in basis points (e.g., 100 = 1%)
+     */
+    function setProtocolFee(uint256 newFee) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newFee <= 1000, "Fee too high");  // Max 10%
+        
+        uint256 oldFee = protocolFee;
+        protocolFee = newFee;
+        
+        emit FeeChanged(oldFee, newFee, block.timestamp);
+    }
+    
+    /**
+     * @notice Emergency pause (no timelock for safety)
+     * @dev Separate EMERGENCY_ROLE can act immediately
+     */
+    function emergencyPause() external onlyRole(keccak256("EMERGENCY_ROLE")) {
+        // Immediate pause without timelock
+    }
+}
+
+/**
+ * @title Deploy timelock and protocol
+ */
+contract DeployTimelockedSystem {
+    function deploy() external returns (address protocol, address timelock) {
+        // 1. Deploy TimelockController
+        //    - minDelay: 48 hours (172800 seconds)
+        //    - proposers: Array of addresses that can propose
+        //    - executors: Array of addresses that can execute (address(0) = anyone after delay)
+        //    - admin: Address that can change timelock config (should be timelock itself)
+        
+        address[] memory proposers = new address[](1);
+        proposers[0] = msg.sender;  // In production: multi-sig
+        
+        address[] memory executors = new address[](1);
+        executors[0] = address(0);  // Anyone can execute after delay
+        
+        timelock = address(new TimelockController(
+            172800,  // 48 hour delay
+            proposers,
+            executors,
+            address(0)  // No admin (immutable)
+        ));
+        
+        // 2. Deploy protocol with timelock as admin
+        protocol = address(new TimelockedProtocol(timelock));
+        
+        return (protocol, timelock);
+    }
+}
+```
+
+**How timelock workflow works:**
+
+```javascript
+// JavaScript/TypeScript: Proposing time-locked change
+import { ethers } from "ethers";
+
+// Step 1: Encode function call
+const protocolInterface = new ethers.Interface([
+  "function setProtocolFee(uint256 newFee)"
+]);
+const calldata = protocolInterface.encodeFunctionData("setProtocolFee", [100]);
+
+// Step 2: Schedule transaction in timelock
+const timelockContract = new ethers.Contract(timelockAddress, timelockABI, signer);
+
+const tx = await timelockContract.schedule(
+  protocolAddress,        // target contract
+  0,                      // value (ETH to send)
+  calldata,               // encoded function call
+  ethers.ZeroHash,        // predecessor (for dependencies)
+  ethers.id("proposal-001"),  // salt (unique ID)
+  172800                  // delay (48 hours in seconds)
+);
+
+console.log("Proposal scheduled. Wait 48 hours before execution.");
+console.log("Transaction hash:", tx.hash);
+
+// Step 3: Wait 48 hours...
+
+// Step 4: Execute transaction
+const executeTx = await timelockContract.execute(
+  protocolAddress,
+  0,
+  calldata,
+  ethers.ZeroHash,
+  ethers.id("proposal-001")
+);
+
+console.log("Fee change executed:", executeTx.hash);
+```
+
+**User protection timeline:**
+
+- **T+0**: Proposer calls `timelock.schedule(setProtocolFee(10%))`
+- **T+0 to T+48h**: Users see pending proposal on-chain, can exit if they disagree
+- **T+48h**: Anyone can call `timelock.execute()` to apply change
+- **Result**: No surprise changes; users have warning to withdraw funds
+
+### 4) Upgradeability access patterns
+
+Upgradeable contracts need special access control to prevent malicious upgrades.
+
+#### UUPS pattern with role-based upgrade authorization
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+/**
+ * @title SecureUpgradeableVault
+ * @notice Upgradeable vault with role-based upgrade authorization
+ * @dev Uses UUPS pattern; upgrades require UPGRADER_ROLE
+ */
+contract SecureUpgradeableVault is 
+    Initializable, 
+    UUPSUpgradeable, 
+    AccessControlUpgradeable 
+{
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
+    
+    uint256 public totalDeposits;
+    mapping(address => uint256) public balances;
+    
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+    
+    /**
+     * @notice Initialize contract (replaces constructor for proxies)
+     * @param admin Address to receive admin roles
+     */
+    function initialize(address admin) external initializer {
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+        
+        // Grant roles to admin
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(UPGRADER_ROLE, admin);
+    }
+    
+    /**
+     * @notice Deposit funds to vault
+     * @dev Restricted to addresses with DEPOSITOR_ROLE or public in later versions
+     */
+    function deposit() external payable onlyRole(DEPOSITOR_ROLE) {
+        balances[msg.sender] += msg.value;
+        totalDeposits += msg.value;
+    }
+    
+    /**
+     * @notice Withdraw funds from vault
+     */
+    function withdraw(uint256 amount) external {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        
+        balances[msg.sender] -= amount;
+        totalDeposits -= amount;
+        
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+    
+    /**
+     * @notice Authorize upgrade to new implementation
+     * @dev Required by UUPSUpgradeable; only UPGRADER_ROLE can upgrade
+     * @param newImplementation Address of new implementation contract
+     */
+    function _authorizeUpgrade(address newImplementation) 
+        internal 
+        override 
+        onlyRole(UPGRADER_ROLE) 
+    {
+        // Additional validation can go here
+        require(newImplementation != address(0), "Invalid implementation");
+        
+        // Optional: Verify implementation is from trusted deployer
+        // Optional: Require timelock delay for upgrades
+    }
+    
+    /**
+     * @notice Get implementation version
+     * @return Version string
+     */
+    function version() external pure returns (string memory) {
+        return "1.0.0";
+    }
+}
+```
+
+**Upgrade process with access control:**
+
+```javascript
+// Hardhat script: Upgrading with UPGRADER_ROLE
+const { ethers, upgrades } = require("hardhat");
+
+async function upgradeVault() {
+  const [admin] = await ethers.getSigners();
+  
+  const proxyAddress = "0x...";  // Existing proxy
+  
+  // Deploy new implementation
+  const VaultV2 = await ethers.getContractFactory("SecureUpgradeableVault");
+  
+  // Upgrade requires admin has UPGRADER_ROLE
+  const upgraded = await upgrades.upgradeProxy(proxyAddress, VaultV2);
+  await upgraded.waitForDeployment();
+  
+  console.log("Vault upgraded to V2");
+  console.log("Proxy:", proxyAddress);
+  console.log("New implementation:", await upgrades.erc1967.getImplementationAddress(proxyAddress));
+  
+  // Verify version changed
+  const version = await upgraded.version();
+  console.log("Version:", version);  // Should be "2.0.0" in V2
+}
+
+upgradeVault().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+```
+
+**Security considerations for upgrades:**
+
+1. **UPGRADER_ROLE on multi-sig**: Never grant to EOA in production
+2. **Timelock integration**: Add 48hr delay before upgrades execute
+3. **Implementation verification**: Audit new implementation before upgrade
+4. **Storage layout checks**: Use OpenZeppelin upgrade plugin to catch collisions
+5. **Emergency pause**: Disable upgrades when paused to prevent attacks
+
+## Testing role-based permissions
+
+Comprehensive role testing prevents "missing access control" vulnerabilities.
+
+### Access control test suite
+
+```javascript
+// test/AccessControl.test.js
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+
+describe("GovernanceToken Access Control", function() {
+  let token;
+  let admin, minter, burner, pauser, user, attacker;
+  
+  const MINTER_ROLE = ethers.utils.id("MINTER_ROLE");
+  const BURNER_ROLE = ethers.utils.id("BURNER_ROLE");
+  const PAUSER_ROLE = ethers.utils.id("PAUSER_ROLE");
+  const DEFAULT_ADMIN_ROLE = ethers.constants.HashZero;
+  
+  beforeEach(async function() {
+    [admin, minter, burner, pauser, user, attacker] = await ethers.getSigners();
+    
+    const Token = await ethers.getContractFactory("GovernanceToken");
+    token = await Token.connect(admin).deploy();
+    
+    // Setup roles
+    await token.connect(admin).grantRole(MINTER_ROLE, minter.address);
+    await token.connect(admin).grantRole(BURNER_ROLE, burner.address);
+    await token.connect(admin).grantRole(PAUSER_ROLE, pauser.address);
+  });
+  
+  describe("Minting", function() {
+    it("should allow minter to mint tokens", async function() {
+      await token.connect(minter).mint(user.address, 1000);
+      expect(await token.balanceOf(user.address)).to.equal(1000);
+    });
+    
+    it("should reject minting from non-minter", async function() {
+      await expect(
+        token.connect(attacker).mint(user.address, 1000)
+      ).to.be.revertedWith("AccessControl: account");
+    });
+    
+    it("should reject minting from admin without MINTER_ROLE", async function() {
+      // Admin can grant roles but can't mint without explicit MINTER_ROLE
+      await token.connect(admin).revokeRole(MINTER_ROLE, admin.address);
+      
+      await expect(
+        token.connect(admin).mint(user.address, 1000)
+      ).to.be.revertedWith("AccessControl: account");
+    });
+  });
+  
+  describe("Burning", function() {
+    beforeEach(async function() {
+      await token.connect(minter).mint(user.address, 1000);
+    });
+    
+    it("should allow burner to burn tokens", async function() {
+      await token.connect(burner).burn(user.address, 500);
+      expect(await token.balanceOf(user.address)).to.equal(500);
+    });
+    
+    it("should reject burning from non-burner", async function() {
+      await expect(
+        token.connect(attacker).burn(user.address, 500)
+      ).to.be.revertedWith("AccessControl: account");
+    });
+    
+    it("should reject burning from minter without BURNER_ROLE", async function() {
+      // Roles are separate: minter can't burn
+      await expect(
+        token.connect(minter).burn(user.address, 500)
+      ).to.be.revertedWith("AccessControl: account");
+    });
+  });
+  
+  describe("Pausing", function() {
+    it("should allow pauser to pause contract", async function() {
+      await token.connect(pauser).pause();
+      expect(await token.paused()).to.be.true;
+    });
+    
+    it("should reject pausing from non-pauser", async function() {
+      await expect(
+        token.connect(attacker).pause()
+      ).to.be.revertedWith("AccessControl: account");
+    });
+    
+    it("should block transfers when paused", async function() {
+      await token.connect(minter).mint(user.address, 1000);
+      await token.connect(pauser).pause();
+      
+      await expect(
+        token.connect(user).transfer(attacker.address, 100)
+      ).to.be.revertedWith("Token transfers paused");
+    });
+    
+    it("should allow unpausing by pauser", async function() {
+      await token.connect(pauser).pause();
+      await token.connect(pauser).unpause();
+      expect(await token.paused()).to.be.false;
+    });
+  });
+  
+  describe("Role Management", function() {
+    it("should allow admin to grant roles", async function() {
+      await token.connect(admin).grantRole(MINTER_ROLE, user.address);
+      expect(await token.hasRole(MINTER_ROLE, user.address)).to.be.true;
+    });
+    
+    it("should allow admin to revoke roles", async function() {
+      await token.connect(admin).revokeRole(MINTER_ROLE, minter.address);
+      expect(await token.hasRole(MINTER_ROLE, minter.address)).to.be.false;
+    });
+    
+    it("should reject role grant from non-admin", async function() {
+      await expect(
+        token.connect(minter).grantRole(MINTER_ROLE, attacker.address)
+      ).to.be.revertedWith("AccessControl: account");
+    });
+    
+    it("should allow account to renounce own role", async function() {
+      await token.connect(minter).renounceRole(MINTER_ROLE, minter.address);
+      expect(await token.hasRole(MINTER_ROLE, minter.address)).to.be.false;
+    });
+    
+    it("should reject renouncing role for other account", async function() {
+      await expect(
+        token.connect(attacker).renounceRole(MINTER_ROLE, minter.address)
+      ).to.be.revertedWith("AccessControl: can only renounce roles for self");
+    });
+  });
+  
+  describe("Role Enumeration", function() {
+    it("should return correct role admin", async function() {
+      expect(await token.getRoleAdmin(MINTER_ROLE)).to.equal(DEFAULT_ADMIN_ROLE);
+    });
+    
+    it("should list all accounts with role", async function() {
+      // Grant role to multiple accounts
+      await token.connect(admin).grantRole(MINTER_ROLE, user.address);
+      
+      // Check both have role
+      expect(await token.hasRole(MINTER_ROLE, minter.address)).to.be.true;
+      expect(await token.hasRole(MINTER_ROLE, user.address)).to.be.true;
+    });
+  });
+  
+  describe("Attack Scenarios", function() {
+    it("should prevent attacker from self-granting roles", async function() {
+      // Attacker tries to grant themselves MINTER_ROLE
+      await expect(
+        token.connect(attacker).grantRole(MINTER_ROLE, attacker.address)
+      ).to.be.revertedWith("AccessControl: account");
+    });
+    
+    it("should prevent role escalation via reentrancy", async function() {
+      // Even if attacker controls a contract that re-enters during token transfer,
+      // they can't grant roles because grantRole checks msg.sender
+      // (This is a conceptual test; actual implementation depends on transfer hooks)
+    });
+    
+    it("should prevent admin lockout", async function() {
+      // Verify at least one account has DEFAULT_ADMIN_ROLE
+      expect(await token.hasRole(DEFAULT_ADMIN_ROLE, admin.address)).to.be.true;
+      
+      // Admin tries to revoke their own admin role
+      await expect(
+        token.connect(admin).revokeRole(DEFAULT_ADMIN_ROLE, admin.address)
+      ).to.not.be.reverted;  // OpenZeppelin allows this (dangerous!)
+      
+      // Best practice: Have multiple admins or admin is multi-sig
+    });
+  });
+});
+```
+
+#### Testing with Foundry (Alternative)
+
+If you prefer Foundry for testing, here's the equivalent access control test suite using Solidity-native tests:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "forge-std/Test.sol";
+import "../src/GovernanceToken.sol";
+
+contract GovernanceTokenAccessControlTest is Test {
+    GovernanceToken public token;
+    
+    address admin;
+    address minter;
+    address burner;
+    address pauser;
+    address user;
+    address attacker;
+    
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
+    
+    function setUp() public {
+        admin = address(this);
+        minter = address(0x1);
+        burner = address(0x2);
+        pauser = address(0x3);
+        user = address(0x4);
+        attacker = address(0x5);
+        
+        // Deploy token
+        token = new GovernanceToken();
+        
+        // Setup roles
+        token.grantRole(MINTER_ROLE, minter);
+        token.grantRole(BURNER_ROLE, burner);
+        token.grantRole(PAUSER_ROLE, pauser);
+    }
+    
+    // Minting tests
+    function testMinterCanMint() public {
+        vm.prank(minter);
+        token.mint(user, 1000);
+        
+        assertEq(token.balanceOf(user), 1000);
+    }
+    
+    function testNonMinterCannotMint() public {
+        vm.prank(attacker);
+        vm.expectRevert();
+        token.mint(user, 1000);
+    }
+    
+    function testAdminCannotMintWithoutMinterRole() public {
+        // Revoke MINTER_ROLE from admin (if it had it)
+        if (token.hasRole(MINTER_ROLE, admin)) {
+            token.revokeRole(MINTER_ROLE, admin);
+        }
+        
+        vm.expectRevert();
+        token.mint(user, 1000);
+    }
+    
+    // Burning tests
+    function testBurnerCanBurn() public {
+        // Mint tokens first
+        vm.prank(minter);
+        token.mint(user, 1000);
+        
+        // Burn tokens
+        vm.prank(burner);
+        token.burn(user, 500);
+        
+        assertEq(token.balanceOf(user), 500);
+    }
+    
+    function testNonBurnerCannotBurn() public {
+        // Mint tokens first
+        vm.prank(minter);
+        token.mint(user, 1000);
+        
+        // Attempt burn
+        vm.prank(attacker);
+        vm.expectRevert();
+        token.burn(user, 500);
+    }
+    
+    function testMinterCannotBurnWithoutBurnerRole() public {
+        // Mint tokens first
+        vm.prank(minter);
+        token.mint(user, 1000);
+        
+        // Minter tries to burn
+        vm.prank(minter);
+        vm.expectRevert();
+        token.burn(user, 500);
+    }
+    
+    // Pausing tests
+    function testPauserCanPause() public {
+        vm.prank(pauser);
+        token.pause();
+        
+        assertTrue(token.paused());
+    }
+    
+    function testNonPauserCannotPause() public {
+        vm.prank(attacker);
+        vm.expectRevert();
+        token.pause();
+    }
+    
+    function testTransfersBlockedWhenPaused() public {
+        // Mint tokens
+        vm.prank(minter);
+        token.mint(user, 1000);
+        
+        // Pause contract
+        vm.prank(pauser);
+        token.pause();
+        
+        // Attempt transfer
+        vm.prank(user);
+        vm.expectRevert("Token transfers paused");
+        token.transfer(attacker, 100);
+    }
+    
+    function testPauserCanUnpause() public {
+        vm.prank(pauser);
+        token.pause();
+        
+        vm.prank(pauser);
+        token.unpause();
+        
+        assertFalse(token.paused());
+    }
+    
+    // Role management tests
+    function testAdminCanGrantRoles() public {
+        token.grantRole(MINTER_ROLE, user);
+        assertTrue(token.hasRole(MINTER_ROLE, user));
+    }
+    
+    function testAdminCanRevokeRoles() public {
+        token.revokeRole(MINTER_ROLE, minter);
+        assertFalse(token.hasRole(MINTER_ROLE, minter));
+    }
+    
+    function testNonAdminCannotGrantRoles() public {
+        vm.prank(minter);
+        vm.expectRevert();
+        token.grantRole(MINTER_ROLE, attacker);
+    }
+    
+    function testAccountCanRenounceOwnRole() public {
+        vm.prank(minter);
+        token.renounceRole(MINTER_ROLE, minter);
+        
+        assertFalse(token.hasRole(MINTER_ROLE, minter));
+    }
+    
+    function testAccountCannotRenounceOthersRole() public {
+        vm.prank(attacker);
+        vm.expectRevert("AccessControl: can only renounce roles for self");
+        token.renounceRole(MINTER_ROLE, minter);
+    }
+    
+    // Role enumeration tests
+    function testGetRoleAdmin() public {
+        assertEq(token.getRoleAdmin(MINTER_ROLE), DEFAULT_ADMIN_ROLE);
+    }
+    
+    function testMultipleAccountsCanHaveSameRole() public {
+        token.grantRole(MINTER_ROLE, user);
+        
+        assertTrue(token.hasRole(MINTER_ROLE, minter));
+        assertTrue(token.hasRole(MINTER_ROLE, user));
+    }
+    
+    // Attack scenario tests
+    function testAttackerCannotSelfGrantRoles() public {
+        vm.prank(attacker);
+        vm.expectRevert();
+        token.grantRole(MINTER_ROLE, attacker);
+    }
+    
+    function testAdminLockoutPrevention() public {
+        // Verify at least one account has DEFAULT_ADMIN_ROLE
+        assertTrue(token.hasRole(DEFAULT_ADMIN_ROLE, admin));
+        
+        // Admin can revoke own role (OpenZeppelin allows this - dangerous!)
+        token.revokeRole(DEFAULT_ADMIN_ROLE, admin);
+        
+        // Best practice: Have multiple admins or admin is multi-sig
+        assertFalse(token.hasRole(DEFAULT_ADMIN_ROLE, admin));
+    }
+}
+```
+
+**Running Foundry tests:**
+
+```bash
+# Run all access control tests
+forge test --match-contract GovernanceTokenAccessControlTest
+
+# Run with verbosity to see detailed output
+forge test --match-contract GovernanceTokenAccessControlTest -vvv
+
+# Run specific test
+forge test --match-test testMinterCanMint -vv
+
+# Generate gas report
+forge test --match-contract GovernanceTokenAccessControlTest --gas-report
+```
+
+**Foundry advantages for security testing:**
+
+- **Speed**: Runs 10-100x faster than Hardhat for large test suites
+- **Native Solidity**: Write tests in the same language as contracts
+- **Fuzzing built-in**: Easy to add fuzz tests with `function testFuzz_name(uint256 x)` pattern
+- **Gas reporting**: Detailed gas usage for each function call
+- **Cheatcodes**: Powerful `vm.prank()`, `vm.expectRevert()`, `vm.warp()` for precise test control
+
+**Test coverage checklist:**
+
+- [ ] Each role can perform its authorized functions
+- [ ] Each role is rejected from unauthorized functions
+- [ ] Non-role holders are rejected from all protected functions
+- [ ] Admin can grant and revoke roles
+- [ ] Non-admin cannot grant or revoke roles
+- [ ] Accounts can renounce their own roles
+- [ ] Accounts cannot renounce others' roles
+- [ ] Role separation enforced (MINTER can't BURN)
+- [ ] Attack scenarios covered (self-granting, escalation)
+
+## Real-world RBAC audit examples
+
+### Case study 1: Poly Network hack ($611M)
+
+**Vulnerability**: Anyone could call `EthCrossChainManager.verifyHeaderAndExecuteTx()` because keeper role check was commented out during development.
+
+**Root cause**:
+```solidity
+// Vulnerable code (simplified)
+function verifyHeaderAndExecuteTx(...) external {
+    // require(hasRole(KEEPER_ROLE, msg.sender), "Not keeper");  // ⚠️ COMMENTED OUT
+    
+    // Execute cross-chain transaction
+    _executeTx(toContract, toMethod, toArgs);
+}
+```
+
+**Attack**: Hacker called the function directly, crafted a malicious cross-chain message to mint themselves tokens on all supported chains.
+
+**Fix**:
+```solidity
+// ✅ SECURE: Enforce keeper role
+function verifyHeaderAndExecuteTx(...) external onlyRole(KEEPER_ROLE) {
+    _executeTx(toContract, toMethod, toArgs);
+}
+```
+
+**Lesson**: Never comment out access control checks, even temporarily. Use feature flags or separate dev deployments instead.
+
+### Case study 2: Nomad Bridge hack ($190M, August 2022)
+
+**Vulnerability**: `initialize()` function could be called by anyone on an already-initialized replica contract, allowing attackers to become owner and authorize fraudulent withdrawals.
+
+**Root cause**:
+```solidity
+// Vulnerable code (simplified)
+contract Replica {
+    address public owner;
+    
+    function initialize(address _owner) external {
+        // ⚠️ Missing initialization guard - can be called multiple times
+        owner = _owner;
+    }
+    
+    function process(bytes memory message) external {
+        // Process cross-chain messages
+        require(msg.sender == owner, "Not owner");
+        // Execute withdrawal...
+    }
+}
+```
+
+**Attack**: Attacker discovered the replica contract's `initialize()` function lacked the `initializer` modifier from OpenZeppelin's `Initializable`. They called `initialize()` with their own address, became owner, and approved $190M in fraudulent cross-chain withdrawals. The attack was permissionless—anyone who noticed the bug could exploit it.
+
+**Fix**:
+```solidity
+// ✅ SECURE: Use OpenZeppelin Initializable pattern
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+contract Replica is Initializable {
+    address public owner;
+    
+    function initialize(address _owner) external initializer {
+        owner = _owner;
+    }
+    
+    function process(bytes memory message) external {
+        require(msg.sender == owner, "Not owner");
+        // Execute withdrawal...
+    }
+}
+```
+
+**Lesson**: Use OpenZeppelin's `Initializable` pattern for all proxy contracts. The `initializer` modifier ensures initialization functions can only be called once. Never roll your own initialization guards—use battle-tested libraries.
+
+## Hands-on with AI Reviewer
+
+Submit these contracts to `/reviewer` and verify it catches access control issues.
+
+### Exercise 1: Missing role checks
+
+**Submit this code:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract VulnerableDAO is ERC20, AccessControl {
+    bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
+    bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
+    
+    struct Proposal {
+        address target;
+        bytes data;
+        uint256 votes;
+        bool executed;
+    }
+    
+    Proposal[] public proposals;
+    
+    constructor() ERC20("DAO Token", "DAO") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+    
+    function createProposal(address target, bytes calldata data) external {
+        // ⚠️ Missing PROPOSER_ROLE check
+        proposals.push(Proposal(target, data, 0, false));
+    }
+    
+    function vote(uint256 proposalId) external {
+        proposals[proposalId].votes += balanceOf(msg.sender);
+    }
+    
+    function executeProposal(uint256 proposalId) external {
+        // ⚠️ Missing EXECUTOR_ROLE check
+        Proposal storage proposal = proposals[proposalId];
+        require(!proposal.executed, "Already executed");
+        require(proposal.votes > totalSupply() / 2, "Insufficient votes");
+        
+        proposal.executed = true;
+        (bool success, ) = proposal.target.call(proposal.data);
+        require(success, "Execution failed");
+    }
+    
+    function setRoleAdmin(bytes32 role, bytes32 adminRole) external {
+        // ⚠️ Missing access control
+        _setRoleAdmin(role, adminRole);
+    }
+}
+```
+
+**Expected AI findings:**
+1. **CRITICAL (9/10)**: `createProposal()` missing access control—any address can create proposals
+2. **CRITICAL (9/10)**: `executeProposal()` missing access control—bypasses role-based execution
+3. **CRITICAL (10/10)**: `setRoleAdmin()` has no protection—anyone can change role hierarchy and grant themselves admin
+4. **MEDIUM (6/10)**: No events for proposal creation/execution (auditability issue)
+5. **HIGH (8/10)**: `executeProposal()` uses low-level `call()` without reentrancy protection
+
+**Your task:**
+1. Add `onlyRole(PROPOSER_ROLE)` to `createProposal()`
+2. Add `onlyRole(EXECUTOR_ROLE)` to `executeProposal()`
+3. Add `onlyRole(DEFAULT_ADMIN_ROLE)` to `setRoleAdmin()`
+4. Add `ReentrancyGuard` to prevent reentrancy during proposal execution
+5. Write tests proving unauthorized users are blocked
+6. Re-submit fixed version and verify AI gives passing score
+
+---
+
+### Exercise 2: Weak multi-sig pattern
+
+**Submit this code:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract WeakMultisig {
+    address[] public signers;
+    uint256 public requiredSignatures;
+    
+    mapping(uint256 => Transaction) public transactions;
+    mapping(uint256 => mapping(address => bool)) public confirmations;
+    uint256 public transactionCount;
+    
+    struct Transaction {
+        address target;
+        uint256 value;
+        bytes data;
+        bool executed;
+    }
+    
+    constructor(address[] memory _signers, uint256 _required) {
+        // ⚠️ No validation
+        signers = _signers;
+        requiredSignatures = _required;
+    }
+    
+    function submitTransaction(address target, uint256 value, bytes calldata data) 
+        external 
+        returns (uint256) 
+    {
+        // ⚠️ No signer check
+        uint256 txId = transactionCount++;
+        transactions[txId] = Transaction(target, value, data, false);
+        return txId;
+    }
+    
+    function confirmTransaction(uint256 txId) external {
+        // ⚠️ No duplicate confirmation check
+        confirmations[txId][msg.sender] = true;
+    }
+    
+    function executeTransaction(uint256 txId) external {
+        Transaction storage txn = transactions[txId];
+        require(!txn.executed, "Already executed");
+        
+        // ⚠️ No confirmation count verification
+        txn.executed = true;
+        
+        (bool success, ) = txn.target.call{value: txn.value}(txn.data);
+        require(success, "Execution failed");
+    }
+}
+```
+
+**Expected AI findings:**
+1. **CRITICAL (10/10)**: `submitTransaction()` has no access control—anyone can submit
+2. **CRITICAL (9/10)**: `executeTransaction()` doesn't verify signature count—can execute with zero confirmations
+3. **HIGH (8/10)**: `confirmTransaction()` allows non-signers to confirm
+4. **HIGH (8/10)**: No duplicate confirmation prevention—one signer can confirm multiple times
+5. **MEDIUM (7/10)**: Constructor doesn't validate `_required <= _signers.length`
+6. **MEDIUM (6/10)**: No events for transaction lifecycle
+
+**Your task:**
+1. Compare this weak pattern to the `MultisigControlledVault` (lines 196-299)
+2. Identify why Safe is superior to custom multi-sig implementations
+3. Fix this contract OR justify why you should use Safe instead
+4. Re-submit and analyze how AI scoring improves
+
+---
+
+### Exercise 3: Timelock bypass vulnerability
+
+**Submit this code:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract TimelockBypass is Ownable {
+    uint256 public constant TIMELOCK_DURATION = 2 days;
+    
+    uint256 public protocolFee;
+    uint256 public pendingFee;
+    uint256 public feeChangeTime;
+    
+    constructor() Ownable(msg.sender) {
+        protocolFee = 100; // 1%
+    }
+    
+    function proposeFeeChange(uint256 newFee) external onlyOwner {
+        pendingFee = newFee;
+        feeChangeTime = block.timestamp + TIMELOCK_DURATION;
+    }
+    
+    function executeFeeChange() external onlyOwner {
+        // ⚠️ Timelock bypass: owner can call this before timelock expires
+        require(block.timestamp >= feeChangeTime, "Timelock not expired");
+        protocolFee = pendingFee;
+    }
+    
+    function emergencySetFee(uint256 newFee) external onlyOwner {
+        // ⚠️ CRITICAL: Emergency function bypasses timelock entirely
+        protocolFee = newFee;
+    }
+}
+```
+
+**Expected AI findings:**
+1. **CRITICAL (9/10)**: `emergencySetFee()` bypasses timelock—defeats the entire security model
+2. **HIGH (7/10)**: No events for fee changes—users can't monitor proposals
+3. **MEDIUM (6/10)**: Owner is EOA (Ownable)—should be multi-sig or TimelockController
+4. **LOW (4/10)**: No maximum fee cap—owner could set 100% fee
+
+**Your task:**
+1. Compare this pattern to `TimelockedProtocol` (lines 428-470)
+2. Identify the key difference: who should have `onlyOwner` access? (Hint: the timelock itself)
+3. Fix by making `TimelockController` the owner, not an EOA
+4. Remove `emergencySetFee()` or restrict it to pause-only operations
+5. Submit fixed version and verify AI approves the timelock pattern
+
+**Reflection questions:**
+- When is it acceptable to have emergency functions that bypass timelocks?
+- How do you balance user protection (timelocks) with protocol responsiveness (emergency pause)?
+- What role should the AI Reviewer play in catching timelock bypasses vs. requiring human audit?
+
+## Production access control checklist
+
+Before mainnet deployment:
+
+- [ ] All external functions have access control or are intentionally public
+- [ ] Roles follow principle of least privilege (no "god mode" accounts)
+- [ ] Admin role is multi-sig (3-of-5 or better)
+- [ ] Critical functions have timelock delays (48hrs minimum)
+- [ ] Role changes emit events for transparency
+- [ ] Test suite covers all role boundaries
+- [ ] Test suite covers attack scenarios (self-granting, escalation)
+- [ ] Upgrade authorization limited to multi-sig + timelock
+- [ ] Emergency functions (pause) exempt from timelock
+- [ ] Initialization functions protected with `Initializable`
+- [ ] No commented-out access control checks in codebase
+- [ ] Role hierarchy documented and audited
+- [ ] Multi-sig signers are hardware wallets or MPC
+- [ ] Backup admin procedure documented (if signers lost)
+- [ ] Professional audit completed if TVL > $100K (recommended firms: OpenZeppelin, Trail of Bits, Consensys Diligence, Cyfrin)
+- [ ] Bug bounty program live (Immunefi, Code4rena) if mainnet deployment
+
+**Audit decision matrix:**
+- **TVL < $10K**: Self-audit with AI Reviewer + peer review sufficient
+- **TVL $10K-$100K**: Community audit (Code4rena) + comprehensive test coverage
+- **TVL > $100K**: Professional audit firm required
+- **TVL > $1M**: Multiple audits + ongoing bug bounty + formal verification for critical functions
+
+## Wrap-up and next steps
+
+You've mastered role-based access control: OpenZeppelin's `AccessControl` for granular permissions, Gnosis Safe for multi-sig operations, `TimelockController` for governance delays, and UUPS upgradeability with protected authorization.
+
+**Key skills mastered:**
+- Implementing RBAC with OpenZeppelin (roles, modifiers, hierarchies)
+- Integrating multi-sig wallets as protocol admins
+- Adding timelock delays to protect users from malicious changes
+- Testing role boundaries comprehensively
+- Auditing access control vulnerabilities
+
+**Next lesson (security-testing-audit-preparation)**: Security Testing & Audit Preparation—fuzzing and invariant testing (including role boundary fuzzing), static analysis tools (Slither, Mythril), pre-audit checklists, frontend security (input validation for role-restricted functions, provider verification, metadata sanitization), and preparing your codebase for professional audits. You'll combine the access control patterns from this lesson with automated testing to catch edge cases like role escalation via reentrancy, missing role checks in proxy implementations, and timelock bypass vulnerabilities before they reach production.
+
+**Practice challenge**: Build a multi-tier governance system with PROPOSER_ROLE (community), EXECUTOR_ROLE (elected council), and ADMIN_ROLE (timelock). Community can propose, council can execute after 24hr delay, admin can emergency-pause. Deploy with Gnosis Safe as admin and write comprehensive role tests.
+
+The difference between a secure protocol and a $600M hack often comes down to a single missing `onlyRole` modifier. Make access control your first line of defense.
+

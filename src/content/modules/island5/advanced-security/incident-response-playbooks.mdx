@@ -1,0 +1,1632 @@
+---
+id: "dapp-security-lesson-8"
+slug: "incident-response-playbooks"
+module: "advanced-security"
+number: "5.19"
+title: "Incident Response & Escalation Playbooks"
+objective: "Master real-time incident detection, automated alerting, war room procedures, and post-mortem analysis for when vulnerabilities are discovered or exploits occur."
+practicalTakeaway: "Build monitoring systems that detect attacks in seconds, execute escalation procedures that minimize damage, and conduct post-mortems that prevent recurrence."
+---
+
+# Incident Response & Escalation Playbooks
+
+## Why this matters now
+
+You've built secure protocols with audits (smart-contract-audit-methodology), emergency mechanisms (emergency-response-circuit-breakers), and defense-in-depth (advanced-attack-vectors). But no system is perfect. When Cream Finance was exploited for $130M, the team didn't discover it until users reported missing funds—30 minutes too late. When Poly Network lost $611M, they detected it immediately via monitoring but had no escalation playbook—panic cost precious minutes.
+
+**Frontend responsibility from previous modules**: When you built dApp interfaces with wallet connections, contract reading, and transaction management in earlier lessons, you learned to handle normal operations. But your frontend must also handle incident states: display clear "Protocol Paused" messages when contracts are frozen, provide UI for emergency withdrawals, show incident status banners, and prevent users from attempting transactions that will revert. Your monitoring alerts should trigger not just backend responses but also frontend status updates—users learn about incidents from your UI, not Twitter. Transparent error handling during crises builds trust and reduces support load.
+
+Incident response is the difference between a $1M loss and a $100M loss. Automated monitoring detects anomalies in seconds. Clear escalation procedures get the right people coordinating immediately. War room protocols prevent chaos when everyone's scrambling. Communication templates maintain user trust during crises. Post-mortems prevent the same issue from recurring.
+
+This lesson teaches you to build complete incident response systems: on-chain monitoring with Tenderly/Defender, automated alerting via Discord/Telegram bots, escalation trees (who to call, in what order), war room procedures (who does what during active exploits), communication templates for transparency, post-mortem methodologies that extract maximum learning, and frontend incident handling patterns that keep users informed. You'll also learn when to pursue fund recovery vs. cutting losses.
+
+## Conceptual foundations for incident response
+
+**Building on transaction monitoring from earlier modules**: You learned to track transaction status and events; this lesson adds the critical procedures for responding when monitoring detects problems.
+
+**Definition — Incident**: Any security event requiring immediate attention, including: active exploits draining funds, discovered vulnerabilities (not yet exploited), oracle failures causing incorrect prices, admin key compromises, or abnormal user behavior patterns. **Why formal process matters**: Incidents trigger stress responses; training and playbooks override panic with effective action.
+
+**Definition — Escalation tree**: Pre-defined list of contacts called in sequence during incidents. **Structure**: Level 1 = on-call engineer (immediate), Level 2 = security lead + CTO (if Level 1 can't resolve in 10 min), Level 3 = CEO + all founders (if critical or over $1M at risk), Level 4 = external advisors + legal (if over $10M or user data compromised). **Why tiered**: Prevents alert fatigue (not everyone for every issue) and ensures appropriate response level.
+
+**Definition — War room**: Real-time coordination channel during active incidents. **Components**: Dedicated Discord/Slack channel, shared Google Doc for notes, video call for complex decisions, clearly assigned roles (not everyone talks at once). **Why structured**: Prevents duplicate work, missed actions, and communication confusion.
+
+**Definition — Post-mortem**: Blameless retrospective analyzing incident cause, response effectiveness, and prevention measures. **Key sections**: Timeline, root cause, what went well, what didn't, action items with owners and deadlines. **Why blameless**: Encourages honesty; blame culture causes cover-ups.
+
+**Mental model — Incident response phases**: Detect (monitoring finds anomaly) → Triage (assess severity) → Contain (stop damage spread) → Eradicate (fix vulnerability) → Recover (restore service) → Learn (post-mortem). Missing any phase causes issues (skip Contain = more loss, skip Learn = repeat incident).
+
+**Anti-pattern — "We'll figure it out when it happens"**: No monitoring, no contacts list, no playbooks. **Why it fails**: First 5 minutes of an incident determine outcome. Figuring out "who do we call?" while funds drain wastes critical time. By the time you coordinate, attacker has moved funds to Tornado Cash.
+
+## Guided code walk-throughs
+
+### 1) On-chain monitoring with Tenderly
+
+Tenderly monitors transactions and triggers alerts on anomalies. **Note**: Test your monitoring configuration on testnet first (Zilliqa Testnet or Sepolia) before deploying to mainnet. Use low thresholds initially and tune based on actual traffic patterns.
+
+#### Setting up Tenderly monitoring
+
+```yaml
+# tenderly.yaml - Monitoring configuration for Zilliqa 2.0
+account_id: "your-account"
+project_slug: "yield-vault-prod"
+
+# NOTE: Configure Tenderly for Zilliqa 2.0 network
+# 1. Add Zilliqa 2.0 RPC in Tenderly dashboard (Settings → Networks)
+# 2. Get Zilliqa network ID from Tenderly after adding custom network
+# 3. Replace network values below with Zilliqa network ID
+
+actions:
+  # Alert 1: Large withdrawals
+  - name: "Large Withdrawal Alert"
+    description: "Alert when single withdrawal > $100K"
+    function: "alert-large-withdrawal"
+    trigger:
+      type: "transaction"
+      transaction:
+        status: ["success"]
+        filters:
+          - eventEmitted:
+              contract:
+                address: "0xYourVaultAddress"  # Your Zilliqa 2.0 vault address
+              name: "Withdraw"
+          - expression: "abi.decode.amount > 100000000000"  # 100K USDC (6 decimals)
+    
+    execution:
+      type: "webhook"
+      webhook:
+        url: "https://your-server.com/api/alerts/large-withdrawal"
+        headers:
+          Authorization: "Bearer ${WEBHOOK_SECRET}"
+  
+  # Alert 2: Unusual transaction pattern
+  - name: "Rapid Withdrawal Pattern"
+    description: "Multiple withdrawals from same address in 5 minutes"
+    function: "alert-rapid-withdrawals"
+    trigger:
+      type: "block"
+      block:
+        network: "ZILLIQA_NETWORK_ID"  # Replace with Zilliqa network ID from Tenderly
+      transaction:
+        status: ["success"]
+    execution:
+      type: "webhook"
+      webhook:
+        url: "https://your-server.com/api/alerts/rapid-withdrawals"
+    # Note: Pattern detection requires custom logic in webhook handler
+    # Tenderly triggers per-transaction; your handler must track frequency
+  
+  # Alert 3: Contract paused
+  - name: "Contract Paused Alert"
+    description: "Emergency pause was triggered"
+    function: "alert-contract-paused"
+    trigger:
+      type: "transaction"
+      transaction:
+        status: ["success"]
+        filters:
+          - eventEmitted:
+              contract:
+                address: "0xYourVaultAddress"
+              name: "Paused"
+    
+    execution:
+      type: "webhook"
+      webhook:
+        url: "https://your-server.com/api/alerts/contract-paused"
+  
+  # Alert 4: Abnormal gas usage (potential attack)
+  - name: "High Gas Usage Alert"
+    description: "Transaction used > 5M gas (possible exploit attempt)"
+    function: "alert-high-gas"
+    trigger:
+      type: "transaction"
+      transaction:
+        status: ["success"]
+        to: "0xYourVaultAddress"
+        filters:
+          - expression: "transaction.gas_used > 5000000"
+    
+    execution:
+      type: "webhook"
+      webhook:
+        url: "https://your-server.com/api/alerts/high-gas"
+  
+  # Alert 5: Price oracle deviation
+  - name: "Oracle Deviation Alert"
+    description: "Price changed > 10% from previous read"
+    function: "alert-oracle-deviation"
+    trigger:
+      type: "transaction"
+      transaction:
+        status: ["success"]
+        filters:
+          - eventEmitted:
+              contract:
+                address: "0xYourOracleAddress"
+              name: "PriceUpdated"
+    # Note: Price comparison logic must be in webhook handler
+    # Tenderly provides event data; handler compares to previous price
+    
+    execution:
+      type: "webhook"
+      webhook:
+        url: "https://your-server.com/api/alerts/oracle-deviation"
+```
+
+#### Webhook handler for alerts
+
+```javascript
+// api/alerts/handler.js - Express webhook handler
+const express = require('express');
+const axios = require('axios');
+const crypto = require('crypto');
+
+const app = express();
+app.use(express.json());
+
+// Environment variables validation
+if (!process.env.DISCORD_ALERT_WEBHOOK) throw new Error('DISCORD_ALERT_WEBHOOK required');
+if (!process.env.TELEGRAM_BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN required');
+if (!process.env.TELEGRAM_CHAT_ID) throw new Error('TELEGRAM_CHAT_ID required');
+if (!process.env.PAGERDUTY_INTEGRATION_KEY) throw new Error('PAGERDUTY_INTEGRATION_KEY required');
+if (!process.env.TENDERLY_WEBHOOK_SECRET) throw new Error('TENDERLY_WEBHOOK_SECRET required');
+if (!process.env.BLOCK_EXPLORER_URL) throw new Error('BLOCK_EXPLORER_URL required');
+
+// Discord webhook URL (from Discord server settings)
+const DISCORD_WEBHOOK = process.env.DISCORD_ALERT_WEBHOOK;
+
+// Telegram bot credentials
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+
+// PagerDuty for critical alerts
+const PAGERDUTY_KEY = process.env.PAGERDUTY_INTEGRATION_KEY;
+
+// Tenderly webhook authentication
+const TENDERLY_SECRET = process.env.TENDERLY_WEBHOOK_SECRET;
+
+// Block explorer (configure for your network)
+// Zilliqa 2.0: https://explorer.zq2-devnet.zilliqa.com
+// Ethereum: https://etherscan.io
+const BLOCK_EXPLORER_URL = process.env.BLOCK_EXPLORER_URL;
+
+/**
+ * Helper: Log failed alert attempts
+ */
+async function logFailedAlert(channel, details) {
+  // In production: write to database or incident log
+  console.error(`ALERT FAILED [${channel}]:`, JSON.stringify(details));
+}
+
+/**
+ * Helper: SMS backup for critical PagerDuty failures
+ */
+async function sendSMSBackup(message) {
+  // In production: use Twilio or similar SMS service
+  console.error(`SMS BACKUP NEEDED: ${message}`);
+}
+
+/**
+ * Middleware: Verify webhook is from Tenderly
+ */
+function verifyTenderlyWebhook(req, res, next) {
+  const signature = req.headers['x-tenderly-signature'];
+  const payload = JSON.stringify(req.body);
+  const expectedSignature = crypto
+    .createHmac('sha256', TENDERLY_SECRET)
+    .update(payload)
+    .digest('hex');
+  
+  if (signature !== expectedSignature) {
+    console.error('Invalid webhook signature');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  next();
+}
+
+/**
+ * Handle large withdrawal alert
+ */
+app.post('/api/alerts/large-withdrawal', verifyTenderlyWebhook, async (req, res) => {
+  const { transaction, event } = req.body;
+  
+  const amount = parseInt(event.args.amount) / 1e6;  // USDC has 6 decimals
+  const user = event.args.user;
+  const txHash = transaction.hash;
+  
+  const message = {
+    embeds: [{
+      title: '⚠️ LARGE WITHDRAWAL DETECTED',
+      color: 0xFFA500,  // Orange
+      fields: [
+        { name: 'Amount', value: `$${amount.toLocaleString()} USDC`, inline: true },
+        { name: 'User', value: user, inline: true },
+        { name: 'Transaction', value: `[View on Explorer](${BLOCK_EXPLORER_URL}/tx/${txHash})`, inline: false },
+        { name: 'Time', value: new Date().toISOString(), inline: false },
+      ],
+      footer: { text: 'YieldVault Monitoring' }
+    }]
+  };
+  
+  // Send to Discord (with error handling)
+  try {
+    await axios.post(DISCORD_WEBHOOK, message);
+    console.log(`Discord alert sent for tx ${txHash}`);
+  } catch (error) {
+    console.error(`Failed to send Discord alert: ${error.message}`);
+    await logFailedAlert('discord', { txHash, amount, user, error: error.message });
+  }
+  
+  // Send to Telegram (with error handling)
+  try {
+    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      chat_id: TELEGRAM_CHAT_ID,
+      text: `⚠️ LARGE WITHDRAWAL\nAmount: $${amount.toLocaleString()}\nUser: ${user}\nTx: ${BLOCK_EXPLORER_URL}/tx/${txHash}`,
+      parse_mode: 'HTML'
+    });
+    console.log(`Telegram alert sent for tx ${txHash}`);
+  } catch (error) {
+    console.error(`Failed to send Telegram alert: ${error.message}`);
+    await logFailedAlert('telegram', { txHash, amount, user, error: error.message });
+  }
+  
+  // If > $1M, page on-call engineer (with error handling)
+  if (amount > 1000000) {
+    try {
+      await axios.post('https://events.pagerduty.com/v2/enqueue', {
+        routing_key: PAGERDUTY_KEY,
+        event_action: 'trigger',
+        payload: {
+          summary: `CRITICAL: $${amount.toLocaleString()} withdrawal from YieldVault`,
+          severity: 'critical',
+          source: 'tenderly-monitoring',
+          custom_details: {
+            transaction: txHash,
+            explorer_url: `${BLOCK_EXPLORER_URL}/tx/${txHash}`,
+            user: user,
+            amount: amount
+          }
+        }
+      });
+      console.log(`PagerDuty alert triggered for tx ${txHash}`);
+    } catch (error) {
+      console.error(`CRITICAL: Failed to page on-call for $${amount} withdrawal: ${error.message}`);
+      // CRITICAL: Try SMS fallback
+      await sendSMSBackup(`CRITICAL: $${amount} withdrawal, PagerDuty failed. Tx: ${txHash}`);
+    }
+  }
+  
+  res.json({ received: true });
+});
+
+/**
+ * Handle rapid withdrawal pattern (potential attack)
+ */
+app.post('/api/alerts/rapid-withdrawals', verifyTenderlyWebhook, async (req, res) => {
+  const { transaction, pattern } = req.body;
+  
+  const user = transaction.from;
+  const count = pattern.transaction_count;
+  
+  const message = {
+    embeds: [{
+      title: '🚨 RAPID WITHDRAWAL PATTERN',
+      color: 0xFF0000,  // Red
+      description: 'Potential attack in progress!',
+      fields: [
+        { name: 'User', value: user, inline: true },
+        { name: 'Withdrawals', value: `${count} in 5 minutes`, inline: true },
+        { name: 'Action Required', value: 'Review and consider pausing contract', inline: false },
+      ]
+    }]
+  };
+  
+  try {
+    await axios.post(DISCORD_WEBHOOK, message);
+    console.log(`Discord alert sent for rapid withdrawals from ${user}`);
+  } catch (error) {
+    console.error(`Failed to send Discord alert: ${error.message}`);
+    await logFailedAlert('discord', { user, count, error: error.message });
+  }
+  
+  // Page entire security team immediately
+  try {
+    await axios.post('https://events.pagerduty.com/v2/enqueue', {
+      routing_key: PAGERDUTY_KEY,
+      event_action: 'trigger',
+      payload: {
+        summary: `ATTACK DETECTED: Rapid withdrawals from ${user}`,
+        severity: 'critical',
+        source: 'tenderly-monitoring'
+      }
+    });
+    console.log(`PagerDuty alert triggered for rapid withdrawals from ${user}`);
+  } catch (error) {
+    console.error(`CRITICAL: Failed to page security team: ${error.message}`);
+    await sendSMSBackup(`ATTACK DETECTED: Rapid withdrawals from ${user}, PagerDuty failed`);
+  }
+  
+  res.json({ received: true });
+});
+
+/**
+ * Handle contract pause event
+ */
+app.post('/api/alerts/contract-paused', verifyTenderlyWebhook, async (req, res) => {
+  const { transaction, event } = req.body;
+  
+  const pauser = transaction.from;
+  const reason = event.args.reason || 'Not specified';
+  
+  const message = {
+    embeds: [{
+      title: '🛑 CONTRACT PAUSED',
+      color: 0xFF0000,
+      fields: [
+        { name: 'Paused By', value: pauser, inline: true },
+        { name: 'Reason', value: reason, inline: true },
+        { name: 'Time', value: new Date().toISOString(), inline: false },
+        { name: 'Next Steps', value: '1. Join war room\n2. Assess situation\n3. Follow incident playbook', inline: false },
+      ]
+    }]
+  };
+  
+  try {
+    await axios.post(DISCORD_WEBHOOK, message);
+    console.log(`Discord alert sent for contract pause by ${pauser}`);
+  } catch (error) {
+    console.error(`Failed to send Discord alert: ${error.message}`);
+    await logFailedAlert('discord', { pauser, reason, error: error.message });
+  }
+  
+  // Create war room
+  try {
+    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      chat_id: TELEGRAM_CHAT_ID,
+      text: `🚨 EMERGENCY: Contract paused\nReason: ${reason}\nJoin war room immediately: https://discord.gg/emergency`,
+    });
+    console.log(`Telegram war room notification sent`);
+  } catch (error) {
+    console.error(`Failed to send Telegram notification: ${error.message}`);
+    await logFailedAlert('telegram', { pauser, reason, error: error.message });
+  }
+  
+  res.json({ received: true });
+});
+
+app.listen(3000, () => console.log('Alert webhook server running on port 3000'));
+```
+
+### 2) Automated monitoring dashboard
+
+Real-time dashboard for protocol health.
+
+#### Grafana dashboard configuration
+```json
+// grafana-dashboard.json - Monitoring configuration
+// (In practice, use Grafana UI or Terraform. This is a simplified representation.)
+{
+  "dashboard": {
+    "title": "YieldVault Security Monitoring",
+    "panels": [
+      {
+        "title": "TVL (Total Value Locked)",
+        "type": "graph",
+        "targets": [{
+          "query": "SELECT totalAssets FROM vault_metrics WHERE time > now() - 24h"
+        }],
+        "alert": {
+          "name": "TVL Drop Alert",
+          "message": "TVL dropped below $10M threshold",
+          "conditions": [{
+            "type": "query",
+            "evaluator": { "type": "lt", "params": [10000000] },
+            "operator": { "type": "and" },
+            "query": { "params": ["A", "5m", "now"] }
+          }]
+        }
+      },
+      {
+        "title": "Withdrawal Rate",
+        "type": "graph",
+        "targets": [{
+          "query": "SELECT count(*) FROM withdrawals WHERE time > now() - 1h GROUP BY time(5m)"
+        }],
+        "alert": {
+          "name": "High Withdrawal Rate",
+          "message": "More than 100 withdrawals in 5 minutes",
+          "conditions": [{
+            "type": "query",
+            "evaluator": { "type": "gt", "params": [100] },
+            "operator": { "type": "and" }
+          }]
+        }
+      },
+      {
+        "title": "Share Price",
+        "type": "graph",
+        "targets": [{
+          "query": "SELECT sharePrice FROM vault_metrics WHERE time > now() - 24h"
+        }],
+        "alert": {
+          "name": "Share Price Deviation",
+          "message": "Share price changed by more than ±10%",
+          "conditions": [{
+            "type": "query",
+            "evaluator": { "type": "outside_range", "params": [-0.10, 0.10] },
+            "operator": { "type": "and" }
+          }]
+        }
+      },
+      {
+        "title": "Gas Usage Anomalies",
+        "type": "stat",
+        "targets": [{
+          "query": "SELECT avg(gasUsed) FROM transactions WHERE time > now() - 1h"
+        }],
+        "alert": {
+          "name": "High Gas Usage",
+          "message": "Average gas usage exceeded 1M",
+          "conditions": [{
+            "type": "query",
+            "evaluator": { "type": "gt", "params": [1000000] },
+            "operator": { "type": "and" }
+          }]
+        }
+      },
+      {
+        "title": "Failed Transactions",
+        "type": "stat",
+        "targets": [{
+          "query": "SELECT count(*) FROM transactions WHERE status='failed' AND time > now() - 1h"
+        }],
+        "alert": {
+          "name": "High Failure Rate",
+          "message": "More than 10 failed transactions per hour",
+          "conditions": [{
+            "type": "query",
+            "evaluator": { "type": "gt", "params": [10] },
+            "operator": { "type": "and" }
+          }]
+        }
+      }
+    ],
+    "notifications": [
+      {
+        "uid": "discord-alerts",
+        "name": "Discord Alerts",
+        "type": "discord",
+        "settings": {
+          "url": "${DISCORD_WEBHOOK}",
+          "message": "@here Alert triggered: ${alert.name}",
+          "title": "${alert.title}"
+        }
+      },
+      {
+        "uid": "pagerduty-critical",
+        "name": "PagerDuty",
+        "type": "pagerduty",
+        "settings": {
+          "integrationKey": "${PAGERDUTY_KEY}",
+          "autoResolve": true,
+          "severity": "critical"
+        }
+      }
+    ]
+  }
+}
+```
+
+### 3) Escalation tree and contact list
+
+Pre-defined escalation procedures prevent confusion during incidents.
+
+#### Escalation matrix
+**Severity definitions**
+
+- **P0 — Critical** → Funds actively draining; over $100K at risk
+  - Response time: under 5 minutes
+  - Escalation: page everyone
+- **P1 — High** → Vulnerability discovered (not yet exploited); over $10K at risk
+  - Response time: under 30 minutes
+  - Escalation: security team + CTO
+- **P2 — Medium** → Service degradation or abnormal activity
+  - Response time: under 2 hours
+  - Escalation: on-call engineer
+- **P3 — Low** → Non‑critical issues or routine monitoring alerts
+  - Response time: under 24 hours
+  - Escalation: log and review
+
+**Contact List**
+
+**Level 1: Immediate Response (under 5 min)**
+**On-call Engineer** (rotates weekly)
+- Primary: Alice Smith
+  - Phone: +1-555-0101
+  - Signal: @alice_eng
+  - Role: Initial triage, pause contract if P0
+- Backup: Bob Jones
+  - Phone: +1-555-0102
+  - Signal: @bob_eng
+
+**Level 2: Security Team (under 15 min if L1 can't resolve)**
+**Security Lead**: Charlie Davis
+- Phone: +1-555-0201
+- Signal: @charlie_sec
+- Role: Coordinate response, assess severity
+
+**CTO**: Diana Lee
+- Phone: +1-555-0202
+- Signal: @diana_cto
+- Role: Technical decisions, upgrade authorization
+
+**Level 3: Executive Team (under 30 min if P0 or over $1M at risk)**
+**CEO**: Eve Martinez
+- Phone: +1-555-0301
+- Signal: @eve_ceo
+- Role: Public communications, legal decisions
+
+**COO**: Frank Wilson
+- Phone: +1-555-0302
+- Signal: @frank_coo
+- Role: User communications, operational impact
+
+**Level 4: External Advisors (if needed)**
+**Audit Firm Contact**: Trail of Bits
+- Emergency: security@trailofbits.com
+- Phone: +1-555-0401
+- Role: Exploit analysis, emergency code review
+
+**Legal Counsel**: [Law Firm Name]
+- Emergency: [attorney]@lawfirm.com
+- Phone: +1-555-0402
+- Role: Regulatory compliance, law enforcement coordination
+
+**Insurance**: [Insurance Provider]
+- Claims: claims@insurance.com
+- Phone: +1-555-0403
+- Role: Coverage assessment, claim filing
+
+**Escalation Flow**
+
+**Process diagram**:
+
+```text
+Alert Triggered
+    ↓
+Level 1 (On-call) notified via PagerDuty
+    ↓ (if can't pause/resolve in 10 min)
+Level 2 (Security + CTO) looped in
+    ↓ (if P0 or over $1M)
+Level 3 (Executives) join war room
+    ↓ (if over $10M or legal issues)
+Level 4 (External advisors) consulted
+```
+
+**War Room Activation**
+
+**When to activate**:
+- P0 incidents (always)
+- P1 incidents if can't resolve in 30 min
+- Any incident with user fund loss
+- Admin key compromise
+
+**How to activate**:
+1. On-call posts in #emergency channel: "@here WAR ROOM ACTIVATED: [reason]"
+2. All Level 1-3 personnel join Discord voice immediately
+3. Create shared Google Doc: "Incident [YYYY-MM-DD] - [Brief description]"
+4. Assign roles (see War Room Procedures below)
+
+**After-Hours Protocol**
+
+**Weekends/Holidays**:
+- On-call engineer has laptop + hardware wallet ready
+- Response time SLA: 10 minutes (vs 5 min business hours)
+- If on-call unreachable after 10 min, PagerDuty auto-escalates to backup
+
+**Vacation**:
+- Designated backup must accept hand-off
+- No single point of failure (always 2+ people available)
+
+### 4) War room procedures
+
+Structured coordination during active incidents.
+
+#### War room role assignments
+**Roles (assign immediately on activation)**
+
+**Incident Commander (IC)**
+**Who**: Security Lead (or highest-ranking available)
+**Responsibilities**:
+- Final decision authority
+- Coordinate all responders
+- Decide when to escalate
+- Declare incident resolved
+
+**Script**:
+> "I'm taking Incident Commander role. Current status: [brief summary]. 
+> Assigning roles now..."
+
+**Technical Lead**
+**Who**: CTO or senior engineer
+**Responsibilities**:
+- Assess technical cause
+- Implement fixes (pause, upgrade, etc.)
+- Coordinate with engineers
+
+**Script**:
+> "Technical Lead checking in. Reviewing transaction [hash]..."
+
+**Communications Lead**
+**Who**: COO or Head of Community
+**Responsibilities**:
+- Draft user communications
+- Post status updates (Twitter, Discord)
+- Coordinate with PR if needed
+
+**Script**:
+> "Communications Lead here. Preparing user notification draft..."
+
+**Scribe**
+**Who**: Any available team member
+**Responsibilities**:
+- Log all actions in shared doc (timestamped)
+- Track open action items
+- Record decisions and rationale
+
+**Script**:
+> "Scribe here. Logging to [Google Doc link]..."
+
+**Subject Matter Expert (SME)**
+**Who**: Developer most familiar with affected code
+**Responsibilities**:
+- Provide technical context
+- Suggest fixes
+- Answer IC questions
+
+#### War Room Cadence
+
+**Every 5 minutes (during active incident)**:
+- IC: "Status check. Technical Lead?"
+- Technical Lead: [brief update]
+- IC: "Communications Lead?"
+- Communications Lead: [brief update]
+- IC: "Any blockers? [pause] Okay, next check in 5 minutes."
+
+**Every 30 minutes (during incident)**:
+- IC: "Taking a breath. What have we learned in last 30 min?"
+- Team discusses
+- IC: "Any changes to our approach? [pause] Okay, continuing."
+
+#### Decision Framework
+
+**IC uses this checklist for key decisions:**
+
+**Should we pause the contract?**
+- [ ] Is exploit active? (YES = pause immediately)
+- [ ] Is vulnerability confirmed? (YES = pause as precaution)
+- [ ] Can users withdraw safely? (NO = pause to investigate)
+- [ ] Is false alarm likely? (YES = gather more data first)
+
+**Decision**: [PAUSE / DON'T PAUSE]  
+**Rationale**: [explain]
+
+**Should we deploy emergency upgrade?**
+- [ ] Is fix ready and tested?
+- [ ] Is risk of new bug less than risk of exploit?
+- [ ] Do we have multi-sig quorum?
+- [ ] Is this actually emergency or can wait for timelock?
+
+**Decision**: [UPGRADE / WAIT]  
+**Rationale**: [explain]
+
+**Should we notify users publicly?**
+- [ ] Are user funds at risk?
+- [ ] Will disclosure help or harm? (help = warn users, harm = tip off attacker)
+- [ ] Is information already public? (if yes, we must respond)
+- [ ] Do we have accurate info or still investigating?
+
+**Decision**: [NOTIFY / WAIT]  
+**Rationale**: [explain]
+
+#### Communication Protocols
+
+**Internal (war room voice chat)**:
+- Mute when not speaking
+- Use push-to-talk for questions
+- IC has priority (everyone else mutes when IC speaks)
+- No side conversations (use #war-room-chat for async)
+
+**External (to users)**:
+- All communications approved by IC + Communications Lead
+- Use pre-written templates (see below)
+- Never speculate or promise anything uncertain
+- Update every 30 min minimum (even if "still investigating")
+
+#### Example War Room Session
+
+**Note**: All times in UTC. Team members join from:
+- Alice (PST/UTC-8): 6:32 AM local time
+- Bob (EST/UTC-5): 9:32 AM local time  
+- Charlie (UTC+0): 14:32 local time
+- Diana (SGT/UTC+8): 22:32 local time
+
+Consider timezone fatigue when running multi-hour incidents. Rotate roles if incident extends beyond 4 hours.
+
+---
+
+**14:32 UTC** - Alert: Rapid withdrawals detected  
+**14:33 UTC** - On-call (Alice): "Activating war room. @here join voice. Link: https://discord.gg/emergency"  
+**14:34 UTC** - IC (Charlie): "I'm IC. Assigning roles: Diana technical lead, Frank comms, Alice scribe."  
+**14:35 UTC** - Technical Lead (Diana): "Reviewing transaction 0xABC...123. Seeing reentrancy pattern."  
+**14:36 UTC** - IC: "Confirmed exploit? Pause recommendation?"  
+**14:37 UTC** - Technical Lead: "Yes, recommend pause immediately."  
+**14:37 UTC** - IC: "Approved. Technical Lead, execute pause. Comms, prepare user notification."  
+**14:38 UTC** - Technical Lead: "Pausing contract... Transaction submitted."  
+**14:39 UTC** - Technical Lead: "Confirmed paused. Tx 0xDEF...456."  
+**14:40 UTC** - Scribe: "Logged. Contract paused at 14:39 UTC."  
+**14:41 UTC** - Communications Lead: "Draft ready. Posting: 'We've paused YieldVault as precaution while investigating unusual activity...'"  
+**14:42 UTC** - IC: "Approved. Post it."  
+**14:43 UTC** - Communications Lead: "Posted to Twitter and Discord."  
+**14:45 UTC** - IC: "Status check. Technical Lead, root cause?"  
+**14:46 UTC** - Technical Lead: "Reentrancy in withdraw(). Fix ready, tested on fork. Can deploy in 15 min."  
+**14:47 UTC** - IC: "SME, confirm fix correct?"  
+**14:48 UTC** - SME (Bob): "Reviewing... Yes, fix looks correct. Added ReentrancyGuard."  
+**14:49 UTC** - IC: "Approved for emergency upgrade. Technical Lead, proceed."  
+**14:50 UTC** - Technical Lead: "Deploying fix..."  
+**[Deployment in progress: 15 minutes for multi-sig approval + upgrade tx]**
+**15:05 UTC** - Technical Lead: "Upgrade complete. Verifying exploit now reverts..."  
+**15:07 UTC** - Technical Lead: "Confirmed. Exploit attempt reverts with 'ReentrancyGuard: reentrant call'."  
+**15:08 UTC** - IC: "Excellent. Damage assessment?"  
+**15:09 UTC** - Technical Lead: "Checking... $47K lost from vault before pause. All other funds safe."  
+**15:10 UTC** - IC: "Okay. Comms, prepare full incident report. Tech, unpause when ready."  
+**15:15 UTC** - Technical Lead: "Unpausing contract."  
+**15:16 UTC** - IC: "Incident contained. Transitioning to recovery phase. Excellent work everyone."  
+**15:17 UTC** - IC: "Post-mortem scheduled for tomorrow 10am UTC (accommodate all timezones). Thank you."  
+
+**Total incident duration**: 45 minutes  
+**Funds lost**: $47K (would have been $millions without quick response)
+
+**Debrief note**: Diana (SGT timezone) handled technical lead at 10:30 PM local time. Consider rotating on-call schedule to distribute after-hours burden fairly across global team.
+
+### 5) Communication templates
+
+Pre-written templates for consistent, clear user communications.
+
+#### Template 1: Initial incident notification
+
+```markdown
+# Initial Incident Notification
+
+**Platform**: Twitter, Discord (pin message)
+
+---
+
+🚨 **INCIDENT ALERT**
+
+We've paused the YieldVault contract as a precautionary measure while we investigate unusual activity detected by our monitoring systems.
+
+**Status**: Contract paused ✅  
+**User Funds**: Currently safe in contract  
+**Actions Required**: None at this time
+
+We're investigating and will provide updates every 30 minutes.
+
+More details: [link to incident page]
+
+---
+
+**Timestamp**: [TIME] UTC  
+**Incident ID**: INC-2025-001
+```
+
+#### Template 2: Exploit confirmed
+
+```markdown
+# Exploit Confirmed Notification
+
+**Platform**: Twitter, Discord, Email blast
+
+---
+
+🚨 **SECURITY INCIDENT UPDATE**
+
+We've confirmed a vulnerability was exploited in YieldVault. Here's what we know:
+
+**What Happened**:
+A reentrancy vulnerability in the withdraw() function allowed an attacker to drain $47,000 before we paused the contract.
+
+**Current Status**:
+- ✅ Contract paused (14:38 UTC)
+- ✅ Vulnerability patched (15:05 UTC)
+- ✅ Contract unpaused and safe (15:16 UTC)
+- ✅ All remaining user funds secure ($9.953M)
+
+**Impact to Your Funds**:
+- ✅ **Before 14:30 UTC**: Fully secure
+- ⚠️ **Between 14:30-14:38 UTC**: Possible exposure (we're checking individual accounts)
+- ✅ **After 14:38 UTC**: Fully secure
+
+**What We're Doing**:
+1. Analyzing all transactions to identify affected users
+2. Preparing compensation plan for any losses
+3. Working with auditors to verify no other vulnerabilities
+4. Reporting to law enforcement
+
+**Next Update**: In 2 hours (17:30 UTC)
+
+Full incident report: [link]
+
+We deeply apologize for this incident and are committed to making affected users whole.
+
+---
+
+**Contact**: security@example.com
+```
+
+#### Template 3: All clear / resolution
+
+```markdown
+# Incident Resolution Notification
+
+**Platform**: Twitter, Discord, Blog post
+
+---
+
+✅ **INCIDENT RESOLVED**
+
+YieldVault is now fully operational and secure. Here's our complete report:
+
+**Timeline**:
+- 14:30 UTC: Exploit detected
+- 14:38 UTC: Contract paused
+- 15:05 UTC: Fix deployed
+- 15:16 UTC: Contract unpaused
+- Total downtime: 38 minutes
+
+**Root Cause**:
+Reentrancy vulnerability in withdraw() function (missed during audit). Full technical details: [link to post-mortem]
+
+**Impact**:
+- $47,000 lost from 3 user accounts
+- All affected users will be compensated 100% from treasury
+- Remaining $9.953M in vault was never at risk
+
+**Actions Taken**:
+1. ✅ Vulnerability patched with ReentrancyGuard
+2. ✅ Exploit test added to prevent regression
+3. ✅ Emergency audit by Trail of Bits (started)
+4. ✅ Bug bounty increased to $500K
+5. ✅ Enhanced monitoring deployed
+
+**Compensation**:
+Affected users will receive:
+- 100% of lost funds
+- 10% bonus as apology
+- Payments in next 48 hours
+
+**Lessons Learned**:
+- Our monitoring worked (detected in 2 min)
+- Our emergency pause worked (stopped damage)
+- Our team responded excellently (38 min total)
+- BUT the vulnerability shouldn't have existed
+
+We've added:
+- Second audit firm (Cyfrin) for all future code
+- Fuzz testing requirement (would have caught this)
+- Quarterly security reviews
+
+**Thank you** for your patience and trust. We're committed to earning it back.
+
+Full post-mortem: [link]  
+Questions: security@example.com
+
+---
+
+The YieldVault Team
+```
+
+### 6) Post-mortem methodology
+
+Blameless retrospective to learn and improve.
+
+#### Post-mortem template
+
+```markdown
+# Post-Mortem: YieldVault Reentrancy Incident
+
+**Date**: 2025-11-10  
+**Incident ID**: INC-2025-001  
+**Severity**: P0 (Critical)  
+**Author**: Charlie Davis (Security Lead)  
+**Reviewed by**: Diana Lee (CTO), Eve Martinez (CEO)
+
+---
+
+## Executive Summary
+
+On November 10, 2025 at 14:30 UTC, an attacker exploited a reentrancy vulnerability in YieldVault's `withdraw()` function, draining $47,000 before our team paused the contract at 14:38 UTC (8 minutes later). We deployed a fix by 15:05 UTC and unpaused by 15:16 UTC. Total incident duration: 46 minutes. No user funds beyond the initial $47K were at risk.
+
+**Root cause**: Missing ReentrancyGuard on `withdraw()` function  
+**Detection**: Automated Tenderly alert (rapid withdrawal pattern)  
+**Response time**: 8 minutes from exploit to pause  
+**Funds at risk**: $10M TVL  
+**Actual loss**: $47K (0.47% of TVL)  
+
+---
+
+## Timeline (all times UTC)
+
+| Time | Event | Actor |
+|------|-------|-------|
+| 14:30:15 | Attacker tx 0xABC...123 (first withdrawal) | Attacker |
+| 14:30:47 | Attacker tx 0xABC...456 (second withdrawal) | Attacker |
+| 14:31:22 | Tenderly alert "Rapid withdrawals" triggered | Monitoring |
+| 14:31:45 | On-call (Alice) receives PagerDuty page | Alice |
+| 14:32:30 | Alice reviews transactions, confirms exploit | Alice |
+| 14:33:00 | Alice activates war room | Alice |
+| 14:34:15 | War room joined by Charlie (IC), Diana (Tech Lead), Frank (Comms) | Team |
+| 14:35:00 | Diana confirms reentrancy pattern | Diana |
+| 14:36:30 | IC approves pause | Charlie |
+| 14:37:15 | Pause tx submitted (high gas priority) | Diana |
+| 14:38:03 | Contract paused (confirmed on-chain) | Diana |
+| 14:41:00 | Comms posts initial notification | Frank |
+| 14:45:00 | Diana confirms root cause, begins fix | Diana |
+| 14:50:00 | Fix tested on forked mainnet | Diana |
+| 14:55:00 | Bob (SME) reviews and approves fix | Bob |
+| 15:00:00 | Emergency upgrade tx submitted | Diana |
+| 15:05:12 | Upgrade confirmed on-chain | Diana |
+| 15:07:30 | Exploit attempt verified to revert | Diana |
+| 15:10:00 | Damage assessment: $47K lost | Diana |
+| 15:15:00 | Unpause tx submitted | Diana |
+| 15:16:22 | Contract unpaused (incident resolved) | Diana |
+| 15:30:00 | Full incident report posted | Frank |
+
+---
+
+## Root Cause Analysis
+
+### What happened?
+
+The `withdraw()` function made an external call (USDC transfer) before updating user balances:
+
+```solidity
+// VULNERABLE CODE
+function withdraw(uint256 shares) external {
+    uint256 assets = convertToAssets(shares);
+    
+    // ⚠️ External call BEFORE state update
+    IERC20(usdc).transfer(msg.sender, assets);
+    
+    // State update happens AFTER
+    balances[msg.sender] -= shares;
+    totalShares -= shares;
+}
+```
+
+This violated Checks-Effects-Interactions (CEI) pattern. Attacker's malicious contract received USDC, then its `receive()` function called `withdraw()` again before balance was updated, allowing multiple withdrawals.
+
+### Why did it happen?
+
+**Immediate cause**: Missing ReentrancyGuard  
+**Contributing factors**:
+1. Developer implemented ERC-4626 manually (didn't use OpenZeppelin template which has guard)
+2. Code review missed CEI violation (focus was on math, not reentrancy)
+3. Test suite didn't include reentrancy exploit tests
+4. Audit (Trail of Bits) missed this specific pattern (focused on inflation attack)
+
+### Why wasn't it caught?
+
+**Tests**: Had unit tests for normal flow, but no adversarial tests (exploit scenarios)  
+**Audit**: Auditor focused on ERC-4626-specific issues (inflation attack, rounding). Standard reentrancy was assumed covered by OpenZeppelin base.  
+**Assumptions**: Team assumed using OpenZeppelin ERC-4626 base = reentrancy-safe. We implemented custom, lost that protection.
+
+**Cross-reference to training**: This vulnerability is covered in common-vulnerability-patterns (reentrancy basics) and advanced-attack-vectors (cross-contract reentrancy). Our test suite from security-testing-audit-preparation should have included the exploit scenario tests demonstrated there. Post-incident action: all engineers will re-review Module 4 security lessons and add corresponding tests.
+
+---
+
+## What Went Well
+
+- Monitoring worked: Tenderly alert triggered within 1 minute of unusual activity
+- On-call responded quickly: Alice reviewed and activated war room in under 2 minutes
+- Team coordinated effectively: War room roles assigned immediately, no confusion
+- Pause mechanism worked: Contract froze in 8 minutes, preventing over $9.9M additional loss
+- Fix was ready: Diana had fix tested and deployed in 27 minutes
+- Communication was timely: Users notified every 30 minutes, avoiding an information vacuum
+
+---
+
+## What Didn't Go Well
+
+- Vulnerability existed in the first place: Should have been caught by tests, review, or audit
+- Eight-minute response time: Monitoring detected in 1 minute, but another 7 minutes to pause (slow)
+- Manual war room activation: On-call had to manually notify everyone (should auto-page)
+- No pre-staged fix: Had to write and test the fix during the incident (wasted time)
+- Attacker moved funds quickly: By the time we paused, funds were already in Tornado Cash (unrecoverable)
+
+---
+
+## Action Items
+
+### Prevent Recurrence
+
+- **Add ReentrancyGuard to all functions with external calls**
+  - Owner: Diana
+  - Deadline: 2025-11-12
+  - Status: Done
+- **Mandate fuzz testing for all future code**
+  - Owner: Charlie
+  - Deadline: 2025-11-15
+  - Status: In progress
+- **Add exploit tests for vulnerabilities from Module 4 lessons**
+  - Owner: Bob
+  - Deadline: 2025-11-20
+  - Status: Todo
+- **Second audit firm (Cyfrin) for all code**
+  - Owner: Eve
+  - Deadline: 2025-12-01
+  - Status: Todo
+- **Pre-stage emergency fixes for common vulnerabilities**
+  - Owner: Diana
+  - Deadline: 2025-11-18
+  - Status: Todo
+
+### Improve Detection
+
+- **Add Tenderly alert for CEI violations (static analysis)**
+  - Owner: Alice
+  - Deadline: 2025-11-13
+  - Status: In progress
+- **Reduce alert-to-pause target from 8 min to 2 min**
+  - Owner: Charlie
+  - Deadline: 2025-11-17
+  - Status: Todo
+- **Auto-page entire security team on P0 alerts**
+  - Owner: Alice
+  - Deadline: 2025-11-12
+  - Status: Done
+- **Real-time dashboard for war room (not manual checks)**
+  - Owner: Alice
+  - Deadline: 2025-11-25
+  - Status: Todo
+
+### Improve Response
+
+- **Automate pause for specific alert patterns (rapid withdrawals)**
+  - Owner: Diana
+  - Deadline: 2025-11-22
+  - Status: Todo
+- **Pre-approve emergency upgrades with multi-sig (so no wait during incident)**
+  - Owner: Charlie
+  - Deadline: 2025-11-19
+  - Status: Todo
+- **Quarterly war room drills (practice)**
+  - Owner: Charlie
+  - Deadline: Ongoing
+  - Status: Todo
+- **Improve escalation docs (add decision trees)**
+  - Owner: Frank
+  - Deadline: 2025-11-14
+  - Status: In progress
+
+### Improve Communication
+
+- **Auto-post initial notification on contract pause**
+  - Owner: Frank
+  - Deadline: 2025-11-15
+  - Status: Todo
+- **Prepare templates for 10 incident scenarios**
+  - Owner: Frank
+  - Deadline: 2025-11-20
+  - Status: Todo
+- **Create public incident dashboard (live status page)**
+  - Owner: Alice
+  - Deadline: 2025-11-30
+  - Status: Todo
+
+---
+
+## Lessons Learned
+
+1. **Defense in depth works**: Monitoring caught what tests/audit missed
+2. **Speed matters**: 8 min response prevented $9.9M additional loss
+3. **Playbooks work**: Team executed well because roles/procedures were documented
+4. **But prevention is better**: Need both adversarial testing AND multiple audits
+5. **Automation reduces response time**: Manual steps (activate war room, call people) waste minutes
+
+---
+
+## Open Questions
+
+1. **Could audit have caught this?**  
+   - Discussed with Trail of Bits: They focused on ERC-4626 logic, assumed standard reentrancy covered
+   - Recommendation: Explicitly ask auditors to test ALL vulnerability classes, not assume anything
+
+2. **Should we auto-pause on rapid withdrawals?**  
+   - Pro: Would have paused in 1 min instead of 8
+   - Con: False positives could DoS legitimate users
+   - Decision: Implement with 5-minute cooldown (auto-unpause if false alarm)
+
+3. **Legal action against attacker?**  
+   - Attacker used Tornado Cash, likely unrecoverable
+   - Consulted legal: Cost of investigation exceeded $47K loss
+   - Decision: File police report, but don't pursue actively
+
+---
+
+## Compensation Plan
+
+**Affected users**: 3 accounts totaling $47,000 loss
+
+| User | Loss | Compensation | Total |
+|------|------|--------------|-------|
+| 0x123...abc | $30,000 | $33,000 (110%) | $33,000 |
+| 0x456...def | $12,000 | $13,200 (110%) | $13,200 |
+| 0x789...ghi | $5,000 | $5,500 (110%) | $5,500 |
+| **Total** | **$47,000** | **$51,700** | **$51,700** |
+
+**Source**: Protocol treasury (has $500K reserves)  
+**Timeline**: Payments sent within 48 hours  
+**Status**: ✅ All payments confirmed
+
+---
+
+## Sign-off
+
+This post-mortem has been reviewed and approved by:
+
+- **Charlie Davis** (Security Lead): Confirmed technical accuracy
+- **Diana Lee** (CTO): Approved action items and timeline
+- **Eve Martinez** (CEO): Approved compensation plan and public communications
+
+**Review date**: 2025-11-11  
+**Publication date**: 2025-11-12 (after all users compensated)
+
+---
+
+## Appendix A: Technical Details
+
+**Exploit transaction**: 0xABC123...  
+**Attacker address**: 0xATTACKER...  
+**Vulnerable code commit**: abc123def456  
+**Fix commit**: def456abc789  
+**Exploit PoC test**: `testReentrancyExploit()` in test/Exploits.t.sol
+
+**Full code diff**: [GitHub PR #234]
+```
+
+---
+
+## Hands-on with AI Reviewer
+
+Now practice identifying incident response gaps using the AI Reviewer at `/reviewer`. These exercises help you audit emergency response mechanisms and incident procedures.
+
+### Exercise 1: Audit emergency pause implementation
+
+Copy this vault contract into the reviewer and ask: **"What incident response vulnerabilities exist in this emergency pause system?"**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+/**
+ * @title IncidentResponseVault
+ * @notice Vault with emergency pause but vulnerable implementation
+ */
+contract IncidentResponseVault {
+    IERC20 public asset;
+    mapping(address => uint256) public balances;
+    bool public paused;
+    address public admin;
+    
+    event Paused(address by);
+    event Unpaused(address by);
+    event EmergencyWithdraw(address user, uint256 amount);
+    
+    constructor(address _asset) {
+        asset = IERC20(_asset);
+        admin = msg.sender;
+    }
+    
+    // 🚨 CRITICAL: Missing access control on pause
+    function pause() external {
+        paused = true;
+        emit Paused(msg.sender);
+    }
+    
+    // 🚨 CRITICAL: Missing access control on unpause
+    function unpause() external {
+        paused = false;
+        emit Unpaused(msg.sender);
+    }
+    
+    function deposit(uint256 amount) external {
+        require(!paused, "Paused");
+        asset.transferFrom(msg.sender, address(this), amount);
+        balances[msg.sender] += amount;
+    }
+    
+    // 🚨 HIGH: Emergency withdraw doesn't work when paused
+    function withdraw(uint256 amount) external {
+        require(!paused, "Paused");
+        require(balances[msg.sender] >= amount, "Insufficient");
+        
+        balances[msg.sender] -= amount;
+        asset.transfer(msg.sender, amount);
+    }
+    
+    // 🚨 CRITICAL: Admin can steal all funds during "emergency"
+    function emergencyDrain() external {
+        require(msg.sender == admin, "Not admin");
+        require(paused, "Must be paused");
+        
+        // Drains ALL vault funds to admin
+        uint256 total = asset.balanceOf(address(this));
+        asset.transfer(admin, total);
+    }
+}
+```
+
+**Expected findings**:
+- **CRITICAL**: `pause()` has no access control—any address can DoS the protocol
+- **CRITICAL**: `unpause()` has no access control—attacker can unpause during incident response
+- **CRITICAL**: `emergencyDrain()` allows admin to steal all user funds (no per-user withdrawals)
+- **HIGH**: Emergency withdrawal impossible when paused—users cannot escape
+- **MEDIUM**: No circuit breaker limits (pause can be permanent with no recovery path)
+- **MEDIUM**: No event parameters for `Paused`/`Unpaused` (can't track who triggered)
+
+**Learning**: Emergency response mechanisms must have proper access control (from role-based-access-control), allow user withdrawals during pause (from emergency-response-circuit-breakers), and never give admins ability to steal funds.
+
+---
+
+### Exercise 2: Audit post-incident upgrade pattern
+
+Copy this upgradeable vault and ask: **"What incident response risks exist in this emergency upgrade pattern?"**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+/**
+ * @title IncidentResponseVaultV2
+ * @notice Upgradeable vault for emergency fixes
+ * @dev 🚨 Multiple upgrade safety issues
+ */
+contract IncidentResponseVaultV2 is Initializable, OwnableUpgradeable {
+    mapping(address => uint256) public balances;
+    uint256 public totalDeposits;
+    bool public paused;
+    
+    // 🚨 HIGH: NEW storage variable added in V2 without gap
+    address public emergencyRecipient;
+    
+    function initialize() public initializer {
+        __Ownable_init();
+    }
+    
+    // 🚨 CRITICAL: No timelock on emergency upgrade
+    function emergencyUpgrade(address newImplementation) external onlyOwner {
+        // Directly upgrades without delay
+        _upgradeTo(newImplementation);
+    }
+    
+    function _upgradeTo(address newImpl) internal {
+        // Simplified upgrade logic (actual implementation would use TransparentUpgradeableProxy)
+        // This is a conceptual example showing the risk
+    }
+    
+    // 🚨 CRITICAL: Emergency withdrawal sends to centralized address
+    function emergencyWithdrawAll() external onlyOwner {
+        require(paused, "Must be paused");
+        // Sends ALL funds to emergencyRecipient (not individual users)
+        payable(emergencyRecipient).transfer(address(this).balance);
+    }
+    
+    // 🚨 HIGH: No validation on emergency recipient
+    function setEmergencyRecipient(address _recipient) external onlyOwner {
+        // Can be set to address(0) or attacker
+        emergencyRecipient = _recipient;
+    }
+    
+    function deposit() external payable {
+        require(!paused, "Paused");
+        balances[msg.sender] += msg.value;
+        totalDeposits += msg.value;
+    }
+}
+```
+
+**Expected findings**:
+- **CRITICAL**: `emergencyUpgrade()` bypasses timelock—admin can rug pull with instant malicious upgrade
+- **CRITICAL**: `emergencyWithdrawAll()` sends all funds to single address (not proportional per-user)
+- **HIGH**: `setEmergencyRecipient()` has no validation—can be front-run or set to burn address
+- **HIGH**: Missing storage gap for future upgrades—storage collision risk in V3
+- **MEDIUM**: No event emission on `emergencyUpgrade()`—can't monitor upgrade history
+- **LOW**: `emergencyRecipient` should be immutable or multi-sig, not single EOA
+
+**Learning**: Emergency upgrades should still use timelocks (from role-based-access-control) or at least multi-sig, emergency withdrawals must be per-user (from emergency-response-circuit-breakers), and storage layout must account for future versions.
+
+---
+
+### Exercise 3: Review monitoring configuration
+
+Copy this Tenderly configuration and ask: **"What monitoring blind spots exist in this setup?"**
+
+```yaml
+# Incomplete monitoring configuration
+account_id: "your-account"
+project_slug: "defi-vault"
+
+actions:
+  - name: "Large Withdrawal Alert"
+    description: "Alert when withdrawal > $100K"
+    function: "alert-withdrawal"
+    trigger:
+      type: "transaction"
+      transaction:
+        status: ["success"]
+        filters:
+          - eventEmitted:
+              contract:
+                address: "0xVaultAddress"
+              name: "Withdraw"
+          - expression: "abi.decode.amount > 100000000000"
+    execution:
+      type: "webhook"
+      webhook:
+        url: "https://server.com/api/alerts/withdrawal"
+```
+
+**Expected findings**:
+- **CRITICAL**: No monitoring for contract pauses or emergency events
+- **HIGH**: No oracle price deviation monitoring (could miss price manipulation attacks)
+- **MEDIUM**: No gas usage anomaly detection (could miss complex attacks)
+- **MEDIUM**: No failed transaction monitoring (could indicate DoS attempts)
+- **LOW**: Single webhook endpoint (no redundancy if server down)
+
+**Learning**: Monitoring must cover ALL critical attack vectors, not just obvious ones.
+
+---
+
+### Exercise 4: Review incident escalation tree
+
+Copy this escalation matrix and ask: **"What weaknesses exist in this incident response structure?"**
+
+```markdown
+# Incident Escalation
+
+## Severity Levels
+- P0: Funds draining → Page everyone
+- P1: Bug found → Call security team
+- P2: Service slow → Email on-call
+
+## Contacts
+- On-call: Alice (+1-555-0101)
+- Security: Bob (+1-555-0201)
+- CEO: Carol (+1-555-0301)
+```
+
+**Expected findings**:
+- **CRITICAL**: No response time SLAs defined (how fast must each level respond?)
+- **HIGH**: No backup contacts if primary unavailable (single point of failure)
+- **HIGH**: No external advisors listed (audit firm, legal, insurance)
+- **MEDIUM**: No war room activation criteria (when to escalate from individual to team response)
+- **MEDIUM**: P2 "email" is too slow for service degradation (could be attack in progress)
+- **LOW**: No communication tools specified (Discord? Signal? Phone?)
+
+**Learning**: Escalation procedures must eliminate single points of failure and specify concrete response times.
+
+---
+
+### Exercise 5: Analyze post-incident communication
+
+Copy this incident notification and ask: **"How could this notification be improved?"**
+
+```markdown
+🚨 INCIDENT ALERT
+
+We've detected unusual activity and paused the contract.
+
+We're investigating and will update soon.
+```
+
+**Expected findings**:
+- **HIGH**: No timestamp (users can't establish timeline)
+- **HIGH**: No incident ID (can't track or reference this specific incident)
+- **MEDIUM**: "Soon" is vague (should specify "every 30 minutes" or concrete time)
+- **MEDIUM**: No status of user funds (users will panic without reassurance)
+- **MEDIUM**: No link to detailed incident page
+- **LOW**: No contact information for urgent user questions
+
+**Learning**: Crisis communications must be specific, timestamped, and reassuring. Vagueness creates panic.
+
+---
+
+### Exercise 6: Evaluate monitoring alert handler
+
+Copy this webhook handler and ask: **"What incident response problems could this code cause?"**
+
+```javascript
+// Alert webhook handler
+app.post('/api/alerts/large-withdrawal', async (req, res) => {
+  const { transaction, event } = req.body;
+  
+  const amount = parseInt(event.args.amount) / 1e6;
+  const user = event.args.user;
+  
+  // Send Discord notification
+  await axios.post(DISCORD_WEBHOOK, {
+    content: `⚠️ Large withdrawal: $${amount} from ${user}`
+  });
+  
+  res.json({ received: true });
+});
+```
+
+**Expected findings**:
+- **CRITICAL**: No authentication on webhook (anyone can trigger false alerts)
+- **CRITICAL**: Missing error handling (if Discord fails, alert is lost)
+- **HIGH**: No PagerDuty integration for critical amounts (won't wake on-call engineer)
+- **HIGH**: No severity classification (all alerts treated equally)
+- **MEDIUM**: No transaction link in message (responder has to manually search)
+- **MEDIUM**: No timestamp in alert (can't establish timeline)
+- **LOW**: Doesn't return failure status if notification fails
+
+**Learning**: Alert handlers must be reliable, authenticated, and provide complete context for immediate response.
+
+---
+
+### Challenge: Build complete incident response system
+
+Create a production-ready incident response system with:
+
+1. **Monitoring**: Tenderly alerts for 5+ attack vectors
+2. **Alerting**: Multi-channel (Discord, Telegram, PagerDuty) with proper error handling
+3. **Escalation**: Contact tree with response time SLAs and backup contacts
+4. **War room**: Role assignments and decision framework documents
+5. **Communication**: Templates for 3 scenarios (initial, exploit, resolution)
+6. **Post-mortem**: Template with timeline, root cause, and action items
+
+Test your system by:
+- Simulating a P0 alert (verify entire team gets paged)
+- Running a war room drill (practice role assignments and decision-making)
+- Writing a mock post-mortem (practice blameless analysis)
+
+Upload your monitoring config, escalation docs, and templates to the AI Reviewer and ask: **"Is this incident response system production-ready? What gaps remain?"**
+
+**Success criteria**:
+- Emergency contracts have proper access control (only authorized roles can pause/upgrade)
+- Emergency withdrawals allow per-user fund recovery (not centralized drainage)
+- Monitoring covers ≥ 5 attack vectors (reentrancy, oracle, access control, economic, DoS)
+- Alerts reach responders in < 60 seconds with full context
+- Escalation has ≥ 2 levels with backup contacts and response time SLAs
+- War room procedures assign 4+ roles with clear responsibilities
+- Communication templates are specific, timestamped, and reassuring
+- Post-mortem template follows blameless methodology
+
+**Real-world benchmark**: The example post-mortem in this lesson (YieldVault incident) achieved 8-minute detection-to-pause, preventing $9.9M additional loss. Your system should target similar or better response times.
+
+---
+
+## Real-world case studies
+
+### Case study 1: Poly Network ($611M, August 2021)
+
+**Vulnerability type**: Access control bypass (see common-vulnerability-patterns, role-based-access-control)
+**Detection**: User reported "strange transaction" on Twitter  
+**Response time**: 30 minutes to first acknowledgment  
+**Containment**: No pause mechanism (not upgradeable)  
+**Recovery**: Public plea to hacker ("white hat yourself"), $500K bounty offered  
+**Outcome**: Hacker returned funds over 2 weeks  
+
+**What went well**: Transparent communication, creative recovery approach  
+**What didn't**: No monitoring (relied on users), no pause capability, no incident playbook  
+
+**Lessons**: Build monitoring BEFORE launch, make contracts pauseable (emergency-response-circuit-breakers), prepare recovery playbooks
+
+---
+
+### Case study 2: Cream Finance ($130M, October 2021)
+
+**Vulnerability type**: Price oracle manipulation + reentrancy (see common-vulnerability-patterns, advanced-attack-vectors)
+**Detection**: 20 minutes after exploit (user reports)  
+**Response time**: 10 minutes to pause  
+**Containment**: Too late—funds already moved to Tornado Cash  
+**Recovery**: None (unrecoverable)  
+**Outcome**: $130M permanent loss  
+
+**What went well**: Pause mechanism existed and worked (emergency-response-circuit-breakers)
+**What didn't**: No monitoring (20 min is eternity), no auto-pause on anomalies  
+
+**Lessons**: Automated monitoring essential (human detection too slow), consider auto-pause for obvious attacks
+
+---
+
+## Production incident response checklist
+
+**Monitoring (before launch)**
+- [ ] Tenderly monitoring configured for all critical events
+- [ ] Alerts sent to Discord AND PagerDuty
+- [ ] Dashboard shows TVL, withdrawal rate, share price, gas usage
+- [ ] Anomaly detection for rapid withdrawals, large transactions
+- [ ] Oracle deviation monitoring
+- [ ] Failed transaction monitoring
+
+**Emergency Mechanisms (implemented from emergency-response-circuit-breakers)**
+- [ ] Pause mechanism implemented (OpenZeppelin Pausable)
+- [ ] Emergency withdrawal function allows user fund recovery during pause
+- [ ] Circuit breakers for rate limiting (max withdrawals per hour)
+- [ ] Pause can execute in < 2 minutes from alert detection
+- [ ] Multi-sig controls pause (not single EOA)
+- [ ] Timelock on unpause (prevents abuse, requires 24-48hr delay)
+
+**Escalation (before launch)**
+- [ ] Contact list complete (names, phones, Signal handles)
+- [ ] Escalation tree documented (L1 → L2 → L3 → L4)
+- [ ] PagerDuty configured with rotation schedule
+- [ ] War room Discord channel created (#emergency)
+- [ ] Shared Google Doc template for incident logging
+
+**Playbooks (before launch)**
+- [ ] Written playbooks for 5 scenarios (exploit, bug, oracle, key compromise, DoS)
+- [ ] Decision trees for pause, upgrade, communicate decisions
+- [ ] Communication templates (initial, exploit, resolution)
+- [ ] Post-mortem template ready
+
+**Testing (before launch)**
+- [ ] Quarterly war room drills scheduled (apply testing methodology from security-testing-audit-preparation)
+- [ ] Pause mechanism tested (can execute in < 2 min)
+- [ ] Emergency upgrade tested (can deploy in < 30 min)
+- [ ] Communication templates reviewed and approved
+- [ ] Escalation tree validated (all contacts reachable)
+
+**During Incident**
+- [ ] War room activated with role assignments
+- [ ] Scribe logging all actions (timestamped)
+- [ ] Status checks every 5 minutes
+- [ ] User communications every 30 minutes
+- [ ] All decisions documented with rationale
+
+**After Incident**
+- [ ] Post-mortem within 48 hours (while memory fresh)
+- [ ] Action items with owners and deadlines
+- [ ] Post-mortem published (transparency builds trust)
+- [ ] Affected users compensated within 7 days
+- [ ] Monitoring/playbooks updated with lessons learned
+
+## Wrap-up and next steps
+
+You've completed Module 4 (Island 5, dApp Security Practical)! You've mastered: vulnerability identification (common-vulnerability-patterns), AI audit interpretation (ai-auditor-findings-interpretation), access control (role-based-access-control), security testing (security-testing-audit-preparation), emergency response (emergency-response-circuit-breakers), advanced attacks (advanced-attack-vectors), audit methodology (smart-contract-audit-methodology), and incident response (incident-response-playbooks).
+
+**Skills mastered across all 8 lessons:**
+- Identifying and fixing critical vulnerabilities (reentrancy, access control, oracle manipulation)
+- Using AI tools to audit code and prioritize fixes
+- Implementing production-grade access control (RBAC, multi-sig, timelock)
+- Writing comprehensive security tests (fuzz, invariant, exploit tests)
+- Building fail-safe systems (pause, emergency withdrawal, circuit breakers)
+- Defending against sophisticated attacks (flash loans, cross-contract reentrancy, signature replay)
+- Navigating professional audits ($50K-$500K process)
+- Responding to incidents in real-time (monitoring, escalation, war rooms, post-mortems)
+
+**What's next**: Take the Module 4 quiz to test your security knowledge, then apply these lessons to your own protocols. Security isn't a feature—it's a mindset. Build it into every line of code, every design decision, and every operational procedure.
+
+**Final challenge**: Build a complete production-ready protocol with ALL security best practices from all Module 4 lessons:
+- Comprehensive vulnerability scanning and fixes
+- Role-based access control with multi-sig + timelock
+- 95%+ test coverage including exploit tests
+- Emergency pause mechanism with circuit breakers
+- Defense against advanced attacks (flash loan, oracle manipulation)
+- Professional audit with documented remediation
+- Real-time monitoring with automated alerts
+- Incident response playbook with war room procedures
+
+The difference between protocols that last and those that fail is systematic security. You now have the complete toolkit. Use it.
+
+**Congratulations on completing Island 5: dApp Security Practical!**
+
+

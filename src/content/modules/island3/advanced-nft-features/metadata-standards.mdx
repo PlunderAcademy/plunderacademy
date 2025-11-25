@@ -1,0 +1,194 @@
+---
+id: "advanced-nft-lesson-1"
+slug: "metadata-standards"
+module: "advanced-nft-features"
+number: "3.4"
+title: "Metadata Standards and IPFS Integration"
+objective: "Master NFT metadata standards and implement decentralized storage solutions using IPFS."
+practicalTakeaway: "Create NFT collections with rich, decentralized metadata that follows industry standards."
+---
+
+# Metadata Standards and IPFS Integration
+
+## Set the stage
+
+Think of metadata as the map and legend for each NFT in your collection. If the map changes unexpectedly or the legend is missing, explorers (wallets, marketplaces, analytics) get lost. For our arc, NFTs can reflect staking milestones—like a `Position` reaching a threshold or rewards vesting—so consumers must reliably read the same `tokenURI` today and months from now.
+
+Without a disciplined metadata plan, reveals become messy, indexers cache stale data, and user trust erodes. Here you will define a stable schema, durable storage, and a reveal path that won’t force you to re-mint or ship breaking changes later.
+
+## Conceptual foundations
+
+### JSON schema (what and why)
+
+- **Definition**: A predictable JSON document returned by `tokenURI(tokenId)` with fields like `name`, `description`, `image`, and `attributes`.
+- **When to use it**: Always—marketplaces expect conventional keys for compatibility and filtering.
+- **Actionable tip**: Keep trait names stable; changing them later breaks dashboards and rarity tooling.
+
+### On‑chain vs off‑chain metadata
+
+- **On‑chain**: Store JSON or URIs on-chain for maximum permanence; higher gas costs and limited flexibility.
+- **Off‑chain (IPFS)**: Use `ipfs://` URIs pointing to pinned content; cheap and updateable via new CIDs, but immutability relies on pinning and disclosure policies.
+- **Guidance**: Prefer IPFS for media and JSON; reserve fully on‑chain for small, permanent data or special editions.
+
+### Base URI, overrides, and determinism
+
+- **Base URI**: `ipfs://<cid>/` + `tokenId` + `.json` keeps paths uniform and cache‑friendly.
+- **Overrides**: If you must special‑case tokens, keep a tiny on‑chain mapping, but avoid per‑token writes for the whole collection.
+- **Determinism rule**: The same `tokenId` should return the same path for all viewers and at all times post‑reveal.
+
+### Dynamic and semi‑dynamic metadata
+
+- **Dynamic**: Metadata that changes over time (e.g., badge level that mirrors a `Position` milestone); risky for provenance.
+- **Semi‑dynamic**: One‑time switch (hidden → revealed) or periodic refreshes signaled via ERC‑4906 events.
+- **Practice**: Prefer semi‑dynamic with explicit events; avoid per‑viewer logic.
+
+### Permanence, pinning, and availability
+
+- **Pinning**: Use multiple pin providers and track CIDs; don’t rely on a single gateway.
+- **Availability**: Provide `ipfs://` URIs and let clients choose gateways; document an official fallback gateway without hard‑coding it on‑chain.
+- **Operational note**: Keep a manifest of all JSON and media CIDs for audits and re‑pinning.
+
+### Indexing and cache invalidation
+
+- **Indexers**: Many marketplaces cache `tokenURI` responses aggressively.
+- **Signals**: Emit ERC‑4906 `MetadataUpdate`/`BatchMetadataUpdate` when changing base URIs.
+- **Rule**: Avoid querystring tricks; rely on events and stable paths instead.
+
+## Guided code walk‑throughs
+
+We keep URIs stable, reveal exactly once, and signal updates for indexers. The snippets below use minimal code aligned with OpenZeppelin 5.x and are easy to compose into your collection contract.
+
+### 1) BaseURI + reveal placeholder
+
+Before reveal, return a single hidden JSON. After reveal, concatenate a base CID with the token ID. Admin actions are explicit and indexable via events.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MetadataNFT is ERC721, Ownable {
+    string private _base;
+    string private _hidden;
+    bool public revealed;
+
+    event BaseURISet(string newBase);
+    event Revealed(string baseCid);
+
+    constructor(address owner_, string memory hiddenURI) ERC721("Meta", "META") Ownable(owner_) {
+        _hidden = hiddenURI; // e.g., ipfs://placeholder-cid/hidden.json
+    }
+
+    function _baseURI() internal view override returns (string memory) { return _base; }
+    function setBaseURI(string calldata newBase) external onlyOwner { _base = newBase; emit BaseURISet(newBase); }
+    function reveal(string calldata baseCid) external onlyOwner { _base = string.concat("ipfs://", baseCid, "/"); revealed = true; emit Revealed(baseCid); }
+
+    function tokenURI(uint256 id) public view override returns (string memory) {
+        if (!revealed) return _hidden;
+        return string.concat(_base, _toString(id), ".json");
+    }
+}
+```
+
+Takeaway: a one‑way switch to `ipfs://<cid>/` + `tokenId` keeps paths deterministic and cache‑friendly.
+
+### 2) Marketplace‑friendly JSON
+
+Use conventional keys so wallets and marketplaces can parse names, images, and traits consistently. Keep trait spelling and casing stable for filters.
+
+```json
+{
+  "name": "Jungle NFT #123",
+  "description": "Explorer from the Jungle collection",
+  "image": "ipfs://bafy.../123.png",
+  "external_url": "https://example.com/jungle/123",
+  "attributes": [
+    { "trait_type": "Background", "value": "Forest" },
+    { "trait_type": "Rarity", "value": "Epic" },
+    { "trait_type": "Power", "value": 42 }
+  ]
+}
+```
+
+Takeaway: conventional keys and `ipfs://` media URIs maximize compatibility and durability.
+
+### 3) Signaling metadata changes (ERC‑4906)
+
+When you reveal or update base URIs, emit lightweight events so indexers know to re‑fetch.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IERC4906 {
+    event MetadataUpdate(uint256 _tokenId);
+    event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
+}
+```
+
+Takeaway: events provide explicit, chain‑native cache invalidation without breaking URI determinism.
+
+## Practice and reflection
+
+- Define your JSON schema now: which `attributes` do analytics need for your collection?
+- Draft your reveal plan: hidden placeholder path and exact base CID format post‑reveal
+- Specify your pinning strategy: at least two providers and how you’ll audit availability
+- Decide whether any metadata is semi‑dynamic (and how you’ll emit ERC‑4906 updates)
+
+{/* Concept Matching */}
+<ConceptMatching pairs={[
+  {"conceptId":"base","definitionId":"def-base","concept":"baseURI","definition":"Common prefix for token metadata paths","category":"meta"},
+  {"conceptId":"token","definitionId":"def-token","concept":"tokenURI","definition":"Per‑token metadata URL read by marketplaces","category":"meta"},
+  {"conceptId":"cid","definitionId":"def-cid","concept":"IPFS CID","definition":"Content identifier for pinned JSON/media","category":"storage"},
+  {"conceptId":"attr","definitionId":"def-attr","concept":"attributes[]","definition":"Array of trait objects for analytics/filters","category":"meta"}
+]}/>
+
+Short reflection: If you later want to reflect a staking milestone in traits, would you re‑mint or use ERC‑4906 to signal a trait refresh? Justify the tradeoff.
+
+## Security and pitfalls
+
+### Non‑deterministic `tokenURI`
+
+- **Danger**: Returning different URIs based on `msg.sender` or time confuses indexers and users.
+- **Rule**: Keep `tokenURI` pure with respect to viewer; restrict changes to explicit admin actions.
+
+### Gateway lock‑in
+
+- **Danger**: Hard‑coding `https://gateway.example/...` can break if the gateway changes or rate limits.
+- **Rule**: Use `ipfs://` on-chain; document recommended gateways off-chain.
+
+### Post‑sale mutability without disclosure
+
+- **Danger**: Changing images or traits after sale erodes trust and may violate marketplace expectations.
+- **Rule**: Publish a metadata policy; if you must update, emit ERC‑4906 events and changelogs.
+
+### Missing pinning redundancy
+
+- **Danger**: Single pin provider outages break image loads.
+- **Rule**: Pin with at least two providers; monitor availability; keep CID manifests.
+
+### Invalid JSON or media type
+
+- **Danger**: Malformed JSON or wrong MIME types break rendering.
+- **Rule**: Validate JSON schemas and content types in CI before publishing.
+
+## Security checklist
+
+Before shipping metadata:
+
+- [ ] **Stable schema**: `name`, `description`, `image`, `attributes[]` present and validated
+- [ ] **ipfs:// URIs**: No hard‑coded HTTP gateways on‑chain
+- [ ] **Deterministic paths**: `tokenURI` returns same path for all viewers
+- [ ] **One‑way reveal**: Hidden → base CID with explicit events
+- [ ] **ERC‑4906 signals**: Emit update events when changing base URIs
+- [ ] **Pinning redundancy**: At least two providers with periodic audits
+- [ ] **No per‑user metadata**: Avoid personalization in `tokenURI`
+- [ ] **JSON validity**: Lint and schema‑check before pinning
+- [ ] **CID manifest**: Track all CIDs and intended lifetimes
+- [ ] **Communication**: Publish a metadata mutability policy
+
+## Wrap‑up
+
+You now have a durable metadata plan with stable JSON, `ipfs://` URIs, and clear reveal signaling. This foundation keeps your collection trustworthy and indexer‑friendly, and it sets you up to implement reveal mechanics and royalties next—without breaking paths or surprising collectors.

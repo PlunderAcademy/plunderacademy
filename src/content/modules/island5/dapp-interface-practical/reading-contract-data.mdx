@@ -1,0 +1,841 @@
+---
+id: "dapp-practical-lesson-4"
+slug: "reading-contract-data"
+module: "dapp-interface-practical"
+number: "5.9"
+title: "Reading Contract Data"
+objective: "Learn to read and display blockchain data using wagmi hooks for ERC20 balances and NFT collections."
+practicalTakeaway: "Build components that fetch and display token balances, NFT ownership, and format data beautifully."
+---
+
+# Reading Contract Data
+
+## Why this matters now
+
+Your dApp is connected and network-enforced. Now let's make it useful by reading on-chain data! We'll fetch ERC20 token balances, display owned NFTs, and make the UI react to blockchain state. Reading data is the foundation of every dApp—it's how users see their holdings, positions, and activity.
+
+## What we're building
+
+In this lesson, you'll create:
+1. **TokenBalance component** (reads ERC20 `balanceOf`)
+2. **TokenInfo component** (reads name, symbol, decimals)
+3. **NFTGallery component** (displays owned NFTs)
+4. **Loading states** (skeletons while fetching)
+5. **Auto-refresh** (updates on new blocks)
+
+**Time estimate:** 30-35 minutes
+
+## Prerequisites
+
+You'll need contract addresses and ABIs. We'll use:
+- **ERC20 token**: Your deployed token (or example from Zilliqa testnet)
+- **NFT collection**: Your deployed NFTs (or example collection)
+
+## Step 1: Set up contract addresses and ABIs
+
+Create environment variables for your contracts.
+
+**Add to `.env.local`:**
+
+```bash
+# .env.local (add these lines)
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_id_here
+
+# ERC20 Token Contract (use your own)
+NEXT_PUBLIC_TOKEN_ADDRESS=0x1234567890123456789012345678901234567890
+
+# NFT Collection Contract (use your own)
+NEXT_PUBLIC_NFT_ADDRESS=0x0987654321098765432109876543210987654321
+```
+
+**Replace with your actual contract addresses** from previous islands.
+
+### Create ABI files (Optional)
+
+**Option 1: Use viem's built-in ABIs** (easiest):
+
+Viem includes standard ERC20 and ERC721 ABIs. We'll use these for simplicity:
+
+```tsx
+// No separate files needed, just import from viem
+import { erc20Abi, erc721Abi } from "viem";
+```
+
+**Option 2: Use your own ABIs** (if you have custom functions):
+
+Copy ABIs from your Hardhat builds:
+
+```bash
+# From your token/NFT projects:
+# Copy artifacts/contracts/YourToken.sol/YourToken.json
+# Extract the "abi" array into src/lib/abis/token-abi.json
+```
+
+We'll use **Option 1** (viem's built-in ABIs) for this lesson—works with any standard ERC20/721.
+
+## Step 2: Create TokenBalance component
+
+This component reads and displays the user's token balance.
+
+Create `src/components/token-balance.tsx`:
+
+```bash
+touch src/components/token-balance.tsx
+```
+
+**Add this code:**
+
+```tsx
+// src/components/token-balance.tsx
+"use client";
+
+import { useAccount, useReadContract } from "wagmi";
+import { formatUnits } from "viem";
+import { erc20Abi } from "viem";
+
+interface TokenBalanceProps {
+  tokenAddress: `0x${string}`;
+}
+
+export function TokenBalance({ tokenAddress }: TokenBalanceProps) {
+  const { address, isConnected } = useAccount();
+
+  // Read token name
+  const { data: name } = useReadContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "name",
+  });
+
+  // Read token symbol
+  const { data: symbol } = useReadContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "symbol",
+  });
+
+  // Read decimals
+  const { data: decimals } = useReadContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "decimals",
+  });
+
+  // Read user's balance
+  const { data: balance, isPending, error, refetch } = useReadContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: isConnected && !!address, // Only fetch when connected
+    },
+  });
+
+  if (!isConnected) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-6">
+        <p className="text-sm text-muted-foreground">
+          Connect wallet to view token balance
+        </p>
+      </div>
+    );
+  }
+
+  if (isPending) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-6 animate-pulse">
+        <div className="h-4 w-24 bg-muted rounded mb-3"></div>
+        <div className="h-8 w-32 bg-muted rounded"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-destructive bg-destructive/10 p-6">
+        <p className="text-sm text-destructive">
+          Error loading balance: {error.message}
+        </p>
+        <button
+          onClick={() => refetch()}
+          className="mt-2 text-sm underline underline-offset-4"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  const formattedBalance = balance && decimals
+    ? formatUnits(balance, decimals)
+    : "0";
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-6">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm text-muted-foreground">Your Balance</p>
+        <button
+          onClick={() => refetch()}
+          className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"
+        >
+          Refresh
+        </button>
+      </div>
+      <div className="space-y-1">
+        <p className="text-3xl font-bold">
+          {formattedBalance}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {symbol || "TOKEN"} ({name || "Token"})
+        </p>
+      </div>
+    </div>
+  );
+}
+```
+
+**Key points:**
+- **Multiple reads**: Fetches name, symbol, decimals, and balance
+- **Conditional fetching**: `query.enabled` prevents calls before connection
+- **formatUnits**: Converts raw bigint to human-readable number
+- **Loading skeleton**: Animated placeholder during fetch
+- **Error handling**: Shows error + retry button
+- **Manual refresh**: Allows user to force refetch
+
+## Step 3: Create TokenInfo component
+
+A simple component showing token metadata.
+
+Create `src/components/token-info.tsx`:
+
+```bash
+touch src/components/token-info.tsx
+```
+
+**Add this code:**
+
+```tsx
+// src/components/token-info.tsx
+"use client";
+
+import { useReadContract } from "wagmi";
+import { erc20Abi } from "viem";
+
+interface TokenInfoProps {
+  tokenAddress: `0x${string}`;
+}
+
+export function TokenInfo({ tokenAddress }: TokenInfoProps) {
+  const { data: name } = useReadContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "name",
+  });
+
+  const { data: symbol } = useReadContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "symbol",
+  });
+
+  const { data: totalSupply } = useReadContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "totalSupply",
+  });
+
+  const { data: decimals } = useReadContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "decimals",
+  });
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-6">
+      <h3 className="text-lg font-semibold mb-4">Token Information</h3>
+      <dl className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">Name:</dt>
+          <dd className="font-medium">{name || "Loading..."}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">Symbol:</dt>
+          <dd className="font-medium">{symbol || "Loading..."}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">Decimals:</dt>
+          <dd className="font-medium">{decimals?.toString() || "Loading..."}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">Total Supply:</dt>
+          <dd className="font-medium font-mono text-xs">
+            {totalSupply ? (totalSupply / BigInt(10 ** Number(decimals || 18))).toString() : "Loading..."}
+          </dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">Contract:</dt>
+          <dd className="font-mono text-xs">
+            <a
+              href={`https://testnet.zilliqa.blockscout.com/address/${tokenAddress}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
+              {tokenAddress.slice(0, 6)}...{tokenAddress.slice(-4)}
+            </a>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+```
+
+**Key points:**
+- **Public data**: No connection required (anyone can read)
+- **Multiple hooks**: Each `useReadContract` is independent
+- **Link to explorer**: Users can verify on Blockscout
+- **Abbreviated address**: Shows first 6 + last 4 characters
+
+## Step 4: Create NFTGallery component
+
+Displays NFTs owned by the connected wallet.
+
+Create `src/components/nft-gallery.tsx`:
+
+```bash
+touch src/components/nft-gallery.tsx
+```
+
+**Add this code:**
+
+```tsx
+// src/components/nft-gallery.tsx
+"use client";
+
+import { useAccount, useReadContract, useReadContracts } from "wagmi";
+import { erc721Abi } from "viem";
+import { useState, useEffect } from "react";
+
+interface NFTGalleryProps {
+  nftAddress: `0x${string}`;
+  maxDisplay?: number;
+}
+
+interface NFTMetadata {
+  name?: string;
+  description?: string;
+  image?: string;
+  tokenId: number;
+}
+
+export function NFTGallery({ nftAddress, maxDisplay = 12 }: NFTGalleryProps) {
+  const { address, isConnected } = useAccount();
+  const [nftMetadata, setNftMetadata] = useState<Record<number, NFTMetadata>>({});
+  const [loadingMetadata, setLoadingMetadata] = useState(false);
+
+  // Read user's NFT balance
+  const { data: balance, isPending } = useReadContract({
+    address: nftAddress,
+    abi: erc721Abi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: isConnected && !!address,
+      refetchInterval: 30000,
+    },
+  });
+
+  // Read collection name
+  const { data: collectionName } = useReadContract({
+    address: nftAddress,
+    abi: erc721Abi,
+    functionName: "name",
+  });
+
+  // Use the contract's walletOfOwner function to get all token IDs
+  const { data: tokenIds } = useReadContract({
+    address: nftAddress,
+    abi: [{
+      inputs: [{ name: "_owner", type: "address" }],
+      name: "walletOfOwner",
+      outputs: [{ name: "", type: "uint256[]" }],
+      stateMutability: "view",
+      type: "function",
+    }],
+    functionName: "walletOfOwner",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: isConnected && !!address && balance !== undefined && Number(balance) > 0,
+      refetchInterval: 30000,
+    },
+  });
+
+  // Get tokenURI for each token
+  const tokenURIQueries = (tokenIds as bigint[] | undefined)?.slice(0, maxDisplay).map((id) => ({
+    address: nftAddress,
+    abi: erc721Abi,
+    functionName: "tokenURI" as const,
+    args: [id],
+  })) || [];
+
+  const { data: tokenURIs } = useReadContracts({
+    contracts: tokenURIQueries,
+    query: {
+      enabled: tokenIds && tokenIds.length > 0,
+      refetchInterval: 30000,
+    },
+  });
+
+  // Fetch metadata from tokenURIs
+  useEffect(() => {
+    async function fetchMetadata() {
+      if (!tokenURIs || tokenURIs.length === 0 || !tokenIds) return;
+      
+      setLoadingMetadata(true);
+      const metadata: Record<number, NFTMetadata> = {};
+      const idsToFetch = (tokenIds as bigint[]).slice(0, maxDisplay);
+
+      for (let i = 0; i < tokenURIs.length; i++) {
+        const uri = tokenURIs[i].result as string;
+        const tokenId = idsToFetch[i];
+        
+        if (!uri || !tokenId) continue;
+
+        try {
+          // Handle IPFS URIs
+          let fetchUrl = uri;
+          if (uri.startsWith('ipfs://')) {
+            fetchUrl = uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
+          }
+
+          const response = await fetch(fetchUrl);
+          const data = await response.json();
+          
+          // Handle IPFS images
+          let imageUrl = data.image;
+          if (imageUrl?.startsWith('ipfs://')) {
+            imageUrl = imageUrl.replace('ipfs://', 'https://ipfs.io/ipfs/');
+          }
+
+          metadata[Number(tokenId)] = {
+            ...data,
+            image: imageUrl,
+            tokenId: Number(tokenId),
+          };
+        } catch (error) {
+          console.error(`Failed to fetch metadata for token ${tokenId}:`, error);
+          metadata[Number(tokenId)] = {
+            tokenId: Number(tokenId),
+          };
+        }
+      }
+
+      setNftMetadata(metadata);
+      setLoadingMetadata(false);
+    }
+
+    fetchMetadata();
+  }, [tokenURIs, tokenIds, maxDisplay]);
+
+  if (!isConnected) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-6">
+        <h3 className="text-lg font-semibold mb-2">Your NFTs</h3>
+        <p className="text-sm text-muted-foreground">
+          Connect wallet to view your NFT collection
+        </p>
+      </div>
+    );
+  }
+
+  if (isPending || loadingMetadata) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-6">
+        <h3 className="text-lg font-semibold mb-4">Your NFTs</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const nftCount = balance ? Number(balance) : 0;
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">Your NFTs</h3>
+        <span className="text-sm text-muted-foreground">
+          {nftCount} {nftCount === 1 ? "NFT" : "NFTs"}
+        </span>
+      </div>
+
+      {nftCount === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-2">🖼️</div>
+          <p className="text-sm text-muted-foreground">
+            You don't own any NFTs from {collectionName || "this collection"} yet
+          </p>
+        </div>
+      ) : !tokenIds || tokenIds.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-2">🔍</div>
+          <p className="text-sm text-muted-foreground">
+            Loading your NFTs...
+          </p>
+        </div>
+      ) : (
+        <div>
+          <p className="text-sm text-muted-foreground mb-4">
+            {collectionName || "NFT Collection"}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {(tokenIds as bigint[]).slice(0, maxDisplay).map((tokenId) => {
+              const tokenIdNum = Number(tokenId);
+              const metadata = nftMetadata[tokenIdNum];
+
+              return (
+                <div
+                  key={tokenIdNum}
+                  className="group aspect-square rounded-lg border border-border bg-muted/50 overflow-hidden hover:border-primary/40 transition-all hover:scale-105"
+                >
+                  {metadata?.image ? (
+                    <div className="relative h-full w-full">
+                      <img
+                        src={metadata.image}
+                        alt={metadata.name || `NFT #${tokenIdNum}`}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = '';
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                        <div className="text-white">
+                          <p className="text-xs font-medium truncate">
+                            {metadata.name || `#${tokenIdNum}`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <div className="text-2xl mb-1">🎨</div>
+                        <p className="text-xs text-muted-foreground">#{tokenIdNum}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {nftCount > maxDisplay && (
+            <p className="text-xs text-muted-foreground mt-4 text-center">
+              Showing {maxDisplay} of {nftCount} NFTs
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**Key points:**
+- **balanceOf**: ERC721 returns count of owned NFTs
+- **walletOfOwner**: Custom function that returns all token IDs owned by an address (batch read)
+- **useReadContracts**: Fetches multiple `tokenURI` calls in parallel for efficiency
+- **Metadata fetching**: Automatically fetches and parses JSON metadata from tokenURIs
+- **IPFS support**: Handles IPFS URIs by converting them to HTTP gateways
+- **Image display**: Shows actual NFT images with hover effects and fallbacks
+- **Empty state**: Friendly message when no NFTs owned
+- **Responsive grid**: Adapts to screen size (2-4 columns)
+- **Loading skeleton**: Animated placeholders during metadata fetch
+- **Error resilience**: Continues loading other NFTs if one fails
+
+> **Note:** This implementation uses `walletOfOwner` (a common extension to ERC721) for efficiency. If your contract doesn't have this function, you can iterate through `tokenOfOwnerByIndex` instead. The component also handles IPFS metadata and images—perfect for most NFT collections!
+
+## Step 5: Update homepage with data components
+
+Open `src/app/page.tsx` and add the new components:
+
+```tsx
+// src/app/page.tsx
+"use client";
+
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { NetworkGuard } from "@/components/network-guard";
+import { TokenBalance } from "@/components/token-balance";
+import { TokenInfo } from "@/components/token-info";
+import { NFTGallery } from "@/components/nft-gallery";
+import { useAccount } from "wagmi";
+
+const TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_TOKEN_ADDRESS || "0x0") as `0x${string}`;
+const NFT_ADDRESS = (process.env.NEXT_PUBLIC_NFT_ADDRESS || "0x0") as `0x${string}`;
+
+export default function Home() {
+  const { isConnected } = useAccount();
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      
+      <main className="flex-1 container mx-auto max-w-screen-2xl px-4 py-8">
+        <NetworkGuard>
+          <div className="space-y-8">
+            {/* Hero Section */}
+            <div className="text-center space-y-4">
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+                Welcome to Token dApp
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Transfer ERC20 tokens, view your NFT collection, and explore the Zilliqa testnet—all with a beautiful, modern interface.
+              </p>
+            </div>
+
+            {!isConnected ? (
+              <div className="rounded-lg border border-border bg-card p-8 text-center">
+                <p className="text-muted-foreground">
+                  Connect your wallet to get started
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Token Section */}
+                <div className="grid gap-6 md:grid-cols-2">
+                  <TokenBalance tokenAddress={TOKEN_ADDRESS} />
+                  <TokenInfo tokenAddress={TOKEN_ADDRESS} />
+                </div>
+
+                {/* NFT Section */}
+                <NFTGallery nftAddress={NFT_ADDRESS} />
+
+                {/* Transfer Section Placeholder */}
+                <div className="rounded-lg border border-border bg-card p-6">
+                  <h2 className="text-xl font-semibold mb-2">Transfer Tokens</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Coming in the next lesson...
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </NetworkGuard>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+```
+
+**What's new:**
+- **Environment variables**: Read token/NFT addresses from `.env.local`
+- **Grid layout**: Balance + info side by side
+- **Sections**: Token data, NFTs, transfer (coming soon)
+
+## Step 6: Test your reading components
+
+**Restart dev server** (to pick up `.env.local` changes):
+
+```bash
+npm run dev
+```
+
+**Test checklist:**
+
+1. **Without connection:**
+   - [ ] All components show "Connect wallet" message
+   - [ ] TokenInfo still loads (public data)
+
+2. **With connection (Zilliqa testnet):**
+   - [ ] TokenBalance shows your balance
+   - [ ] Token name, symbol, decimals display
+   - [ ] NFTGallery shows count (or 0 if you own none)
+   - [ ] Loading states appear briefly during fetch
+   - [ ] No console errors
+
+3. **Error handling:**
+   - [ ] Invalid token address → error message appears
+   - [ ] Click "Try again" → refetches data
+
+4. **Manual refresh:**
+   - [ ] Click "Refresh" button in TokenBalance
+   - [ ] Balance updates (if changed on-chain)
+
+5. **Auto-refresh (advanced test):**
+   - [ ] Open MetaMask, send yourself tokens
+   - [ ] Wait ~10 seconds
+   - [ ] Balance auto-updates (wagmi refetches on new blocks)
+
+## Understanding reads and caching
+
+### How useReadContract works
+
+```tsx
+const { data, isPending, error, refetch } = useReadContract({
+  address: tokenAddress,
+  abi: erc20Abi,
+  functionName: "balanceOf",
+  args: [userAddress],
+  query: {
+    enabled: isConnected && !!userAddress, // Only fetch when ready
+  },
+});
+```
+
+**Behind the scenes:**
+1. wagmi calls the RPC endpoint (https://api.testnet.zilliqa.com)
+2. Executes a "call" (free, read-only, no transaction)
+3. Caches the result (TanStack Query)
+4. Auto-refetches on new blocks (keeps data fresh)
+5. Returns typed data based on ABI
+
+### Why formatUnits?
+
+Blockchain stores numbers as `bigint` (no decimals). For display:
+
+```tsx
+// Raw balance: 1000000000000000000n (18 zeros)
+// After formatUnits(balance, 18): "1.0"
+
+const formatted = formatUnits(balance, decimals);
+```
+
+### Auto-refresh behavior
+
+wagmi automatically refetches reads:
+- **On new blocks** (every ~1 second on Zilliqa)
+- **On window focus** (when user returns to tab)
+- **On reconnection** (after network issues)
+
+You can configure this with `query` options:
+
+```tsx
+query: {
+  enabled: isConnected,
+  refetchInterval: 10000, // Manual: every 10 seconds
+  staleTime: 5000, // Consider data stale after 5 seconds
+}
+```
+
+## Common issues and fixes
+
+### Issue: "Contract call reverted"
+
+**Problem:** Contract address is invalid or contract doesn't implement function.
+
+**Fix:**
+- Verify contract address in `.env.local`
+- Check it's deployed on Zilliqa testnet: https://testnet.zilliqa.blockscout.com
+- Ensure it's an ERC20/721 contract (implements standard functions)
+
+### Issue: Balance shows "0" but I have tokens
+
+**Problem:** Wrong token address, or tokens are on different network.
+
+**Fix:**
+- Verify `NEXT_PUBLIC_TOKEN_ADDRESS` in `.env.local`
+- Check MetaMask is on Zilliqa testnet (chain ID 33101)
+- Verify your wallet address owns tokens on Blockscout
+
+### Issue: Data never loads (infinite spinner)
+
+**Problem:** RPC endpoint might be down, or contract address invalid.
+
+**Fix:**
+- Check browser console for errors
+- Test RPC manually: `curl https://api.testnet.zilliqa.com`
+- Try a different contract address
+- Restart dev server after `.env.local` changes
+
+### Issue: TypeScript errors on address types
+
+**Problem:** Address must be `0x${string}` type.
+
+**Fix:**
+```tsx
+const TOKEN_ADDRESS = "0x123..." as `0x${string}`;
+// Or with validation:
+const addr = process.env.NEXT_PUBLIC_TOKEN_ADDRESS;
+const TOKEN_ADDRESS = addr as `0x${string}`;
+```
+
+## Advanced: Custom hooks for contract reads
+
+For cleaner code, extract reads into custom hooks:
+
+```tsx
+// src/hooks/use-token-balance.ts
+import { useAccount, useReadContract } from "wagmi";
+import { formatUnits } from "viem";
+import { erc20Abi } from "viem";
+
+export function useTokenBalance(tokenAddress: `0x${string}`) {
+  const { address } = useAccount();
+  
+  const { data: balance, ...rest } = useReadContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  const { data: decimals } = useReadContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "decimals",
+  });
+
+  const formatted = balance && decimals 
+    ? formatUnits(balance, decimals)
+    : "0";
+
+  return { balance, formatted, ...rest };
+}
+
+// Usage in component:
+const { formatted, isPending } = useTokenBalance(TOKEN_ADDRESS);
+```
+
+**Benefits:**
+- Reusable across components
+- Encapsulates formatting logic
+- Easier testing
+
+## Next steps
+
+You now have:
+- ✅ Token balance reading
+- ✅ Token metadata display
+- ✅ NFT ownership viewing
+- ✅ Loading states and error handling
+- ✅ Auto-refreshing data
+- ✅ Manual refresh buttons
+
+**Next lesson:** We'll add the missing piece—**writing to contracts**! You'll build a transfer form that sends tokens, tracks transaction status, and updates the UI when confirmed. This is where wallets sign transactions and users see their actions go on-chain.
+
+## Checklist
+
+Before moving on, verify:
+
+- [ ] TokenBalance shows your actual balance
+- [ ] Token name, symbol, decimals are correct
+- [ ] Total supply displays properly
+- [ ] NFT count shows (0 or actual amount)
+- [ ] Contract links open Blockscout in new tab
+- [ ] Loading states appear during fetch
+- [ ] Error states show when address is invalid
+- [ ] Manual refresh button works
+- [ ] No console errors
+- [ ] Data auto-updates after on-chain changes
+
+**All checked?** Time to write some transactions! ✍️
+

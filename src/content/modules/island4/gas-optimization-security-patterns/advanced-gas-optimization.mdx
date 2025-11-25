@@ -1,0 +1,381 @@
+---
+id: "gas-optimization-lesson-1"
+slug: "advanced-gas-optimization"
+module: "gas-optimization-security-patterns"
+number: 4.9
+title: "Advanced Gas Optimization Techniques"
+objective: "Master storage packing, assembly optimizations, and other advanced techniques for gas efficiency."
+practicalTakeaway: "Optimize smart contracts to minimize gas costs while maintaining functionality and security."
+---
+
+# Advanced Gas Optimization Techniques
+
+## Set the stage
+
+Imagine your cargo ship loading crates at port. Every gram of weight costs fuel; every unnecessary item slows the journey. In EVM contracts, every byte stored and every operation executed burns gas—and that cost is borne by your users on every transaction. A poorly optimized swap contract might cost 200,000 gas per trade; a well-tuned version of the same logic can drop to 120,000 gas. That 40% reduction translates directly to lower barriers and better UX.
+
+Gas optimization is not about obscuring your code with inline assembly or removing safety checks. It's about disciplined choices: ordering struct fields to pack into fewer storage slots, caching repeated reads from storage into memory, choosing `calldata` over `memory` for external inputs, and using bitmaps to compress boolean flags. These patterns are mechanical, auditable, and deliver measurable wins without sacrificing clarity or security.
+
+In this lesson, we'll walk through the highest-impact optimizations for DeFi infrastructure—SwapRouter, LiquidityPool, OracleAdapter components—and show you how to measure improvements with gas snapshots. You'll learn when to use `immutable` and `constant`, when `unchecked` math is safe, and how to balance optimization with maintainability. By the end, you'll be equipped to ship gas-efficient contracts to Zilliqa EVM that respect both your users' wallets and your team's ability to audit and extend the code.
+
+## Conceptual foundations
+
+Gas optimization in smart contracts is fundamentally about reducing storage operations (SSTORE/SLOAD), minimizing calldata size, and choosing the right data locations. Every optimization must be weighed against code clarity and security—micro-optimizations that obscure logic or introduce subtle bugs are net-negative. The goal is mechanical, high-impact wins that become standard practice.
+
+### Storage packing and slot utilization
+
+The EVM stores data in 32-byte slots. When you declare a struct or a sequence of state variables, the compiler tries to pack multiple smaller types into a single slot. However, the order you declare fields matters: if you interleave large types (like `uint256` or `address`) with small types (like `uint64` or `bool`), you'll waste slots because the compiler cannot backtrack to fill gaps.
+
+Optimal packing groups small types together beneath the 32-byte boundary. For example, placing an `address` (20 bytes), a `uint64` (8 bytes), and a `bool` (1 byte) consecutively allows them to share one slot, saving two SLOAD operations on every read and two SSTORE operations on every write. In DeFi protocols with millions of transactions, these savings compound.
+
+Consider a LiquidityPool struct: if you need to store `owner` (address), `feeTier` (uint24), `paused` (bool), and `totalLiquidity` (uint256), order them as `owner`, `feeTier`, `paused` (packed into slot 0), then `totalLiquidity` (slot 1). This uses two slots instead of four.
+
+### Data locations: calldata, memory, and storage
+
+Solidity offers three data locations: `storage` (persistent, expensive), `memory` (temporary, moderate cost), and `calldata` (read-only input data, cheapest). Choosing the right location for function parameters and local variables can dramatically reduce gas costs.
+
+For external functions that accept arrays or structs as read-only inputs, always use `calldata`. This avoids copying the data into memory, which incurs allocation costs. For internal functions and complex manipulations, `memory` is appropriate. For state that persists across transactions, `storage` is required—but you should cache storage reads into local variables when you need to access the same value multiple times within a function.
+
+In a SwapRouter, if you read `poolState.reserve0` and `poolState.reserve1` multiple times during a swap calculation, cache them into `uint256 r0 = poolState.reserve0;` and `uint256 r1 = poolState.reserve1;` at the start of the function. This replaces multiple SLOAD operations (800 gas each) with cheap MLOAD operations (3 gas each).
+
+### Immutability with constant and immutable
+
+Values that never change after deployment should be marked `constant` (evaluated at compile time) or `immutable` (set once in the constructor). Both avoid storage slots entirely: `constant` is inlined directly into the bytecode, and `immutable` is stored in the code section rather than storage, making reads nearly free.
+
+Use `constant` for protocol-wide parameters like `PRECISION = 1e18` or `MAX_FEE = 1000`. Use `immutable` for deployment-specific values like the factory address, initial token addresses, or owner. A common pattern in DeFi is to store the factory or router address as `immutable` and use it for cross-contract calls without paying for storage access.
+
+### Custom errors for gas-efficient reverts
+
+Since Solidity 0.8.4, custom errors offer a cheaper alternative to `require` statements with long string messages. A revert string like `"Insufficient output amount for trade"` must be stored in the contract bytecode and costs gas to copy and return. A custom error like `error InsufficientOutput(uint256 requested, uint256 available);` encodes only a 4-byte selector plus the argument data, significantly reducing gas costs—especially when the error is hit frequently (e.g., slippage checks in swaps).
+
+Custom errors also improve debugging: instead of parsing a string, you get structured data that can be decoded off-chain. This is critical for DeFi UIs that need to surface precise failure reasons (e.g., "Trade requires 1000 USDC output but pool can only provide 950 USDC").
+
+### Bitmaps for compressed boolean storage
+
+When you need to track many binary flags (claimed/not claimed, enabled/disabled), a `mapping(address => bool)` costs one storage slot per entry. A bitmap compresses 256 flags into a single `uint256`, reducing costs by two orders of magnitude for large sets.
+
+A bitmap works by treating each bit in a `uint256` as a boolean flag. To check if index `i` is set, compute the word (`i / 256`) and the bit position (`i % 256`), then test the bit with a bitwise AND. To set a flag, use bitwise OR. Libraries like OpenZeppelin's `BitMaps` provide safe abstractions, but the core pattern is simple: `words[index >> 8] & (1 << (index & 255))`.
+
+This pattern is ideal for airdrop claims (track which indices have claimed), whitelist flags, and permission sets. A contract tracking 10,000 airdrop claims with a bitmap uses ~40 storage slots instead of 10,000.
+
+### Safe unchecked arithmetic for loop counters and fees
+
+Solidity 0.8+ adds overflow/underflow checks to all arithmetic by default, costing ~20-30 gas per operation. In contexts where overflow is mathematically impossible (e.g., loop counters bounded by array length, fee calculations capped by constants), you can wrap the arithmetic in an `unchecked {}` block to save gas without introducing risk.
+
+For example, in a loop iterating over an array of length `n`, the counter increment `i++` cannot overflow because `n` is bounded by memory constraints (much less than `type(uint256).max`). Wrapping the loop body in `unchecked { ... }` is safe. Similarly, if you calculate a fee as `amount * feeBps / 10_000` and you've validated that `feeBps <= 10_000`, the multiplication cannot overflow a uint256 for realistic `amount` values (up to total supply of a token).
+
+**Critical**: only use `unchecked` when you can document why overflow is impossible. Otherwise, silent overflows are catastrophic.
+
+## Guided code walk-throughs
+
+These examples demonstrate gas optimization patterns in DeFi infrastructure components—LiquidityPool structs, SwapRouter caching, AirdropDistributor bitmaps—showing measurable wins without sacrificing clarity.
+
+### 1) Storage packing before vs after
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+// Before: wastes slots due to ordering
+struct AccountBefore {
+  address owner;   // 20 bytes
+  bool active;     // 1 byte (occupies a new slot because of ordering)
+  uint64 tier;     // 8 bytes
+  uint256 balance; // 32 bytes
+}
+
+// After: packs into fewer slots by ordering small types together
+struct AccountAfter {
+  address owner;   // slot 0 (20 bytes)
+  uint64 tier;     // slot 0 (+8 bytes)
+  bool active;     // slot 0 (+1 byte)
+  uint256 balance; // slot 1 (32 bytes)
+}
+```
+
+Takeaway: group small types beneath a 32‑byte ceiling. Prefer `uint256` for arithmetic; only downsize when you actually gain packing.
+
+### 2) Data locations and caching storage
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract CacheExample {
+  uint256 public total;
+
+  error BadLen();
+
+  // Use calldata to avoid copying; cache SLOAD into memory/local variables
+  function sumAndAdd(uint256[] calldata values) external {
+    uint256 t = total; // cache SLOAD
+    uint256 len = values.length;
+    if (len == 0) revert BadLen();
+    unchecked { // safe: loop counter bounds checked by len
+      for (uint256 i = 0; i < len; i++) {
+        t += values[i];
+      }
+    }
+    total = t; // single SSTORE
+  }
+}
+```
+
+Takeaway: reading once and writing once is cheaper than many small reads/writes.
+
+### 3) Bitmap pattern for O(1) flags
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+library Bitmap {
+  function _word(uint256 index) internal pure returns (uint256 key, uint256 mask) {
+    key = index >> 8; // /256
+    mask = 1 << (index & 255);
+  }
+}
+
+contract Flags {
+  mapping(uint256 => uint256) private words;
+
+  function isSet(uint256 index) public view returns (bool) {
+    (uint256 key, uint256 mask) = Bitmap._word(index);
+    return words[key] & mask != 0;
+  }
+
+  function set(uint256 index) external {
+    (uint256 key, uint256 mask) = Bitmap._word(index);
+    words[key] |= mask;
+  }
+}
+```
+
+Takeaway: bitmaps compress 256 boolean flags into one storage slot—ideal for claims/eligibility.
+
+### 4) Custom errors vs strings
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+library Errors {
+  error InsufficientOutput(uint256 want, uint256 got);
+}
+
+contract Reverts {
+  using Errors for *;
+  function check(uint256 out, uint256 min) external pure {
+    if (out < min) revert Errors.InsufficientOutput(min, out);
+  }
+}
+```
+
+Takeaway: custom errors encode data efficiently and save gas compared to long revert strings.
+
+## Practice and reflection
+
+Apply gas optimization techniques to your DeFi contracts:
+
+- **Audit a struct for packing**: Take a core data structure (PoolState, Position, or Claim) and reorder the fields to minimize storage slots. Calculate the slot savings and estimate gas cost reduction per operation.
+- **Cache storage reads in a hot path**: Find a function that reads the same storage variable multiple times (e.g., `totalSupply`, `feeRate`, or `reserve0`). Cache it into a local variable at the start of the function and measure the gas difference with a before/after snapshot.
+- **Replace a boolean mapping with a bitmap**: If you have a `mapping(uint256 => bool)` tracking claims or eligibility, convert it to a bitmap using bitwise operations. Estimate the gas savings for 100, 1,000, and 10,000 entries.
+- **Convert a revert string to a custom error**: Find a `require` statement with a long string message and replace it with a custom error that includes relevant parameters. Measure the deployment and runtime gas savings.
+- **Add unchecked math to a safe loop**: Identify a loop where the counter cannot overflow (bounded by array length or a small constant). Wrap the loop body in `unchecked {}` and verify the gas savings in a test case.
+- **Mark a deployment-time value as immutable**: If you have a state variable set once in the constructor (factory address, initial token, or admin), change it to `immutable` and measure the gas savings on reads.
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"gasopt1","text":"Downsizing integers always reduces gas","correctAnswer":false,"explanation":"Downsizing can add casts and doesn't help unless it improves packing."},
+  {"id":"gasopt2","text":"calldata avoids copying external inputs","correctAnswer":true,"explanation":"Use calldata for external functions with read-only inputs."},
+  {"id":"gasopt3","text":"Custom errors are cheaper than long revert strings","correctAnswer":true,"explanation":"Errors encode selector+args instead of long UTF-8."},
+  {"id":"gasopt4","text":"Unchecked math blocks disable all safety checks in the entire contract","correctAnswer":false,"explanation":"Unchecked only applies to the specific block; use it for provably safe arithmetic like loop counters."}
+]}/>
+
+{/* Word Jumble */}
+<WordJumble word="BITMAP" hint="Compress many boolean flags into one slot" scrambled="TIBMPA" />
+
+Short reflection: Which gas optimization technique offers the highest return-on-investment for your current project, balancing gas savings against code complexity and maintainability?
+
+## Security and pitfalls
+
+Gas optimization must never compromise security. These patterns show how to avoid common pitfalls when applying optimization techniques.
+
+### Unsafe unchecked arithmetic
+
+**Danger**: Using `unchecked {}` without verifying mathematical bounds can cause silent overflows, leading to catastrophic vulnerabilities like infinite minting, double-spending, or loss of funds. If an attacker can manipulate inputs to trigger an overflow in an unchecked block, the consequences are silent and often irreversible.
+
+**Bad**:
+```solidity
+function distribute(uint256[] calldata amounts) external {
+  uint256 total;
+  unchecked {
+    for (uint256 i = 0; i < amounts.length; i++) {
+      total += amounts[i]; // Can overflow if sum > type(uint256).max
+    }
+  }
+  require(balance >= total, "Insufficient balance");
+}
+```
+
+**Good**:
+```solidity
+function distribute(uint256[] calldata amounts) external {
+  uint256 total;
+  // Only loop counter is unchecked; accumulation uses checked arithmetic
+  for (uint256 i = 0; i < amounts.length; ) {
+    total += amounts[i]; // Checked arithmetic
+    unchecked { ++i; } // Safe: i < amounts.length always
+  }
+  require(balance >= total, "Insufficient balance");
+}
+```
+
+**Rule**: Only use `unchecked` for operations where you can mathematically prove overflow is impossible (loop counters, small bounded calculations). Document the invariant in a comment. Never wrap complex arithmetic or user-controlled values in unchecked blocks.
+
+### Poor packing introducing alignment bugs
+
+**Danger**: Incorrectly packed structs can introduce subtle bugs if you rely on struct layout for low-level operations (assembly, keccak256 hashing, or cross-contract calls). Over-aggressive packing can also make code harder to read and increase the risk of off-by-one errors when accessing packed fields.
+
+**Bad**:
+```solidity
+struct Position {
+  uint128 amount;
+  uint64 timestamp;
+  uint32 flags;
+  uint16 tier;
+  uint8 status; // Packed into 31 bytes total—confusing and error-prone
+}
+```
+
+**Good**:
+```solidity
+struct Position {
+  uint128 amount;      // slot 0 (16 bytes)
+  uint64 timestamp;    // slot 0 (+8 bytes)
+  uint32 flags;        // slot 0 (+4 bytes)
+  // Total: 28 bytes in slot 0 (4 bytes unused, acceptable)
+  address owner;       // slot 1 (20 bytes, clear boundary)
+}
+```
+
+**Rule**: Pack structs to save slots, but maintain clear semantic boundaries. Group related fields together and document the layout in comments. Avoid packing more than 3-4 fields per slot to preserve readability.
+
+### Storage caching that breaks reentrancy safety
+
+**Danger**: Caching storage values into locals can break reentrancy safety if you write the cached value back to storage after an external call. An attacker can reenter between the read and the write, manipulating state in ways that invalidate your cached assumptions.
+
+**Bad**:
+```solidity
+function withdraw(uint256 amount) external nonReentrant {
+  uint256 bal = balanceOf[msg.sender]; // Cache storage
+  require(bal >= amount, "Insufficient balance");
+  
+  balanceOf[msg.sender] = bal - amount; // Effect (but too early)
+  token.transfer(msg.sender, amount);   // Interaction
+  // If nonReentrant modifier is missing, this is exploitable
+}
+```
+
+**Good**:
+```solidity
+function withdraw(uint256 amount) external nonReentrant {
+  uint256 bal = balanceOf[msg.sender]; // Cache for check
+  require(bal >= amount, "Insufficient balance");
+  
+  balanceOf[msg.sender] = bal - amount; // Effect BEFORE interaction
+  // External call last (CEI discipline)
+  (bool success, ) = msg.sender.call{value: amount}("");
+  require(success, "Transfer failed");
+}
+```
+
+**Rule**: Follow CEI discipline even when caching. Update storage before external calls, and use `nonReentrant` guards on all value-moving functions. Gas optimization never justifies breaking CEI order.
+
+### Immutable values that need upgradability
+
+**Danger**: Marking values as `immutable` saves gas but makes them unchangeable after deployment. If you mark protocol parameters (fee rates, limits, addresses) as `immutable` and later need to change them (upgrade a dependency, adjust economics), you'll need to redeploy the entire contract and migrate state.
+
+**Bad**:
+```solidity
+contract SwapRouter {
+  address public immutable factory; // Cannot change if factory is upgraded
+  uint256 public immutable feeRate; // Cannot adjust fees without redeploying
+}
+```
+
+**Good**:
+```solidity
+contract SwapRouter is Ownable {
+  address public immutable factory;  // Truly immutable (no upgrade path needed)
+  uint256 public feeRate;            // Storage (can be updated by owner)
+  
+  constructor(address factory_, address owner_) Ownable(owner_) {
+    factory = factory_;
+    feeRate = 30; // 0.3% default
+  }
+  
+  function setFeeRate(uint256 newRate) external onlyOwner {
+    require(newRate <= 100, "Max 1%");
+    feeRate = newRate;
+    emit FeeRateUpdated(newRate);
+  }
+}
+```
+
+**Rule**: Only use `immutable` for values that will truly never change (factory addresses, token addresses set at deployment, protocol constants). For economic parameters, governance addresses, or upgradable dependencies, use storage with access controls.
+
+### Bitmap off-by-one errors
+
+**Danger**: Bitmap operations involve bitwise arithmetic that's easy to get wrong. Off-by-one errors in index calculations (word selection, bit masking) can cause flags to overlap, skip indices, or overwrite unrelated data. These bugs are silent and hard to detect without comprehensive testing.
+
+**Bad**:
+```solidity
+function set(uint256 index) external {
+  uint256 word = index / 256;         // Should use >> 8
+  uint256 bit = index % 256;          // Should use & 255
+  words[word] |= 1 << bit;            // Risk of misalignment
+}
+```
+
+**Good**:
+```solidity
+function set(uint256 index) external {
+  uint256 word = index >> 8;          // Bit shift is clearer and cheaper
+  uint256 bit = index & 255;          // Mask to get remainder
+  words[word] |= 1 << bit;            // Set the bit
+}
+
+function isSet(uint256 index) public view returns (bool) {
+  uint256 word = index >> 8;
+  uint256 mask = 1 << (index & 255);
+  return words[word] & mask != 0;     // Test the bit
+}
+```
+
+**Rule**: Use bitwise shifts (`>>`, `<<`) and masks (`& 255`) for bitmap calculations instead of division/modulo. Add extensive unit tests covering edge cases (index 0, 255, 256, 257, max uint256). Consider using OpenZeppelin's `BitMaps` library for battle-tested abstractions.
+
+## Security checklist
+
+Before deploying gas-optimized contracts:
+
+- [ ] **Storage packing audit**: Verify struct field ordering minimizes slots without introducing alignment bugs; document slot layout in comments
+- [ ] **Data location review**: Confirm all external array/struct parameters use `calldata`; cache repeated storage reads into locals
+- [ ] **Immutable correctness**: Ensure all `immutable` values truly never need updates; use storage with access controls for parameters that might change
+- [ ] **Custom error coverage**: Replace all long revert strings with custom errors; verify error parameters provide sufficient debugging context
+- [ ] **Unchecked math bounds**: Document invariants proving overflow is impossible for every `unchecked` block; add tests for boundary conditions
+- [ ] **Bitmap edge cases**: Test bitmap operations at indices 0, 255, 256, and near `type(uint256).max`; verify no off-by-one errors
+- [ ] **CEI discipline maintained**: Verify storage caching doesn't break Checks-Effects-Interactions order; update state before external calls
+- [ ] **Reentrancy guards active**: Ensure `nonReentrant` protects all value-moving functions even when using cached storage reads
+- [ ] **Gas snapshots measured**: Generate before/after gas reports for optimizations; verify claimed savings are real and significant
+- [ ] **Readability preserved**: Ensure optimized code remains auditable; add comments explaining non-obvious packing or bitwise operations
+- [ ] **OpenZeppelin patterns followed**: Use battle-tested libraries (BitMaps, SafeERC20) instead of hand-rolled optimizations where available
+- [ ] **Upgrade compatibility**: If using proxies, verify storage layout changes don't break delegatecall assumptions; test packing with upgrade paths
+
+## Wrap‑up
+
+Practical gas wins come from disciplined storage layout, correct data locations, and compact state representations. By ordering struct fields carefully, caching storage reads, using `calldata` for external inputs, and marking deployment-time values as `immutable`, you can cut gas costs by 30-50% without obscuring your code. These patterns are mechanical, auditable, and deliver measurable improvements that directly benefit user experience.
+
+Advanced techniques like bitmaps, custom errors, and safe `unchecked` arithmetic provide additional savings in high-frequency operations. Bitmaps compress thousands of boolean flags into a handful of storage slots, custom errors reduce revert costs and improve error surfaces, and `unchecked` blocks eliminate redundant overflow checks in provably safe contexts like loop counters. Each technique requires careful verification—document invariants, add comprehensive tests, and measure actual gas savings with snapshots before claiming victory.
+
+Gas optimization is a balance between efficiency and maintainability. Always prioritize security and clarity over micro-optimizations; a contract that saves 2,000 gas but introduces a subtle reentrancy bug or off-by-one error is a net loss. Use gas optimization as a tool to make your DeFi infrastructure more accessible and competitive on Zilliqa EVM, but never at the expense of the safety and auditability that make your protocol trustworthy.

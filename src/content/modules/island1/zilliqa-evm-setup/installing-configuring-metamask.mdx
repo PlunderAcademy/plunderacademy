@@ -1,0 +1,237 @@
+---
+id: installing-configuring-metamask
+module: zilliqa-evm-setup
+number: 4.1
+title: Installing and Configuring MetaMask for Zilliqa EVM
+objective: Learn how to install and configure MetaMask wallet for Zilliqa EVM network.
+slug: installing-configuring-metamask
+---
+
+## Understanding MetaMask for Zilliqa Development
+
+### What is MetaMask?
+
+**Real-world analogy:** Think of MetaMask like a secure digital wallet that also functions as an ID card and keychain. It stores your blockchain identity (addresses), your keys (for signing transactions), and connects you to blockchain applications - all while keeping your private information secure.
+
+MetaMask is the most widely used Ethereum-compatible browser wallet, and thanks to Zilliqa's full EVM compatibility, it works seamlessly with Zilliqa networks. For developers, MetaMask serves as both a testing wallet and a way to interact with deployed contracts.
+
+**Why MetaMask is essential for development:**
+- **Transaction signing:** Required to deploy contracts and interact with them
+- **Network switching:** Easy switching between mainnet, testnet, and local networks
+- **dApp integration:** Essential for testing how users will interact with your applications
+- **Account management:** Manage multiple accounts for different testing scenarios
+
+## Step-by-Step MetaMask Installation
+
+### Step 1: Download and Install MetaMask
+
+#### For Chrome, Firefox, Brave, or Edge:
+
+1. **Visit the official MetaMask website:** https://metamask.io/
+2. **Click "Download"** and select your browser
+3. **Add to browser** from the official browser extension store
+4. **Pin the extension** to your browser toolbar for easy access
+
+**⚠️ Security Warning:** Only download MetaMask from the official website or your browser's official extension store. Fake MetaMask extensions exist and will steal your funds.
+
+#### Verify Authentic Installation:
+- **Chrome:** Look for "metamask.io" in the extension details
+- **Firefox:** Verify it's published by "danfinlay, kumavis"
+- **Extension ID:** For Chrome, the ID should be `nkbihfbeogaeaoehlefnkodbefgpgknn`
+
+### Step 2: Create or Import a Wallet
+
+#### For New Users (Recommended for Development):
+
+1. **Click "Get Started"** when MetaMask opens
+2. **Select "Create a new wallet"**
+3. **Create a strong password** (at least 8 characters with mixed case, numbers, symbols)
+4. **Watch the security video** (optional but recommended)
+5. **Reveal your Secret Recovery Phrase**
+6. **Write down your 12-word seed phrase** on paper (never store digitally)
+7. **Confirm your seed phrase** by selecting words in the correct order
+8. **Complete setup**
+
+#### For Existing Users:
+
+1. **Select "Import wallet"**
+2. **Enter your existing 12-word seed phrase**
+3. **Create a new password** for this browser installation
+4. **Complete import**
+
+### Step 3: Add Zilliqa Networks to MetaMask
+
+#### Adding Zilliqa Mainnet:
+
+1. **Open MetaMask** and click the network dropdown (shows "Ethereum Mainnet" by default)
+2. **Click "Add network"** at the bottom of the dropdown
+3. **Click "Add a network manually"**
+4. **Fill in the following details:**
+
+```
+Network Name: Zilliqa EVM Mainnet
+New RPC URL: https://api.zilliqa.com
+Chain ID: 32769
+Currency Symbol: ZIL
+Block Explorer URL: https://zilliqa.blockscout.com
+```
+
+5. **Click "Save"**
+6. **Switch to the new network** by selecting it from the dropdown
+
+#### Adding Zilliqa Testnet (Essential for Development):
+
+1. **Repeat the process above** with these details:
+
+```
+Network Name: Zilliqa EVM Testnet
+New RPC URL: https://api.testnet.zilliqa.com
+Chain ID: 33101
+Currency Symbol: ZIL
+Block Explorer URL: https://zilliqa.blockscout.com
+```
+
+2. **Click "Save"**
+3. **Switch to testnet** for development work
+
+### Step 4: Account Management for Development
+
+#### Creating Multiple Accounts:
+
+1. **Click the account circle** in the top right
+2. **Select "Create account"**
+3. **Name your account** (e.g., "Development", "Testing", "Mainnet")
+4. **Click "Create"**
+
+**Best practices for development accounts:**
+- **Testnet Account:** For all development and testing
+- **Mainnet Account:** Only for production deployments (keep minimal funds)
+- **Contract Owner Account:** Separate account for contract ownership
+- **User Testing Account:** For testing user interactions
+
+#### Account Security Setup:
+
+```
+Development Setup:
+├── Account 1: "Development Main" (for contract deployment)
+├── Account 2: "Testing User" (for user interaction testing)  
+├── Account 3: "Contract Owner" (for administrative functions)
+└── Account 4: "Mainnet Deploy" (for production only)
+```
+
+## Network Configuration Verification
+
+### Testing Your Setup:
+
+1. **Switch to Zilliqa Testnet** in MetaMask
+2. **Check network details** by clicking the network name
+3. **Verify the following:**
+   - ✅ Network name shows "Zilliqa EVM Testnet"
+   - ✅ Chain ID shows "33101"
+   - ✅ Currency symbol shows "ZIL"
+   - ✅ RPC URL shows "https://api.testnet.zilliqa.com"
+
+### Common Configuration Issues:
+
+#### Issue: "Network already exists"
+**Solution:** The network might be added with a different name. Check your network list for existing Zilliqa networks.
+
+#### Issue: "RPC Error" or connection failures
+**Solutions:**
+- Verify the RPC URL is exactly: `https://api.testnet.zilliqa.com`
+- Check your internet connection
+- Try removing and re-adding the network
+
+#### Issue: Wrong chain ID errors
+**Solution:** Ensure Chain ID is exactly `33101` for testnet and `32769` for mainnet.
+
+## Development Workflow Setup
+
+### Environment-Specific Network Usage:
+
+#### During Development:
+- **Always use Zilliqa Testnet** for development and testing
+- **Never use mainnet** for experimental code
+- **Keep testnet account funded** with testnet ZIL from faucets
+
+#### For Production:
+- **Deploy to mainnet** only after thorough testnet testing
+- **Use minimal mainnet ZIL** for deployment
+- **Test all functions** on testnet before mainnet deployment
+
+### MetaMask Developer Settings:
+
+1. **Open MetaMask Settings** (click account icon → Settings)
+2. **Go to Advanced** settings
+3. **Enable these developer features:**
+   - ✅ "Show hex data" (useful for debugging transactions)
+   - ✅ "Show conversion on test networks" (helps with gas estimation)
+   - ✅ "Customize transaction nonce" (for stuck transaction recovery)
+
+## Security Best Practices for Developers
+
+### Seed Phrase Security:
+
+**Critical security rules:**
+- **Write seed phrase on paper** and store in multiple secure locations
+- **Never store seed phrase digitally** (no photos, files, cloud storage)
+- **Never share your seed phrase** with anyone (legitimate support never asks for this)
+- **Use a dedicated development wallet** separate from your main holdings
+
+### Development Security:
+
+**Safe development practices:**
+- **Use hardware wallets** for mainnet deployments with significant funds
+- **Keep development and production accounts separate**
+- **Regular security audits** of your seed phrase storage
+- **Be cautious with browser extensions** that request MetaMask access
+
+### Testing Account Management:
+
+**Recommended setup:**
+```
+Production Account (Hardware Wallet)
+├── Used only for final mainnet deployments
+├── Minimal ZIL balance
+└── Maximum security practices
+
+Development Account (MetaMask)
+├── Used for all development work
+├── Testnet ZIL only
+└── Regular security practices
+```
+
+## Troubleshooting Common Issues
+
+### Connection Problems:
+
+#### MetaMask not connecting to applications:
+1. **Refresh the webpage**
+2. **Check if MetaMask is unlocked**
+3. **Verify you're on the correct network**
+4. **Clear browser cache and cookies**
+5. **Disable other wallet extensions temporarily**
+
+#### Transactions failing:
+1. **Check you have sufficient ZIL for gas**
+2. **Verify you're on the correct network (testnet vs mainnet)**
+3. **Try increasing gas limit slightly**
+4. **Reset account** (Settings → Advanced → Reset Account) if nonce is stuck
+
+### Performance Optimization:
+
+#### Speed up MetaMask:
+1. **Disable unnecessary browser extensions**
+2. **Clear MetaMask storage** (Settings → Advanced → Reset Account)
+3. **Use hardware acceleration** in your browser
+4. **Keep MetaMask updated** to the latest version
+
+## Ready for Development
+
+Once your MetaMask is properly configured with Zilliqa networks, you're ready to:
+- **Receive testnet ZIL** from faucets
+- **Deploy smart contracts** using development frameworks
+- **Interact with deployed contracts**
+- **Test transaction flows** and user experiences
+
+Your MetaMask setup is the foundation of your entire development workflow - take time to configure it properly and securely!

@@ -1,0 +1,390 @@
+---
+id: storage-optimization
+module: advanced-data-structures-error-handling
+number: 2.2.2
+title: Storage vs Memory vs Calldata Optimization
+objective: >-
+  Choose the right data locations, pack storage, and structure functions to minimize SLOAD/SSTORE and calldata costs in staking flows.
+slug: storage-optimization
+---
+
+## Set the stage
+
+Your staking vault is like a cargo ship: every crate (variable) lives in one of three places—**storage** (the hold, expensive to access), **memory** (the deck, cheap but temporary), or **calldata** (the manifest, read-only and ultra-cheap). Loading a crate from the hold costs 2,100 gas (cold `SLOAD`); reading from the manifest costs 3 gas per word. Writing to the hold costs 20,000 gas for a new slot, 5,000 to update. Get these choices wrong, and your users pay hundreds of dollars per transaction on mainnet. Get them right, and your staking contract is 10× cheaper than competitors.
+
+Every function in your staking system—deposit, withdraw, accrue rewards, claim—hits storage, memory, or calldata. The difference between a 50k-gas deposit and a 200k-gas deposit often comes down to: did you pack `uint128` fields into one slot? Did you read arguments from `calldata` instead of copying to `memory`? Did you avoid redundant `SSTORE` by checking for no-ops first? These micro-optimizations compound: a vault with 10,000 users saves them collectively millions of dollars in gas over its lifetime.
+
+By the end of this lesson you'll know when to use each data location, how to pack storage slots, and how to structure function arguments for zero-copy calldata access. In Module 5's staking contract, every hot path will be optimized: positions packed into single slots, batch operations reading from calldata, and redundant writes eliminated. Your users will thank you with their wallets.
+
+## Conceptual foundations
+
+### Storage: the expensive vault
+
+**Storage** is persistent state: every `mapping`, `uint256 public balance`, and struct lives here. Storage is organized in 256-bit (32-byte) slots, numbered 0, 1, 2, ...
+
+**Costs** (as of recent EVM):
+- **Cold `SLOAD`** (first read of a slot in a transaction): 2,100 gas
+- **Warm `SLOAD`** (subsequent reads): 100 gas
+- **`SSTORE` from zero to non-zero**: 20,000 gas
+- **`SSTORE` from non-zero to non-zero**: 5,000 gas (or 2,900 if slot is already warm)
+- **`SSTORE` from non-zero to zero**: Refund up to 4,800 gas (but refunds are capped and paid at tx end)
+
+**When to use**: For state that must persist between transactions (user balances, timestamps, accrued rewards).
+
+**Optimization**: Pack multiple small variables into one slot; avoid writing when value hasn't changed (check for no-ops).
+
+### Memory: the temporary workspace
+
+**Memory** is a per-call byte array that grows as needed. Reset to empty at the start of each call. Reading and writing are cheap, but memory **expands quadratically** in cost once you allocate large regions.
+
+**Costs**:
+- First 22 words (704 bytes): 3 gas per word
+- After that: quadratic expansion (gets expensive fast for large allocations)
+
+**When to use**: For intermediate calculations, building arrays to return, copying calldata when you must mutate, and passing data to internal functions.
+
+**Optimization**: Minimize memory allocation; prefer reading from calldata when possible; avoid large temporary arrays unless necessary.
+
+### Calldata: the read-only manifest
+
+**Calldata** is the raw byte payload of a transaction or external call. It's immutable and lives outside the EVM's memory space. Reading from calldata costs ~3 gas per word, making it the cheapest location.
+
+**When to use**: For `external` function arguments, especially arrays and structs. Mark parameters `calldata` instead of `memory` to avoid a copy.
+
+**Optimization**: Use `external` (not `public`) for functions that take large inputs; mark array/struct parameters `calldata` to read directly without copying.
+
+**Example**:
+```solidity
+// Bad: copies to memory (costs ~200 gas per element)
+function processPublic(uint256[] memory amounts) public { /*...*/ }
+
+// Good: reads from calldata (costs ~3 gas per element)
+function processExternal(uint256[] calldata amounts) external { /*...*/ }
+```
+
+### Storage packing: fitting multiple variables into one slot
+
+EVM storage is 256-bit slots. If you declare:
+```solidity
+uint128 a; // uses first 128 bits of slot 0
+uint128 b; // uses last 128 bits of slot 0 (packed!)
+uint256 c; // uses all of slot 1
+```
+
+One `SLOAD` of slot 0 reads both `a` and `b`; one `SSTORE` updates both. This is **2× cheaper** than storing them in separate slots.
+
+**Packing rules**:
+- Variables are packed in declaration order
+- A new 256-bit type (e.g., `uint256`, `address`, `bytes32`) starts a new slot
+- Smaller types (`uint128`, `uint64`, `uint32`, `bool`, `address`) pack if they fit
+
+**Best practice for staking**: Group frequently-updated fields into one struct and pack them. Example:
+```solidity
+struct Position {
+    uint128 amount;       // 128 bits
+    uint64 lastAccruedAt; // 64 bits
+    uint64 flags;         // 64 bits
+} // Total: 256 bits → 1 slot
+```
+
+**Caution**: Don't pack fields that update independently, or you'll pay to rewrite the whole slot each time one field changes.
+
+### When to prefer each location: decision tree
+
+| Scenario | Location | Why |
+|----------|----------|-----|
+| User balance, persistent state | `storage` | Must survive between transactions |
+| Function argument (read-only) | `calldata` | Cheapest; no copy |
+| Function argument (public, small) | `memory` | `public` functions can't take `calldata` |
+| Temporary calculation | `memory` | Cheap, ephemeral |
+| Building an array to return | `memory` | Must be mutable |
+| Large batch operation input | `calldata` | Avoid 200+ gas per element copy |
+| Struct passed to internal function | `memory` or `storage` | Depends on mutability |
+
+### Advanced: storage pointers vs memory copies
+
+When reading from a struct in storage, you have two choices:
+
+**Option A: Load into memory**
+```solidity
+Position memory p = positions[user]; // Copies entire struct to memory
+uint256 reward = calculateReward(p.amount, p.lastAccruedAt);
+```
+**Cost**: One `SLOAD` per field (e.g., 3 fields = 3 `SLOAD` = ~6,300 gas cold, ~300 gas warm)
+
+**Option B: Use storage pointer**
+```solidity
+Position storage p = positions[user]; // Just a pointer; no copy
+uint256 reward = calculateReward(p.amount, p.lastAccruedAt);
+```
+**Cost**: Same (still `SLOAD` each field when accessed), but **no memory allocation**
+
+**When to use each**:
+- **Memory**: If you'll read all fields multiple times (amortize copy cost) or pass to functions that expect `memory`
+- **Storage pointer**: If you'll read only a few fields, or might write back (avoid double copy)
+
+**For staking**: Most position reads are storage pointers (read amount, maybe timestamp; calculate; return). Only copy to memory if returning the entire position or passing to complex internal functions.
+
+**Anti-pattern**:
+```solidity
+// Bad: copies to memory, then immediately writes back
+Position memory p = positions[user];
+p.amount += reward;
+positions[user] = p; // Writes all fields, even if only one changed
+```
+
+**Good**:
+```solidity
+// Good: direct storage write
+positions[user].amount += reward; // Only writes changed field
+```
+
+## Guided code walk-throughs
+
+These examples show how to choose the right data location, pack storage, and eliminate redundant writes in staking operations.
+
+### 1) Favor calldata for `external` functions with large inputs
+
+Passing arrays by `calldata` avoids copying into memory; iterate without mutation to save gas. This batch processing function reads user addresses and amounts directly from the transaction payload.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract Batching {
+    event BatchProcessed(uint256 count, uint256 sum);
+
+    function process(uint256[] calldata amounts) external {
+        uint256 sum;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            sum += amounts[i];
+        }
+        emit BatchProcessed(amounts.length, sum);
+    }
+}
+```
+
+**Takeaway**: `calldata` is cheapest for read-only iteration in `external` functions. For staking, batch reward distribution or multi-user deposits should always use `calldata` arrays to save users gas.
+
+### 2) Pack storage and minimize writes
+
+Write co-located fields once rather than piecemeal; prefer `uint128/uint64` where ranges allow, and avoid unnecessary `SSTORE` by detecting no-ops. This example packs a staking position into one slot and skips writes when values don't change.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract PackedState {
+    struct Accrual { uint128 amount; uint64 last; uint64 flags; }
+    Accrual public accrual;
+
+    function setAccrual(uint128 amount, uint64 last, uint64 flags) external {
+        Accrual memory next = Accrual(amount, last, flags);
+        if (
+            next.amount != accrual.amount ||
+            next.last != accrual.last ||
+            next.flags != accrual.flags
+        ) {
+            accrual = next; // single SSTORE covering the slot
+        }
+    }
+}
+```
+
+**Takeaway**: Pack fields that update together and check for no-ops before writing. For staking, user positions (amount, last accrual timestamp, flags) should live in one packed slot; accrual updates should skip `SSTORE` if nothing changed.
+
+### 3) Copy to memory only when you must mutate
+
+If you need to modify an input array, copy once to memory and mutate there; return or write back once. This pattern is useful when you must transform user inputs before processing (e.g., applying a multiplier to all amounts).
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract Mutator {
+    function double(uint256[] calldata inArr) external pure returns (uint256[] memory outArr) {
+        outArr = new uint256[](inArr.length);
+        for (uint256 i = 0; i < inArr.length; i++) {
+            outArr[i] = inArr[i] * 2;
+        }
+    }
+}
+```
+
+**Takeaway**: Keep calldata read-only and do mutations in memory. For staking, if you need to compute adjusted reward shares before distributing, copy the input array to memory once, mutate, then process.
+
+<svg viewBox="0 0 650 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      {`.slot { fill: var(--background); stroke: var(--border); stroke-width: 2; rx: 4; }
+        .packed { fill: var(--primary); fill-opacity: 0.15; stroke: var(--primary); stroke-width: 2; }
+        .unpacked { fill: var(--destructive); fill-opacity: 0.1; stroke: var(--destructive); stroke-width: 2; }
+        .label { fill: var(--foreground); font-size: 12px; font-family: ui-monospace, monospace; }
+        .small { fill: var(--foreground); font-size: 10px; font-family: ui-monospace, monospace; }
+        .cost { fill: var(--muted-foreground); font-size: 10px; font-style: italic; }`}
+    </style>
+  </defs>
+  
+  {/* Unpacked (Bad) */}
+  <text className="label" x="10" y="25" style={{fontWeight: 'bold', fill: 'var(--destructive)'}}>Unpacked (3 slots, 3 SLOAD)</text>
+  <rect className="unpacked" x="10" y="40" width="300" height="60" />
+  <text className="small" x="20" y="60">Slot 0: uint256 amount</text>
+  <text className="small" x="20" y="80">Slot 1: uint256 lastAccruedAt</text>
+  <text className="small" x="20" y="95">Slot 2: uint256 flags</text>
+  <text className="cost" x="20" y="120">Read all 3: 2,100 + 100 + 100 = 2,300 gas</text>
+  <text className="cost" x="20" y="135">Write all 3: 20,000 + 5,000 + 5,000 = 30,000 gas</text>
+  
+  {/* Packed (Good) */}
+  <text className="label" x="10" y="175" style={{fontWeight: 'bold', fill: 'var(--primary)'}}>Packed (1 slot, 1 SLOAD)</text>
+  <rect className="packed" x="10" y="190" width="300" height="70" />
+  <text className="small" x="20" y="210">Slot 0:</text>
+  <text className="small" x="20" y="228">  uint128 amount (128 bits)</text>
+  <text className="small" x="20" y="244">  uint64 lastAccruedAt (64 bits)</text>
+  <text className="small" x="20" y="260">  uint64 flags (64 bits)</text>
+  <text className="cost" x="320" y="220">Read: 2,100 gas (1 SLOAD)</text>
+  <text className="cost" x="320" y="240">Write: 20,000 gas (1 SSTORE)</text>
+  <text className="small" x="320" y="260" style={{fill: 'var(--primary)', fontWeight: 'bold'}}>✓ Saves 200 gas/read, 10k gas/write</text>
+  
+  {/* Visual slot representation */}
+  <text className="label" x="350" y="25">256-bit Slot Layout:</text>
+  <rect className="slot" x="350" y="40" width="280" height="40" />
+  <rect className="packed" x="350" y="40" width="140" height="40" />
+  <text className="small" x="370" y="65" textAnchor="start">uint128 (128 bits)</text>
+  <rect className="packed" x="490" y="40" width="70" height="40" />
+  <text className="small" x="505" y="65" textAnchor="start" style={{fontSize: '9px'}}>uint64</text>
+  <rect className="packed" x="560" y="40" width="70" height="40" />
+  <text className="small" x="575" y="65" textAnchor="start" style={{fontSize: '9px'}}>uint64</text>
+</svg>
+
+## Practice and reflection
+
+Apply storage optimization to your staking design:
+
+- **Calldata conversion**: Take a function in your staking contract that accepts an array (e.g., batch deposit for multiple users). Rewrite it to use `calldata` instead of `memory`. Estimate the gas savings per element (hint: ~200 gas).
+- **Packing audit**: List all storage variables in your staking contract. Identify three fields that are frequently updated together and could be packed into one slot. Sketch the packed struct with bit widths.
+- **No-op detection**: Write a function that updates a reward rate. Add a guard that skips the `SSTORE` if the new rate equals the old rate. Explain why this matters when the rate is updated frequently but often doesn't change.
+- **Memory vs storage**: Your staking contract reads a `Position` struct from storage, calculates accrued rewards (doesn't modify the position), and returns the reward amount. Should you load the position into `memory` or use a `storage` pointer? Write two sentences defending your choice.
+- **Decision tree exercise**: For each scenario, choose `storage`, `memory`, or `calldata`: (a) a user's staked balance; (b) an array of pool IDs passed to a batch claim function; (c) a temporary array built to return reward history; (d) a loop counter. Justify each choice.
+
+{/* Word Jumble */}
+<WordJumble 
+  word="CALLDATA" 
+  hint="Cheapest read-only data location for external functions" 
+/>
+
+Short reflection: Your staking contract has a function that processes 100 user addresses. If you use `memory` instead of `calldata`, how much extra gas do users pay? (Hint: ~200 gas per address.)
+
+## Security and pitfalls
+
+Optimization can introduce subtle bugs if you're not careful. Follow these patterns to stay safe:
+
+### Packing overflow risks
+
+**Danger**: Using `uint128` or smaller types can overflow if you don't enforce bounds. If a user stakes `2^128 wei` (unlikely but possible on testnets or with large token decimals), your packed field silently wraps to zero.
+
+**Mitigation**:
+- Add explicit bounds checks: `require(amount <= type(uint128).max, "Overflow")`
+- Use OpenZeppelin's `SafeCast` library for safe downcasts: `amount.toUint128()`
+- Choose bit widths carefully: `uint64` for timestamps is safe until year 2262; `uint128` for token amounts is safe for almost all realistic balances
+
+**Example**:
+```solidity
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+using SafeCast for uint256;
+
+function setPosition(uint256 amount) external {
+    position.amount = amount.toUint128(); // Reverts if amount > 2^128-1
+}
+```
+
+### Calldata collision attacks (abi.encodePacked pitfalls)
+
+**Danger**: If you hash composite keys using `abi.encodePacked`, collisions can occur when dynamic types abut. Example: `keccak256(abi.encodePacked(userA, userB))` can collide with `keccak256(abi.encodePacked(userC, userD))` if addresses are concatenated without padding.
+
+**Mitigation**:
+- Prefer `abi.encode` for hashing; it includes length prefixes
+- If you must use `abi.encodePacked`, ensure static-sized types or explicit delimiters
+- For staking, prefer nested mappings (`user => poolId => Position`) over flat keys
+
+**Safe**:
+```solidity
+bytes32 key = keccak256(abi.encode(user, poolId)); // Safe: includes lengths
+```
+
+**Risky**:
+```solidity
+bytes32 key = keccak256(abi.encodePacked(user, poolId)); // Risk if types are dynamic
+```
+
+### Memory expansion attacks
+
+**Danger**: Malicious callers can pass enormous array lengths, forcing your contract to allocate gigabytes of memory. Memory expansion is quadratic beyond 704 bytes, so a 1 MB allocation can consume all gas.
+
+**Mitigation**:
+- Bound input sizes: `require(arr.length <= 100, "Too many")`
+- Use `calldata` instead of `memory` to avoid allocation
+- Never trust user-provided lengths; validate before looping
+
+**Example**:
+```solidity
+function processBatch(uint256[] calldata amounts) external {
+    require(amounts.length <= 100, "Batch too large");
+    // Now safe to iterate
+}
+```
+
+### No-op detection subtleties
+
+**Danger**: Checking for no-ops saves gas, but be careful with complex structs. If you check each field individually, you pay for multiple comparisons. If you check hash equality, you pay for hashing.
+
+**Best practice**: For simple values (uint256, address), check directly. For structs with 2-3 fields, check each field. For large structs, skip no-op detection (the comparison cost exceeds the savings).
+
+**Example**:
+```solidity
+// Good: simple value
+if (newRate != oldRate) { rate = newRate; }
+
+// Good: small struct
+if (newPos.amount != oldPos.amount || newPos.last != oldPos.last) {
+    position = newPos;
+}
+
+// Bad: large struct (comparison cost > savings)
+if (keccak256(abi.encode(newBigStruct)) != keccak256(abi.encode(oldBigStruct))) {
+    bigStruct = newBigStruct; // Don't do this
+}
+```
+
+## Pitfalls summary
+
+Quick reference for common mistakes:
+
+- Beware of `abi.encodePacked` collisions when hashing composite keys—prefer `abi.encode`
+- Don't downsize integers below realistic bounds; use `SafeCast` to prevent overflows
+- Avoid unbounded loops over calldata in public endpoints; bound input size explicitly
+- Remember storage refunds only apply when setting a slot to zero, and refunds are capped
+- Check for no-ops on simple values; skip for complex structs (comparison cost > savings)
+- Never trust user-provided array lengths; bound and validate before allocating memory
+- Test packing with edge values (max uint128, zero, etc.) to catch overflow bugs
+
+## Security checklist
+
+Before shipping storage optimizations:
+
+- [ ] **Packed fields bounded**: All downsized types (`uint128`, `uint64`) have explicit bounds checks or use `SafeCast`
+- [ ] **No-op guards in place**: Functions that update storage check if value changed before `SSTORE`
+- [ ] **Calldata for batches**: All functions taking arrays use `calldata` instead of `memory` where possible
+- [ ] **External visibility**: Functions taking large inputs are `external` (not `public`) to enable `calldata`
+- [ ] **Array length bounds**: All batch operations enforce max input size (e.g., `require(arr.length <= 100)`)
+- [ ] **Composite keys use abi.encode**: If hashing multiple keys, use `abi.encode` not `abi.encodePacked`
+- [ ] **Packing groups logical**: Only fields updated together are packed; independent fields stay separate
+- [ ] **Memory allocation limited**: No unbounded memory arrays; validate lengths before allocation
+- [ ] **Test coverage for packing**: Tests include max values for packed fields to catch overflow
+- [ ] **Gas profiling done**: Measure actual gas savings; ensure optimization is worth the complexity
+
+## Wrap-up and next steps
+
+You've learned how to choose the right data location—`storage` for persistence, `memory` for temporary work, `calldata` for read-only inputs—and how to pack storage slots to cut gas costs in half. You saw how to detect no-ops before writing, how to avoid calldata-to-memory copies, and the security pitfalls of packing (overflow) and unbounded inputs (memory expansion).
+
+Combined with the data structures (Lesson 1) and custom errors (Lesson 3) from this module, you now have a complete toolkit for building gas-efficient staking contracts. Next, in Lesson 4 (Revert Patterns and Error Recovery), you'll learn when to fail fast, when to soft-fail, and how to design idempotent operations. By Module 5 you'll assemble all these patterns into a production-ready staking contract where every deposit costs 50k gas instead of 200k, and every claim is 10× cheaper than competitors.
+

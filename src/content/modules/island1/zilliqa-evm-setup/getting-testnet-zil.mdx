@@ -1,0 +1,234 @@
+---
+id: getting-testnet-zil
+module: zilliqa-evm-setup
+number: 4.2
+title: Getting Testnet ZIL and Using the Block Explorer
+objective: >-
+  Learn how to obtain test tokens and use the block explorer for transaction
+  verification.
+slug: getting-testnet-zil
+---
+
+## Understanding Testnet ZIL for Development
+
+### What are Test Tokens?
+
+**Real-world analogy:** Think of testnet ZIL like play money at a casino training course. It looks and behaves exactly like real money within the training environment, but has no real-world value. You can practice all your moves without any financial risk.
+
+Testnet ZIL tokens are essential for blockchain development because they allow you to:
+- **Deploy smart contracts** without spending real money
+- **Test all contract functions** in a risk-free environment  
+- **Simulate user interactions** before going to mainnet
+- **Practice deployment workflows** without financial consequences
+- **Debug issues** without losing actual funds
+
+**Key differences from mainnet ZIL:**
+- ✅ **Free to obtain** from faucets
+- ✅ **Identical functionality** to mainnet ZIL
+- ✅ **Same transaction format** and gas mechanics
+- ❌ **No real-world value** (cannot be sold or transferred to mainnet)
+- ❌ **Network may reset** periodically (losing transaction history)
+
+## Finding and Using Zilliqa Testnet Faucets
+
+### Official Zilliqa Faucets
+
+**Primary sources for testnet ZIL:**
+- Faucet: https://faucet.testnet.zilliqa.com
+
+**⚠️ Security Note:** Only use faucets linked from official Zilliqa sources. Fake faucets may attempt to steal your wallet information.
+
+### How to Use a Testnet Faucet
+
+#### Step 1: Prepare Your Wallet Address
+
+1. **Open MetaMask** and ensure you're on Zilliqa Testnet
+2. **Click on your account name** to copy your address
+3. **Verify the address format:** Should start with `0x` and be 42 characters long
+4. **Example address:** `0x742d35Cc6565C42d26A7b4b4c6d3A5c5c5d4e4F4`
+
+#### Step 2: Access the Faucet
+
+1. **Navigate to the official faucet URL - https://faucet.testnet.zilliqa.com**
+2. **Read any requirements:** Some faucets have daily limits or verification requirements
+
+#### Step 3: Request Testnet ZIL
+
+1. **Paste your MetaMask address** into the faucet form
+2. **Submit the request**
+3. **Note the transaction ID** if provided
+
+#### Step 4: Wait for Distribution
+
+**Typical wait times:**
+- **Instant to 10 seconds:** Most faucets process quickly
+
+### Verification and Troubleshooting
+
+#### Verifying Receipt in MetaMask
+
+**Check MetaMask balance:**
+   - Open MetaMask
+   - Ensure you're on Zilliqa Testnet
+   - Balance should show testnet ZIL (usually 100 ZIL)
+
+**If balance doesn't appear:**
+   - Refresh MetaMask (click account circle → refresh)
+   - Check you're on the correct network
+   - Wait a few more minutes for network confirmation
+
+#### Using the Block Explorer for Verification
+
+1. **Open Zilliqa Testnet Blockscout:** https://testnet.zilliqa.blockscout.com/
+2. **Paste your wallet address** in the search bar
+3. **Verify transaction details:**
+   - ✅ Transaction status shows "Success"
+   - ✅ Amount received matches faucet distribution
+   - ✅ Transaction type shows "Transfer"
+   - ✅ From address is the faucet address
+
+#### Reading Transaction Details
+
+**Key information to verify:**
+```
+Transaction Hash: 0xabcd1234567890ef...
+Status: Success ✅
+From: 0x1234... (Faucet Address)
+To: 0x742d... (Your Address)
+Value: 100 ZIL
+Gas Used: 21,000
+Gas Price: 4,762 gwei
+```
+
+### Common Issues and Solutions
+
+#### Issue: "Request made too recently"
+**Cause:** Zilliqa is limited to 1 request per min
+**Solution:** 
+- Wait 1 min before requesting again
+- Use a different MetaMask account if you need more testnet ZIL
+
+#### Issue: "Invalid address format"
+**Cause:** Wrong address format or network
+**Solutions:**
+- Ensure you copied the full address (starting with 0x)
+- Verify you're copying from MetaMask on Zilliqa Testnet
+- Check for extra spaces or characters in the address
+
+#### Issue: "Faucet is empty" or "Service unavailable"
+**Cause:** Faucet has run out of funds or is under maintenance
+**Solutions:**
+- Try again in a few hours
+
+#### Issue: Transaction pending for a long time
+**Cause:** Network congestion or faucet issues
+**Solutions:**
+- Wait up to 10 minutes for confirmation
+- Check the transaction hash on the block explorer
+
+### Managing Your Testnet ZIL
+
+#### How Much Do You Need?
+
+**For basic development:**
+- **Contract deployment:** 0.5-5 ZIL per contract
+- **Function calls:** 0.1-5 ZIL per transaction
+- **Testing interactions:** 1-5 ZIL for comprehensive testing
+
+**Faucet provides:** 100 ZIL, enough for significant development work
+
+#### Conserving Testnet ZIL
+
+**Gas optimization tips:**
+- **Use appropriate gas limits:** Don't over-estimate gas needs
+- **Batch operations:** Combine multiple operations when possible
+- **Test locally first:** Use Hardhat's local network before testnet deployment
+
+#### Getting More Testnet ZIL
+
+**When you need additional tokens:**
+1. **Wait for reset** (1 min) to use the same faucet
+2. **Use additional MetaMask accounts** for more faucet requests
+
+### Best Practices for Development
+
+#### Testnet Workflow
+
+**Recommended development flow:**
+```
+1. Local Development (Hardhat local network) - Free, instant
+2. Testnet Deployment - Use testnet ZIL
+3. Testnet Testing - Verify all functions work
+4. Mainnet Deployment - Use real ZIL (minimal amount)
+```
+
+#### Account Management
+
+**Organize your accounts:**
+- **Account 1:** Primary development account (keep funded)
+- **Account 2:** User testing account
+- **Account 3:** Contract owner/admin testing
+- **Account 4:** Reserved for mainnet deployment
+
+#### Security Considerations
+
+**Safe practices:**
+- **Never use mainnet private keys** for testnet development
+- **Keep testnet and mainnet accounts separate**
+- **Be cautious with private key exposure** even on testnet
+- **Regular backups** of your development environment
+
+### Advanced Block Explorer Usage
+
+#### Monitoring Your Development Activity
+
+**Track your progress:**
+1. **Bookmark your address** in the block explorer
+2. **Monitor contract deployments** and their addresses
+3. **Analyze gas usage patterns** for optimization
+4. **Verify all test transactions** complete successfully
+
+#### Understanding Transaction Details
+
+**Key fields to monitor:**
+- **Gas Used vs Gas Limit:** Optimize for efficiency
+- **Transaction Status:** Ensure all operations succeed
+- **Internal Transactions:** Track contract-to-contract calls
+- **Event Logs:** Verify your contract events are emitted correctly
+
+#### Contract Interaction Verification
+
+**After deploying contracts:**
+1. **Find your contract address** in deployment transaction
+2. **Verify contract code** is properly deployed
+3. **Check contract interactions** appear in transaction list
+4. **Monitor events and logs** for proper functionality
+
+## Preparing for Mainnet
+
+### Testing Checklist
+
+**Before mainnet deployment, verify on testnet:**
+- ✅ Contract deploys successfully
+- ✅ All functions work as expected
+- ✅ Gas costs are reasonable
+- ✅ Security measures function properly
+- ✅ User interactions flow smoothly
+- ✅ Error handling works correctly
+
+### Cost Estimation
+
+**Calculate mainnet costs:**
+- **Deployment cost:** Monitor testnet deployment gas usage
+- **Typical operations:** Test common user operations
+- **Emergency procedures:** Test pause/upgrade mechanisms if applicable
+
+**Example calculation:**
+```
+Testnet Usage:
+- Deploy contract: 1,200,000 gas
+- User transaction: 50,000 gas
+- Admin function: 80,000 gas
+```
+
+Your testnet ZIL is the fuel for your entire development process. Take time to understand the faucet system and block explorer - they're essential tools for successful Zilliqa development!

@@ -1,0 +1,1069 @@
+---
+id: understanding-training-registry
+module: upgradable-contract-practical
+number: 4.6.2
+title: Understanding the TrainingRegistry Contract
+objective: >-
+  Deep dive into the TrainingRegistry V1 contract architecture, EIP-712 vouchers, claimant tracking, and upgradeable patterns.
+slug: understanding-training-registry
+---
+
+## Contract Overview
+
+The `TrainingRegistryV1` contract is the **actual system powering this training portal's achievements**! Every time you complete a module and claim an achievement, you're interacting with this contract on Zilliqa mainnet.
+
+**Key features:**
+- ✅ EIP-712 signed voucher verification
+- ✅ Issuer allowlist (controls who can sign vouchers)
+- ✅ ERC-1155 soulbound badges (non-transferable achievements)
+- ✅ UUPS upgradeable pattern
+- ✅ Claimant tracking (proves you deployed it!)
+- ✅ Per-wallet achievement tracking
+- ✅ Access controls and pause functionality
+
+**What makes it special:**
+- You're deploying the same contract architecture used in production
+- Real EIP-712 cryptographic signatures (not simple auth)
+- Actual soulbound NFT badges for achievements
+- Production-grade upgradeability patterns
+
+## Full TrainingRegistryV1 Contract
+
+Here's the complete V1 contract with claimant tracking:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {ERC1155Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+
+/// @title TrainingRegistryV1 (Upgradeable)
+/// @notice Verifies EIP-712 signed completion vouchers and mints ERC-1155 badges
+contract TrainingRegistryV1 is
+    Initializable,
+    UUPSUpgradeable,
+    Ownable2StepUpgradeable,
+    PausableUpgradeable,
+    EIP712Upgradeable,
+    ERC1155Upgradeable
+{
+    using ECDSA for bytes32;
+
+    /// @dev Minimal voucher: binds a task code to a specific wallet
+    struct CompletionVoucher {
+        uint256 taskCode;      // decimal task/badge code (also tokenId)
+        address wallet;        // learner (must equal msg.sender)
+    }
+
+    // EIP-712 struct type hash
+    bytes32 private constant VOUCHER_TYPEHASH = keccak256(
+        "CompletionVoucher(uint256 taskCode,address wallet)"
+    );
+
+    // Issuer allowlist (API addresses that can sign vouchers)
+    mapping(address => bool) public isIssuer;
+
+    // Per-wallet task completion flag
+    mapping(address => mapping(uint256 => bool)) public completed;
+
+    // Per-wallet achievement index for fast queries
+    mapping(address => uint256[]) private _walletTokenIds;
+    mapping(address => mapping(uint256 => bool)) private _hasTokenId;
+
+    // Achievement tracking - proves you deployed this contract!
+    address public claimant;
+
+    event IssuerUpdated(address indexed issuer, bool allowed);
+    event TaskCompleted(uint256 indexed taskCode, address indexed wallet);
+    event BaseURISet(string newBaseURI);
+    event UriPadDigitsSet(uint8 newPadDigits);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @notice Initializer for proxy deployment
+    function initialize(
+        address initialOwner,
+        string memory baseURI,
+        string memory eip712Name,
+        string memory eip712Version,
+        address _claimant
+    ) external initializer {
+        __ERC1155_init(baseURI);
+        __Pausable_init();
+        __Ownable2Step_init();
+        __UUPSUpgradeable_init();
+        __EIP712_init(eip712Name, eip712Version);
+
+        _transferOwnership(initialOwner);
+
+        require(_claimant != address(0), "Invalid claimant address");
+        claimant = _claimant;
+
+        _baseDirectoryURI = baseURI;
+        uriPadDigits = 4;
+    }
+
+    // --- Admin functions ---
+
+    function setIssuer(address issuer, bool allowed) external onlyOwner {
+        isIssuer[issuer] = allowed;
+        emit IssuerUpdated(issuer, allowed);
+    }
+
+    function setBaseURI(string memory newBaseURI) external onlyOwner {
+        _setURI(newBaseURI);
+        _baseDirectoryURI = newBaseURI;
+        emit BaseURISet(newBaseURI);
+    }
+
+    function setUriPadDigits(uint8 newPad) external onlyOwner {
+        uriPadDigits = newPad;
+        emit UriPadDigitsSet(newPad);
+    }
+
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
+
+    // --- Public flow ---
+
+    /// @notice Submit a signed voucher to record completion and mint badge
+    function submitVoucher(uint256 taskCode, bytes calldata signature) external whenNotPaused {
+        require(!completed[msg.sender][taskCode], "already completed");
+
+        // Reconstruct struct hash with wallet bound to msg.sender
+        bytes32 structHash = keccak256(abi.encode(VOUCHER_TYPEHASH, taskCode, msg.sender));
+        bytes32 digest = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
+        address signer = ECDSA.recover(digest, signature);
+        require(isIssuer[signer], "invalid issuer");
+
+        completed[msg.sender][taskCode] = true;
+        _mint(msg.sender, taskCode, 1, "");
+        emit TaskCompleted(taskCode, msg.sender);
+    }
+
+    // --- ERC-1155 soulbound guard ---
+    function _update(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts
+    ) internal override {
+        require(from == address(0) || to == address(0), "SBT: non-transferable");
+        super._update(from, to, ids, amounts);
+
+        // Maintain cached achievement index
+        if (to != address(0)) {
+            for (uint256 i = 0; i < ids.length; i++) {
+                uint256 tokenId = ids[i];
+                if (!_hasTokenId[to][tokenId] && balanceOf(to, tokenId) > 0) {
+                    _hasTokenId[to][tokenId] = true;
+                    _walletTokenIds[to].push(tokenId);
+                }
+            }
+        }
+        if (from != address(0)) {
+            for (uint256 i = 0; i < ids.length; i++) {
+                uint256 tokenId = ids[i];
+                if (_hasTokenId[from][tokenId] && balanceOf(from, tokenId) == 0) {
+                    _hasTokenId[from][tokenId] = false;
+                    _removeWalletTokenId(from, tokenId);
+                }
+            }
+        }
+    }
+
+    /// @dev Override URI resolution for decimal zero-padded filenames
+    function uri(uint256 tokenId) public view override returns (string memory) {
+        return string(abi.encodePacked(_baseDirectoryURI, _paddedDecimal(tokenId, uriPadDigits), ".json"));
+    }
+
+    function _paddedDecimal(uint256 value, uint8 minDigits) internal pure returns (string memory) {
+        string memory dec = Strings.toString(value);
+        uint256 len = bytes(dec).length;
+        if (len >= minDigits) return dec;
+        uint256 pad = uint256(minDigits) - len;
+        bytes memory zeros = new bytes(pad);
+        for (uint256 i = 0; i < pad; i++) zeros[i] = bytes1("0");
+        return string(abi.encodePacked(zeros, dec));
+    }
+
+    function _removeWalletTokenId(address wallet, uint256 tokenId) internal {
+        uint256[] storage list = _walletTokenIds[wallet];
+        for (uint256 i = 0; i < list.length; i++) {
+            if (list[i] == tokenId) {
+                uint256 last = list[list.length - 1];
+                list[i] = last;
+                list.pop();
+                break;
+            }
+        }
+    }
+
+    /// @notice Returns all badge tokenIds held by wallet
+    function getWalletAchievements(address wallet) external view returns (uint256[] memory) {
+        return _walletTokenIds[wallet];
+    }
+
+    /// @notice Returns true if wallet holds the badge tokenId
+    function hasAchievement(address wallet, uint256 tokenId) external view returns (bool) {
+        return _hasTokenId[wallet][tokenId];
+    }
+
+    // --- Upgradability ---
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    // --- Storage gap ---
+    string private _baseDirectoryURI;
+    uint8 public uriPadDigits;
+    uint256[38] private __gap;  // 40 - 2 used slots
+}
+```
+
+## Contract Architecture
+
+### Inheritance Hierarchy
+
+```
+TrainingRegistryV1
+├── Initializable (OpenZeppelin)
+│   └── Initialize-once logic
+├── UUPSUpgradeable (OpenZeppelin)
+│   └── Upgrade authorization
+├── Ownable2StepUpgradeable (OpenZeppelin)
+│   └── Two-step ownership transfer
+├── PausableUpgradeable (OpenZeppelin)
+│   └── Emergency pause
+├── EIP712Upgradeable (OpenZeppelin)
+│   └── Structured data signing
+└── ERC1155Upgradeable (OpenZeppelin)
+    └── Multi-token standard
+```
+
+**Why this stack?**
+- **Initializable**: Replaces constructor for proxy pattern
+- **UUPS**: Gas-efficient upgrades (vs Transparent proxy)
+- **Ownable2Step**: Safer ownership transfer (prevents accidents)
+- **Pausable**: Emergency stop for security issues
+- **EIP712**: Industry-standard structured signatures
+- **ERC1155**: Efficient multi-token (one contract, many badges)
+
+### Comparison to Your Previous Contracts
+
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>NFT Contract</th>
+<th>TrainingRegistry V1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Initialization</strong></td>
+<td>constructor()</td>
+<td>initialize() - upgradeable!</td>
+</tr>
+<tr>
+<td><strong>Token Standard</strong></td>
+<td>ERC721 (one NFT = one ID)</td>
+<td>ERC1155 (many tokens, one contract)</td>
+</tr>
+<tr>
+<td><strong>Claimant</strong></td>
+<td>✅ Set in constructor</td>
+<td>✅ Set in initialize</td>
+</tr>
+<tr>
+<td><strong>Access Control</strong></td>
+<td>Ownable (simple)</td>
+<td>Ownable2Step (safer)</td>
+</tr>
+<tr>
+<td><strong>Upgradeability</strong></td>
+<td>❌ Immutable</td>
+<td>✅ UUPS upgradeable</td>
+</tr>
+<tr>
+<td><strong>Minting</strong></td>
+<td>Pay ZIL to mint</td>
+<td>Submit signed voucher</td>
+</tr>
+<tr>
+<td><strong>Transferability</strong></td>
+<td>✅ Freely transferable</td>
+<td>❌ Soulbound (locked to wallet)</td>
+</tr>
+</tbody>
+</table>
+
+## Line-by-Line Walkthrough
+
+### 1. SPDX and Pragma
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+```
+
+**Why 0.8.28?**
+- Required for Zilliqa 2.0 compatibility (Shanghai EVM)
+- OpenZeppelin upgradeable contracts work with 0.8.20+
+- Aligned with your previous practicals (NFT, Staking, RNG)
+- Has overflow protection and all modern Solidity features
+
+### 2. Imports (Upgradeable Versions!)
+
+```solidity
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+// ... etc
+```
+
+**Critical difference from NFT contract:**
+```solidity
+// NFT contract (immutable)
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+// TrainingRegistry (upgradeable)
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+```
+
+**Why `-upgradeable` suffix?**
+- Upgradeable contracts can't use regular constructors
+- `-upgradeable` versions use `initializer` functions
+- Storage layout designed for proxy pattern
+- Always use upgradeable imports for upgradeable contracts!
+
+### 3. Struct Definition
+
+```solidity
+struct CompletionVoucher {
+    uint256 taskCode;      // decimal task/badge code (also tokenId)
+    address wallet;        // learner (must equal msg.sender)
+}
+```
+
+**What is this?**
+- A "voucher" is proof you completed an achievement
+- Signed by the API (cryptographically secure)
+- Binds a specific task to your specific wallet
+
+**Flow:**
+1. You complete a module
+2. API generates voucher: `{taskCode: 5, wallet: 0xYourAddress}`
+3. API signs it with EIP-712 private key
+4. You submit voucher + signature to contract
+5. Contract verifies signature → mints badge
+
+**Why not just let anyone mint?**
+- Without vouchers: anyone could mint any achievement
+- With vouchers: only API-verified completions mint
+- Cryptographically secure (can't forge signatures)
+
+### 4. EIP-712 Type Hash
+
+```solidity
+bytes32 private constant VOUCHER_TYPEHASH = keccak256(
+    "CompletionVoucher(uint256 taskCode,address wallet)"
+);
+```
+
+**What is EIP-712?**
+- Standard for signing structured data
+- Used by MetaMask, Ledger, all major wallets
+- Better than raw signatures (shows human-readable data)
+
+**This hash:**
+- Identifies the struct type
+- Must match exactly in API and contract
+- Part of signature verification
+
+### 5. State Variables
+
+```solidity
+// Issuer allowlist (API addresses that can sign vouchers)
+mapping(address => bool) public isIssuer;
+
+// Per-wallet task completion flag
+mapping(address => mapping(uint256 => bool)) public completed;
+
+// Per-wallet achievement index
+mapping(address => uint256[]) private _walletTokenIds;
+mapping(address => mapping(uint256 => bool)) private _hasTokenId;
+
+// Achievement tracking - proves you deployed this contract!
+address public claimant;
+```
+
+**isIssuer:**
+- Controls who can sign valid vouchers
+- Owner adds API address to allowlist
+- Prevents unauthorized voucher signing
+
+**completed:**
+- `completed[yourWallet][taskCode] = true`
+- Prevents double-claiming same achievement
+- Permanent record on-chain
+
+**_walletTokenIds:**
+- Array of all tokenIds you own
+- Used by frontend to show your achievements
+- Cached for gas efficiency
+
+**claimant:**
+- **Same pattern as NFT/Staking contracts!**
+- Your training portal wallet address
+- Proves YOU deployed this contract
+- Used for achievement verification
+
+### 6. Constructor (The Key Difference!)
+
+```solidity
+/// @custom:oz-upgrades-unsafe-allow constructor
+constructor() {
+    _disableInitializers();
+}
+```
+
+**Why is it empty?**
+- Constructors run when implementation deploys
+- Code executes in implementation storage, not proxy storage
+- Any state set here would be lost!
+
+**_disableInitializers():**
+- Prevents anyone from calling `initialize()` on the implementation directly
+- Only the proxy should be initialized
+- Security best practice
+
+**vs NFT contract:**
+```solidity
+// NFT (immutable)
+constructor(
+    string memory _name,
+    string memory _symbol,
+    address _claimant
+) ERC721(_name, _symbol) Ownable(msg.sender) {
+    claimant = _claimant;  // Sets state directly
+}
+```
+
+### 7. Initialize Function (Constructor Replacement!)
+
+```solidity
+function initialize(
+    address initialOwner,
+    string memory baseURI,
+    string memory eip712Name,
+    string memory eip712Version,
+    address _claimant
+) external initializer {
+    __ERC1155_init(baseURI);
+    __Pausable_init();
+    __Ownable2Step_init();
+    __UUPSUpgradeable_init();
+    __EIP712_init(eip712Name, eip712Version);
+
+    _transferOwnership(initialOwner);
+
+    require(_claimant != address(0), "Invalid claimant address");
+    claimant = _claimant;
+
+    _baseDirectoryURI = baseURI;
+    uriPadDigits = 4;
+}
+```
+
+**This is the upgradeable equivalent of constructor!**
+
+**Key points:**
+1. **external** (not public) - called once after proxy deployment
+2. **initializer** modifier - prevents calling twice
+3. **__ModuleName_init()** - initialize parent contracts
+4. **claimant validation** - same as NFT contract!
+
+**Execution flow:**
+1. Deploy implementation contract (constructor runs, disables initializers)
+2. Deploy proxy contract pointing to implementation
+3. Call `proxy.initialize(...)` to set up state
+4. All initialization happens in proxy's storage
+
+**Claimant pattern:**
+```solidity
+require(_claimant != address(0), "Invalid claimant address");
+claimant = _claimant;
+```
+
+**Identical to NFT contract!** Just in initialize instead of constructor.
+
+### 8. Admin Functions
+
+```solidity
+function setIssuer(address issuer, bool allowed) external onlyOwner {
+    isIssuer[issuer] = allowed;
+    emit IssuerUpdated(issuer, allowed);
+}
+
+function setBaseURI(string memory newBaseURI) external onlyOwner {
+    _setURI(newBaseURI);
+    _baseDirectoryURI = newBaseURI;
+    emit BaseURISet(newBaseURI);
+}
+
+function pause() external onlyOwner { _pause(); }
+function unpause() external onlyOwner { _unpause(); }
+```
+
+**setIssuer:**
+- Add/remove addresses that can sign vouchers
+- Owner controls who has signing authority
+- Typically set to API backend address
+
+**setBaseURI:**
+- Update metadata IPFS link
+- Example: `"https://static.plunderswap.com/training/"`
+- Can change if you migrate hosting
+
+**pause/unpause:**
+- Emergency stop functionality
+- Prevents all voucher submissions if vulnerability found
+- Good for upgradeable contracts (can pause, upgrade, unpause)
+
+### 9. Submit Voucher (The Core Function!)
+
+```solidity
+function submitVoucher(uint256 taskCode, bytes calldata signature) external whenNotPaused {
+    require(!completed[msg.sender][taskCode], "already completed");
+
+    // Reconstruct struct hash with wallet bound to msg.sender
+    bytes32 structHash = keccak256(abi.encode(VOUCHER_TYPEHASH, taskCode, msg.sender));
+    bytes32 digest = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
+    address signer = ECDSA.recover(digest, signature);
+    require(isIssuer[signer], "invalid issuer");
+
+    completed[msg.sender][taskCode] = true;
+    _mint(msg.sender, taskCode, 1, "");
+    emit TaskCompleted(taskCode, msg.sender);
+}
+```
+
+**This is what runs when you claim an achievement!**
+
+**Step-by-step:**
+
+**1. Check not already completed**
+```solidity
+require(!completed[msg.sender][taskCode], "already completed");
+```
+- Prevents double-claiming
+- Same achievement can't be claimed twice
+
+**2. Reconstruct the voucher hash**
+```solidity
+bytes32 structHash = keccak256(abi.encode(VOUCHER_TYPEHASH, taskCode, msg.sender));
+```
+- Rebuilds what was signed
+- Uses YOUR wallet address (msg.sender)
+- Binds voucher to specific caller
+
+**3. Create EIP-712 digest**
+```solidity
+bytes32 digest = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
+```
+- Adds domain separator (chain ID, contract address)
+- Prevents replay attacks across chains
+- EIP-712 standard format
+
+**4. Recover signer from signature**
+```solidity
+address signer = ECDSA.recover(digest, signature);
+```
+- Cryptographic magic: extract who signed this
+- Uses elliptic curve cryptography
+- Returns the signer's address
+
+**5. Verify signer is allowed**
+```solidity
+require(isIssuer[signer], "invalid issuer");
+```
+- Check signer is in allowlist
+- Prevents forged vouchers
+- Only API can create valid vouchers
+
+**6. Mint badge**
+```solidity
+completed[msg.sender][taskCode] = true;
+_mint(msg.sender, taskCode, 1, "");
+emit TaskCompleted(taskCode, msg.sender);
+```
+- Mark as completed
+- Mint ERC-1155 badge (tokenId = taskCode)
+- Emit event for indexing
+
+**Flow in practice:**
+```
+User completes module
+       ↓
+API creates voucher: {taskCode: 5, wallet: 0xUser}
+       ↓
+API signs with EIP-712
+       ↓
+Frontend gets signature from API
+       ↓
+Frontend calls: submitVoucher(5, signature)
+       ↓
+Contract verifies signature
+       ↓
+Badge minted! 🎉
+```
+
+### 10. Soulbound Token Guard
+
+```solidity
+function _update(
+    address from,
+    address to,
+    uint256[] memory ids,
+    uint256[] memory amounts
+) internal override {
+    require(from == address(0) || to == address(0), "SBT: non-transferable");
+    super._update(from, to, ids, amounts);
+    // ... achievement tracking logic
+}
+```
+
+**What is soulbound?**
+- Achievements can't be transferred
+- Locked to the wallet that earned them
+- Proves YOU completed the work
+
+**The check:**
+```solidity
+require(from == address(0) || to == address(0), "SBT: non-transferable");
+```
+
+**Allows:**
+- `from == address(0)` → Minting (creating tokens)
+- `to == address(0)` → Burning (destroying tokens)
+
+**Blocks:**
+- Any transfer between two wallets
+- Selling achievements (they're earned, not bought!)
+
+**vs NFT contract:**
+- NFTs are transferable (can sell on marketplace)
+- Achievements are soulbound (earned credentials)
+
+### 11. URI Resolution
+
+```solidity
+function uri(uint256 tokenId) public view override returns (string memory) {
+    return string(abi.encodePacked(_baseDirectoryURI, _paddedDecimal(tokenId, uriPadDigits), ".json"));
+}
+
+function _paddedDecimal(uint256 value, uint8 minDigits) internal pure returns (string memory) {
+    string memory dec = Strings.toString(value);
+    uint256 len = bytes(dec).length;
+    if (len >= minDigits) return dec;
+    uint256 pad = uint256(minDigits) - len;
+    bytes memory zeros = new bytes(pad);
+    for (uint256 i = 0; i < pad; i++) zeros[i] = bytes1("0");
+    return string(abi.encodePacked(zeros, dec));
+}
+```
+
+**Purpose:**
+- Convert tokenId to metadata URL
+- Example: tokenId 5 → `"https://static.plunderswap.com/training/0005.json"`
+
+**Why padding?**
+- 4-digit padding: 0001, 0002, ..., 0100
+- Consistent file naming
+- Easier to organize metadata files
+
+**vs NFT contract:**
+```solidity
+// NFT: "ipfs://QmHash/42.json"
+string(abi.encodePacked(baseURI, tokenId.toString(), ".json"))
+
+// TrainingRegistry: "https://static.plunderswap.com/training/0042.json"
+string(abi.encodePacked(baseURI, _paddedDecimal(tokenId, 4), ".json"))
+```
+
+### 12. Upgrade Authorization
+
+```solidity
+function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+```
+
+**This is the UUPS pattern!**
+
+**What it does:**
+- Called when upgrading to V2
+- Only owner can upgrade
+- Empty body = just checks onlyOwner
+
+**vs Transparent proxy:**
+- Transparent: Upgrade logic in separate ProxyAdmin contract
+- UUPS: Upgrade logic in implementation (here)
+
+**Critical for safety:**
+- If removed in V2, contract becomes frozen!
+- Must always include in every version
+- We'll see this in upgrade lesson
+
+### 13. Storage Gap
+
+```solidity
+string private _baseDirectoryURI;
+uint8 public uriPadDigits;
+uint256[38] private __gap;  // 40 - 2 used slots
+```
+
+**What is __gap?**
+- Reserved storage slots for future versions
+- Currently using 2 slots (string + uint8)
+- Reserve 38 more = 40 total
+
+**Why reserve slots?**
+- V2 will add new state variables
+- Need to append, not reorder
+- __gap shrinks as we add variables
+
+**Example upgrade:**
+```solidity
+// V1
+string private _baseDirectoryURI;
+uint8 public uriPadDigits;
+uint256[38] private __gap;
+
+// V2 (add batch submission counter)
+string private _baseDirectoryURI;  // unchanged
+uint8 public uriPadDigits;          // unchanged
+uint256 public batchSubmissionCount; // NEW
+uint256[37] private __gap;          // shrink by 1
+```
+
+**Storage layout discipline = critical for upgrades!**
+
+## EIP-712 Explained (The Signature Magic)
+
+EIP-712 is what makes vouchers secure. Let's break it down:
+
+### What Gets Signed
+
+When the API creates a voucher:
+
+```javascript
+// API side (JavaScript)
+const voucher = {
+  taskCode: 5,
+  wallet: "0xYourAddress"
+};
+
+const domain = {
+  name: "TrainingCert",
+  version: "1",
+  chainId: 33101,  // Zilliqa testnet
+  verifyingContract: "0xRegistryAddress"
+};
+
+const types = {
+  CompletionVoucher: [
+    { name: "taskCode", type: "uint256" },
+    { name: "wallet", type: "address" }
+  ]
+};
+
+// Sign with EIP-712
+const signature = await signer._signTypedData(domain, types, voucher);
+```
+
+### What Contract Verifies
+
+```solidity
+// Contract side (Solidity)
+bytes32 structHash = keccak256(abi.encode(
+    VOUCHER_TYPEHASH,  // keccak256("CompletionVoucher(uint256 taskCode,address wallet)")
+    taskCode,          // 5
+    msg.sender         // 0xYourAddress
+));
+
+bytes32 digest = MessageHashUtils.toTypedDataHash(
+    _domainSeparatorV4(),  // Includes chainId, contract address
+    structHash
+);
+
+address signer = ECDSA.recover(digest, signature);
+require(isIssuer[signer], "invalid issuer");
+```
+
+**Security properties:**
+1. **Wallet binding**: Voucher only works for specific wallet
+2. **Contract binding**: Can't replay on different contract
+3. **Chain binding**: Can't replay on different chain
+4. **Task binding**: Can't reuse voucher for different task
+5. **Signature verification**: Only API can create valid vouchers
+
+## Claimant Tracking (Achievement Verification)
+
+The claimant pattern is identical to your previous contracts:
+
+### In Constructor (NFT Contract - Immutable)
+```solidity
+constructor(address _claimant) {
+    require(_claimant != address(0), "Invalid claimant address");
+    claimant = _claimant;
+}
+```
+
+### In Initializer (TrainingRegistry - Upgradeable)
+```solidity
+function initialize(address _claimant) external initializer {
+    require(_claimant != address(0), "Invalid claimant address");
+    claimant = _claimant;
+}
+```
+
+**Why the difference?**
+- Immutable contracts: Use constructor (runs once at deploy)
+- Upgradeable contracts: Use initializer (runs after proxy deploys)
+- **Same validation, same storage, same purpose!**
+
+**How it works:**
+1. You set claimant to your training portal wallet
+2. Deploy the contract (implementation + proxy)
+3. Initialize with your wallet as claimant
+4. Submit deployment transaction to portal
+5. Portal verifies claimant matches your connected wallet
+6. You receive achievement NFT!
+
+**This teaches a critical lesson:**
+Upgradeable contracts can't use constructors for state initialization, so we use initializers instead. The pattern is identical, just the mechanism differs!
+
+## Design Decisions
+
+### Why ERC-1155 instead of ERC-721?
+
+**ERC-721 (NFT contract):**
+- One contract per collection
+- Each token has unique properties
+- Transferable (can sell)
+
+**ERC-1155 (TrainingRegistry):**
+- One contract, many token types
+- All tokens of same ID are identical
+- More gas efficient
+- Perfect for badges/achievements
+
+**Gas comparison:**
+```
+Mint 10 different ERC-721s: ~70k gas each = 700k total
+Mint 10 different ERC-1155s: ~50k gas each = 500k total
+```
+
+### Why Soulbound?
+
+**Achievements should be earned, not bought!**
+
+If transferable:
+- Someone could buy all achievements
+- Defeats purpose of learning
+- No proof of skill
+
+If soulbound:
+- Proves YOU did the work
+- Can't buy your way through
+- True credential
+
+### Why Ownable2Step?
+
+**Regular Ownable (NFT contract):**
+```solidity
+function transferOwnership(address newOwner) public onlyOwner {
+    _transferOwnership(newOwner);  // Immediate transfer
+}
+```
+
+**Ownable2Step (TrainingRegistry):**
+```solidity
+function transferOwnership(address newOwner) public onlyOwner {
+    _pendingOwner = newOwner;  // Pending state
+}
+
+function acceptOwnership() public {
+    require(msg.sender == _pendingOwner);
+    _transferOwnership(msg.sender);  // New owner accepts
+}
+```
+
+**Why safer?**
+- Typo in address? Owner can cancel
+- New owner must confirm they control the address
+- Prevents accidental loss of control
+
+**For production contracts managing real value: always use Ownable2Step!**
+
+## Security Considerations
+
+### 1. Signature Replay Prevention
+
+**Problem:** Could someone reuse a signature?
+
+**Protection 1: Wallet binding**
+```solidity
+bytes32 structHash = keccak256(abi.encode(VOUCHER_TYPEHASH, taskCode, msg.sender));
+```
+- Signature includes msg.sender
+- Only works for that specific wallet
+
+**Protection 2: Domain separator**
+```solidity
+bytes32 digest = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
+```
+- Includes chainId (can't replay on mainnet if signed for testnet)
+- Includes contract address (can't replay on different registry)
+
+**Protection 3: Completion tracking**
+```solidity
+require(!completed[msg.sender][taskCode], "already completed");
+```
+- Even if replayed, fails on second attempt
+
+### 2. Issuer Controls
+
+**Without allowlist:**
+- Anyone could generate fake vouchers
+- No verification of actual completion
+
+**With allowlist:**
+- Only approved addresses can sign
+- Typically just the API backend
+- Owner controls who gets signing authority
+
+### 3. Initialize-Once Protection
+
+**What if someone called initialize twice?**
+
+**Protection:**
+```solidity
+function initialize(...) external initializer {
+    // initializer modifier prevents re-initialization
+}
+```
+
+OpenZeppelin's `initializer` sets a flag after first call. Second call reverts.
+
+### 4. Storage Collision Prevention
+
+**If we add state variables in V2 in wrong order:**
+- Could overwrite existing data
+- Silent corruption
+- Users lose achievements
+
+**Our protection:**
+- `__gap` reserves slots
+- Append new variables only
+- Never reorder existing ones
+
+We'll see this in detail in the upgrade lesson!
+
+## Comparison: Immutable vs Upgradeable Patterns
+
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>NFT (Immutable)</th>
+<th>TrainingRegistry (Upgradeable)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Initialization</strong></td>
+<td>constructor()</td>
+<td>initialize() with initializer modifier</td>
+</tr>
+<tr>
+<td><strong>Constructor body</strong></td>
+<td>Sets all state</td>
+<td>Only _disableInitializers()</td>
+</tr>
+<tr>
+<td><strong>Imports</strong></td>
+<td>@openzeppelin/contracts/</td>
+<td>@openzeppelin/contracts-upgradeable/</td>
+</tr>
+<tr>
+<td><strong>Parent init</strong></td>
+<td>Ownable(msg.sender)</td>
+<td>__Ownable_init(initialOwner)</td>
+</tr>
+<tr>
+<td><strong>Storage layout</strong></td>
+<td>Can change freely</td>
+<td>Must use __gap and append-only</td>
+</tr>
+<tr>
+<td><strong>Upgrades</strong></td>
+<td>Impossible</td>
+<td>UUPS with _authorizeUpgrade</td>
+</tr>
+<tr>
+<td><strong>Claimant tracking</strong></td>
+<td>✅ In constructor</td>
+<td>✅ In initialize</td>
+</tr>
+</tbody>
+</table>
+
+**Key insight:**
+The upgradeable version has more complexity (initializers, storage gaps, upgrade logic), but the core logic is the same! Claimant tracking, access controls, and business logic work identically.
+
+## What Makes This Production-Ready?
+
+This isn't a toy contract - it's the real system powering Plunder Academy:
+
+1. **EIP-712 signatures**: Industry standard, MetaMask compatible
+2. **Soulbound badges**: Can't be faked or bought
+3. **Issuer allowlist**: Controlled signing authority
+4. **Pausable**: Emergency stop if needed
+5. **Ownable2Step**: Safe ownership transfer
+6. **UUPS upgradeable**: Can fix bugs post-launch
+7. **Gas optimized**: Efficient achievement tracking
+8. **Event logging**: Indexable by block explorers
+
+**Real usage stats (production):**
+- Deployed on Zilliqa mainnet
+- Thousands of achievements minted
+- Zero security incidents
+- Successfully upgraded for new features
+
+**You're deploying enterprise-grade code!**
+
+## Wrap-Up
+
+You now understand every line of the TrainingRegistry V1 contract:
+
+✅ **Upgradeable patterns**: Initialize instead of constructor, storage gaps  
+✅ **EIP-712 vouchers**: Cryptographically secure signatures  
+✅ **Claimant tracking**: Same as NFT/Staking, but in initialize  
+✅ **Soulbound badges**: Non-transferable ERC-1155 tokens  
+✅ **Security**: Issuer controls, replay prevention, pause functionality  
+✅ **Production-ready**: Real contract used by this training portal  
+
+**Key lesson:**
+Upgradeable contracts require different patterns (initialize vs constructor, storage gaps, UUPS), but the core logic remains the same. Claimant tracking works identically - just adapted for the proxy pattern!
+
+**Next up:** We'll set up Foundry, compare it to Hardhat, and deploy TrainingRegistry V1 to Zilliqa testnet. Get ready to use Solidity for tests (no more TypeScript!) and see how `forge` commands differ from `hardhat`. Let's go! 🚀
+

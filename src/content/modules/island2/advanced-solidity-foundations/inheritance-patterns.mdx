@@ -1,0 +1,325 @@
+---
+id: inheritance-patterns
+module: advanced-solidity-foundations
+number: 2.1.1
+title: Inheritance Patterns and Abstract Contracts
+objective: >-
+  Master Solidity inheritance (virtual/override, explicit override) and abstract contracts so you can safely extend battle-tested libraries and design composable staking modules that evolve without breaking.
+slug: inheritance-patterns
+---
+
+## Set the stage
+
+Inheritance is like learning the rules of a ship’s chain of command: if roles and responsibilities aren’t explicit, orders clash and chaos follows. In Solidity, inheritance determines who gets to run which piece of logic, in what order, and with which guarantees. If you can structure those relationships purposefully, you’ll later assemble your staking system as a stable crew—each module does one job, and overrides are obvious.
+
+On Island 2 we’re aiming at a practical staking contract. Staking needs extendable rules: how rewards are computed, who can pause, and how tokens move safely. Inheritance and abstract contracts let you define these seams cleanly, so features can evolve without rewriting everything.
+
+## Core ideas
+
+Think of a contract family as a set of roles on a ship. Higher-level contracts define policies, and child contracts specialize those policies for real voyages. Overrides make the specialization explicit; abstract contracts define the roles themselves without committing to an implementation.
+
+- **Definition — Inheritance**: A way for a contract to reuse and specialize another contract’s state and functions. **When to use it**: When you need a consistent base API or shared behavior that is extended predictably across variants.
+- **Definition — `virtual`**: Marks a function as extensible; children may override it. **When to use it**: On base contracts to allow customization (hooks, policies, or guards) downstream.
+- **Definition — `override`**: Implements or refines a `virtual` function in a child. **When to use it**: In child contracts to replace or augment parent behavior, usually pairing with `super` to preserve the chain of responsibility.
+- **Definition — Explicit override list (`override(A, B)`)**: Required when multiple bases define the same function. **When to use it**: In diamond-like or multiple inheritance to document and resolve ambiguity.
+- **Definition — Abstract contract**: A contract with at least one unimplemented function. **When to use it**: To define an interface-with-state or reusable policy surface where children supply the concrete logic.
+- **Definition — Linearization (C3)**: The deterministic order Solidity uses to resolve `super` calls across multiple parents. **When to use it**: To reason about who runs before whom when multiple contracts override the same function.
+
+### Mental model
+
+Start with a “policy surface” that is small and intentionally virtual, like a hook or formula stub. Children override the surface to customize behavior. If two different parents affect the same function, Solidity requires you to list them in an explicit `override(Parent1, Parent2)`. That’s the compiler asking you to be the captain: document your intended chain.
+
+For staking, we want a reward policy we can upgrade safely (e.g., from fixed APR to tiered or time-decaying). That’s a perfect use of abstract contracts or interfaces: define the policy signature once, then swap implementations without touching the staking core.
+
+### Composition over inheritance
+
+Don’t inherit just because you can. A good heuristic:
+- **Prefer composition (libraries, smaller helper contracts) for reusable math and utilities**. This keeps storage simple and avoids shadowing.
+- **Use inheritance to specialize life-cycle hooks or enforce cross-cutting rules**, like pause gates or access control.
+- **Avoid deep chains**; two or three layers are typically enough for clarity and testability.
+
+### Events and clients
+
+Events should announce consequential state changes and include `indexed` fields for efficient client queries. Never rely on events to enforce on-chain logic; they’re for off-chain consumers. For staking later, we’ll emit `indexed` staker addresses when rewards accrue, so dashboards can subscribe efficiently.
+
+### Visualizing linearization
+
+Sometimes a picture helps. In the diamond below, `Diamond` inherits from `Left` and `Right`, both of which inherit from `Base`. The arrows indicate the direction of `super` resolution when `Diamond` calls `super.onPing()`.
+
+<svg viewBox="0 0 540 260" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      {`.node { fill: var(--background); stroke: var(--border); rx: 8; ry: 8; }
+        .label { fill: var(--foreground); font-size: 14px; font-family: ui-sans-serif, system-ui, -apple-system; }
+        .arrow { stroke: var(--primary-foreground); fill: none; marker-end: url(#arrowHead); }
+        .sub { fill: var(--muted-foreground); font-size: 12px; }`}
+    </style>
+    <marker id="arrowHead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" style={{fill: 'var(--primary-foreground)'}} />
+    </marker>
+  </defs>
+  {/* Nodes */}
+  <rect className="node" x="220" y="20" width="100" height="40" />
+  <text className="label" x="270" y="45" textAnchor="middle">Base</text>
+
+  <rect className="node" x="90" y="100" width="120" height="40" />
+  <text className="label" x="150" y="125" textAnchor="middle">Left</text>
+
+  <rect className="node" x="330" y="100" width="120" height="40" />
+  <text className="label" x="390" y="125" textAnchor="middle">Right</text>
+
+  <rect className="node" x="220" y="180" width="100" height="40" />
+  <text className="label" x="270" y="205" textAnchor="middle">Diamond</text>
+
+  {/* Arrows: Diamond -> Right -> Left -> Base (example order) */}
+  <path className="arrow" d="M270 180 L270 146" />
+  <text className="sub" x="280" y="165">super()</text>
+  <path className="arrow" d="M330 120 L220 120" />
+  <path className="arrow" d="M270 60 L270 94" />
+</svg>
+
+Interpretation: `Diamond.onPing()` calls `super.onPing()`, which resolves to `Right.onPing()` (given the inheritance order). `Right` then calls its own `super.onPing()`, which resolves to `Left.onPing()`, and finally `Left` calls `super.onPing()` to reach `Base.onPing()`.
+
+### Linearization basics, step-by-step
+
+- **List parents from right to left**: In `contract C is A, B`, `B` is visited before `A` for `super` resolution
+- **Each contract appears once**: Even if multiple paths lead to `Base`, it runs a single time
+- **`override(A, B)` is documentation**: You’re recording which parents define the same function
+- **Use `super` to compose**: Each layer does its local work, then delegates
+- **Minimize surprises**: Keep overrides short, call `super` unless you intend to block the chain
+- **Test the order**: Write unit tests that assert the exact sequence of effects
+
+### Common anti-patterns
+
+- **Deep inheritance ladders**: Hard to test, risk of incidental coupling
+- **Shadowing storage**: Reusing parent variable names leads to confusion and bugs
+- **Skipping `super` silently**: Accidentally breaking the chain by omitting `super` when a parent enforces invariants
+- **Sprinkled checks**: Duplicating the same `require` across multiple overrides instead of centralizing
+- **Over-virtualizing**: Marking everything `virtual` without a strategy invites unauthorized customization
+- **Event-only logic**: Using events as a substitute for on-chain checks is unsafe
+
+### Designing your override surface
+
+- **Define small, purposeful hooks**: e.g., `_beforeStake`, `_afterStake`
+- **Compose cross-cutting checks**: Access control and pause gates should be single-source-of-truth
+- **Prefer libraries for pure math**: Keep business rules stateless when possible
+- **Keep constructors minimal**: Use immutables; avoid storage writes across many parents
+- **Document intent**: Comments should explain why an override exists, not restate what the code already says
+
+### Storage and constructor ordering notes
+
+- **Initialization order** follows linearization, not call order in your constructor list
+- **Immutable parameters** are set per-contract and avoid reentrancy risk during construction
+- **State layout** is owned by each contract; don’t assume private parent variables are visible or compatible in children
+- **Upgrades** (if used) require extreme caution; keep abstract seams stable and avoid layout changes in shared bases
+
+## Code in practice
+
+The following small snippets focus on the mechanics you’ll apply to staking modules. Each code block is intentionally short and explained with the chain of responsibility in mind.
+
+### 1) Multiple inheritance with explicit override and `super`
+
+When multiple parents define the same function, you must explicitly list them in the child’s `override(Parent1, Parent2)`. Using `super` delegates to the next parent in the linearization order, ensuring each layer runs at most once. Think of it as a well-ordered watch rotation—each crew member takes a turn.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract Base {
+    event Ping(address indexed caller);
+    function onPing() public virtual returns (string memory) {
+        emit Ping(msg.sender);
+        return "Base";
+    }
+}
+
+contract Left is Base {
+    function onPing() public virtual override returns (string memory) {
+        string memory prev = super.onPing();
+        return string.concat("Left->", prev);
+    }
+}
+
+contract Right is Base {
+    function onPing() public virtual override returns (string memory) {
+        string memory prev = super.onPing();
+        return string.concat("Right->", prev);
+    }
+}
+
+contract Diamond is Left, Right {
+    function onPing() public override(Left, Right) returns (string memory) {
+        string memory prev = super.onPing();
+        return string.concat("Diamond->", prev);
+    }
+}
+```
+
+Takeaway: explicit override plus `super` makes the execution order predictable. In staking, this pattern lets you layer cross-cutting checks (e.g., pausable, rate limits) without duplicating code.
+
+### 2) Abstract contracts for pluggable reward policy
+
+Abstract contracts define the shape of a behavior while leaving details to children. Your staking core can depend on this abstract surface and accept any implementation, enabling safe iteration (e.g., changing APR formulas) without redeploying the whole system.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+abstract contract RewardPolicy {
+    function computeReward(uint256 stakeAmount, uint256 secondsStaked) public view virtual returns (uint256);
+}
+
+contract LinearAPRPolicy is RewardPolicy {
+    uint256 public immutable aprBps; // parts per 10_000
+    constructor(uint256 _aprBps) { aprBps = _aprBps; }
+    function computeReward(uint256 stakeAmount, uint256 secondsStaked) public view override returns (uint256) {
+        uint256 year = 365 days;
+        return (stakeAmount * aprBps * secondsStaked) / year / 10_000;
+    }
+}
+
+contract StakingCore {
+    RewardPolicy public policy;
+    constructor(RewardPolicy _policy) { policy = _policy; }
+    function previewReward(uint256 amount, uint256 secondsStaked) external view returns (uint256) {
+        return policy.computeReward(amount, secondsStaked);
+    }
+}
+```
+
+Takeaway: by depending on an abstract policy, the staking core composes with swappable modules. Upgrades become additive, not invasive.
+
+### 3) Extending OpenZeppelin safely with pause gates
+
+OpenZeppelin contracts provide hardened building blocks, but adding cross-cutting rules still requires careful overrides. Here we enforce a pause gate on token moves by overriding the ERC20 internal hook (`_update`) and composing with `Ownable` and `Pausable`.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+
+contract StakingToken is ERC20, Ownable, Pausable {
+    event RewardAccrued(address indexed staker, uint256 amount);
+
+    constructor(address initialOwner)
+        ERC20("StakingToken", "STK")
+        Ownable(initialOwner)
+    {
+        _mint(initialOwner, 1_000_000e18);
+    }
+
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
+
+    function _update(address from, address to, uint256 value)
+        internal
+        override
+    {
+        require(!paused(), "Pausable: paused");
+        super._update(from, to, value);
+    }
+}
+```
+
+Takeaway: use small, intentional overrides to add safety rails. In staking later, similar hooks guard deposits/withdrawals while preserving OpenZeppelin invariants.
+
+## Practice and reflection
+
+Try these bite-size tasks to strengthen your intuition. Keep each change small and reversible.
+
+- **Trace linearization**: In the `Diamond` example, predict the string returned by `onPing()` and verify mentally using the order `Diamond -> Right -> Left -> Base` (or vice versa depending on inheritance order). Explain why `super` runs each layer once.
+- **Design a new policy**: Sketch an abstract policy for “bonus after 30 days.” Write only the function signature and a one-line rule in prose.
+- **Pause semantics**: Explain the difference between pausing an ERC20 via internal `_update` vs. pausing only deposit/withdraw routes in a staking contract.
+- **Pick composition**: Identify a behavior in staking that should be a library (pure/stateless) rather than inheritance.
+
+{/* Concept Matching (learning mode) */}
+<ConceptMatching pairs={[
+  {"conceptId":"virtual","definitionId":"def-virtual","concept":"virtual","definition":"Marks a function as extensible by children","category":"syntax"},
+  {"conceptId":"override","definitionId":"def-override","concept":"override","definition":"Implements or refines a virtual function in a child","category":"syntax"},
+  {"conceptId":"explicit","definitionId":"def-explicit","concept":"Explicit override list","definition":"Lists all parents that define the same function to resolve ambiguity","category":"safety"},
+  {"conceptId":"abstract","definitionId":"def-abstract","concept":"Abstract contract","definition":"Defines an interface-with-state surface; leaves implementation to children","category":"design"},
+  {"conceptId":"linearization","definitionId":"def-linearization","concept":"Linearization","definition":"Deterministic order for resolving super across multiple parents","category":"mechanics"}
+]}/>
+
+Short reflection: Where would you inject a pause gate in staking—at token transfer, at deposit/withdraw functions, or both? Defend your answer in two sentences.
+
+## Security and pitfalls
+
+Security is about removing surprises. Inheritance can hide them unless you make intent explicit.
+
+### Inheritance-specific vulnerabilities
+
+- **Shadowing state variables**: If a child redeclares a variable with the same name as a parent, Solidity creates a *separate* storage slot. Both variables exist; reads/writes go to the child's version. This is almost always a bug. **Solution**: Use unique, descriptive names across the hierarchy.
+- **Constructor ordering surprises**: Base constructors run in linearized order (left-to-right in the inheritance list), not in the order you invoke them. If `Base` expects `Child` to set a value first, that won't happen. **Solution**: Keep constructors minimal; use immutables set at child level and passed to parents.
+- **Incorrect `super` usage**: Forgetting `super` breaks the chain; parent logic doesn't run. Calling `Parent.foo()` instead of `super.foo()` skips intermediate layers. **Solution**: Always use `super` unless you intentionally block the chain; document why.
+- **Explicit override ambiguity**: If two parents define `foo()`, and you forget `override(Parent1, Parent2)`, compilation fails. But if you list them in the wrong order or omit one, the code compiles but behaves unexpectedly. **Solution**: List all parents in the same order as your inheritance declaration.
+
+### CEI and reentrancy in inheritance
+
+- **CEI applies to the entire call chain**: If `Child.foo()` calls `super.foo()`, which calls `Parent.foo()`, which calls external code, *all* state updates must happen before that external call. **Solution**: Finalize state in the leaf (child) before calling `super`.
+- **`ReentrancyGuard` at the top**: Place `nonReentrant` on the entry function (child). Parent functions inherit the lock; you don't need `nonReentrant` on every override. **Solution**: Guard the public entry point; internal helpers don't need guards.
+- **Pull over push in inheritance**: If a parent calls `token.transfer(user, amount)` (push), and a child adds batch logic, reentrancy risk multiplies. **Solution**: Prefer pull patterns (users claim in separate txs).
+
+### Access control pitfalls
+
+- **Multiple `Ownable` parents**: If two parents both inherit `Ownable`, diamond inheritance causes ambiguity. **Solution**: Inherit `Ownable` only once, at the top of your hierarchy.
+- **Role collision**: If you use `AccessControl` with custom roles, ensure role names don't collide across parents. **Solution**: Prefix roles with module names (`STAKING_PAUSER_ROLE`, `REWARDS_MANAGER_ROLE`).
+- **Modifier ordering**: If you stack modifiers (`onlyOwner whenNotPaused nonReentrant`), they run outer-to-inner. Auth fails before pause checks. **Solution**: Order modifiers intentionally; test all paths.
+
+### Upgradability and storage layout
+
+- **Storage slots are append-only**: If you add a new state variable to a parent in an upgrade, and a child already uses that slot, corruption occurs. **Solution**: Reserve gap slots (`uint256[50] private __gap;`) in base contracts if planning upgrades.
+- **Initialization vs constructor**: Proxied contracts can't use constructors (they run on the implementation, not the proxy). **Solution**: Use `initialize()` with `initializer` modifier from OpenZeppelin's `Initializable`.
+- **Abstract boundaries**: If your staking policy is abstract, document storage layout and init order so future implementations don't break. **Solution**: Write explicit NatSpec for storage and initialization sequences.
+
+### Event and error handling
+
+- **Events in overrides**: If both parent and child emit events, clients see duplicates. **Solution**: Decide which layer owns event emission; document in NatSpec.
+- **Custom errors in inheritance**: If parent defines `error Unauthorized()` and child defines the same, they collide. **Solution**: Use unique error names or define once in a shared base.
+
+### Testing inheritance chains
+
+- **Unit test each layer**: Test parent alone (mock child behavior), test child alone (mock parent behavior). **Solution**: Use mocks and abstract stubs.
+- **Integration test the chain**: Deploy the full hierarchy and assert the exact sequence of `super` calls. **Solution**: Emit events at each layer and verify order.
+- **Fuzz override paths**: If multiple parents override the same function, fuzz inputs to ensure all paths compose correctly. **Solution**: Use Foundry or Echidna fuzzing.
+
+## Security checklist
+
+Before shipping contracts with inheritance:
+
+- [ ] **Minimal `virtual` surface**: Only functions you'll actually override are `virtual`
+- [ ] **Explicit override lists**: Every override specifies all parents: `override(Parent1, Parent2)`
+- [ ] **Correct `super` calls**: Each override calls `super` unless intentionally blocking; test the chain
+- [ ] **No shadowed variables**: State variable names are unique across the hierarchy
+- [ ] **Constructors minimal**: Base constructors don't depend on child state; immutables preferred
+- [ ] **CEI discipline**: All state updates happen before external calls, even across `super` boundaries
+- [ ] **ReentrancyGuard on entries**: Public entry points have `nonReentrant`; internal helpers don't
+- [ ] **Single `Ownable`/`AccessControl`**: Inherited only once at the top of the hierarchy
+- [ ] **Role names unique**: Custom roles prefixed to avoid collisions (`MODULE_ROLE`)
+- [ ] **Events owned by one layer**: No duplicate emissions across parent/child
+- [ ] **Storage layout documented**: If upgradable, storage slots and gaps documented
+- [ ] **Initialization tested**: If using proxies, `initialize()` tested with correct modifier
+- [ ] **Test coverage**: Unit tests per layer + integration test for full chain
+- [ ] **Linearization verified**: You can trace `super` resolution manually and match test results
+
+## Wrap‑up and next steps
+
+You've mastered Solidity's inheritance mechanics: `virtual` and `override` create clear extension points; explicit override lists (`override(Parent1, Parent2)`) document intent in multiple inheritance; `super` composes layers predictably via C3 linearization; and abstract contracts decouple interfaces from implementations.
+
+For staking specifically, you saw how to:
+- Build pluggable reward policies (`abstract contract RewardPolicy`) that swap without touching the core
+- Layer OpenZeppelin primitives (`Ownable`, `Pausable`, `ERC20`) with focused overrides like `_update` hooks
+- Minimize the `virtual` surface to reduce attack vectors and maintenance burden
+
+These patterns are the foundation of Module 5's practical staking contract. In the next lessons, you'll:
+- **Interface Design (Lesson 2)**: Define stable APIs for external modules (tokens, reward distributors) using interfaces
+- **Events & Libraries (Lesson 3)**: Make your staking observable with events and extract math into reusable libraries
+- **Contract Interactions (Lesson 4)**: Call external contracts safely with CEI, `ReentrancyGuard`, and `try/catch`
+- **OpenZeppelin Ecosystem (Lesson 5)**: Choose and configure the right primitives for production staking
+
+By Module 5, you'll assemble all these pieces into a staking contract that's modular, testable, and secure—ready for Zilliqa mainnet.
+
+

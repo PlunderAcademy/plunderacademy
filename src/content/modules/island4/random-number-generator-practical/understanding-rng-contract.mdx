@@ -1,0 +1,759 @@
+---
+id: understanding-rng-contract
+module: random-number-generator-practical
+number: 4.5.2
+title: Understanding the RNG Contract
+objective: >-
+  Deep dive into the ZilliqaRandomNumber2 contract architecture, security mechanisms, and implementation details.
+slug: understanding-rng-contract
+---
+
+## Contract Overview
+
+The `ZilliqaRandomNumber2` contract implements a secure, verifiable random number generation system using the commit-reveal pattern. It's designed to be gas-efficient, secure against manipulation, and mathematically fair.
+
+### Key Features
+
+✅ **Commit-Reveal Pattern**: Prevents outcome prediction  
+✅ **Range Constraints**: Generate numbers within specific bounds  
+✅ **Multiple Entropy Sources**: Combines user, block, and validator randomness  
+✅ **Security Measures**: Validation checks and manipulation resistance  
+✅ **Event Transparency**: All entropy sources published  
+✅ **Commitment Management**: Cancel stale commitments  
+
+## Contract Structure
+
+### Storage Layout
+
+```solidity
+contract ZilliqaRandomNumber2 {
+    struct Commitment {
+        uint256 targetBlock;   // Future block for reveal
+        uint256 minRandom;     // Minimum random value
+        uint256 maxRandom;     // Maximum random value
+        bool revealed;         // Reveal status
+    }
+    
+    // Constants for security
+    uint256 public constant MIN_BLOCKS_DELAY = 5;
+    uint256 public constant MAX_BLOCKS_DELAY = 1000;
+    uint256 public constant MAX_RANDOM_LIMIT = 2_000_000_000;
+    
+    // One commitment per address
+    mapping(address => Commitment) public commitments;
+}
+```
+
+**Design decisions:**
+
+1. **Struct Storage**: Keeps all commitment data together
+2. **Single Commitment**: One active commitment per address (simplifies logic)
+3. **Constants**: Security parameters are immutable
+4. **Public Mapping**: Allows external verification
+
+### State Variables Explained
+
+**targetBlock**
+- The future block number when reveal can happen
+- Must be at least 5 blocks in the future
+- Cannot be more than 1000 blocks ahead
+- Ensures sufficient unpredictability window
+
+**minRandom / maxRandom**
+- User-specified range for random number
+- Committed upfront (prevents manipulation)
+- Maximum range of 2 billion
+- Inclusive bounds: [minRandom, maxRandom]
+
+**revealed**
+- Tracks if commitment has been revealed
+- Prevents double-reveals
+- Commitment cleaned up after reveal
+
+## The Commit Function
+
+### Function Signature
+
+```solidity
+function commit(
+    uint256 futureBlockNumber,
+    uint256 minRandom,
+    uint256 maxRandom
+) external {
+    // Validation and commitment storage
+}
+```
+
+### Step-by-Step Breakdown
+
+**1. Block Timing Validation**
+
+```solidity
+require(
+    futureBlockNumber > block.number + MIN_BLOCKS_DELAY,
+    "Need minimum 5 blocks"
+);
+```
+
+**Why 5 blocks minimum?**
+- Zilliqa 2.0 has 1-second block times
+- 5 blocks = ~5 seconds delay
+- Prevents immediate reveal attacks
+- Ensures block entropy is unpredictable
+- Gives time for other transactions to be included
+
+```solidity
+require(
+    futureBlockNumber < block.number + MAX_BLOCKS_DELAY,
+    "Too far in future"
+);
+```
+
+**Why 1000 blocks maximum?**
+- 1000 blocks = ~16.7 minutes
+- Prevents very long-lived commitments
+- Ensures reasonable reveal timeframe
+- Older blocks may not have accessible hashes
+- Keeps commitment storage manageable
+
+**2. Existing Commitment Check**
+
+```solidity
+require(
+    commitments[msg.sender].targetBlock == 0,
+    "Existing commitment found"
+);
+```
+
+**Why one commitment per address?**
+- Simplifies state management
+- Reduces storage costs
+- Clear user flow (commit → reveal → repeat)
+- Prevents commitment spam
+- Users must reveal or cancel before new commit
+
+**3. Range Validation**
+
+```solidity
+require(minRandom > 0, "Min random must be greater than 0");
+require(maxRandom <= MAX_RANDOM_LIMIT, "Max random exceeds limit");
+require(minRandom <= maxRandom, "Min cannot be greater than max");
+```
+
+**Range requirements:**
+- **Min > 0**: Avoids zero-based confusion (users think 1-10, not 0-9)
+- **Max ≤ 2 billion**: Prevents overflow issues, ensures fair distribution
+- **Min ≤ Max**: Logical constraint for valid range
+
+**4. Commitment Storage**
+
+```solidity
+commitments[msg.sender] = Commitment({
+    targetBlock: futureBlockNumber,
+    minRandom: minRandom,
+    maxRandom: maxRandom,
+    revealed: false
+});
+
+emit CommitSubmitted(msg.sender, futureBlockNumber, minRandom, maxRandom);
+```
+
+**What's stored:**
+- Future block to wait for
+- User's desired range
+- Reveal status (initially false)
+- Event for transparency
+
+### Usage Example
+
+```solidity
+// Commit to get a random number between 1 and 100
+// Reveal at block currentBlock + 10
+rng.commit(block.number + 10, 1, 100);
+
+// Event emitted:
+// CommitSubmitted(0xUser..., targetBlock, 1, 100)
+```
+
+## The Reveal Function
+
+### Function Signature
+
+```solidity
+function reveal() external {
+    // Validation, entropy generation, cleanup
+}
+```
+
+### Step-by-Step Breakdown
+
+**1. Commitment Validation**
+
+```solidity
+Commitment storage commitment = commitments[msg.sender];
+require(commitment.targetBlock != 0, "No commitment found");
+require(block.number >= commitment.targetBlock, "Too early");
+require(!commitment.revealed, "Already revealed");
+```
+
+**Checks:**
+- **Commitment exists**: User must have called `commit()` first
+- **Block reached**: Current block ≥ target block
+- **Not revealed**: Prevents double-reveals
+
+**2. Entropy Generation**
+
+```solidity
+uint256 randomNumber = uint256(
+    keccak256(
+        abi.encodePacked(
+            msg.sender,
+            block.prevrandao,
+            blockhash(block.number - 1)
+        )
+    )
+);
+```
+
+**Three entropy sources:**
+
+<table>
+  <thead>
+    <tr>
+      <th>Source</th>
+      <th>Type</th>
+      <th>Security Property</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>msg.sender</code></td>
+      <td>User address</td>
+      <td>Different users get different results</td>
+    </tr>
+    <tr>
+      <td><code>block.prevrandao</code></td>
+      <td>Validator entropy</td>
+      <td>Unpredictable per-block randomness (works great on Zilliqa 2.0)</td>
+    </tr>
+    <tr>
+      <td><code>blockhash(block.number - 1)</code></td>
+      <td>Previous block hash</td>
+      <td>Cannot be manipulated (already finalized)</td>
+    </tr>
+  </tbody>
+</table>
+
+**Why keccak256?**
+- Cryptographic hash function
+- Produces uniform distribution
+- Output space: 2^256 possible values
+- Deterministic (same inputs = same output)
+- One-way (cannot reverse)
+
+**Why these three sources?**
+
+1. **msg.sender**: Ensures different users get different results even if they reveal in the same block
+2. **block.prevrandao**: Strong per-block entropy from validators (confirmed working well on Zilliqa 2.0)
+3. **blockhash(block.number - 1)**: Additional entropy that's manipulation-resistant because the block is already finalized
+
+**3. Range Constraint**
+
+```solidity
+uint256 constrainedRandomNumber = generateRandomNumber(
+    randomNumber,
+    commitment.minRandom,
+    commitment.maxRandom
+);
+```
+
+**Helper function:**
+
+```solidity
+function generateRandomNumber(
+    uint256 randomNumber,
+    uint256 minRandom,
+    uint256 maxRandom
+) internal pure returns (uint256) {
+    uint256 range = maxRandom - minRandom + 1;
+    return (randomNumber % range) + minRandom;
+}
+```
+
+**How it works:**
+
+1. Calculate range size: `maxRandom - minRandom + 1`
+   - Example: range 1-100 = 100 possible values
+   - Example: range 50-150 = 101 possible values
+
+2. Apply modulo: `randomNumber % range`
+   - Maps huge number (0 to 2^256-1) to small range (0 to range-1)
+   - Example: 12345678901234567890 % 100 = 90
+
+3. Shift to min: `result + minRandom`
+   - Moves range from [0, range-1] to [minRandom, maxRandom]
+   - Example: 90 + 1 = 91 (in range 1-100)
+
+**Mathematical fairness:**
+
+Since 2^256 is astronomically larger than any practical range (max 2 billion), the modulo bias is negligible (< 1 in 10^60).
+
+**4. Storage and Cleanup**
+
+```solidity
+// Store values before deleting commitment
+uint256 minRandom = commitment.minRandom;
+uint256 maxRandom = commitment.maxRandom;
+
+commitment.revealed = true;
+delete commitments[msg.sender];
+```
+
+**Why store then delete?**
+- Need min/max for event emission
+- Delete frees storage (gas refund)
+- Allows user to make new commitment
+- Marks as revealed before deletion (safety)
+
+**5. Event Emission**
+
+```solidity
+emit RandomnessRevealed(
+    msg.sender,
+    randomNumber,                    // Raw random (full entropy)
+    constrainedRandomNumber,         // Final result (within range)
+    bytes32(0),                      // No salt needed
+    block.prevrandao,                // Validator entropy
+    blockhash(block.number - 1),     // Previous block hash
+    minRandom,                       // Range minimum
+    maxRandom                        // Range maximum
+);
+```
+
+**Why emit all this data?**
+- **Transparency**: Anyone can verify calculation
+- **Auditability**: All entropy sources visible
+- **Debugging**: Helps developers verify integration
+- **Trust**: Users can confirm fairness
+
+### Usage Example
+
+```solidity
+// User committed earlier to get number 1-100 at block X
+// Now block X has been reached
+
+uint256 result = rng.reveal();
+
+// Event emitted:
+// RandomnessRevealed(
+//   user: 0xUser...,
+//   randomNumber: 115792089237316195423570985008687907853269984665640564039457584007913129639935,
+//   constrainedRandomNumber: 42,  // The actual result: 42 (within 1-100)
+//   salt: 0x0000000000000000000000000000000000000000000000000000000000000000,
+//   prevrandao: 12345678901234567890,
+//   blockhash: 0xabcdef...,
+//   minRandom: 1,
+//   maxRandom: 100
+// )
+```
+
+## Cancel Commitment Function
+
+### Purpose
+
+Allows users to cancel commitments that have become stale (target block passed + MAX_BLOCKS_DELAY).
+
+```solidity
+function cancelCommitment() external {
+    Commitment storage commitment = commitments[msg.sender];
+    require(commitment.targetBlock != 0, "No commitment found");
+    require(!commitment.revealed, "Already revealed");
+    require(
+        block.number > commitment.targetBlock + MAX_BLOCKS_DELAY,
+        "Too early to cancel"
+    );
+    
+    delete commitments[msg.sender];
+}
+```
+
+**When to cancel:**
+- User forgot to reveal
+- User doesn't need randomness anymore
+- Commitment too old (> 1000 blocks past target)
+
+**Why the delay requirement?**
+- Prevents canceling to avoid unfavorable outcomes
+- User must wait until commitment is "expired"
+- Only for cleanup, not manipulation
+
+### Timeline Example
+
+```
+Block 1000: User commits for block 1010
+Block 1010: User can reveal (ideal)
+...
+Block 2010: User can now cancel (1000 blocks past target)
+```
+
+## Events Deep Dive
+
+### CommitSubmitted Event
+
+```solidity
+event CommitSubmitted(
+    address indexed user,
+    uint256 targetBlock,
+    uint256 minRandom,
+    uint256 maxRandom
+);
+```
+
+**Emitted when**: User creates a commitment
+
+**Use cases:**
+- Track active commitments
+- Monitor when reveals will be possible
+- Analyze commitment patterns
+- Build user interfaces
+
+**Example:**
+```javascript
+// Listen for commits
+contract.on("CommitSubmitted", (user, targetBlock, min, max) => {
+  console.log(`${user} committed for block ${targetBlock}`);
+  console.log(`Range: ${min} to ${max}`);
+  
+  // Schedule reminder to reveal
+  scheduleReveal(user, targetBlock);
+});
+```
+
+### RandomnessRevealed Event
+
+```solidity
+event RandomnessRevealed(
+    address indexed user,
+    uint256 randomNumber,
+    uint256 constrainedRandomNumber,
+    bytes32 salt,
+    uint256 prevrandao,
+    bytes32 blockhash,
+    uint256 minRandom,
+    uint256 maxRandom
+);
+```
+
+**Emitted when**: User reveals randomness
+
+**Fields explained:**
+
+- **user**: Who generated the random number
+- **randomNumber**: Raw entropy (before range constraint)
+- **constrainedRandomNumber**: Final result within [min, max]
+- **salt**: Unused in this version (for future extensibility)
+- **prevrandao**: Block's PREVRANDAO value
+- **blockhash**: Previous block's hash
+- **minRandom/maxRandom**: The committed range
+
+**Use cases:**
+- Verify fairness (recalculate hash)
+- Use result in your application
+- Audit entropy sources
+- Debug integration issues
+
+**Example verification:**
+```javascript
+// Verify the calculation
+contract.on("RandomnessRevealed", async (
+  user, rawRandom, finalRandom, salt, 
+  prevrandao, blockHash, min, max, event
+) => {
+  // Verify raw random number calculation
+  const expectedRaw = ethers.utils.keccak256(
+    ethers.utils.solidityPack(
+      ['address', 'uint256', 'bytes32'],
+      [user, prevrandao, blockHash]
+    )
+  );
+  
+  console.log("Raw random matches:", rawRandom === expectedRaw);
+  
+  // Verify range constraint
+  const range = max - min + 1;
+  const expectedFinal = (BigInt(rawRandom) % BigInt(range)) + BigInt(min);
+  
+  console.log("Final random matches:", finalRandom === expectedFinal);
+  console.log("Result:", finalRandom.toString());
+});
+```
+
+## Security Analysis
+
+### Attack Vectors Prevented
+
+**1. Prediction Attack**
+
+❌ **Attack**: User predicts outcome before committing
+✅ **Prevention**: Future block data is unknown at commit time
+
+**2. Selective Reveal Attack**
+
+❌ **Attack**: User only reveals if outcome is favorable
+✅ **Prevention**: Range committed upfront, cannot change after seeing outcome
+
+**3. Front-Running Attack**
+
+❌ **Attack**: Observer sees reveal transaction, front-runs with own transaction
+✅ **Prevention**: User address is part of entropy (different users get different results)
+
+**4. Validator Manipulation**
+
+❌ **Attack**: Validator manipulates block data to influence outcome
+✅ **Prevention**: Uses previous block hash (already finalized) + PREVRANDAO (expensive to manipulate)
+
+**5. Commit Spam Attack**
+
+❌ **Attack**: User creates many commitments to spam storage
+✅ **Prevention**: Only one commitment per address allowed
+
+**6. Block Hash Unavailability**
+
+❌ **Attack**: Reveal so late that blockhash() returns 0
+✅ **Prevention**: MAX_BLOCKS_DELAY limits commitment lifetime
+
+### Edge Cases Handled
+
+<table>
+  <thead>
+    <tr>
+      <th>Scenario</th>
+      <th>Handling</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>User commits twice without reveal</td>
+      <td>Reverts with "Existing commitment found"</td>
+    </tr>
+    <tr>
+      <td>User reveals before target block</td>
+      <td>Reverts with "Too early"</td>
+    </tr>
+    <tr>
+      <td>User reveals twice</td>
+      <td>Reverts with "Already revealed" or "No commitment found"</td>
+    </tr>
+    <tr>
+      <td>Invalid range (min &gt; max)</td>
+      <td>Reverts at commit time</td>
+    </tr>
+    <tr>
+      <td>Range too large (&gt; 2 billion)</td>
+      <td>Reverts at commit time</td>
+    </tr>
+    <tr>
+      <td>Stale commitment (forgot to reveal)</td>
+      <td>Can cancel after MAX_BLOCKS_DELAY</td>
+    </tr>
+  </tbody>
+</table>
+
+## Gas Optimization
+
+### Storage Efficiency
+
+**Struct packing:**
+```solidity
+struct Commitment {
+    uint256 targetBlock;   // 32 bytes
+    uint256 minRandom;     // 32 bytes
+    uint256 maxRandom;     // 32 bytes
+    bool revealed;         // 1 byte (packed with next variable if any)
+}
+```
+
+**Note**: Since all uint256 values can be large, struct packing doesn't provide significant savings here. However, the design is still gas-efficient because:
+
+1. **Single commitment per address**: Limits storage growth
+2. **Delete after reveal**: Storage refund reduces costs
+3. **No array iterations**: O(1) lookups
+4. **Minimal validation logic**: Only necessary checks
+
+### Function Cost Analysis
+
+<table>
+  <thead>
+    <tr>
+      <th>Function</th>
+      <th>Approximate Gas Cost</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>commit()</code></td>
+      <td>~45,000 - 70,000</td>
+      <td>First commitment costs more (storage allocation)</td>
+    </tr>
+    <tr>
+      <td><code>reveal()</code></td>
+      <td>~30,000 - 50,000</td>
+      <td>Delete provides gas refund</td>
+    </tr>
+    <tr>
+      <td><code>cancelCommitment()</code></td>
+      <td>~15,000 - 25,000</td>
+      <td>Simple delete operation</td>
+    </tr>
+  </tbody>
+</table>
+
+**Cost comparison:**
+- **Our approach**: ~75,000 - 120,000 gas total (commit + reveal)
+- **Chainlink VRF**: ~150,000 - 250,000 gas + oracle fees (~0.1-0.2 LINK)
+- **Savings**: ~50% lower gas costs, no external fees
+
+## Integration Patterns
+
+### Pattern 1: Direct Integration
+
+```solidity
+contract MyGame {
+    ZilliqaRandomNumber2 public rng;
+    
+    function requestLootDrop(uint256 chestId) external {
+        // Commit for random loot roll
+        rng.commit(block.number + 10, 1, 100);
+        
+        // Store pending request
+        pendingLoots[msg.sender] = chestId;
+    }
+    
+    function claimLoot() external {
+        // User reveals
+        // Listen for RandomnessRevealed event
+        // Process loot in separate transaction or off-chain
+    }
+}
+```
+
+### Pattern 2: Callback Integration
+
+```solidity
+interface IRandomnessConsumer {
+    function consumeRandomness(uint256 randomNumber) external;
+}
+
+contract MyLottery is IRandomnessConsumer {
+    ZilliqaRandomNumber2 public rng;
+    
+    function drawWinner() external onlyOwner {
+        rng.commit(block.number + 20, 1, players.length);
+    }
+    
+    function processWinner() external onlyOwner {
+        // After reveal, manually call this with event data
+        // Or use off-chain service to trigger
+    }
+    
+    function consumeRandomness(uint256 randomNumber) external override {
+        // Called by off-chain service after reveal
+        uint256 winnerIndex = randomNumber - 1; // Convert to 0-based
+        address winner = players[winnerIndex];
+        payable(winner).transfer(prizePool);
+    }
+}
+```
+
+### Pattern 3: Event-Based Integration
+
+```solidity
+// Off-chain service listens for events
+// Automatically processes results
+
+contract MyNFT {
+    ZilliqaRandomNumber2 public rng;
+    mapping(uint256 => uint256) public pendingMints;
+    
+    function mintWithRandomTraits(uint256 tokenId) external {
+        rng.commit(block.number + 5, 1, 1000000);
+        pendingMints[tokenId] = block.timestamp;
+    }
+    
+    function finalizeMint(uint256 tokenId, uint256 traitSeed) external onlyOwner {
+        // Owner calls this after observing RandomnessRevealed event
+        // Or use Chainlink Automation / The Graph to automate
+        
+        uint256 background = (traitSeed % 10) + 1;
+        uint256 eyes = ((traitSeed / 10) % 15) + 1;
+        uint256 outfit = ((traitSeed / 100) % 20) + 1;
+        
+        setNFTTraits(tokenId, background, eyes, outfit);
+        delete pendingMints[tokenId];
+    }
+}
+```
+
+## Best Practices
+
+### For Users
+
+✅ **Do:**
+- Wait for target block before revealing
+- Cancel stale commitments if you don't need them
+- Choose appropriate block delays (5-20 blocks usually sufficient)
+- Select ranges that make sense for your use case
+
+❌ **Don't:**
+- Commit and immediately try to reveal
+- Set target blocks too far in the future
+- Forget to reveal (wastes gas on commit)
+- Try to manipulate by committing multiple times
+
+### For Integrators
+
+✅ **Do:**
+- Listen for events to process results
+- Validate commitment exists before expecting reveals
+- Handle the two-transaction flow in your UX
+- Provide clear feedback on commitment status
+- Consider automation for reveal step
+
+❌ **Don't:**
+- Assume reveal happens immediately
+- Store sensitive logic outcome in commit transaction
+- Allow users to select blocks (calculate it for them)
+- Forget to handle edge cases (no commitment, too early, etc.)
+
+## Summary
+
+The `ZilliqaRandomNumber2` contract provides:
+
+✅ **Security**: Multiple entropy sources, manipulation-resistant  
+✅ **Fairness**: Mathematically proven uniform distribution  
+✅ **Flexibility**: User-defined ranges up to 2 billion  
+✅ **Transparency**: All entropy sources published in events  
+✅ **Efficiency**: Gas-optimized, no external dependencies  
+✅ **Simplicity**: Clear two-step process (commit + reveal)  
+
+**Key Takeaways:**
+
+1. Commit-reveal pattern prevents prediction and manipulation
+2. Three entropy sources provide strong randomness
+3. Range is committed upfront (prevents post-hoc selection)
+4. Events enable verification and integration
+5. Gas-efficient compared to oracle solutions
+
+## Next Steps
+
+Now that you understand how the contract works, let's deploy it! In the next lesson, we'll:
+
+- Set up Hardhat 3 project
+- Configure for Zilliqa 2.0
+- Write deployment scripts
+- Test locally and deploy to testnet
+- Create helper scripts for commit and reveal
+
+Ready to build? Let's go! 🚀
+

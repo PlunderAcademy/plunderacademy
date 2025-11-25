@@ -1,0 +1,291 @@
+---
+slug: evm-storage-layout
+title: EVM Storage Layout Explained
+excerpt: How Solidity maps state variables to storage slots, with diagrams and examples.
+level: intermediate
+tags:
+  - evm
+  - storage
+  - solidity
+  - gas-optimization
+---
+
+Understanding how the EVM stores data is crucial for writing gas-efficient contracts and avoiding storage collisions in upgradeable contracts. This guide explains how Solidity maps state variables to storage slots and how you can optimize your contracts accordingly.
+
+## Storage Fundamentals
+
+The EVM provides a key-value store where each storage slot is 32 bytes (256 bits). Solidity automatically assigns storage slots to state variables based on their declaration order and type.
+
+### Basic Storage Slot Assignment
+
+```solidity
+contract StorageExample {
+    uint256 a;      // Slot 0
+    uint256 b;      // Slot 1
+    uint128 c;      // Slot 2 (first 16 bytes)
+    uint128 d;      // Slot 2 (last 16 bytes) - packed!
+    bool e;         // Slot 3 (first 1 byte)
+    address f;      // Slot 3 (last 20 bytes) - packed!
+}
+```
+
+## Storage Packing Rules
+
+Solidity packs multiple smaller variables into a single 32-byte slot when possible:
+
+### Efficient Packing
+```solidity
+contract EfficientPacking {
+    uint128 a;      // Slot 0 (first 16 bytes)
+    uint128 b;      // Slot 0 (last 16 bytes) ✅ Packed
+    
+    bool flag1;     // Slot 1 (1 byte)
+    bool flag2;     // Slot 1 (1 byte)
+    address owner;  // Slot 1 (20 bytes) ✅ All fit in one slot
+}
+```
+
+### Inefficient Packing
+```solidity
+contract InEfficientPacking {
+    uint128 a;      // Slot 0
+    uint256 b;      // Slot 1 (forces new slot)
+    uint128 c;      // Slot 2 ❌ Could have been packed with 'a'
+}
+```
+
+**Gas Impact:** Reading/writing packed variables together costs ~2,100 gas vs ~20,000+ gas for separate slots.
+
+## Complex Data Types
+
+### Mappings
+
+Mappings don't occupy a specific slot. Instead, their values are stored at computed locations:
+
+```solidity
+mapping(address => uint256) balances; // Declared at slot 0
+
+// Value for key 'k' is stored at:
+// keccak256(abi.encode(k, 0))
+```
+
+### Dynamic Arrays
+
+```solidity
+uint256[] numbers; // Declared at slot 0
+
+// Array length stored at slot 0
+// Element at index 'i' stored at: keccak256(0) + i
+```
+
+### Fixed Arrays and Structs
+
+```solidity
+struct User {
+    uint128 balance;  // Packed together
+    uint128 rewards;  // in consecutive slots
+    address wallet;   // New slot (can't pack with uint256)
+    uint256 timestamp;
+}
+
+User[3] users; // Takes 3 * 3 = 9 storage slots
+```
+
+## Optimization Strategies
+
+### 1. Group Related Variables
+```solidity
+// ❌ Bad: Uses 4 slots
+contract BadLayout {
+    address owner;     // Slot 0
+    uint256 balance;   // Slot 1
+    bool active;       // Slot 2
+    uint128 limit;     // Slot 3
+}
+
+// ✅ Good: Uses 2 slots
+contract GoodLayout {
+    address owner;     // Slot 0 (20 bytes)
+    bool active;       // Slot 0 (1 byte) - packed
+    uint128 limit;     // Slot 0 (16 bytes) - packed (but won't fit)
+    uint256 balance;   // Slot 1
+    uint128 limit;     // Actually goes to Slot 1 (but this is wrong)
+}
+
+// ✅ Better: Actually uses 2 slots correctly
+contract BetterLayout {
+    uint256 balance;   // Slot 0
+    address owner;     // Slot 1 (20 bytes)
+    uint128 limit;     // Slot 1 (16 bytes) - doesn't fit, goes to Slot 2
+    bool active;       // Slot 2 (1 byte) - packed with limit
+}
+
+// ✅ Best: Uses 2 slots efficiently
+contract BestLayout {
+    uint256 balance;   // Slot 0
+    address owner;     // Slot 1 (20 bytes)
+    bool active;       // Slot 1 (1 byte) - packed
+    // 11 bytes remaining in Slot 1
+}
+```
+
+### 2. Use Appropriate Data Types
+```solidity
+// Use smallest possible types
+uint8 percentage;   // Instead of uint256 for 0-100
+uint32 timestamp;   // Instead of uint256 for dates (until 2106)
+uint128 balance;    // Instead of uint256 for most token amounts
+```
+
+### 3. Struct Optimization
+```solidity
+// ❌ Bad: 4 slots
+struct BadUser {
+    address wallet;    // Slot 0
+    uint256 balance;   // Slot 1
+    bool active;       // Slot 2
+    uint32 joinDate;   // Slot 3
+}
+
+// ✅ Good: 2 slots
+struct GoodUser {
+    uint256 balance;   // Slot 0
+    address wallet;    // Slot 1 (20 bytes)
+    uint32 joinDate;   // Slot 1 (4 bytes) - packed
+    bool active;       // Slot 1 (1 byte) - packed
+    // 7 bytes remaining
+}
+```
+
+## Memory vs Storage vs Calldata
+
+Understanding the difference is crucial for gas optimization:
+
+### Storage
+- Persistent between function calls
+- Most expensive (20,000 gas for new slot, 5,000 for existing)
+- Use for contract state
+
+### Memory  
+- Temporary during function execution
+- Cheaper than storage (~3 gas per 32-byte word)
+- Use for temporary calculations
+
+### Calldata
+- Read-only function parameters
+- Cheapest (~16 gas per byte)
+- Use for external function parameters when possible
+
+```solidity
+contract DataLocationExample {
+    uint256[] storageArray; // Persistent storage
+    
+    function processData(
+        uint256[] calldata data  // ✅ Cheapest - read-only
+    ) external {
+        uint256[] memory temp = new uint256[](data.length); // Temporary
+        
+        // Process data...
+        for (uint256 i = 0; i < data.length; i++) {
+            temp[i] = data[i] * 2;
+        }
+        
+        storageArray = temp; // Copy to storage
+    }
+    
+    function badExample(
+        uint256[] memory data  // ❌ More expensive - unnecessary copy
+    ) external {
+        // Same processing...
+    }
+}
+```
+
+## Storage Collision in Upgradeable Contracts
+
+When using proxy patterns, storage layout must remain consistent:
+
+```solidity
+// V1 Contract
+contract TokenV1 {
+    uint256 totalSupply;    // Slot 0
+    mapping(address => uint256) balances; // Slot 1
+}
+
+// V2 Contract - Safe upgrade
+contract TokenV2 {
+    uint256 totalSupply;    // Slot 0 - same position ✅
+    mapping(address => uint256) balances; // Slot 1 - same position ✅
+    uint256 newFeature;     // Slot 2 - new slot ✅
+}
+
+// V2 Contract - Dangerous upgrade
+contract TokenV2Bad {
+    uint256 newFeature;     // Slot 0 - collision! ❌
+    uint256 totalSupply;    // Slot 1 - moved! ❌
+    mapping(address => uint256) balances; // Slot 2 - moved! ❌
+}
+```
+
+## Tools for Storage Analysis
+
+### 1. Hardhat Storage Layout Plugin
+```bash
+npm install --save-dev hardhat-storage-layout
+```
+
+```javascript
+// hardhat.config.js
+require("hardhat-storage-layout");
+
+module.exports = {
+  // ... other config
+};
+```
+
+```bash
+npx hardhat check-storage-layout
+```
+
+### 2. Foundry Storage Inspection
+```bash
+forge inspect MyContract storage-layout
+```
+
+## Practical Example: Optimizing a Token Contract
+
+```solidity
+// ❌ Unoptimized: Uses 6+ slots per user
+contract UnoptimizedToken {
+    mapping(address => uint256) balances;
+    mapping(address => bool) frozen;
+    mapping(address => uint256) lastTransfer;
+    mapping(address => address) delegates;
+}
+
+// ✅ Optimized: Uses 2 slots per user
+contract OptimizedToken {
+    struct UserData {
+        uint128 balance;      // Slot 0 (16 bytes)
+        uint128 delegateData; // Slot 0 (16 bytes) - packed
+        address delegate;     // Slot 1 (20 bytes)
+        uint32 lastTransfer; // Slot 1 (4 bytes) - packed
+        bool frozen;         // Slot 1 (1 byte) - packed
+        // 7 bytes remaining in Slot 1
+    }
+    
+    mapping(address => UserData) users;
+}
+```
+
+## Best Practices Summary
+
+1. **Pack related variables** together in structs
+2. **Order variables** by size (largest first) for natural packing
+3. **Use appropriate data types** - don't default to uint256
+4. **Prefer calldata** over memory for external function parameters
+5. **Test storage layout** before deploying upgradeable contracts
+6. **Use tools** to visualize and verify storage layout
+7. **Consider bit packing** for boolean flags and small enums
+
+Understanding storage layout is essential for writing efficient, upgradeable smart contracts. The gas savings from proper storage optimization can be substantial, especially for contracts with frequent state changes.

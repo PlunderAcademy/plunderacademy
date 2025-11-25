@@ -1,0 +1,802 @@
+---
+id: testing-verification
+module: upgradable-contract-practical
+number: 4.6.4
+title: Testing with Foundry
+objective: >-
+  Write comprehensive Solidity tests for TrainingRegistryV1, covering initialization, voucher submission, soulbound transfers, and upgrade safety.
+slug: testing-verification
+---
+
+## Testing Overview
+
+In this lesson, you'll write tests in **Solidity** (not TypeScript!). Foundry tests are faster, more intuitive for smart contract developers, and don't require context switching between languages.
+
+**What you'll test:**
+1. **Deployment and initialization** (claimant, owner, URI)
+2. **Voucher submission** (EIP-712 signature verification)
+3. **Issuer controls** (allowlist management)
+4. **Soulbound transfers** (must revert)
+5. **Achievement tracking** (completion status, badges)
+6. **Access controls** (onlyOwner, pause)
+7. **Storage safety** (prepare for V2 upgrade)
+
+## Hardhat vs Foundry Tests
+
+You've been writing tests in TypeScript with Hardhat. Here's the comparison:
+
+### Hardhat Test (TypeScript)
+```typescript
+import { network } from "hardhat";
+import assert from "node:assert/strict";
+
+describe("TrainingRegistry", function () {
+  it("Should set claimant", async function () {
+    const { viem } = await network.connect();
+    const [deployer, claimant] = await viem.getWalletClients();
+    
+    const registry = await viem.deployContract("TrainingRegistryV1", [
+      deployer.account.address,
+      "https://base/",
+      "TrainingCert",
+      "1",
+      claimant.account.address
+    ]);
+    
+    const registeredClaimant = await registry.read.claimant();
+    assert.equal(registeredClaimant, claimant.account.address);
+  });
+});
+```
+
+### Foundry Test (Solidity)
+```solidity
+import {Test} from "forge-std/Test.sol";
+import {TrainingRegistryV1} from "../src/TrainingRegistryV1.sol";
+
+contract TrainingRegistryTest is Test {
+    TrainingRegistryV1 public registry;
+    address public claimant = address(0x1);
+    
+    function setUp() public {
+        registry = new TrainingRegistryV1();
+        registry.initialize(
+            address(this),
+            "https://base/",
+            "TrainingCert",
+            "1",
+            claimant
+        );
+    }
+    
+    function testClaimant() public view {
+        assertEq(registry.claimant(), claimant);
+    }
+}
+```
+
+**Key differences:**
+- Foundry tests inherit from `Test` contract
+- `setUp()` runs before each test (like `beforeEach`)
+- `assertEq()` instead of `assert.equal()`
+- No async/await (pure EVM execution)
+- Much faster execution!
+
+## Creating the Test File
+
+### test/TrainingRegistryV1.t.sol
+
+Create comprehensive tests for V1:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {Test, console2} from "forge-std/Test.sol";
+import {TrainingRegistryV1} from "../src/TrainingRegistryV1.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
+contract TrainingRegistryV1Test is Test {
+    using MessageHashUtils for bytes32;
+
+    TrainingRegistryV1 public implementation;
+    TrainingRegistryV1 public registry;
+    ERC1967Proxy public proxy;
+    
+    address public owner;
+    address public issuer;
+    uint256 public issuerPk;
+    address public learner;
+    address public claimant;
+
+    string private constant EIP712_NAME = "TrainingCert";
+    string private constant EIP712_VERSION = "1";
+    string private constant BASE_URI = "https://static.plunderswap.com/training/";
+
+    bytes32 private constant VOUCHER_TYPEHASH = keccak256(
+        "CompletionVoucher(uint256 taskCode,address wallet)"
+    );
+
+    function setUp() public {
+        // Set up test accounts
+        owner = address(this);
+        (issuer, issuerPk) = makeAddrAndKey("ISSUER");
+        learner = address(0xBEEF);
+        claimant = address(0xC1A1);
+
+        // Deploy implementation
+        implementation = new TrainingRegistryV1();
+        
+        // Deploy proxy and initialize
+        bytes memory initData = abi.encodeWithSelector(
+            TrainingRegistryV1.initialize.selector,
+            owner,
+            BASE_URI,
+            EIP712_NAME,
+            EIP712_VERSION,
+            claimant
+        );
+        proxy = new ERC1967Proxy(address(implementation), initData);
+        registry = TrainingRegistryV1(address(proxy));
+
+        // Set up issuer
+        registry.setIssuer(issuer, true);
+    }
+
+    // ============ DEPLOYMENT TESTS ============
+
+    function testInitialization() public view {
+        assertEq(registry.owner(), owner);
+        assertEq(registry.claimant(), claimant);
+        assertEq(registry.uriPadDigits(), 4);
+        assertEq(registry.uri(1), string(abi.encodePacked(BASE_URI, "0001.json")));
+    }
+
+    function testInitializeRevertsOnZeroClaimant() public {
+        TrainingRegistryV1 newImpl = new TrainingRegistryV1();
+        
+        bytes memory initData = abi.encodeWithSelector(
+            TrainingRegistryV1.initialize.selector,
+            owner,
+            BASE_URI,
+            EIP712_NAME,
+            EIP712_VERSION,
+            address(0)  // Zero claimant
+        );
+        
+        vm.expectRevert("Invalid claimant address");
+        new ERC1967Proxy(address(newImpl), initData);
+    }
+
+    function testCannotInitializeTwice() public {
+        vm.expectRevert();
+        registry.initialize(owner, BASE_URI, EIP712_NAME, EIP712_VERSION, claimant);
+    }
+
+    function testImplementationCannotBeInitialized() public {
+        vm.expectRevert();
+        implementation.initialize(owner, BASE_URI, EIP712_NAME, EIP712_VERSION, claimant);
+    }
+
+    // ============ VOUCHER SUBMISSION TESTS ============
+
+    function testSubmitVoucherSucceeds() public {
+        uint256 taskCode = 1;
+        bytes memory sig = _signVoucher(taskCode, learner);
+
+        vm.prank(learner);
+        registry.submitVoucher(taskCode, sig);
+
+        assertTrue(registry.completed(learner, taskCode));
+        assertEq(registry.balanceOf(learner, taskCode), 1);
+        assertTrue(registry.hasAchievement(learner, taskCode));
+    }
+
+    function testSubmitVoucherEmitsEvent() public {
+        uint256 taskCode = 5;
+        bytes memory sig = _signVoucher(taskCode, learner);
+
+        vm.expectEmit(true, true, false, true);
+        emit TrainingRegistryV1.TaskCompleted(taskCode, learner);
+
+        vm.prank(learner);
+        registry.submitVoucher(taskCode, sig);
+    }
+
+    function testSubmitVoucherRevertsOnInvalidIssuer() public {
+        (, uint256 badPk) = makeAddrAndKey("BAD");
+        uint256 taskCode = 1;
+        bytes memory sig = _signVoucherWith(badPk, taskCode, learner);
+
+        vm.prank(learner);
+        vm.expectRevert("invalid issuer");
+        registry.submitVoucher(taskCode, sig);
+    }
+
+    function testSubmitVoucherRevertsOnWalletMismatch() public {
+        uint256 taskCode = 1;
+        bytes memory sig = _signVoucher(taskCode, learner);
+
+        // Different sender than signed wallet
+        vm.prank(address(0xCAFE));
+        vm.expectRevert("invalid issuer");
+        registry.submitVoucher(taskCode, sig);
+    }
+
+    function testSubmitVoucherRevertsOnDoubleSubmit() public {
+        uint256 taskCode = 1;
+        bytes memory sig = _signVoucher(taskCode, learner);
+
+        vm.prank(learner);
+        registry.submitVoucher(taskCode, sig);
+
+        // Try again
+        bytes memory sig2 = _signVoucher(taskCode, learner);
+        vm.prank(learner);
+        vm.expectRevert("already completed");
+        registry.submitVoucher(taskCode, sig2);
+    }
+
+    function testMultipleTasksSameUser() public {
+        vm.startPrank(learner);
+        
+        for (uint256 i = 1; i <= 5; i++) {
+            bytes memory sig = _signVoucher(i, learner);
+            registry.submitVoucher(i, sig);
+        }
+        
+        vm.stopPrank();
+
+        uint256[] memory achievements = registry.getWalletAchievements(learner);
+        assertEq(achievements.length, 5);
+        
+        for (uint256 i = 1; i <= 5; i++) {
+            assertTrue(registry.completed(learner, i));
+            assertTrue(registry.hasAchievement(learner, i));
+        }
+    }
+
+    // ============ SOULBOUND TESTS ============
+
+    function testTransferReverts() public {
+        uint256 taskCode = 1;
+        bytes memory sig = _signVoucher(taskCode, learner);
+
+        vm.prank(learner);
+        registry.submitVoucher(taskCode, sig);
+
+        // Try to transfer
+        vm.prank(learner);
+        vm.expectRevert("SBT: non-transferable");
+        registry.safeTransferFrom(learner, address(0x1234), taskCode, 1, "");
+    }
+
+    function testBatchTransferReverts() public {
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = 1;
+        ids[1] = 2;
+        
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 1;
+        amounts[1] = 1;
+
+        // Mint both
+        vm.startPrank(learner);
+        registry.submitVoucher(1, _signVoucher(1, learner));
+        registry.submitVoucher(2, _signVoucher(2, learner));
+        vm.stopPrank();
+
+        // Try batch transfer
+        vm.prank(learner);
+        vm.expectRevert("SBT: non-transferable");
+        registry.safeBatchTransferFrom(learner, address(0x1234), ids, amounts, "");
+    }
+
+    // ============ ISSUER MANAGEMENT TESTS ============
+
+    function testSetIssuer() public {
+        address newIssuer = address(0x999);
+        
+        vm.expectEmit(true, false, false, true);
+        emit TrainingRegistryV1.IssuerUpdated(newIssuer, true);
+        
+        registry.setIssuer(newIssuer, true);
+        assertTrue(registry.isIssuer(newIssuer));
+    }
+
+    function testRemoveIssuer() public {
+        registry.setIssuer(issuer, false);
+        assertFalse(registry.isIssuer(issuer));
+    }
+
+    function testSetIssuerOnlyOwner() public {
+        vm.prank(learner);
+        vm.expectRevert();
+        registry.setIssuer(address(0x999), true);
+    }
+
+    // ============ URI TESTS ============
+
+    function testUriPadding() public view {
+        assertEq(registry.uri(1), string(abi.encodePacked(BASE_URI, "0001.json")));
+        assertEq(registry.uri(50), string(abi.encodePacked(BASE_URI, "0050.json")));
+        assertEq(registry.uri(100), string(abi.encodePacked(BASE_URI, "0100.json")));
+        assertEq(registry.uri(1000), string(abi.encodePacked(BASE_URI, "1000.json")));
+    }
+
+    function testSetBaseURI() public {
+        string memory newURI = "https://new-base/";
+        
+        vm.expectEmit(false, false, false, true);
+        emit TrainingRegistryV1.BaseURISet(newURI);
+        
+        registry.setBaseURI(newURI);
+        assertEq(registry.uri(1), string(abi.encodePacked(newURI, "0001.json")));
+    }
+
+    function testSetUriPadDigits() public {
+        registry.setUriPadDigits(6);
+        assertEq(registry.uriPadDigits(), 6);
+        assertEq(registry.uri(1), string(abi.encodePacked(BASE_URI, "000001.json")));
+    }
+
+    // ============ PAUSE TESTS ============
+
+    function testPauseStopsSubmissions() public {
+        registry.pause();
+        
+        uint256 taskCode = 1;
+        bytes memory sig = _signVoucher(taskCode, learner);
+
+        vm.prank(learner);
+        vm.expectRevert();
+        registry.submitVoucher(taskCode, sig);
+    }
+
+    function testUnpauseAllowsSubmissions() public {
+        registry.pause();
+        registry.unpause();
+        
+        uint256 taskCode = 1;
+        bytes memory sig = _signVoucher(taskCode, learner);
+
+        vm.prank(learner);
+        registry.submitVoucher(taskCode, sig);
+        
+        assertTrue(registry.completed(learner, taskCode));
+    }
+
+    function testPauseOnlyOwner() public {
+        vm.prank(learner);
+        vm.expectRevert();
+        registry.pause();
+    }
+
+    // ============ OWNERSHIP TESTS ============
+
+    function testTransferOwnership() public {
+        address newOwner = address(0x999);
+        
+        registry.transferOwnership(newOwner);
+        assertEq(registry.pendingOwner(), newOwner);
+        
+        vm.prank(newOwner);
+        registry.acceptOwnership();
+        assertEq(registry.owner(), newOwner);
+    }
+
+    function testTransferOwnershipOnlyOwner() public {
+        vm.prank(learner);
+        vm.expectRevert();
+        registry.transferOwnership(address(0x999));
+    }
+
+    // ============ ACHIEVEMENT TRACKING TESTS ============
+
+    function testGetWalletAchievements() public {
+        vm.startPrank(learner);
+        
+        for (uint256 i = 1; i <= 3; i++) {
+            registry.submitVoucher(i, _signVoucher(i, learner));
+        }
+        
+        vm.stopPrank();
+
+        uint256[] memory achievements = registry.getWalletAchievements(learner);
+        assertEq(achievements.length, 3);
+        assertEq(achievements[0], 1);
+        assertEq(achievements[1], 2);
+        assertEq(achievements[2], 3);
+    }
+
+    function testHasAchievement() public {
+        uint256 taskCode = 1;
+        bytes memory sig = _signVoucher(taskCode, learner);
+
+        assertFalse(registry.hasAchievement(learner, taskCode));
+        
+        vm.prank(learner);
+        registry.submitVoucher(taskCode, sig);
+        
+        assertTrue(registry.hasAchievement(learner, taskCode));
+    }
+
+    // ============ UPGRADE AUTHORIZATION TESTS ============
+
+    function testUpgradeOnlyOwner() public {
+        TrainingRegistryV1 newImpl = new TrainingRegistryV1();
+        
+        vm.prank(learner);
+        vm.expectRevert();
+        registry.upgradeToAndCall(address(newImpl), "");
+    }
+
+    function testOwnerCanUpgrade() public {
+        TrainingRegistryV1 newImpl = new TrainingRegistryV1();
+        
+        registry.upgradeToAndCall(address(newImpl), "");
+        
+        // Verify still works
+        assertEq(registry.owner(), owner);
+        assertEq(registry.claimant(), claimant);
+    }
+
+    // ============ HELPER FUNCTIONS ============
+
+    function _signVoucher(uint256 taskCode, address wallet) internal view returns (bytes memory) {
+        return _signVoucherWith(issuerPk, taskCode, wallet);
+    }
+
+    function _signVoucherWith(uint256 pk, uint256 taskCode, address wallet) internal view returns (bytes memory) {
+        bytes32 structHash = keccak256(abi.encode(VOUCHER_TYPEHASH, taskCode, wallet));
+        bytes32 domainSeparator = _domainSeparator();
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
+        
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _domainSeparator() internal view returns (bytes32) {
+        bytes32 typehash = keccak256(
+            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+        );
+        return keccak256(
+            abi.encode(
+                typehash,
+                keccak256(bytes(EIP712_NAME)),
+                keccak256(bytes(EIP712_VERSION)),
+                block.chainid,
+                address(registry)
+            )
+        );
+    }
+}
+```
+
+## Running the Tests
+
+### Run All Tests
+
+```bash
+forge test
+```
+
+**Expected output:**
+```
+[⠰] Compiling...
+[⠃] Compiling 6 files with Solc 0.8.28
+[⠊] Solc 0.8.28 finished in 2.43s
+Compiler run successful!
+
+Ran 27 tests for test/TrainingRegistryV1.t.sol:TrainingRegistryV1Test
+[PASS] testBatchTransferReverts() (gas: 268765)
+[PASS] testCannotInitializeTwice() (gas: 23039)
+[PASS] testGetWalletAchievements() (gas: 373417)
+[PASS] testHasAchievement() (gas: 159389)
+[PASS] testImplementationCannotBeInitialized() (gas: 18781)
+[PASS] testInitialization() (gas: 40230)
+[PASS] testInitializeRevertsOnZeroClaimant() (gas: 2871853)
+[PASS] testMultipleTasksSameUser() (gas: 606121)
+[PASS] testOwnerCanUpgrade() (gas: 2666391)
+[PASS] testPauseOnlyOwner() (gas: 19165)
+[PASS] testPauseStopsSubmissions() (gas: 48728)
+[PASS] testRemoveIssuer() (gas: 19151)
+[PASS] testSetBaseURI() (gas: 43603)
+[PASS] testSetIssuer() (gas: 42667)
+[PASS] testSetIssuerOnlyOwner() (gas: 19154)
+[PASS] testSetUriPadDigits() (gas: 36349)
+[PASS] testSubmitVoucherEmitsEvent() (gas: 157768)
+[PASS] testSubmitVoucherRevertsOnDoubleSubmit() (gas: 160913)
+[PASS] testSubmitVoucherRevertsOnInvalidIssuer() (gas: 37334)
+[PASS] testSubmitVoucherRevertsOnWalletMismatch() (gas: 37901)
+[PASS] testSubmitVoucherSucceeds() (gas: 160244)
+[PASS] testTransferOwnership() (gas: 36069)
+[PASS] testTransferOwnershipOnlyOwner() (gas: 19254)
+[PASS] testTransferReverts() (gas: 159397)
+[PASS] testUnpauseAllowsSubmissions() (gas: 164986)
+[PASS] testUpgradeOnlyOwner() (gas: 2656209)
+[PASS] testUriPadding() (gas: 46795)
+Suite result: ok. 27 passed; 0 failed; 0 skipped; finished in 3.37ms (46.66ms CPU time)
+
+Ran 1 test suite in 27.46ms (3.37ms CPU time): 27 tests passed, 0 failed, 0 skipped (27 total tests)
+```
+
+**Much faster than Hardhat tests!** ⚡
+
+### Test with Coverage
+
+```bash
+forge coverage
+```
+
+**Expected output:**
+```
+| File                        | % Lines         | % Statements    | % Branches    | % Funcs        |
+|-----------------------------|-----------------|-----------------|---------------|----------------|
+| src/TrainingRegistryV1.sol  | 100.00% (45/45) | 100.00% (52/52) | 95.00% (19/20)| 100.00% (12/12)|
+| Total                       | 100.00% (45/45) | 100.00% (52/52) | 95.00% (19/20)| 100.00% (12/12)|
+```
+
+## Understanding Foundry Test Patterns
+
+### setUp() Function
+
+```solidity
+function setUp() public {
+    // Runs before EVERY test
+    // Deploy contracts, set up state
+    owner = address(this);
+    registry = new TrainingRegistryV1();
+}
+```
+
+**vs Hardhat:**
+```typescript
+beforeEach(async function () {
+  // Runs before every test
+});
+```
+
+### Assertions
+
+<table>
+<thead>
+<tr>
+<th>Foundry</th>
+<th>Hardhat</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>assertEq(a, b)</td>
+<td>assert.equal(a, b)</td>
+<td>Check equality</td>
+</tr>
+<tr>
+<td>assertTrue(x)</td>
+<td>assert.ok(x)</td>
+<td>Check true</td>
+</tr>
+<tr>
+<td>assertFalse(x)</td>
+<td>assert.ok(!x)</td>
+<td>Check false</td>
+</tr>
+<tr>
+<td>assertGt(a, b)</td>
+<td>assert.ok(a &gt; b)</td>
+<td>Greater than</td>
+</tr>
+<tr>
+<td>assertLt(a, b)</td>
+<td>assert.ok(a &lt; b)</td>
+<td>Less than</td>
+</tr>
+</tbody>
+</table>
+
+### Testing Reverts
+
+```solidity
+// Expect next call to revert
+vm.expectRevert();
+registry.someFunction();
+
+// Expect revert with message
+vm.expectRevert("error message");
+registry.someFunction();
+
+// Expect revert with custom error
+vm.expectRevert(abi.encodeWithSelector(CustomError.selector, arg1));
+registry.someFunction();
+```
+
+**vs Hardhat:**
+```typescript
+await assert.rejects(
+  async () => await registry.write.someFunction(),
+  /error message/
+);
+```
+
+### Testing Events
+
+```solidity
+// Expect event emission
+vm.expectEmit(true, true, false, true);
+emit TaskCompleted(1, learner);
+
+registry.submitVoucher(1, sig);
+```
+
+**vs Hardhat:**
+```typescript
+const hash = await registry.write.submitVoucher([1, sig]);
+const logs = await publicClient.getLogs({
+  address: registry.address,
+  event: TaskCompletedEvent,
+  fromBlock: receipt.blockNumber,
+  toBlock: receipt.blockNumber,
+});
+assert.equal(logs.length, 1);
+```
+
+### Using vm Cheatcodes
+
+```solidity
+// Change msg.sender
+vm.prank(learner);
+registry.submitVoucher(1, sig);
+
+// Change msg.sender for multiple calls
+vm.startPrank(learner);
+registry.submitVoucher(1, sig);
+registry.submitVoucher(2, sig);
+vm.stopPrank();
+
+// Time travel
+vm.warp(block.timestamp + 1 days);
+
+// Mine blocks
+vm.roll(block.number + 100);
+
+// Deal ETH
+vm.deal(learner, 100 ether);
+```
+
+## Gas Reporting
+
+### Run Tests with Gas Report
+
+```bash
+forge test --gas-report
+```
+
+**Output:**
+```
+| src/TrainingRegistryV1.sol:TrainingRegistryV1 contract |                 |        |        |        |         |
+|--------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                        | Deployment Size |        |        |        |         |
+| 2,456,789                                              | 12,345          |        |        |        |         |
+| Function Name                                          | min             | avg    | median | max    | # calls |
+| submitVoucher                                          | 150,000         | 165,000| 165,000| 180,000| 15      |
+| setIssuer                                              | 45,000          | 45,000 | 45,000 | 45,000 | 3       |
+| pause                                                  | 28,000          | 28,000 | 28,000 | 28,000 | 2       |
+| uri                                                    | 5,000           | 5,000  | 5,000  | 5,000  | 8       |
+```
+
+**Use this to:**
+- Identify expensive functions
+- Compare gas costs before/after optimizations
+- Plan for user transaction costs
+
+## Storage Layout Verification
+
+Before upgrading to V2, verify V1 storage layout:
+
+```bash
+forge inspect TrainingRegistryV1 storage-layout
+```
+
+**Output:**
+```bash
+╭-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------╮
+| Name              | Type                                         | Slot | Offset | Bytes | Contract                   
+                   |
+-------------------|
+| _walletTokenIds   | mapping(address => uint256[])                | 2    | 0      | 32    | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+|-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------|
+| _hasTokenId       | mapping(address => mapping(uint256 => bool)) | 3    | 0      | 32    | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+|-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------|
+| claimant          | address                                      | 4    | 0      | 20    | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+|-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------|
+| _baseDirectoryURI | string                                       | 5    | 0      | 32    | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+|-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------|
+| uriPadDigits      | uint8                                        | 6    | 0      | 1     | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+|-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------|
+| __gap             | uint256[38]                                  | 7    | 0      | 1216  | src/TrainingRegistryV1.sol:TrainingRegistryV1 |
+╰-------------------+----------------------------------------------+------+--------+-------+-----------------------------------------------╯
+```
+
+**Critical for upgrades!**
+- Slot numbers must stay the same in V2
+- New variables must use __gap slots
+- Never reorder existing variables
+
+## Comparison to Your Previous Tests
+
+### NFT Contract (Hardhat + TypeScript)
+
+```typescript
+import { network } from "hardhat";
+import assert from "node:assert/strict";
+
+describe("SimpleNFTCollection", function () {
+  it("Should mint NFT", async function () {
+    const { viem } = await network.connect();
+    const [deployer] = await viem.getWalletClients();
+    
+    const nft = await viem.deployContract("SimpleNFTCollection", [
+      "Test", "TST", "ipfs://", "ipfs://hidden", deployer.account.address
+    ]);
+    
+    const hash = await nft.write.mint([1n], { value: 1000000000000000000n });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    
+    assert.equal(receipt.status, "success");
+    const balance = await nft.read.balanceOf([deployer.account.address]);
+    assert.equal(balance, 1n);
+  });
+});
+```
+
+### TrainingRegistry (Foundry + Solidity)
+
+```solidity
+import {Test} from "forge-std/Test.sol";
+import {TrainingRegistryV1} from "../src/TrainingRegistryV1.sol";
+
+contract TrainingRegistryV1Test is Test {
+    TrainingRegistryV1 public registry;
+    
+    function setUp() public {
+        registry = new TrainingRegistryV1();
+        registry.initialize(address(this), "https://base/", "Cert", "1", address(0x1));
+    }
+    
+    function testSubmitVoucher() public {
+        bytes memory sig = _signVoucher(1, address(this));
+        registry.submitVoucher(1, sig);
+        
+        assertTrue(registry.completed(address(this), 1));
+        assertEq(registry.balanceOf(address(this), 1), 1);
+    }
+}
+```
+
+**Key differences:**
+- No async/await in Foundry
+- Simpler syntax (pure Solidity)
+- Faster execution
+- Direct contract interaction
+
+## Wrap-Up
+
+You've successfully:
+
+✅ **Written Solidity tests** (new skill!)  
+✅ **Tested initialization** (claimant, owner, URI)  
+✅ **Tested voucher submission** (EIP-712 signatures)  
+✅ **Tested soulbound transfers** (must revert)  
+✅ **Tested access controls** (onlyOwner, pause)  
+✅ **Verified storage layout** (ready for upgrade)  
+✅ **Used vm cheatcodes** (prank, expectRevert, expectEmit)  
+✅ **Compared to Hardhat tests** (understood the differences)  
+
+**Key lesson:**
+Foundry tests are faster, written in Solidity, and don't require context switching. The concepts are the same as Hardhat tests - just different syntax!
+
+**Next up:** We'll upgrade to TrainingRegistryV2, adding batch voucher submission for gas savings. You'll see how to safely add new state variables, maintain storage layout, and test the full upgrade process. Ready to upgrade? 🚀
+

@@ -1,0 +1,256 @@
+---
+id: "advanced-nft-features-quiz"
+slug: "advanced-nft-features-quiz"
+module: "advanced-nft-features"
+title: "Module 2: Advanced NFT Features - Quiz"
+description: "Test understanding of metadata standards, reveal/royalties, and multi-phase minting."
+totalQuestions: 14
+passingScore: 80
+timeLimit: 20
+---
+
+# Module 2: Advanced NFT Features - Quiz
+
+## Questions
+
+### Question 1
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.4 Metadata Standards and IPFS Integration
+
+What on-chain URI scheme should contracts use for NFT metadata to avoid gateway lock-in?
+
+**Options:**
+- A) https://gateway.example.com/collection/
+- B) ipfs:// URIs on-chain
+- C) data: URIs for all JSON and images
+- D) ftp:// URIs served by the project
+
+---
+
+### Question 2
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.4 Metadata Standards and IPFS Integration
+
+Which signals should a contract (or companion) emit to tell indexers that metadata changed and must be re-fetched?
+
+**Options:**
+- A) Transfer
+- B) ApprovalForAll
+- C) BaseURISet only
+- D) ERC-4906 MetadataUpdate / BatchMetadataUpdate
+
+---
+
+### Question 3
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.4 Metadata Standards and IPFS Integration
+
+Which statement best describes deterministic tokenURI design after reveal?
+
+**Options:**
+- A) The same tokenId always resolves to the same path for every viewer; changes are signaled via events
+- B) tokenURI varies by msg.sender to personalize content
+- C) tokenURI rotates gateways per request to avoid rate-limits
+- D) tokenURI appends random query params to force cache refreshes
+
+---
+
+### Question 4
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.4 Metadata Standards and IPFS Integration
+
+Why pin JSON and media across multiple IPFS providers?
+
+**Options:**
+- A) To reduce on-chain gas for _baseURI
+- B) To increase royalty enforcement across marketplaces
+- C) To ensure availability and durability if one provider or gateway fails
+- D) To eliminate the need for a provenance hash
+
+---
+
+### Question 5
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.5 Reveal Mechanics and Royalty Standards
+
+What does ERC-2981 primarily provide for NFT collections?
+
+**Options:**
+- A) Guaranteed enforcement of royalties on every marketplace
+- B) Automatic on-chain distribution of secondary sale proceeds
+- C) A standard interface reporting royalty receiver and amount; enforcement is marketplace-dependent
+- D) A mandatory fixed 10% royalty for all tokens
+
+---
+
+### Question 6
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.5 Reveal Mechanics and Royalty Standards
+
+Which is the recommended approach for fair, audit-friendly reveals?
+
+**Options:**
+- A) A single atomic switch from hidden placeholder to final base CID
+- B) Per-token reveals over several days
+- C) Viewer-dependent reveals based on wallet address
+- D) Multiple random base URIs chosen at request time
+
+---
+
+### Question 7
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.5 Reveal Mechanics and Royalty Standards
+
+Why publish a provenance hash before mint?
+
+**Options:**
+- A) To compress metadata files for cheaper storage
+- B) To pre-commit to media ordering/content and discourage manipulation accusations
+- C) To speed up tokenURI resolution in wallets
+- D) To define the default royalty receiver on-chain
+
+---
+
+### Question 8
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.5 Reveal Mechanics and Royalty Standards
+
+Which royalty configuration aligns with typical marketplace limits and best practice?
+
+**Options:**
+- A) 25% (2500 bps) minimum to ensure creator revenue
+- B) 0% only, because royalties are never honored
+- C) No limit; set any percentage and expect universal enforcement
+- D) ≤10% commonly, prefer 2.5–7.5% (250–750 bps) and document policy
+
+---
+
+### Question 9
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.6 Multi-Phase Minting Concepts
+
+What should contracts do on every mint phase transition?
+
+**Options:**
+- A) Update tokenURI for all tokens
+- B) Emit a PhaseChanged(phase) event for auditability and frontends
+- C) Emit Minted events for all prior minters
+- D) Transfer one token to the admin to mark the phase
+
+---
+
+### Question 10
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.6 Multi-Phase Minting Concepts
+
+How do Merkle proofs enable scalable allowlists for presales?
+
+**Options:**
+- A) By storing the entire allowlist array on-chain
+- B) By letting any address mint without verification
+- C) By relying on signature strings uploaded to IPFS
+- D) By verifying a short proof against an on-chain Merkle root
+
+---
+
+### Question 11
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.6 Multi-Phase Minting Concepts
+
+What is a gas-predictable pattern to enforce per-wallet mint caps?
+
+**Options:**
+- A) Track mints in mapping(address => uint256) and perform O(1) checks before mint
+- B) Iterate over the buyer’s entire purchase history on-chain each mint
+- C) Query past Transfer events in the same transaction
+- D) Require an off-chain server to track per-wallet usage
+
+---
+
+### Question 12
+**Type:** Multiple Choice  
+**Points:** 6  
+**Lesson:** 3.6 Multi-Phase Minting Concepts
+
+Which approach provides robust safety for payable mints that call external code?
+
+**Options:**
+- A) Prefer require strings over custom errors
+- B) Rely on _safeMint without additional guards
+- C) Follow CEI (Checks-Effects-Interactions) and add nonReentrant
+- D) Skip emitting events to save gas
+
+---
+
+### Question 13
+**Type:** Timeline Builder  
+**Points:** 8  
+**Lesson:** 3.6 Multi-Phase Minting Concepts
+
+Order the key steps for a fair mint sequence.
+
+**Interactive Data:**
+```json
+{
+  "events": [
+    { "id": "p1", "text": "Set presale config (price, cap, merkleRoot)" },
+    { "id": "p2", "text": "Open presale (allowlist)" },
+    { "id": "p3", "text": "Open public mint" },
+    { "id": "p4", "text": "Reveal collection" }
+  ]
+}
+```
+
+---
+
+### Question 14
+**Type:** Concept Matching  
+**Points:** 8  
+**Lesson:** 3.5 Reveal Mechanics and Royalty Standards
+
+Match concepts to definitions.
+
+**Interactive Data:**
+```json
+{
+  "concepts": [
+    { "id": "erc2981", "text": "ERC-2981" },
+    { "id": "erc4906", "text": "ERC-4906" },
+    { "id": "merkle", "text": "Merkle root" },
+    { "id": "base", "text": "baseURI" },
+    { "id": "prov", "text": "Provenance hash" }
+  ],
+  "definitions": [
+    { "id": "def-2981", "text": "Standard interface returning royalty receiver and amount for a sale price" },
+    { "id": "def-4906", "text": "Events used by indexers to refresh metadata caches" },
+    { "id": "def-merkle", "text": "Commitment enabling allowlist membership verification via proofs" },
+    { "id": "def-base", "text": "Common prefix used by tokenURI to build metadata paths" },
+    { "id": "def-prov", "text": "Pre-published commitment to media order/content ensuring fairness" }
+  ]
+}
+```
+
+---
+id: advanced-nft-features-quiz
+slug: advanced-nft-features-quiz
+module: advanced-nft-features
+title: "Advanced NFT Features - Quiz"
+description: "CONTENT TO BE WRITTEN"
+totalQuestions: 10
+passingScore: 80
+timeLimit: 15
+---
+
+# CONTENT TO BE WRITTEN
+

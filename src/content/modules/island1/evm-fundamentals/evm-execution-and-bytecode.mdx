@@ -1,0 +1,373 @@
+---
+id: evm-execution-and-bytecode
+module: evm-fundamentals
+number: 2.2
+title: Understanding EVM Execution and Bytecode
+objective: >-
+  Learn how Solidity contracts are compiled into bytecode and executed by the
+  EVM.
+slug: evm-execution-and-bytecode
+---
+
+## From Human-Readable Code to Machine Instructions
+
+### The Compilation Journey
+
+**Real-world analogy:** Think of compilation like translating a book from English to a universal language that computers around the world can understand, no matter what brand or operating system they use.
+
+When you write a smart contract in Solidity (human-readable code), it must be transformed into bytecode (machine-readable instructions) that the EVM can execute. This process is called compilation.
+
+### Understanding Bytecode
+
+**What is bytecode?**
+Bytecode is a concise, low-level set of instructions that the EVM can directly execute. It's like assembly language for the virtual machine - very efficient but not human-readable.
+
+**Why bytecode matters:**
+- **Efficiency:** Much faster to execute than interpreting high-level code
+- **Standardization:** Same bytecode runs identically on all EVM networks
+- **Optimization:** Compilers can optimize code for better performance
+- **Determinism:** Ensures exactly the same execution across all nodes
+
+### The Application Binary Interface (ABI)
+
+**What is an ABI?**
+The Application Binary Interface (ABI) is like a instruction manual that tells external applications how to interact with your smart contract.
+
+**Real-world analogy:** Think of the ABI like a restaurant menu. It tells you:
+- What dishes (functions) are available
+- What ingredients (parameters) each dish needs
+- What you'll get (return values) when you order
+- How much it costs (gas estimates)
+
+**ABI components:**
+- **Function signatures:** Names and parameter types of callable functions
+- **Event definitions:** What events the contract can emit
+- **Data types:** How to encode/decode function parameters
+- **Error definitions:** What errors the contract might throw
+
+### Compilation Process Step-by-Step
+
+#### Step 1: Solidity Source Code
+```solidity
+pragma solidity ^0.8.0;
+
+contract SimpleStorage {
+    uint256 public storedData;
+    
+    function set(uint256 x) public {
+        storedData = x;
+    }
+    
+    function get() public view returns (uint256) {
+        return storedData;
+    }
+}
+```
+
+#### Step 2: Lexical Analysis (Tokenization)
+The compiler breaks down your code into tokens:
+- Keywords: `contract`, `function`, `public`, `returns`
+- Identifiers: `SimpleStorage`, `storedData`, `set`, `get`
+- Operators: `=`, `(`
+- Literals: `uint256`, `0`
+
+#### Step 3: Syntax Analysis (Parsing)
+The compiler builds an Abstract Syntax Tree (AST) representing the structure of your code, checking for syntax errors.
+
+#### Step 4: Semantic Analysis
+The compiler checks for logical errors:
+- Type compatibility
+- Function visibility rules
+- Variable declarations
+- Access control violations
+
+#### Step 5: Code Generation
+The compiler generates EVM bytecode - a series of opcodes (operation codes) that the EVM can execute.
+
+**Example bytecode (simplified):**
+```
+PUSH1 0x60    // Push value 0x60 to stack
+PUSH1 0x40    // Push value 0x40 to stack
+MSTORE        // Store in memory
+PUSH1 0x80    // Push value 0x80 to stack
+PUSH1 0x40    // Push value 0x40 to stack
+...
+```
+
+#### Step 6: ABI Generation
+The compiler creates the ABI JSON that describes how to interact with the contract:
+
+```json
+[
+  {
+    "inputs": [{"name": "x", "type": "uint256"}],
+    "name": "set",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "get",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
+```
+
+### EVM Resources and Data Structures
+
+#### The Stack: EVM's Primary Workspace
+
+**What it is:** A temporary, last-in-first-out (LIFO) data structure - like a stack of plates where you can only add or remove from the top.
+
+**Real-world analogy:** Imagine you're solving a math problem using a calculator that can only remember numbers in a stack. To calculate (5 + 3) × 2:
+1. Push 5 onto stack: [5]
+2. Push 3 onto stack: [5, 3]
+3. ADD operation: pops 3 and 5, pushes result 8: [8]
+4. Push 2 onto stack: [8, 2]
+5. MUL operation: pops 2 and 8, pushes result 16: [16]
+
+**Technical details:**
+- **Maximum depth:** 1024 items
+- **Item size:** Each item is 256 bits (32 bytes)
+- **Access pattern:** Only the top 16 items are directly accessible
+- **Usage:** Stores intermediate values during computation
+
+#### Memory: Temporary Workspace
+
+**What it is:** A volatile byte array that exists only during contract execution - like your computer's RAM.
+
+**Characteristics:**
+- **Lifetime:** Created fresh for each transaction, destroyed after execution
+- **Size:** Starts at zero, expands as needed (costs gas to expand)
+- **Access:** Random access - can read/write any location
+- **Cost:** Relatively cheap compared to storage
+
+**Use cases:**
+- Function parameters and local variables
+- Temporary calculations
+- Data manipulation before storage
+- Return values preparation
+
+#### Storage: Permanent Database
+
+**What it is:** A persistent key-value store unique to each contract - like your computer's hard drive but distributed across thousands of computers.
+
+**Real-world analogy:** Think of storage like a permanent filing cabinet where each drawer has a unique number (key) and contains documents (values). Once you file something, it stays there forever unless you explicitly change it.
+
+**Characteristics:**
+- **Persistence:** Data survives between function calls and transactions
+- **Scope:** Each contract has its own isolated storage
+- **Size:** Virtually unlimited (but very expensive)
+- **Cost:** Most expensive operation in EVM (~20,000 gas to write)
+
+**Storage layout example:**
+```
+Storage Slot 0: uint256 balance = 1000
+Storage Slot 1: address owner = 0x123...
+Storage Slot 2: mapping(address => uint256) balances
+Storage Slot 3: string name = "MyToken"
+```
+
+#### Calldata: Function Input Data
+
+**What it is:** Read-only data passed with transactions or calls, serving as function input parameters.
+
+**Structure:**
+- **Function selector:** First 4 bytes identify which function to call
+- **Encoded parameters:** Remaining bytes contain function arguments
+
+**Example calldata for `transfer(address to, uint256 amount)`:**
+```
+0xa9059cbb                           // Function selector
+000000000000000000000000742d35Cc...  // 'to' address (padded to 32 bytes)
+0000000000000000000000000000000000... // amount (padded to 32 bytes)
+```
+
+### Execution Flow: How EVM Processes Bytecode
+
+#### Sequential Execution Model
+
+**Basic principle:** EVM processes bytecode instructions one by one, like reading a recipe step by step.
+
+**Real-world analogy:** Think of EVM execution like following a cooking recipe:
+1. Read the next instruction
+2. Perform the action (add ingredients, stir, etc.)
+3. Update the current state (ingredients mixed, temperature changed)
+4. Move to the next instruction
+5. Repeat until done
+
+#### The Execution Cycle
+
+**Step 1: Instruction Fetch**
+- EVM reads the next opcode from bytecode
+- Program counter (PC) points to current instruction
+- Gas cost is calculated for the operation
+
+**Step 2: Instruction Decode**
+- EVM determines what operation to perform
+- Checks if sufficient gas is available
+- Validates stack depth requirements
+
+**Step 3: Instruction Execute**
+- Operation is performed using stack, memory, or storage
+- Stack items are popped/pushed as needed
+- State changes are applied
+
+**Step 4: State Update**
+- Program counter advances to next instruction
+- Gas is consumed from the transaction's gas limit
+- Any events or logs are recorded
+
+#### Common EVM Opcodes and Their Functions
+
+**Arithmetic Operations:**
+```
+ADD     // Pop two values, push their sum
+SUB     // Pop two values, push their difference  
+MUL     // Pop two values, push their product
+DIV     // Pop two values, push their division
+```
+
+**Stack Operations:**
+```
+PUSH1   // Push a 1-byte value onto stack
+POP     // Remove top item from stack
+DUP1    // Duplicate top stack item
+SWAP1   // Swap top two stack items
+```
+
+**Memory Operations:**
+```
+MLOAD   // Load 32 bytes from memory to stack
+MSTORE  // Store 32 bytes from stack to memory
+MSTORE8 // Store 1 byte from stack to memory
+```
+
+**Storage Operations:**
+```
+SLOAD   // Load from storage to stack
+SSTORE  // Store from stack to storage
+```
+
+**Control Flow:**
+```
+JUMP    // Jump to a specific location in code
+JUMPI   // Conditional jump based on stack value
+RETURN  // Return data and stop execution
+REVERT  // Revert all changes and stop execution
+```
+
+### Execution Example: Step-by-Step
+
+Let's trace through executing a simple function `add(uint256 a, uint256 b)`:
+
+**Solidity code:**
+```solidity
+function add(uint256 a, uint256 b) public pure returns (uint256) {
+    return a + b;
+}
+```
+
+**Simplified bytecode execution:**
+```
+1. PUSH1 0x40    // Prepare memory pointer
+2. MLOAD         // Load memory pointer to stack
+3. CALLDATALOAD  // Load parameter 'a' from calldata
+4. PUSH1 0x20    // Prepare offset for second parameter
+5. CALLDATALOAD  // Load parameter 'b' from calldata  
+6. ADD           // Pop 'a' and 'b', push (a + b)
+7. PUSH1 0x40    // Prepare return data location
+8. MLOAD         // Load return pointer
+9. MSTORE        // Store result in memory
+10. PUSH1 0x20   // Return data size (32 bytes)
+11. PUSH1 0x40   // Return data offset
+12. RETURN       // Return result and end execution
+```
+
+**Stack state during execution:**
+```
+Initial:     []
+After 1-2:   [memPtr]
+After 3:     [memPtr, a]
+After 4-5:   [memPtr, a, b]
+After 6:     [memPtr, (a+b)]
+After 7-9:   []  // Result stored in memory
+After 10-11: [0x20, 0x40]
+After 12:    []  // Function returns
+```
+
+### Advanced Execution Concepts
+
+#### Gas Consumption During Execution
+
+**Dynamic gas costs:**
+- **Memory expansion:** Costs more gas as memory grows
+- **Storage operations:** Different costs for setting vs updating
+- **External calls:** Gas forwarding to other contracts
+
+**Gas optimization example:**
+```solidity
+// Expensive: Multiple storage operations
+function badIncrement() public {
+    counter = counter + 1;  // SLOAD + ADD + SSTORE
+}
+
+// Efficient: Single storage operation  
+function goodIncrement() public {
+    uint256 temp = counter; // SLOAD
+    temp = temp + 1;        // ADD (in memory)
+    counter = temp;         // SSTORE
+}
+```
+
+#### Event Emission and Logs
+
+**What events do:**
+Events provide a way for contracts to communicate with the outside world without consuming much gas.
+
+**How events work during execution:**
+1. Event parameters are encoded
+2. Topic hashes are calculated for indexed parameters
+3. Log entry is added to transaction receipt
+4. External applications can listen for these events
+
+**Example event execution:**
+```solidity
+event Transfer(address indexed from, address indexed to, uint256 value);
+
+// During execution:
+emit Transfer(msg.sender, recipient, amount);
+```
+
+This creates a log entry that external applications can filter and monitor.
+
+#### Error Handling and Reverts
+
+**When execution fails:**
+- `REVERT` opcode is executed
+- All state changes are rolled back
+- Gas used up to the revert point is still consumed
+- Error message can be returned to caller
+
+**Common causes of reverts:**
+- `require()` statements failing
+- Running out of gas
+- Stack overflow/underflow
+- Invalid opcode execution
+
+### Practical Implications for Developers
+
+**Understanding execution helps with:**
+- **Gas optimization:** Know which operations are expensive
+- **Debugging:** Understand why transactions fail
+- **Security:** Recognize attack patterns and vulnerabilities
+- **Architecture:** Design efficient contract interactions
+
+**Best practices:**
+- Minimize storage operations
+- Use memory for temporary data
+- Batch operations when possible
+- Handle edge cases to prevent reverts

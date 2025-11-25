@@ -1,0 +1,782 @@
+---
+id: metadata-ipfs-setup
+module: nft-collection-practical
+number: 3.7.4
+title: NFT Metadata and IPFS Integration
+objective: >-
+  Create NFT metadata, generate collection artwork, pin to IPFS, and update your deployed contract with real metadata URIs.
+slug: metadata-ipfs-setup
+---
+
+## Metadata Overview
+
+Your NFT collection is deployed, but it's showing placeholder URIs! In this lesson, you'll:
+
+1. **Generate 100 unique SVG images** (automated script)
+2. **Create JSON metadata** for each token
+3. **Pin to IPFS** using Pinata (free tier)
+4. **Update contract URIs** with real IPFS links
+5. **Test reveal mechanics**
+
+By the end, your collection will have real art and metadata that anyone can view!
+
+## Understanding NFT Metadata
+
+### What is Metadata?
+
+NFT metadata is a JSON file that describes your NFT:
+
+```json
+{
+  "name": "Plunder NFT #42",
+  "description": "A unique shape from the Plunder NFT Collection",
+  "image": "ipfs://QmHash/42.svg",
+  "attributes": [
+    { "trait_type": "Shape", "value": "Circle" },
+    { "trait_type": "Color", "value": "#FF6B6B" },
+    { "trait_type": "Rarity", "value": "Common" }
+  ]
+}
+```
+
+**Why it matters:**
+- Wallets (MetaMask) display `name` and `image`
+- Marketplaces (OpenSea) show `description` and `attributes`
+- Rarity tools use `attributes` for rankings
+- All data is **permanent** on IPFS (decentralized storage)
+
+### The tokenURI Flow
+
+When someone views your NFT:
+
+1. **Wallet calls** `tokenURI(42)`
+2. **Contract returns** `"ipfs://QmRevealed/42.json"`
+3. **Wallet fetches** JSON from IPFS
+4. **Wallet reads** `image` field
+5. **Wallet fetches** SVG from IPFS
+6. **User sees** the complete NFT!
+
+### Hidden vs Revealed
+
+**Before reveal:**
+- `tokenURI(42)` → `"ipfs://QmHidden/hidden.json"`
+- All tokens show same placeholder image
+- Creates mystery and excitement
+
+**After reveal:**
+- `tokenURI(42)` → `"ipfs://QmRevealed/42.json"`
+- Each token shows unique image
+- One-time reveal (can't undo)
+
+## Project Structure for Metadata
+
+Create the following structure in your project:
+
+```
+my-nft-collection/
+├── metadata/
+│   ├── hidden.json              # Placeholder metadata
+│   ├── images/                  # Generated SVG files
+│   │   ├── shape-001.svg
+│   │   ├── shape-002.svg
+│   │   └── ... (100 total)
+│   ├── revealed/                # Per-token metadata
+│   │   ├── 1.json
+│   │   ├── 2.json
+│   │   └── ... (100 total)
+│   └── hidden-image.svg         # Placeholder image
+└── scripts/
+    └── generate-svgs.js         # Automated image generation
+```
+
+## Step 1: Generate SVG Images
+
+### Create the SVG Generator Script
+
+Create `scripts/generate-svgs.cjs`:
+
+```javascript
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+
+// 100 Simple SVG Shapes in Different Colors
+const svgShapes = [
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="#FF6B6B"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" fill="#4ECDC4"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,10 90,90 10,90" fill="#45B7D1"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="#FFA07A"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" fill="#98D8C8"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,10 90,90 10,90" fill="#F7DC6F"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="#BB8FCE"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" fill="#85C1E2"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="50" rx="45" ry="30" fill="#F8B88B"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="#52C76A"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" fill="#FF85A2"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,10 90,50 50,90 10,50" fill="#A8E6CF"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="#FFD93D"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" fill="#6BCF7F"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,10 90,90 10,90" fill="#C7CEEA"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="50" rx="30" ry="45" fill="#FF6F91"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="#95E1D3"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" fill="#FECA57"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,10 90,50 50,90 10,50" fill="#E056FD"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="#48DBFB"/></svg>',
+  // ... Continue with all 100 shapes (see full file in attached file)
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" fill="#5C6BC0"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="#76FF03"/></svg>',
+  '<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" fill="#00E5FF"/></svg>',
+];
+
+const outDir = 'metadata/images';
+
+// Create directory if it doesn't exist
+if (!fs.existsSync(outDir)) {
+  fs.mkdirSync(outDir, { recursive: true });
+}
+
+// Write each SVG file
+svgShapes.forEach((svg, idx) => {
+  const num = String(idx + 1).padStart(3, '0');
+  fs.writeFileSync(path.join(outDir, `shape-${num}.svg`), svg);
+});
+
+console.log(`✅ Successfully created ${svgShapes.length} SVG files in ${outDir}/`);
+```
+
+**Note:** The full script with all 100 shapes is [available here](/islands/island3/generate-svgs.cjs).
+
+### Run the Generator
+
+```bash
+node scripts/generate-svgs.cjs
+```
+
+**Output:**
+```
+✅ Successfully created 100 SVG files in metadata/images/
+```
+
+**Check the files:**
+```bash
+ls metadata/images/
+# shape-001.svg  shape-002.svg  ...  shape-100.svg
+```
+
+Each file is a unique, colorful SVG shape!
+
+## Step 2: Create Hidden Metadata
+
+### Create Hidden Image
+
+Create `metadata/hidden-image.svg` (placeholder for unrevealed):
+
+```xml
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="400" fill="#1a1a2e"/>
+  <text x="200" y="180" font-family="Arial" font-size="48" fill="#16213e" text-anchor="middle">?</text>
+  <text x="200" y="230" font-family="Arial" font-size="20" fill="#0f3460" text-anchor="middle">Mystery NFT</text>
+  <text x="200" y="260" font-family="Arial" font-size="16" fill="#e94560" text-anchor="middle">Reveal Coming Soon</text>
+</svg>
+```
+
+This creates a mystery box placeholder!
+
+### Create Hidden Metadata JSON
+
+Create `metadata/hidden.json`:
+
+```json
+{
+  "name": "Mystery Plunder NFT",
+  "description": "A mysterious NFT from the Plunder Collection. Reveal coming soon!",
+  "image": "ipfs://REPLACE_WITH_HIDDEN_IMAGE_CID/hidden-image.svg",
+  "attributes": [
+    {
+      "trait_type": "Status",
+      "value": "Hidden"
+    }
+  ]
+}
+```
+
+**Note:** We'll replace `REPLACE_WITH_HIDDEN_IMAGE_CID` after uploading to IPFS.
+
+## Step 3: Create Revealed Metadata
+
+### Generate Metadata Script
+
+Create `scripts/generate-metadata.cjs`:
+
+```javascript
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+
+// Shape types (matches SVG generation pattern)
+const shapes = ['Circle', 'Rectangle', 'Triangle', 'Diamond', 'Ellipse'];
+const colors = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+  '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B88B', '#52C76A',
+  // Add more colors to match your SVGs...
+];
+
+// Rarity distribution
+function getRarity(tokenId) {
+  if (tokenId <= 10) return 'Legendary';
+  if (tokenId <= 30) return 'Epic';
+  if (tokenId <= 60) return 'Rare';
+  return 'Common';
+}
+
+// Get shape type from token ID
+function getShape(tokenId) {
+  const patterns = [
+    [0, 3, 6, 9],    // Circle indices
+    [1, 4, 7],       // Rectangle indices
+    [2, 5, 8],       // Triangle indices
+  ];
+  
+  const mod = (tokenId - 1) % 12;
+  if (patterns[0].includes(mod)) return 'Circle';
+  if (patterns[1].includes(mod)) return 'Rectangle';
+  if (patterns[2].includes(mod)) return 'Triangle';
+  if (mod >= 9) return 'Diamond';
+  return 'Ellipse';
+}
+
+// Get color from token ID
+function getColor(tokenId) {
+  return colors[(tokenId - 1) % colors.length] || '#000000';
+}
+
+const revealedDir = 'metadata/revealed';
+const imagesCID = process.env.IMAGES_CID || 'REPLACE_WITH_IMAGES_CID';
+
+// Create directory if it doesn't exist
+if (!fs.existsSync(revealedDir)) {
+  fs.mkdirSync(revealedDir, { recursive: true });
+}
+
+// Generate metadata for each token (1-100)
+for (let i = 1; i <= 100; i++) {
+  const num = String(i).padStart(3, '0');
+  const shape = getShape(i);
+  const color = getColor(i);
+  const rarity = getRarity(i);
+  
+  const metadata = {
+    name: `Plunder NFT #${i}`,
+    description: `A unique ${shape.toLowerCase()} from the Plunder NFT Collection. This is token #${i} of 100.`,
+    image: `ipfs://${imagesCID}/shape-${num}.svg`,
+    attributes: [
+      {
+        trait_type: 'Shape',
+        value: shape
+      },
+      {
+        trait_type: 'Color',
+        value: color
+      },
+      {
+        trait_type: 'Rarity',
+        value: rarity
+      },
+      {
+        trait_type: 'Number',
+        value: i
+      }
+    ]
+  };
+  
+  fs.writeFileSync(
+    path.join(revealedDir, `${i}.json`),
+    JSON.stringify(metadata, null, 2)
+  );
+}
+
+console.log(`✅ Successfully created 100 metadata JSON files in ${revealedDir}/`);
+console.log(`📝 Don't forget to replace IMAGES_CID in the files after uploading images to IPFS!`);
+```
+
+### Run the Metadata Generator
+
+```bash
+node scripts/generate-metadata.cjs
+```
+
+**Output:**
+```
+✅ Successfully created 100 metadata JSON files in metadata/revealed/
+📝 Don't forget to replace IMAGES_CID in the files after uploading images to IPFS!
+```
+
+**Check the files:**
+```bash
+cat metadata/revealed/1.json
+```
+
+```json
+{
+  "name": "Plunder NFT #1",
+  "description": "A unique circle from the Plunder NFT Collection. This is token #1 of 100.",
+  "image": "ipfs://REPLACE_WITH_IMAGES_CID/shape-001.svg",
+  "attributes": [
+    {
+      "trait_type": "Shape",
+      "value": "Circle"
+    },
+    {
+      "trait_type": "Color",
+      "value": "#FF6B6B"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Legendary"
+    },
+    {
+      "trait_type": "Number",
+      "value": 1
+    }
+  ]
+}
+```
+
+Perfect! Now we have 100 images and 100 metadata files.
+
+## Step 4: Pin to IPFS with Pinata
+
+### Create Pinata Account
+
+1. Visit https://pinata.cloud
+2. Sign up for free account
+3. Verify email
+4. Get API keys:
+   - Go to **API Keys** → **New Key**
+   - Enable **pinFileToIPFS** and **pinJSONToIPFS**
+   - Name: "Plunder NFT Upload"
+   - Copy **API Key** and **API Secret**
+
+### Add Pinata Keys to .env
+
+```bash
+echo "PINATA_API_KEY=your_api_key_here" >> .env
+echo "PINATA_API_SECRET=your_api_secret_here" >> .env
+```
+
+### Upload Images to IPFS
+
+**Using Pinata Web UI (Easiest):**
+
+1. Go to https://app.pinata.cloud/pinmanager
+2. Click **Upload** → **Folder**
+3. Select `metadata/images/` folder
+4. Name: "Plunder NFT Images"
+5. Click **Upload**
+6. **Copy the CID** (starts with `Qm...` or `bafy...`)
+
+**Example CID:** `QmXYZ123...abc`
+
+**Save the CID:**
+```bash
+echo "IMAGES_CID=QmXYZ123...abc" >> .env
+```
+
+### Update Metadata with Images CID
+
+Now update all metadata files to reference the images:
+
+**Option 1: Manual update** `scripts/generate-metadata.cjs`:
+```javascript
+export IMAGES_CID=QmXYZ123...abc (Replace REPLACE_WITH_YOUR_IMAGES_CID)
+```
+
+Then re-run:
+```bash
+node scripts/generate-metadata.cjs
+```
+
+**Option 2: Use sed (Linux/Mac):**
+```bash
+cd metadata/revealed
+sed -i 's/REPLACE_WITH_IMAGES_CID/QmXYZ123...abc/g' *.json
+```
+
+### Upload Hidden Image to IPFS
+
+1. Go to Pinata web UI
+2. Upload `metadata/hidden-image.svg`
+3. Name: "Plunder NFT Hidden Image"
+4. Copy the CID
+5. Update `metadata/hidden.json`:
+
+```json
+{
+  "name": "Mystery Plunder NFT",
+  "description": "A mysterious NFT from the Plunder Collection. Reveal coming soon!",
+  "image": "ipfs://QmHiddenImageCID/hidden-image.svg",
+  "attributes": [
+    {
+      "trait_type": "Status",
+      "value": "Hidden"
+    }
+  ]
+}
+```
+
+### Upload Hidden Metadata to IPFS
+
+1. Upload `metadata/hidden.json` to Pinata
+2. Name: "Plunder NFT Hidden Metadata"
+3. Copy the CID
+4. **This is your `notRevealedUri`!**
+
+Example: `ipfs://QmHiddenCID/hidden.json`
+
+### Upload Revealed Metadata to IPFS
+
+1. Go to Pinata web UI
+2. Upload entire `metadata/revealed/` folder
+3. Name: "Plunder NFT Revealed Metadata"
+4. Copy the folder CID
+5. **This is your `baseURI`!**
+
+Example: `ipfs://QmRevealedCID/`
+
+## Step 5: Update Contract URIs
+
+### Update Hidden URI
+
+Using the `setNotRevealedURI` function:
+
+Create `scripts/update-uris.ts`:
+
+```typescript
+import { network } from "hardhat";
+
+const nftAddress = process.env.NFT_CONTRACT_ADDRESS as `0x${string}`;
+const networkName = process.env.HARDHAT_NETWORK || "localhost";
+
+const hiddenURI = "ipfs://QmHiddenCID/hidden.json";  // Your hidden metadata CID
+const baseURI = "ipfs://QmRevealedCID/";  // Your revealed metadata folder CID
+
+const { viem } = await network.connect({ network: networkName });
+const publicClient = await viem.getPublicClient();
+const [walletClient] = await viem.getWalletClients();
+
+async function main() {
+  console.log(`Updating URIs on ${networkName}...`);
+  
+  const nft = await viem.getContractAt("SimpleNFTCollection", nftAddress);
+  
+  // Update hidden URI
+  console.log("\n📝 Updating hidden URI...");
+  console.log("New hidden URI:", hiddenURI);
+  const hiddenHash = await nft.write.setNotRevealedURI([hiddenURI]);
+  await publicClient.waitForTransactionReceipt({ hash: hiddenHash });
+  console.log("✅ Hidden URI updated!");
+  
+  // Update base URI
+  console.log("\n📝 Updating base URI...");
+  console.log("New base URI:", baseURI);
+  const baseHash = await nft.write.setBaseURI([baseURI]);
+  await publicClient.waitForTransactionReceipt({ hash: baseHash });
+  console.log("✅ Base URI updated!");
+  
+  console.log("\n🎉 All URIs updated successfully!");
+}
+
+main().catch(console.error);
+```
+
+**Run it:**
+```bash
+HARDHAT_NETWORK=zilliqaTestnet npx hardhat run scripts/update-uris.ts --network zilliqaTestnet
+```
+
+## Step 6: Test the Metadata
+
+### Before Reveal
+
+Check what tokenURI returns:
+
+```bash
+npm run interact:testnet
+```
+
+**Should show:**
+```
+Token 1 URI: ipfs://QmHiddenCID/hidden.json
+Token 2 URI: ipfs://QmHiddenCID/hidden.json
+Token 3 URI: ipfs://QmHiddenCID/hidden.json
+```
+
+All tokens show the same hidden metadata!
+
+### View in Browser
+
+**IPFS Gateway URLs:**
+- https://gateway.pinata.cloud/ipfs/QmHiddenCID/
+- https://ipfs.io/ipfs/QmHiddenCID/
+
+**Should see:**
+```json
+{
+  "name": "Mystery Plunder NFT",
+  "description": "A mysterious NFT from the Plunder Collection...",
+  "image": "ipfs://QmHiddenImageCID/hidden-image.svg"
+}
+```
+
+### After Reveal
+
+Run the reveal script:
+
+```bash
+npm run reveal:testnet
+```
+
+**Output:**
+```
+🎉 Revealing collection...
+✅ Collection revealed successfully!
+🎨 All NFTs now show their revealed metadata!
+```
+
+Check tokenURIs again:
+
+```bash
+npm run interact:testnet
+```
+
+**Should show:**
+```
+Token 1 URI: ipfs://QmRevealedCID/1.json
+Token 2 URI: ipfs://QmRevealedCID/2.json
+Token 3 URI: ipfs://QmRevealedCID/3.json
+```
+
+Each token has unique metadata!
+
+### View Revealed Metadata
+
+Visit:
+- https://gateway.pinata.cloud/ipfs/QmRevealedCID/1.json
+- https://gateway.pinata.cloud/ipfs/QmRevealedCID/1.svg
+
+You should see your NFT's unique data and image!
+
+## Step 7: Verify in Wallet
+
+### Add NFT to MetaMask
+
+1. Open MetaMask
+2. Switch to Zilliqa Testnet
+3. Go to **NFTs** tab
+4. Click **Import NFT**
+5. Enter:
+   - **Address:** Your NFT contract address
+   - **Token ID:** 1 (or any token you own)
+6. Click **Add**
+
+**Before reveal:** Shows mystery box
+**After reveal:** Shows unique shape!
+
+## IPFS Best Practices
+
+### 1. Use Multiple Pinning Services
+
+**Why:** If one service goes down, your metadata stays available
+
+**Recommended services:**
+- Pinata (free tier: 1 GB)
+- NFT.Storage (free, built for NFTs)
+- Web3.Storage (free, 5 GB)
+
+**How:**
+1. Upload to Pinata
+2. Copy CID
+3. Pin same CID on NFT.Storage
+4. Now you have redundancy!
+
+### 2. Pin Metadata AND Images
+
+**Upload order:**
+1. Images first → Get CID1
+2. Update metadata with CID1
+3. Upload metadata → Get CID2
+4. Use CID2 in contract
+
+### 3. Use ipfs:// Protocol
+
+**Good:**
+```json
+"image": "ipfs://QmHash/image.svg"
+```
+
+**Bad (don't hardcode gateway):**
+```json
+"image": "https://gateway.pinata.cloud/ipfs/QmHash/image.svg"
+```
+
+**Why:** Let wallets/marketplaces choose their own gateway
+
+### 4. Test Before Reveal
+
+**Checklist:**
+- [ ] All image files uploaded and pinned
+- [ ] All metadata files uploaded and pinned
+- [ ] Hidden metadata uploaded and pinned
+- [ ] Contract URIs updated
+- [ ] Test tokenURI in unrevealed state
+- [ ] Mint a test token
+- [ ] Verify metadata loads in wallet
+- [ ] Only then reveal!
+
+### 5. Keep Backup of CIDs
+
+Create `metadata/IPFS-CIDS.md`:
+
+```markdown
+# IPFS CIDs for Plunder NFT Collection
+
+## Images
+- **CID:** QmXYZ123...abc
+- **URL:** ipfs://QmXYZ123...abc/
+- **Gateway:** https://gateway.pinata.cloud/ipfs/QmXYZ123...abc/
+- **Uploaded:** 2024-01-15
+- **Pinned on:** Pinata, NFT.Storage
+
+## Revealed Metadata
+- **CID:** QmABC456...def
+- **URL:** ipfs://QmABC456...def/
+- **Gateway:** https://gateway.pinata.cloud/ipfs/QmABC456...def/
+- **Uploaded:** 2024-01-15
+- **Pinned on:** Pinata, NFT.Storage
+
+## Hidden Metadata
+- **CID:** QmDEF789...ghi
+- **URL:** ipfs://QmDEF789...ghi/hidden.json
+- **Gateway:** https://gateway.pinata.cloud/ipfs/QmDEF789...ghi/hidden.json
+- **Uploaded:** 2024-01-15
+- **Pinned on:** Pinata
+```
+
+## Troubleshooting
+
+### Issue: "IPFS gateway timeout"
+
+**Problem:** Gateway is slow or down
+
+**Solution:**
+- Try different gateway (ipfs.io, cloudflare-ipfs.com)
+- Wait and retry
+- Check Pinata pin status
+
+### Issue: "Image not loading in wallet"
+
+**Problem:** Wallet can't fetch from IPFS
+
+**Solution:**
+- Ensure file is pinned (check Pinata dashboard)
+- Try viewing in browser with gateway URL
+- Wait 1-2 minutes for IPFS propagation
+
+### Issue: "Metadata shows wrong image"
+
+**Problem:** CID mismatch in metadata
+
+**Solution:**
+```bash
+# Check metadata file
+cat metadata/revealed/1.json | grep image
+
+# Should match your images CID
+# If not, regenerate metadata with correct CID
+```
+
+### Issue: "Can't update contract URI"
+
+**Problem:** Not the owner or wrong network
+
+**Solution:**
+```bash
+# Check you're the owner
+npm run interact:testnet
+
+# Ensure you're on correct network
+echo $HARDHAT_NETWORK
+```
+
+## Cost Breakdown
+
+**Pinata Free Tier:**
+- 1 GB storage
+- 100 MB max file size
+- Unlimited gateways
+
+**Your collection:**
+- 100 SVGs @ ~1 KB each = 100 KB
+- 100 JSON files @ ~500 bytes each = 50 KB
+- **Total: ~150 KB** (well within free tier!)
+
+## Advanced: Custom Image Generation
+
+Want to use your own images instead of SVGs?
+
+### Using PNG/JPG
+
+1. Create 100 images (500x500 px recommended)
+2. Name them: `1.png`, `2.png`, ..., `100.png`
+3. Upload to Pinata
+4. Update metadata `image` field
+
+### Using Generative Art
+
+Libraries:
+- **p5.js** - Creative coding
+- **Canvas API** - Node.js image generation
+- **Sharp** - Image processing
+
+Example with Canvas:
+
+```javascript
+const { createCanvas } = require('canvas');
+const fs = require('fs');
+
+for (let i = 1; i <= 100; i++) {
+  const canvas = createCanvas(500, 500);
+  const ctx = canvas.getContext('2d');
+  
+  // Draw something unique based on i
+  ctx.fillStyle = `hsl(${i * 3.6}, 70%, 60%)`;
+  ctx.fillRect(0, 0, 500, 500);
+  
+  const buffer = canvas.toBuffer('image/png');
+  fs.writeFileSync(`metadata/images/${i}.png`, buffer);
+}
+```
+
+## Wrap-Up
+
+You've successfully:
+
+✅ **Generated 100 unique SVG images** with automated script  
+✅ **Created JSON metadata** for all tokens  
+✅ **Uploaded to IPFS** using Pinata  
+✅ **Updated contract URIs** with real IPFS links  
+✅ **Tested reveal mechanics** (hidden → revealed)  
+✅ **Verified in wallet** (MetaMask display)  
+
+**Your NFT collection now has:**
+- Permanent, decentralized storage (IPFS)
+- Unique metadata for each token
+- Working reveal mechanics
+- Marketplace-compatible JSON format
+
+**Next up:** Module 3.7.5 will cover comprehensive testing with Hardhat 3, including minting tests, reveal tests, security tests, and gas optimization validation.
+
+Ready to test? Let's go! 🚀
+

@@ -1,0 +1,359 @@
+---
+id: gas-as-fuel
+module: evm-fundamentals
+number: 2.3
+title: Gas as the Fuel of EVM
+objective: >-
+  Understand how gas quantifies computational effort and resource usage on the
+  EVM.
+slug: gas-as-fuel
+---
+
+## Understanding Gas: The Fuel of the EVM
+
+### Why Gas Exists: Solving Critical Problems
+
+**Real-world analogy:** Imagine if public utilities were completely free - people would waste electricity, water, and gas without consideration. Blockchain networks face the same problem: without a cost mechanism, people could create infinite loops or massive computations that would crash the entire network.
+
+Gas solves several critical problems in blockchain systems:
+
+#### Problem 1: The Halting Problem
+**The issue:** In computer science, it's mathematically impossible to determine if a program will run forever or eventually stop.
+
+**How gas solves it:** By charging for each computational step, even infinite loops eventually run out of gas and stop. This guarantees all programs terminate.
+
+**Example:**
+```solidity
+// This would run forever without gas limits
+while (true) {
+    // Do something
+}
+// Gas limit ensures it stops when gas runs out
+```
+
+#### Problem 2: Resource Allocation
+**The issue:** Blockchain nodes have limited computational power, memory, and storage. Without a pricing mechanism, users would consume unlimited resources.
+
+**How gas solves it:** More resource-intensive operations cost more gas, creating economic incentives for efficient programming.
+
+#### Problem 3: Spam Prevention
+**The issue:** Without costs, malicious actors could flood the network with meaningless transactions.
+
+**How gas solves it:** Even the simplest transaction costs gas, making spam attacks expensive and economically unviable.
+
+#### Problem 4: Miner/Validator Incentives
+**The issue:** Network participants need compensation for running the infrastructure.
+
+**How gas solves it:** Gas fees reward validators for processing transactions and maintaining network security.
+
+### Gas as Economic Incentive System
+
+**What gas quantifies:**
+Gas quantifies computational effort and resource usage on the EVM. By attaching a cost to every executed operation, it prevents wasteful or malicious consumption of network resources. Users must pay gas fees to incentivize validators to include and execute their transactions.
+
+**The three-layer gas system:**
+1. **Gas units:** Abstract measure of computational work
+2. **Gas price:** How much you pay per unit (in cryptocurrency)
+3. **Gas limit:** Maximum units you're willing to consume
+
+### Gas Costs and Pricing Mechanics
+
+**How gas costs are determined:**
+EVM instructions have predefined gas costs proportional to their computation and storage demands. These costs are carefully designed to reflect the actual computational work required.
+
+#### Gas Cost Categories
+
+**Basic Operations (1-10 gas):**
+- `ADD`, `SUB`, `MUL`: 3 gas each
+- `PUSH1`, `POP`: 3 gas each
+- `DUP1`, `SWAP1`: 3 gas each
+
+**Memory Operations (3-100+ gas):**
+- `MLOAD` (load from memory): 3 gas
+- `MSTORE` (store to memory): 3 gas + memory expansion cost
+- Memory expansion: quadratic cost as memory grows
+
+**Storage Operations (800-20,000 gas):**
+- `SLOAD` (read from storage): 800 gas (warm) / 2,100 gas (cold)
+- `SSTORE` (write to storage): 
+  - Setting a new value: 20,000 gas
+  - Updating existing value: 5,000 gas
+  - Clearing a value: 5,000 gas but refunds 15,000 gas
+
+**External Operations (700-25,000+ gas):**
+- External contract calls: 2,600 gas + call cost
+- Contract creation: 32,000 gas + deployment cost
+- Transaction base cost: 21,000 gas
+
+#### The Gas Pricing System
+
+Before execution, users specify two crucial parameters:
+
+**Gas Price: Your Bid for Network Priority**
+- **What it is:** Payment per unit of gas, measured in wei (smallest unit of cryptocurrency)
+- **How it works:** Higher gas prices get your transaction processed faster
+- **Market dynamics:** Supply and demand - busy networks = higher prices
+- **Strategic consideration:** Balance speed vs cost based on urgency
+
+**Gas Limit: Your Safety Net**
+- **What it is:** Upper gas expenditure bound protecting users from unexpectedly high fees
+- **Purpose:** Prevents runaway costs from infinite loops or buggy contracts
+- **Setting tips:** 
+  - Too low: Transaction fails but still costs gas
+  - Too high: No problem, unused gas is refunded
+  - Just right: Sufficient for execution with small buffer
+
+**Total Cost Calculation:**
+```
+Total Fee = Gas Used × Gas Price
+Maximum Possible Fee = Gas Limit × Gas Price
+```
+
+### Practical Gas Examples with Real Costs
+
+#### Example 1: Simple Token Transfer (ERC-20)
+```solidity
+function transfer(address to, uint256 amount) public returns (bool) {
+    balances[msg.sender] -= amount;  // SSTORE: 5,000 gas
+    balances[to] += amount;          // SSTORE: 20,000 gas (new) or 5,000 gas (existing)
+    emit Transfer(msg.sender, to, amount); // LOG: ~1,500 gas
+    return true;
+}
+```
+
+**Estimated gas usage:**
+- Base transaction: 21,000 gas
+- Function execution: ~30,000-45,000 gas
+- **Total: ~51,000-66,000 gas**
+
+**On Zilliqa (assuming 4,762 gwei gas price):**
+- Cost: ~$0.10-0.15 USD
+- Time: ~1 second confirmation
+
+#### Example 2: Complex DeFi Swap
+```solidity
+function swapExactTokensForTokens(
+    uint amountIn,
+    uint amountOutMin,
+    address[] calldata path,
+    address to,
+    uint deadline
+) external {
+    // Multiple storage reads and writes
+    // External contract calls
+    // Complex calculations
+}
+```
+
+**Estimated gas usage:**
+- Base transaction: 21,000 gas
+- Function execution: ~150,000-300,000 gas
+- **Total: ~171,000-321,000 gas**
+
+**On Zilliqa:**
+- Cost: ~$0.30-0.60 USD
+- Time: ~1 second confirmation
+
+#### Example 3: NFT Minting
+```solidity
+function mintNFT(address to, string memory tokenURI) public {
+    uint256 tokenId = _tokenIdCounter.current();  // SLOAD + increment
+    _tokenIdCounter.increment();                  // SSTORE
+    _safeMint(to, tokenId);                      // Multiple SSTOREs
+    _setTokenURI(tokenId, tokenURI);             // SSTORE for metadata
+}
+```
+
+**Estimated gas usage:**
+- Base transaction: 21,000 gas
+- Function execution: ~100,000-200,000 gas
+- **Total: ~121,000-221,000 gas**
+
+**On Zilliqa:**
+- Cost: ~$0.25-0.45 USD
+- Time: ~1 second confirmation
+
+### Gas Optimization Strategies
+
+#### Strategy 1: Minimize Storage Operations
+
+**Bad: Multiple storage reads**
+```solidity
+function inefficientFunction() public {
+    if (users[msg.sender].balance > 100) {      // SLOAD
+        users[msg.sender].balance -= 100;       // SLOAD + SSTORE
+        users[msg.sender].lastActivity = block.timestamp; // SLOAD + SSTORE
+    }
+}
+```
+
+**Good: Cache storage reads**
+```solidity
+function efficientFunction() public {
+    User storage user = users[msg.sender];      // One SLOAD for pointer
+    if (user.balance > 100) {
+        user.balance -= 100;                    // SSTORE only
+        user.lastActivity = block.timestamp;    // SSTORE only
+    }
+}
+```
+
+**Gas savings: ~4,000-6,000 gas (significant!)**
+
+#### Strategy 2: Use Events Instead of Storage for Non-Critical Data
+
+**Bad: Store everything on-chain**
+```solidity
+struct Action {
+    uint256 timestamp;
+    string description;
+    address user;
+}
+mapping(uint256 => Action) public actions; // Expensive storage
+
+function recordAction(string memory desc) public {
+    actions[actionCount] = Action(block.timestamp, desc, msg.sender);
+    actionCount++;
+}
+```
+
+**Good: Use events for historical data**
+```solidity
+event ActionRecorded(uint256 indexed actionId, address indexed user, string description);
+
+function recordAction(string memory desc) public {
+    emit ActionRecorded(actionCount, msg.sender, desc); // Much cheaper
+    actionCount++; // Only store counter
+}
+```
+
+**Gas savings: ~15,000-30,000 gas per action**
+
+#### Strategy 3: Pack Struct Variables Efficiently
+
+**Bad: Inefficient packing**
+```solidity
+struct User {
+    address wallet;     // 20 bytes
+    bool isActive;      // 1 byte (but takes full 32-byte slot)
+    uint256 balance;    // 32 bytes
+    uint8 level;        // 1 byte (but takes full 32-byte slot)
+}
+// Uses 4 storage slots = 4 × 20,000 gas = 80,000 gas
+```
+
+**Good: Efficient packing**
+```solidity
+struct User {
+    address wallet;     // 20 bytes
+    bool isActive;      // 1 byte
+    uint8 level;        // 1 byte
+    // Total: 22 bytes - fits in one 32-byte slot
+    uint256 balance;    // 32 bytes in next slot
+}
+// Uses 2 storage slots = 2 × 20,000 gas = 40,000 gas
+```
+
+**Gas savings: ~40,000 gas per struct creation**
+
+#### Strategy 4: Use Memory for Temporary Arrays
+
+**Bad: Create storage arrays for temporary work**
+```solidity
+uint256[] public tempResults; // Storage array
+
+function processData(uint256[] calldata input) external {
+    delete tempResults; // Clear previous results
+    for (uint i = 0; i < input.length; i++) {
+        tempResults.push(input[i] * 2); // Expensive storage operations
+    }
+    // Process tempResults...
+}
+```
+
+**Good: Use memory arrays**
+```solidity
+function processData(uint256[] calldata input) external {
+    uint256[] memory tempResults = new uint256[](input.length); // Memory array
+    for (uint i = 0; i < input.length; i++) {
+        tempResults[i] = input[i] * 2; // Cheap memory operations
+    }
+    // Process tempResults...
+}
+```
+
+**Gas savings: ~20,000+ gas per array element**
+
+### Gas Payments on Zilliqa: Practical Advantages
+
+#### Why Zilliqa Gas is More Affordable
+
+**Efficient consensus mechanism:**
+Zilliqa's native token ZIL is used to pay fees. Its efficient Pipelined Fast-Hotstuff consensus with ~32 validators keeps typical gas prices low, facilitating affordable and rapid dApp interactions.
+
+**Comparison with other networks:**
+
+| Operation | Zilliqa | Ethereum | Polygon |
+|-----------|---------|----------|---------|
+| Simple transfer | ~$0.01 | ~$1-20 | ~$0.01 |
+| Token swap | ~$0.10 | ~$5-50 | ~$0.05 |
+| NFT mint | ~$0.25 | ~$10-100 | ~$0.10 |
+| Complex DeFi | ~$0.50 | ~$20-200 | ~$0.20 |
+
+#### Gas Price Stability on Zilliqa
+
+**Predictable costs:**
+- Less network congestion means more stable gas prices
+- Efficient architecture reduces computational bottlenecks
+- 1-second block times provide quick confirmation
+
+**Developer benefits:**
+- Lower barrier to entry for testing and development
+- More economical for users, increasing adoption potential
+- Enables microtransaction use cases that are impossible on expensive networks
+
+### Advanced Gas Concepts
+
+#### Gas Stipends and Call Gas
+
+**Gas forwarding in external calls:**
+```solidity
+// Forward specific amount of gas
+recipient.call{gas: 50000}(data);
+
+// Forward all remaining gas (dangerous!)
+recipient.call(data);
+```
+
+**Gas stipend for simple transfers:**
+When sending ETH to contracts, a 2,300 gas stipend is provided - just enough for logging but not enough for complex operations.
+
+#### Gas Refunds
+
+**Storage refunds:**
+- Clearing storage (setting to zero) refunds 15,000 gas
+- Maximum refund is 50% of gas used in transaction
+- Refunds are applied at transaction end
+
+**Practical implication:**
+```solidity
+// This clears storage and provides refund
+user.balance = 0; // Refunds 15,000 gas
+
+// This is equivalent to clearing
+delete user.balance; // Also refunds 15,000 gas
+```
+
+### Common Gas Optimization Mistakes
+
+#### Mistake 1: Premature Optimization
+**Problem:** Optimizing before measuring actual gas usage
+**Solution:** Profile your contracts first, then optimize the most expensive operations
+
+#### Mistake 2: Over-Optimizing at Code Readability Expense
+**Problem:** Making code unreadable to save small amounts of gas
+**Solution:** Balance optimization with maintainability - save big gas costs, ignore tiny optimizations
+
+#### Mistake 3: Not Considering User Experience
+**Problem:** Optimizing individual functions without considering user workflows
+**Solution:** Optimize for the complete user journey, not individual transactions

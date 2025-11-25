@@ -1,0 +1,448 @@
+---
+id: security-patterns
+module: advanced-data-structures-error-handling
+number: 2.2.5
+title: "Security Patterns: CEI and Access Guards"
+objective: >-
+  Apply CEI discipline, reentrancy guards, role-based access control, and pausable emergency stops to build defense-in-depth staking systems.
+slug: security-patterns
+---
+
+## Set the stage
+
+Your staking vault is a high-value target: millions of dollars in locked tokens, complex reward accrual logic, and admin functions that can drain the treasury. One reentrancy bug, one missing access check, one unguarded parameter update, and your users lose everything. Security isn't a feature you bolt on at the end—it's a discipline you follow from the first line of code: **Checks → Effects → Interactions** (CEI), reentrancy guards on every value-moving function, role-based access control for privileged actions, and pausable circuits for emergencies.
+
+This lesson is the culmination of Module 2: you've learned data structures, gas optimizations, custom errors, and revert patterns. Now we layer in **defense in depth**—multiple overlapping safeguards so that when (not if) one fails, others catch it. CEI prevents reentrancy by design; `ReentrancyGuard` catches it by force. `Ownable` gates admin functions; `Pausable` gives you a kill switch when something goes wrong. Threat modeling helps you anticipate attacks before they happen.
+
+By the end of this lesson you'll apply CEI discipline to every function, use OpenZeppelin's guards correctly, design role hierarchies that follow least privilege, and pause your contract safely in emergencies. In Module 5's staking contract, every value transfer will follow CEI + `nonReentrant`, every admin function will check roles, and the pause button will freeze user actions without bricking the contract. Your vault will be secure by design, not by hope.
+
+## Conceptual foundations
+
+### CEI discipline: the prime directive
+
+**Checks → Effects → Interactions** is not optional; it's the foundation of safe Solidity:
+
+1. **Checks**: Validate inputs, authorization, preconditions (require, custom errors)
+2. **Effects**: Update your contract's state (balances, timestamps, flags)
+3. **Interactions**: Call external contracts (token transfers, oracle queries)
+
+**Why this order**: External calls can re-enter your contract. If you update state **after** the call, the re-entrant call sees stale state (classic reentrancy). If you update state **before** the call, the re-entrant call sees the new state and can't exploit staleness.
+
+**Example** (vulnerable):
+```solidity
+function withdraw(uint256 amount) external {
+    // Checks
+    require(balanceOf[msg.sender] >= amount, "Insufficient");
+    
+    // Interaction BEFORE effect (WRONG!)
+    (bool ok, ) = msg.sender.call{value: amount}("");
+    require(ok);
+    
+    // Effects (too late!)
+    balanceOf[msg.sender] -= amount; // Attacker re-enters before this line
+}
+```
+
+**Example** (safe):
+```solidity
+function withdraw(uint256 amount) external {
+    // Checks
+    require(balanceOf[msg.sender] >= amount, "Insufficient");
+    
+    // Effects
+    balanceOf[msg.sender] -= amount;
+    
+    // Interactions
+    (bool ok, ) = msg.sender.call{value: amount}("");
+    require(ok);
+}
+```
+
+**Mental model**: Think of your contract as a database transaction. Lock the record (update state), then notify the world (external call). Never notify first.
+
+### Reentrancy guards: belt and suspenders
+
+Even with CEI, humans make mistakes. OpenZeppelin's `ReentrancyGuard` adds a runtime lock:
+
+```solidity
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract Vault is ReentrancyGuard {
+    function withdraw(uint256 amount) external nonReentrant {
+        // If this function is re-entered, `nonReentrant` reverts
+        // ...
+    }
+}
+```
+
+**How it works**: Sets a `_status` flag to `ENTERED` at function start, clears it at end. Re-entrant calls see `ENTERED` and revert.
+
+**Cost**: ~2,500 gas per call (one `SSTORE` and one `SLOAD`). Worth it for value-moving functions.
+
+**When to use**: Every function that transfers tokens, sends ETH, or calls untrusted external contracts. Combine with CEI for defense in depth.
+
+**When NOT to use**: `view`/`pure` functions (no state changes, so no reentrancy risk); internal functions (guard the external entry point instead).
+
+### Access control: who can do what
+
+Not every address should be able to pause the contract, update reward rates, or withdraw the treasury. **Access control** gates privileged actions.
+
+**Option 1: `Ownable`** (simple, single admin)
+```solidity
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract StakingVault is Ownable {
+    uint256 public rewardRate;
+
+    constructor(address initialOwner) Ownable(initialOwner) {}
+
+    function setRewardRate(uint256 newRate) external onlyOwner {
+        rewardRate = newRate;
+    }
+}
+```
+
+**Option 2: `AccessControl`** (flexible, role-based)
+```solidity
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract StakingVault is AccessControl {
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    constructor(address admin) {
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(ADMIN_ROLE, admin);
+    }
+
+    function setRewardRate(uint256 newRate) external onlyRole(ADMIN_ROLE) {
+        rewardRate = newRate;
+    }
+
+    function pause() external onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+}
+```
+
+**When to use each**:
+- **`Ownable`**: Single admin, simple contracts, low overhead
+- **`AccessControl`**: Multiple roles, separation of duties (e.g., admin can update params, pauser can pause, neither can do both)
+
+**Principle**: **Least privilege**. Grant the minimum permissions needed. If someone only needs to pause, don't give them full admin.
+
+### Pausable: emergency stop
+
+Sometimes things go wrong: oracle bug, reentrancy discovered, external dependency compromised. You need a **circuit breaker** to freeze user actions while you investigate.
+
+OpenZeppelin's `Pausable`:
+```solidity
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+
+contract StakingVault is Pausable {
+    function deposit(uint256 amount) external whenNotPaused {
+        // Only runs if contract is not paused
+        // ...
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+}
+```
+
+**What to pause**: User-facing actions (deposit, withdraw, claim). Don't pause admin functions (you need them to fix the issue) or view functions (monitoring must continue).
+
+**Gotcha**: If you pause withdrawals, users can't get their funds out. Consider **partial pause**: freeze deposits/claims but allow emergency withdrawals (perhaps with a penalty).
+
+**Testing**: Write a test that pauses the contract and confirms all pausable functions revert. Write another test that unpauses and confirms they work again.
+
+### Threat modeling: anticipate attacks
+
+Before you ship, walk through adversarial scenarios:
+
+1. **Reentrancy**: Could an attacker re-enter via a malicious token or fallback?
+2. **Access control bypass**: Can a non-admin call admin functions? Can they front-run parameter updates?
+3. **Integer overflow/underflow**: Are all arithmetic operations safe (Solidity 0.8+ has checked math, but watch for unsafe casts)?
+4. **Denial of service**: Can an attacker make the contract unusable (unbounded loops, griefing gas limits)?
+5. **Oracle manipulation**: If you rely on external data (prices, timestamps), can it be manipulated?
+6. **Front-running**: Can an attacker see your transaction and profit by front-running it (e.g., sandwich your reward rate update)?
+
+**Process**: For each privileged function, ask: "What's the worst an attacker could do here?" Then add guards (CEI, `nonReentrant`, access control, bounds checks).
+
+## Guided code walk-throughs
+
+These examples show CEI + reentrancy guard, role-based access control, and pausable staking flows.
+
+### 1) CEI + ReentrancyGuard on staking withdraw
+
+This withdraw function follows CEI strictly and uses `nonReentrant` for defense in depth. Even if CEI is violated elsewhere, reentrancy is blocked.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+error ZeroAmount();
+error InsufficientBalance(uint256 requested, uint256 available);
+
+contract SecureStakingVault is ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    IERC20 public stakingToken;
+    mapping(address => uint256) public balanceOf;
+
+    event Withdrawn(address indexed user, uint256 amount);
+
+    constructor(IERC20 _token) {
+        stakingToken = _token;
+    }
+
+    /// @notice Withdraw staked tokens (CEI + nonReentrant)
+    function withdraw(uint256 amount) external nonReentrant {
+        // Checks
+        if (amount == 0) revert ZeroAmount();
+        uint256 balance = balanceOf[msg.sender];
+        if (amount > balance) revert InsufficientBalance(amount, balance);
+
+        // Effects
+        balanceOf[msg.sender] = balance - amount;
+
+        // Interactions
+        stakingToken.safeTransfer(msg.sender, amount);
+        emit Withdrawn(msg.sender, amount);
+    }
+}
+```
+
+**Takeaway**: CEI order (checks → effects → interactions) is your first defense; `nonReentrant` is your second. For staking, every withdraw and claim should use both.
+
+### 2) Role-based access control for parameter updates
+
+This contract uses `AccessControl` to separate admin (update params) and pauser (emergency stop) roles. Neither can do the other's job; principle of least privilege.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+
+contract RoleBasedStaking is AccessControl, Pausable {
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    uint256 public rewardRate;
+
+    event RewardRateUpdated(uint256 oldRate, uint256 newRate);
+
+    constructor(address admin, address pauser) {
+        _grantRole(DEFAULT_ADMIN_ROLE, admin); // Can grant/revoke roles
+        _grantRole(ADMIN_ROLE, admin);
+        _grantRole(PAUSER_ROLE, pauser);
+    }
+
+    /// @notice Update reward rate (admin only)
+    function setRewardRate(uint256 newRate) external onlyRole(ADMIN_ROLE) {
+        emit RewardRateUpdated(rewardRate, newRate);
+        rewardRate = newRate;
+    }
+
+    /// @notice Pause contract (pauser only)
+    function pause() external onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    /// @notice Unpause contract (admin only, higher bar than pause)
+    function unpause() external onlyRole(ADMIN_ROLE) {
+        _unpause();
+    }
+}
+```
+
+**Takeaway**: Separate roles for separate powers. Pauser can freeze the contract in an emergency; admin can unfreeze after fixing the issue. If one key is compromised, the other still works.
+
+### 3) Pausable staking with emergency withdrawals
+
+This vault pauses deposits and claims, but **not** withdrawals. Users can always get their principal out, even during a pause (fail-safe).
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract PausableStakingVault is Pausable, Ownable {
+    using SafeERC20 for IERC20;
+
+    IERC20 public stakingToken;
+    mapping(address => uint256) public balanceOf;
+
+    event Deposited(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+
+    constructor(IERC20 _token, address initialOwner) Ownable(initialOwner) {
+        stakingToken = _token;
+    }
+
+    /// @notice Deposit tokens (pausable)
+    function deposit(uint256 amount) external whenNotPaused {
+        balanceOf[msg.sender] += amount;
+        stakingToken.safeTransferFrom(msg.sender, address(this), amount);
+        emit Deposited(msg.sender, amount);
+    }
+
+    /// @notice Withdraw tokens (always allowed, even when paused)
+    function withdraw(uint256 amount) external {
+        balanceOf[msg.sender] -= amount; // Reverts if insufficient
+        stakingToken.safeTransfer(msg.sender, amount);
+        emit Withdrawn(msg.sender, amount);
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+}
+```
+
+**Takeaway**: Pausable is for stopping **new risk**, not trapping user funds. Withdrawals should be fail-safe (always allowed). Deposits and claims can be paused (prevent new exposure).
+
+## Practice and reflection
+
+Apply security patterns to your staking design:
+
+- **CEI audit**: Take one of your staking functions (deposit, withdraw, claim). List the lines in order. Do checks come first? Effects before interactions? If not, rewrite it.
+- **Reentrancy scenario**: Imagine your staking contract calls a malicious ERC20 token. The token's `transfer` function re-enters your `withdraw` function. Walk through what happens if you (a) follow CEI, (b) use `nonReentrant`, (c) do neither. Which cases are safe?
+- **Role design**: Your staking contract needs three roles: `OWNER` (transfer ownership, grant roles), `ADMIN` (update reward rates, add pools), `PAUSER` (pause/unpause). Sketch the role hierarchy. Who can grant `PAUSER`? Can `ADMIN` grant `OWNER`?
+- **Pause scope**: List five functions in your staking contract (deposit, withdraw, claimRewards, updateRewardRate, transferOwnership). For each, decide: pausable or not? Defend your choices.
+- **Threat model**: Choose one admin function (e.g., `setRewardRate`). List three attacks an adversary might try (front-running, access control bypass, overflow). For each attack, list the mitigation (access control, bounds checks, slippage protection).
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"s1","text":"CEI means call external code first, then update state","correctAnswer":false,"explanation":"Always Checks → Effects → Interactions. Update state before calling external code."},
+  {"id":"s2","text":"ReentrancyGuard makes CEI discipline unnecessary","correctAnswer":false,"explanation":"Use both for defense in depth. CEI is your primary defense; nonReentrant is backup."},
+  {"id":"s3","text":"Pausable should freeze all functions including withdrawals","correctAnswer":false,"explanation":"Users should always be able to withdraw (fail-safe). Pause deposits and claims, not withdrawals."},
+  {"id":"s4","text":"AccessControl roles should follow least privilege","correctAnswer":true,"explanation":"Grant minimum permissions needed. Separate roles for separate powers."}
+]}/>
+
+Short reflection: Your staking contract has a `setRewardRate(uint256 newRate)` function. An attacker watches the mempool, sees you calling it with `newRate = 100`, and front-runs with a large deposit. Is this an attack? If so, how do you mitigate it? (Hint: timelock or max rate change per update.)
+
+## Security and pitfalls
+
+Security patterns protect you, but misuse can introduce new vulnerabilities. Follow these rules:
+
+### CEI violations: the most common bug
+
+**Danger**: Updating state **after** an external call. This is the root cause of most reentrancy exploits.
+
+**Common mistake**: Emitting events after interactions and assuming events are "effects." They're not—events don't update state. State variables do.
+
+**Rule**: All state updates (`balanceOf[user] = ...`, `totalSupply -= ...`) before any external calls (`token.transfer`, `oracle.getPrice`, `msg.sender.call`).
+
+### ReentrancyGuard misuse
+
+**Danger 1**: Not using it on functions that call untrusted contracts. Even if you think you followed CEI, add `nonReentrant` for defense in depth.
+
+**Danger 2**: Using it on `view` functions. Wastes gas; `view` can't change state, so no reentrancy risk.
+
+**Danger 3**: Cross-function reentrancy. If `functionA` calls external code, and that code calls `functionB`, **both** need guards.
+
+**Example** (vulnerable):
+```solidity
+function withdraw(uint256 amount) external nonReentrant {
+    // ... external call ...
+}
+
+function claim() external { // NO GUARD!
+    // Attacker re-enters via claim, not withdraw
+}
+```
+
+**Fix**: Guard all external-calling functions, or guard the state they share.
+
+### Access control pitfalls
+
+**Danger 1**: Forgetting to grant roles in the constructor. Your contract deploys with no admin!
+
+**Good**:
+```solidity
+constructor(address admin) {
+    _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    _grantRole(ADMIN_ROLE, admin);
+}
+```
+
+**Danger 2**: Granting `DEFAULT_ADMIN_ROLE` to wrong address. This role can grant/revoke all other roles; it's the master key.
+
+**Rule**: Grant `DEFAULT_ADMIN_ROLE` to a multisig or governance contract, never an EOA (externally owned account) in production.
+
+**Danger 3**: Circular dependencies. If `ROLE_A` can grant `ROLE_B`, and `ROLE_B` can grant `ROLE_A`, you've created a privilege escalation path.
+
+### Pausable pitfalls
+
+**Danger 1**: Pausing withdrawals. Users can't get their funds out; this looks like a rug pull.
+
+**Solution**: Only pause deposit and claim; allow withdrawals always.
+
+**Danger 2**: Pausing admin functions. If you pause `setRewardRate`, you can't fix the bug that made you pause in the first place.
+
+**Solution**: Pausable guards go on user functions only; admin functions stay unguarded.
+
+**Danger 3**: No unpause path. If `pause()` is `onlyOwner` but owner loses their key, contract is bricked forever.
+
+**Solution**: Use multisig for pause/unpause; have a recovery mechanism (timelock, governance).
+
+### Threat modeling gaps
+
+**Common gaps**:
+- Forgetting to model oracle failures (price feed goes offline)
+- Ignoring front-running (MEV bots profit from your transactions)
+- Missing DoS vectors (unbounded loops, gas griefing)
+- Not testing pause/unpause flows (edge cases when transitioning)
+
+**Process**: For every function, ask:
+1. Can an attacker re-enter?
+2. Can they bypass access control?
+3. Can they cause integer overflow/underflow?
+4. Can they make the function unusable (DoS)?
+5. Can they front-run or back-run for profit?
+
+## Security checklist
+
+Before shipping security patterns:
+
+- [ ] **CEI discipline**: All functions follow Checks → Effects → Interactions order
+- [ ] **ReentrancyGuard on value transfers**: Functions that transfer tokens or ETH have `nonReentrant`
+- [ ] **Access control on admin functions**: All privileged actions check `onlyOwner` or `onlyRole`
+- [ ] **Roles granted in constructor**: `DEFAULT_ADMIN_ROLE` and initial roles granted to correct addresses
+- [ ] **Least privilege**: Each role has minimum permissions needed; no god-mode roles
+- [ ] **Pausable on user actions**: Deposit, claim, and other risky user functions have `whenNotPaused`
+- [ ] **Withdrawals always allowed**: Users can withdraw principal even when paused (fail-safe)
+- [ ] **Admin functions not pausable**: Pause/unpause, role management, and fix functions work always
+- [ ] **Threat model documented**: Each admin function has a list of potential attacks and mitigations
+- [ ] **Reentrancy tests**: Tests include malicious contracts that attempt re-entry; all fail
+- [ ] **Access control tests**: Tests verify non-admins can't call admin functions; roles work as expected
+- [ ] **Pause/unpause tests**: Tests verify pausable functions revert when paused, work when unpaused
+
+## Wrap-up and next steps
+
+You've learned defense-in-depth security patterns: CEI discipline to prevent reentrancy by design, `ReentrancyGuard` to catch violations at runtime, role-based access control to gate privileged actions, and pausable circuits to freeze the contract in emergencies. You saw how to threat model by anticipating attacks before they happen, and how to combine these patterns for resilient staking systems.
+
+This completes Module 2: Advanced Data Structures & Error Handling. You've mastered data modeling (nested mappings, packed structs, bounded arrays), gas optimization (storage vs memory vs calldata, packing, no-op detection), error handling (custom errors, revert patterns, idempotency), and security (CEI, reentrancy guards, access control, pausable). You're now ready to apply all these patterns in Module 3 (Testing Fundamentals) and Module 4 (Staking & Time Logic), leading to Module 5 where you'll build a production-ready staking contract from scratch.
+
+Next, in Module 3, you'll learn how to **test** these patterns: unit tests for CEI violations, fuzzing for reentrancy, access control tests for role hierarchies, and integration tests for pausable flows. By the end of Module 5 you'll have a fully tested, auditable, gas-optimized staking contract ready to deploy to Zilliqa.
+

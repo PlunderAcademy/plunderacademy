@@ -1,0 +1,1308 @@
+---
+id: "dapp-security-lesson-4"
+slug: "security-testing-audit-preparation"
+module: "advanced-security"
+number: "5.15"
+title: "Security Testing & Audit Preparation"
+objective: "Master comprehensive security testing strategies from fuzzing to frontend validation, and prepare codebases for professional audits."
+practicalTakeaway: "Build multi-layered security validation pipelines that catch vulnerabilities in smart contracts and dApp frontends before attackers do."
+---
+
+# Security Testing & Audit Preparation
+
+## Why this matters now
+
+You've learned to identify vulnerabilities (common-vulnerability-patterns), interpret AI audit findings (ai-auditor-findings-interpretation), and implement access control (role-based-access-control). But security doesn't end with writing secure code—you need systematic testing to prove your contracts resist attacks and validate that fixes work.
+
+Professional auditors expect comprehensive test suites: unit tests for all edge cases, integration tests for cross-contract interactions, fuzzing to find unexpected inputs, and invariant tests that verify your contract's core guarantees hold under all conditions. Without these, auditors charge more (to write tests themselves) or miss vulnerabilities that require specific setups.
+
+Frontend security is equally critical. Smart contracts can be perfect, but if your dApp accepts unvalidated addresses, displays unsanitized metadata, or trusts compromised providers, users lose funds. This lesson covers end-to-end security testing: Foundry fuzzing, Slither static analysis, frontend input validation, provider verification, and the pre-audit documentation that saves you thousands in audit costs.
+
+## Conceptual foundations for security testing
+
+**Definition — Fuzzing (fuzz testing)**: Automated testing that generates thousands of random inputs to find edge cases humans miss. **When to use it**: Testing arithmetic (overflow boundaries), access control (role combinations), and state transitions (unexpected sequences). Fuzzing found critical bugs in Compound, Aave, and Uniswap during development.
+
+**Definition — Invariant testing**: Verifying properties that must always be true (e.g., "total supply equals sum of balances," "contract never holds negative debt"). **When to use it**: After every transaction, these properties are checked. If any invariant breaks, test fails and you've found a vulnerability. Essential for DeFi protocols with complex math.
+
+**Definition — Static analysis**: Automated code review that scans for known vulnerability patterns without executing code. **When to use it**: Pre-commit hooks, CI/CD pipelines, and before audits. Tools like Slither and Mythril catch 80% of common issues (reentrancy, integer overflow, unchecked returns) in seconds.
+
+**Definition — Frontend input validation**: Sanitizing and verifying user inputs before sending to blockchain. **When to use it**: All address inputs (isAddress check), all numeric inputs (parseUnits bounds), all metadata (DOMPurify for XSS). Invalid inputs should fail gracefully with clear errors, not submit invalid transactions.
+
+**Definition — Provider verification**: Detecting when wallet provider (MetaMask, Coinbase Wallet) has been tampered with or is spoofing responses. **When to use it**: Critical operations (large transfers, admin actions). Verify provider signature matches expected, check chainId hasn't been spoofed, and validate transaction parameters match UI.
+
+**Mental model — Defense in depth**: Layer security controls so single failure doesn't compromise system. Smart contract checks, frontend validation, backend APIs, monitoring alerts—each layer catches what others miss.
+
+**Anti-pattern — "Tests as documentation"**: Writing tests only to satisfy coverage metrics without actually testing security properties. **Why it fails**: 100% line coverage doesn't mean 100% vulnerability coverage. A test that calls `withdraw()` with valid input doesn't test reentrancy, overflow, or access control bypass.
+
+## Guided code walk-throughs
+
+### 1) Foundry fuzzing for smart contracts
+
+Foundry's fuzzing engine generates random inputs to find edge cases. Here's how to use it effectively:
+
+#### Basic fuzz testing
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "forge-std/Test.sol";
+import "../src/Vault.sol";
+
+contract VaultFuzzTest is Test {
+    Vault public vault;
+    address public owner = address(1);
+    
+    function setUp() public {
+        vault = new Vault();
+        vm.deal(owner, 1000 ether);
+    }
+    
+    /**
+     * @notice Fuzz test: Deposit amount should always equal balance
+     * @dev Foundry runs this with 256 random amounts by default
+     * @param amount Random deposit amount (bounded 0 to 1000 ether)
+     */
+    function testFuzz_DepositAlwaysMatchesBalance(uint256 amount) public {
+        // Bound inputs to realistic range
+        amount = bound(amount, 0, 1000 ether);
+        
+        vm.startPrank(owner);
+        vault.deposit{value: amount}();
+        
+        // Invariant: deposited amount should match user's vault balance
+        assertEq(vault.balances(owner), amount, "Balance mismatch after deposit");
+        vm.stopPrank();
+    }
+    
+    /**
+     * @notice Fuzz test: Withdraw should never exceed balance
+     * @dev Tests that withdraw reverts when amount > balance
+     */
+    function testFuzz_WithdrawRevertsWhenExceedingBalance(uint256 depositAmount, uint256 withdrawAmount) public {
+        depositAmount = bound(depositAmount, 1 ether, 100 ether);
+        withdrawAmount = bound(withdrawAmount, depositAmount + 1, 1000 ether);
+        
+        vm.startPrank(owner);
+        vault.deposit{value: depositAmount}();
+        
+        // Should revert when withdrawing more than balance
+        vm.expectRevert("Insufficient balance");
+        vault.withdraw(withdrawAmount);
+        vm.stopPrank();
+    }
+    
+    /**
+     * @notice Fuzz test: Multiple deposits should accumulate correctly
+     * @dev Tests that balance tracking doesn't overflow or reset
+     */
+    function testFuzz_MultipleDepositsAccumulate(uint256[3] memory amounts) public {
+        uint256 expectedTotal = 0;
+        
+        vm.startPrank(owner);
+        for (uint256 i = 0; i < amounts.length; i++) {
+            amounts[i] = bound(amounts[i], 0.01 ether, 10 ether);
+            expectedTotal += amounts[i];
+            
+            vault.deposit{value: amounts[i]}();
+        }
+        
+        assertEq(vault.balances(owner), expectedTotal, "Total mismatch after multiple deposits");
+        vm.stopPrank();
+    }
+    
+    /**
+     * @notice Fuzz test: Deposit then withdraw should return to zero balance
+     * @dev Tests round-trip correctness
+     */
+    function testFuzz_DepositWithdrawReturnsToZero(uint256 amount) public {
+        amount = bound(amount, 0.1 ether, 100 ether);
+        
+        vm.startPrank(owner);
+        vault.deposit{value: amount}();
+        vault.withdraw(amount);
+        
+        assertEq(vault.balances(owner), 0, "Balance should be zero after full withdrawal");
+        vm.stopPrank();
+    }
+}
+```
+
+**Running fuzz tests:**
+
+```bash
+# Run with default 256 runs per test
+forge test --match-contract VaultFuzzTest
+
+# Increase runs for deeper fuzzing (slower but finds more edge cases)
+forge test --match-contract VaultFuzzTest --fuzz-runs 10000
+
+# Run specific fuzz test
+forge test --match-test testFuzz_DepositAlwaysMatchesBalance -vvv
+
+# Show failing inputs when test fails
+forge test --match-contract VaultFuzzTest --show-progress
+```
+
+**Interpreting fuzz results:**
+
+```
+[PASS] testFuzz_DepositAlwaysMatchesBalance(uint256) (runs: 256, μ: 45201, ~: 45201)
+  ✓ Passed with 256 random inputs
+  
+[FAIL. Reason: Arithmetic overflow] testFuzz_MultipleDepositsAccumulate(uint256[3]) (runs: 23, μ: 89432, ~: 89432)
+  ✗ Failed on run 23 with inputs: [2^255, 2^255, 100]
+  
+Counterexample:
+  amounts[0] = 57896044618658097711785492504343953926634992332820282019728792003956564819968
+  amounts[1] = 57896044618658097711785492504343953926634992332820282019728792003956564819968
+  amounts[2] = 100
+```
+
+When a fuzz test fails, Foundry shows the exact input that broke your contract. Fix the issue and re-run.
+
+#### Advanced: Invariant testing
+
+Invariant tests run random sequences of transactions and check core properties after each one.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "forge-std/Test.sol";
+import "../src/StakingPool.sol";
+
+contract StakingPoolInvariantTest is Test {
+    StakingPool public pool;
+    Handler public handler;
+    
+    function setUp() public {
+        pool = new StakingPool();
+        handler = new Handler(pool);
+        
+        // Tell Foundry to call random handler functions
+        targetContract(address(handler));
+    }
+    
+    /**
+     * @notice INVARIANT: Total staked should equal contract balance
+     * @dev This MUST hold after every transaction
+     */
+    function invariant_totalStakedEqualsBalance() public {
+        assertEq(
+            pool.totalStaked(),
+            address(pool).balance,
+            "Total staked != contract balance"
+        );
+    }
+    
+    /**
+     * @notice INVARIANT: Sum of all user stakes equals total staked
+     * @dev Detects accounting bugs
+     */
+    function invariant_userStakesSumToTotal() public {
+        uint256 sum = 0;
+        address[] memory users = handler.getUsers();
+        
+        for (uint256 i = 0; i < users.length; i++) {
+            sum += pool.stakes(users[i]);
+        }
+        
+        assertEq(sum, pool.totalStaked(), "User stakes don't sum to total");
+    }
+    
+    /**
+     * @notice INVARIANT: No user can have negative stake
+     * @dev Sanity check for underflow bugs
+     */
+    function invariant_noNegativeStakes() public {
+        address[] memory users = handler.getUsers();
+        
+        for (uint256 i = 0; i < users.length; i++) {
+            // If this fails, we have an underflow bug
+            assertTrue(pool.stakes(users[i]) >= 0, "Negative stake detected");
+        }
+    }
+}
+
+/**
+ * @title Handler
+ * @notice Wrapper for random action sequences
+ * @dev Foundry calls random functions on this contract
+ */
+contract Handler is Test {
+    StakingPool public pool;
+    address[] public users;
+    
+    constructor(StakingPool _pool) {
+        pool = _pool;
+        
+        // Create test users
+        users.push(address(0x1001));
+        users.push(address(0x1002));
+        users.push(address(0x1003));
+        
+        // Fund users
+        for (uint256 i = 0; i < users.length; i++) {
+            vm.deal(users[i], 100 ether);
+        }
+    }
+    
+    function stake(uint256 userIndex, uint256 amount) public {
+        userIndex = bound(userIndex, 0, users.length - 1);
+        amount = bound(amount, 0.01 ether, 10 ether);
+        
+        address user = users[userIndex];
+        vm.prank(user);
+        pool.stake{value: amount}();
+    }
+    
+    function unstake(uint256 userIndex, uint256 amount) public {
+        userIndex = bound(userIndex, 0, users.length - 1);
+        address user = users[userIndex];
+        
+        uint256 userStake = pool.stakes(user);
+        if (userStake == 0) return;  // Skip if no stake
+        
+        amount = bound(amount, 0, userStake);
+        
+        vm.prank(user);
+        pool.unstake(amount);
+    }
+    
+    function getUsers() external view returns (address[] memory) {
+        return users;
+    }
+}
+```
+
+**Running invariant tests:**
+
+```bash
+# Run invariant tests with default settings (256 runs, 256 depth)
+forge test --match-contract StakingPoolInvariantTest
+
+# Increase runs and depth for thorough testing
+forge test --match-contract StakingPoolInvariantTest --fuzz-runs 1000 --fuzz-max-depth 100
+
+# When invariant fails, Foundry shows the exact sequence:
+# Run sequence:
+#   1. stake(0, 5 ether)
+#   2. stake(1, 3 ether)
+#   3. unstake(0, 10 ether)  ← Invariant broken here
+```
+
+**Common invariants to test:**
+
+- **Conservation**: `totalSupply == sum of all balances`
+- **Solvency**: `contract balance >= total deposits`
+- **Bounded values**: `fee <= MAX_FEE` (always)
+- **State consistency**: `paused == true` implies all transfers revert
+- **Authorization**: Only admin can change critical parameters
+
+### 2) Static analysis with Slither
+
+Slither scans Solidity code for vulnerabilities without executing it.
+
+#### Installing and running Slither
+
+```bash
+# Install Slither (requires Python 3.8+)
+pip3 install slither-analyzer
+
+# Run on single file
+slither contracts/Vault.sol
+
+# Run on entire project
+slither .
+
+# Output JSON for CI/CD integration
+slither . --json slither-report.json
+
+# Filter by severity
+slither . --filter-paths "node_modules|test" --exclude-low --exclude-informational
+```
+
+#### Example Slither output
+
+```
+Vault.withdraw(uint256) (contracts/Vault.sol#45-52) sends eth to arbitrary user
+  Dangerous calls:
+  - (success) = msg.sender.call{value: amount}() (contracts/Vault.sol#50)
+  Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#functions-that-send-ether-to-arbitrary-destinations
+  
+  SEVERITY: HIGH
+  CONFIDENCE: MEDIUM
+
+Vault.setOwner(address) (contracts/Vault.sol#30-33) should emit an event for:
+  - owner = newOwner (contracts/Vault.sol#32)
+  Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#missing-events-state-changes
+  
+  SEVERITY: LOW
+  CONFIDENCE: MEDIUM
+```
+
+#### Integrating Slither into CI/CD
+
+```yaml
+# .github/workflows/security.yml
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  slither:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install Slither
+        run: pip3 install slither-analyzer
+      
+      - name: Run Slither
+        run: |
+          slither . \
+            --filter-paths "node_modules|test" \
+            --exclude-low \
+            --exclude-informational \
+            --json slither-report.json
+      
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: slither-report
+          path: slither-report.json
+      
+      - name: Fail on high severity findings
+        run: |
+          HIGH_COUNT=$(cat slither-report.json | jq '[.results.detectors[] | select(.impact == "High")] | length')
+          if [ "$HIGH_COUNT" -gt 0 ]; then
+            echo "Found $HIGH_COUNT high-severity issues"
+            exit 1
+          fi
+```
+
+### 3) Frontend input validation
+
+Smart contracts can be secure, but if frontend accepts malicious input, users lose funds.
+
+#### Address validation
+
+```tsx
+// components/TransferForm.tsx
+'use client';
+
+import { useState } from 'react';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther, isAddress, getAddress } from 'viem';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+export default function TransferForm() {
+  const [recipient, setRecipient] = useState('');
+  const [amount, setAmount] = useState('');
+  const [errors, setErrors] = useState<{ recipient?: string; amount?: string }>({});
+  
+  const { writeContract, data: hash } = useWriteContract();
+  const { isSuccess } = useWaitForTransactionReceipt({ hash });
+  
+  /**
+   * Validate address input
+   * @returns Checksummed address or null if invalid
+   */
+  const validateAddress = (input: string): string | null => {
+    // Remove whitespace
+    const trimmed = input.trim();
+    
+    // Check basic format (0x + 40 hex chars)
+    if (!isAddress(trimmed)) {
+      return null;
+    }
+    
+    // Return checksummed version (prevents case errors)
+    try {
+      return getAddress(trimmed);
+    } catch {
+      return null;
+    }
+  };
+  
+  /**
+   * Validate amount input
+   * @returns Parsed amount in wei or null if invalid
+   */
+  const validateAmount = (input: string): bigint | null => {
+    try {
+      const parsed = parseEther(input);
+      
+      // Check bounds
+      if (parsed <= 0n) {
+        return null;
+      }
+      
+      // Check reasonable max (prevent UI issues with huge numbers)
+      if (parsed > parseEther('1000000')) {
+        return null;
+      }
+      
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Reset errors
+    setErrors({});
+    
+    // Validate recipient
+    const validRecipient = validateAddress(recipient);
+    if (!validRecipient) {
+      setErrors(prev => ({
+        ...prev,
+        recipient: 'Invalid Ethereum address. Must be 0x followed by 40 hex characters.',
+      }));
+      return;
+    }
+    
+    // Check for common mistakes
+    if (validRecipient === '0x0000000000000000000000000000000000000000') {
+      setErrors(prev => ({
+        ...prev,
+        recipient: 'Cannot send to zero address (0x0...0). This burns tokens permanently.',
+      }));
+      return;
+    }
+    
+    // Validate amount
+    const validAmount = validateAmount(amount);
+    if (!validAmount) {
+      setErrors(prev => ({
+        ...prev,
+        amount: 'Invalid amount. Must be a positive number.',
+      }));
+      return;
+    }
+    
+    // All validations passed - submit transaction
+    writeContract({
+      address: validRecipient as `0x${string}`,
+      abi: [{
+        name: 'transfer',
+        type: 'function',
+        inputs: [
+          { name: 'to', type: 'address' },
+          { name: 'amount', type: 'uint256' },
+        ],
+        outputs: [{ name: 'success', type: 'bool' }],
+        stateMutability: 'nonpayable',
+      }],
+      functionName: 'transfer',
+      args: [validRecipient, validAmount],
+    });
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="recipient">Recipient Address</Label>
+        <Input
+          id="recipient"
+          value={recipient}
+          onChange={(e) => setRecipient(e.target.value)}
+          placeholder="0x..."
+          className={errors.recipient ? 'border-red-500' : ''}
+        />
+        {errors.recipient && (
+          <p className="text-sm text-red-500 mt-1">{errors.recipient}</p>
+        )}
+      </div>
+      
+      <div>
+        <Label htmlFor="amount">Amount (ETH)</Label>
+        <Input
+          id="amount"
+          type="number"
+          step="0.01"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="0.0"
+          className={errors.amount ? 'border-red-500' : ''}
+        />
+        {errors.amount && (
+          <p className="text-sm text-red-500 mt-1">{errors.amount}</p>
+        )}
+      </div>
+      
+      <Button type="submit" disabled={!recipient || !amount}>
+        Transfer
+      </Button>
+      
+      {isSuccess && (
+        <div className="bg-green-100 dark:bg-green-900 p-4 rounded">
+          ✅ Transfer successful! Transaction hash: {hash}
+        </div>
+      )}
+    </form>
+  );
+}
+```
+
+**Key validation patterns:**
+
+1. **Whitespace trimming**: `input.trim()` removes accidental spaces
+2. **Format checking**: `isAddress()` before any operations
+3. **Checksumming**: `getAddress()` prevents case-related errors
+4. **Zero address detection**: Warn user before burning tokens
+5. **Bounds checking**: Prevent overflow and unrealistic values
+6. **Error messages**: Clear, actionable feedback for users
+
+#### Metadata sanitization
+
+Before implementing metadata sanitization, install the required dependency:
+
+```bash
+npm install isomorphic-dompurify
+# or
+yarn add isomorphic-dompurify
+# or
+pnpm add isomorphic-dompurify
+```
+
+**Why `isomorphic-dompurify`?** This package works in both browser and server environments (important for Next.js SSR), unlike the standard `dompurify` which is browser-only.
+
+```tsx
+// components/NFTDisplay.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import DOMPurify from 'isomorphic-dompurify';
+import { Card } from '@/components/ui/card';
+
+interface NFTMetadata {
+  name: string;
+  description: string;
+  image: string;
+  attributes?: Array<{ trait_type: string; value: string }>;
+}
+
+export default function NFTDisplay({ tokenId }: { tokenId: bigint }) {
+  const [metadata, setMetadata] = useState<NFTMetadata | null>(null);
+  const [error, setError] = useState<string>('');
+  
+  useEffect(() => {
+    fetchMetadata();
+  }, [tokenId]);
+  
+  const fetchMetadata = async () => {
+    try {
+      // Fetch metadata from IPFS/HTTP
+      const response = await fetch(`https://api.example.com/nft/${tokenId}`);
+      const data = await response.json();
+      
+      // 🚨 NEVER directly render user-supplied metadata
+      // Malicious NFTs can inject XSS: <img src=x onerror=alert(document.cookie)>
+      
+      // ✅ SECURE: Sanitize all HTML content
+      const sanitized: NFTMetadata = {
+        name: DOMPurify.sanitize(data.name, { ALLOWED_TAGS: [] }),  // Strip all HTML
+        description: DOMPurify.sanitize(data.description, {
+          ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a'],  // Allow safe formatting
+          ALLOWED_ATTR: ['href'],
+        }),
+        image: sanitizeURL(data.image),
+        attributes: data.attributes?.map((attr: any) => ({
+          trait_type: DOMPurify.sanitize(attr.trait_type, { ALLOWED_TAGS: [] }),
+          value: DOMPurify.sanitize(attr.value, { ALLOWED_TAGS: [] }),
+        })),
+      };
+      
+      setMetadata(sanitized);
+    } catch (err) {
+      setError('Failed to load NFT metadata');
+      console.error(err);
+    }
+  };
+  
+  /**
+   * Sanitize URLs to prevent javascript: and data: URI attacks
+   */
+  const sanitizeURL = (url: string): string => {
+    try {
+      const parsed = new URL(url);
+      
+      // Only allow http, https, and ipfs protocols
+      if (!['http:', 'https:', 'ipfs:'].includes(parsed.protocol)) {
+        throw new Error('Invalid protocol');
+      }
+      
+      return parsed.toString();
+    } catch {
+      // Invalid URL - return placeholder
+      return '/images/placeholder.png';
+    }
+  };
+  
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
+  
+  if (!metadata) {
+    return <div>Loading...</div>;
+  }
+  
+  return (
+    <Card className="p-6">
+      <img 
+        src={metadata.image} 
+        alt={metadata.name}
+        className="w-full h-64 object-cover rounded mb-4"
+        onError={(e) => {
+          // Fallback for broken images
+          (e.target as HTMLImageElement).src = '/images/placeholder.png';
+        }}
+      />
+      
+      <h2 className="text-2xl font-bold mb-2">{metadata.name}</h2>
+      
+      {/* Safe to render: already sanitized */}
+      <div 
+        className="prose dark:prose-invert"
+        dangerouslySetInnerHTML={{ __html: metadata.description }}
+      />
+      
+      {metadata.attributes && (
+        <div className="mt-4 space-y-2">
+          <h3 className="font-semibold">Attributes</h3>
+          {metadata.attributes.map((attr, i) => (
+            <div key={i} className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">{attr.trait_type}</span>
+              <span className="font-medium">{attr.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+```
+
+**Security considerations:**
+
+- **XSS prevention**: DOMPurify removes malicious scripts from HTML
+- **URL validation**: Block `javascript:` and `data:` URIs that execute code
+- **Image fallbacks**: Handle broken/malicious image URLs gracefully
+- **CSP headers**: Add Content-Security-Policy to block inline scripts
+
+**Content Security Policy Configuration** (Next.js 15):
+
+```typescript
+// next.config.ts
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",  // Next.js requires unsafe-eval
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.zilliqa.com wss://*.zilliqa.com",
+            ].join('; '),
+          },
+        ],
+      },
+    ];
+  },
+};
+
+export default nextConfig;
+```
+
+**Note**: Next.js 15 uses `next.config.ts` (TypeScript) by default. If you're using JavaScript, rename to `next.config.js` and remove the type annotations.
+
+### 4) Provider verification
+
+Detect when wallet provider has been compromised or is spoofing responses.
+
+#### Verifying wallet connection
+
+```tsx
+// hooks/use-safe-wallet.ts
+'use client';
+
+import { useAccount, useChainId } from 'wagmi';
+import { useEffect, useState } from 'react';
+import { zilliqa } from 'viem/chains';
+
+export function useSafeWallet() {
+  const { address, connector } = useAccount();
+  const chainId = useChainId();
+  const [warnings, setWarnings] = useState<string[]>([]);
+  
+  useEffect(() => {
+    if (!address || !connector) return;
+    
+    verifyProvider();
+  }, [address, connector, chainId]);
+  
+  const verifyProvider = async () => {
+    const newWarnings: string[] = [];
+    
+    // 1. Verify chainId matches expected
+    if (chainId !== zilliqa.id) {
+      newWarnings.push(
+        `⚠️ Connected to unexpected chain (${chainId}). Expected Zilliqa (${zilliqa.id}).`
+      );
+    }
+    
+    // 2. Verify provider is authentic (not injected malicious code)
+    if (typeof window !== 'undefined' && window.ethereum) {
+      const provider = window.ethereum;
+      
+      // Check for suspicious provider modifications
+      if (!provider.request || typeof provider.request !== 'function') {
+        newWarnings.push('⚠️ Wallet provider appears compromised (missing request method).');
+      }
+      
+      // Verify provider matches connector
+      const connectorProvider = await connector.getProvider();
+      if (provider !== connectorProvider) {
+        newWarnings.push('⚠️ Wallet provider mismatch detected. Possible injection attack.');
+      }
+    }
+    
+    // 3. Verify address ownership (challenge-response)
+    try {
+      const message = `Verify ownership: ${Date.now()}`;
+      const signature = await connector.signMessage({ message });
+      
+      // In production, verify signature on backend
+      // This prevents frontend signature spoofing
+    } catch (err) {
+      newWarnings.push('⚠️ Failed to verify wallet ownership.');
+    }
+    
+    setWarnings(newWarnings);
+  };
+  
+  return {
+    address,
+    connector,
+    chainId,
+    warnings,
+    isSecure: warnings.length === 0,
+  };
+}
+```
+
+**Using the safe wallet hook:**
+
+```tsx
+// components/SecureAdmin.tsx
+'use client';
+
+import { useSafeWallet } from '@/hooks/use-safe-wallet';
+import { Button } from '@/components/ui/button';
+
+export default function SecureAdmin() {
+  const { address, warnings, isSecure } = useSafeWallet();
+  
+  const handleAdminAction = () => {
+    if (!isSecure) {
+      alert('Cannot perform admin action: wallet security issues detected');
+      return;
+    }
+    
+    // Proceed with admin action
+  };
+  
+  return (
+    <div>
+      {warnings.length > 0 && (
+        <div className="bg-red-100 dark:bg-red-900 p-4 rounded mb-4">
+          <h3 className="font-bold mb-2">Security Warnings</h3>
+          <ul className="list-disc list-inside">
+            {warnings.map((warning, i) => (
+              <li key={i}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
+      <Button onClick={handleAdminAction} disabled={!isSecure}>
+        Execute Admin Action
+      </Button>
+    </div>
+  );
+}
+```
+
+### 5) Pre-audit documentation checklist
+
+Professional auditors need context to review effectively. Provide:
+
+#### Architecture documentation
+
+```markdown
+# Protocol Architecture
+
+## Overview
+YieldFarm is a staking protocol where users deposit LP tokens and earn rewards in governance tokens.
+
+## Contracts
+
+### YieldFarm.sol
+- **Purpose**: Core staking logic and reward distribution
+- **Privileges**: Owner can set reward rate, pause/unpause
+- **Trust assumptions**: Reward token is trusted (controlled by protocol)
+- **Known limitations**: Rewards calculated per-block; may drift slightly on L2s
+
+### GovernanceToken.sol
+- **Purpose**: ERC20 reward token with minting controls
+- **Privileges**: MINTER_ROLE (assigned to YieldFarm) can mint rewards
+- **Trust assumptions**: Admin is 3-of-5 multi-sig
+- **Known limitations**: Unlimited supply (by design)
+
+## Access Control
+
+| Role | Contracts | Permissions | Holder |
+|------|-----------|-------------|--------|
+| DEFAULT_ADMIN_ROLE | YieldFarm, GovernanceToken | Grant/revoke roles | 3-of-5 multi-sig (0xABC...) |
+| MINTER_ROLE | GovernanceToken | Mint rewards | YieldFarm contract |
+| PAUSER_ROLE | YieldFarm | Emergency pause | 2-of-3 emergency multi-sig (0xDEF...) |
+
+## Fund Flows
+
+```
+User deposits LP tokens
+  ↓
+YieldFarm holds LP tokens
+  ↓
+User claims rewards
+  ↓
+YieldFarm calls GovernanceToken.mint()
+  ↓
+Rewards sent to user
+```
+
+## Security Considerations
+
+1. **Reentrancy**: All external calls use Checks-Effects-Interactions pattern
+2. **Access control**: All admin functions require multi-sig approval
+3. **Integer overflow**: Using Solidity 0.8+ checked arithmetic
+4. **Oracle dependency**: None (no external price feeds)
+5. **Upgradeability**: Not upgradeable (immutable by design)
+
+## Known Issues
+
+- Reward calculation uses block.timestamp; can be manipulated ±15 seconds by miners
+  - Mitigation: Reward rate is low enough that 15s manipulation is negligible
+- No slippage protection on withdrawals
+  - Acceptable: Users always receive exact staked amount (no swaps involved)
+
+## Out of Scope
+
+- Frontend security (auditor focuses on contracts only)
+- Reward token price manipulation (market risk, not contract risk)
+- Multi-chain deployments (only Zilliqa mainnet in scope)
+```
+
+#### Threat model
+
+```markdown
+# Threat Model
+
+## Attack Vectors
+
+### 1. Reentrancy on Withdraw
+**Likelihood**: Low  
+**Impact**: Critical  
+**Mitigation**: Checks-Effects-Interactions pattern + ReentrancyGuard
+
+**Attack scenario**:
+1. Attacker stakes 1 ETH
+2. Attacker calls withdraw()
+3. Contract sends 1 ETH to attacker's malicious contract
+4. Attacker's receive() calls withdraw() again
+5. Loop drains contract
+
+**Why it's mitigated**: State updated before external call (line 67)
+
+### 2. Admin Key Compromise
+**Likelihood**: Medium  
+**Impact**: High  
+**Mitigation**: Multi-sig + Timelock
+
+**Attack scenario**:
+1. Attacker compromises 1 of 5 admin keys
+2. Attacker needs 2 more keys to execute malicious action
+3. Even with 3 keys, timelock gives users 48hrs to exit
+
+### 3. Flash Loan Price Manipulation
+**Likelihood**: N/A (no price oracles)  
+**Impact**: N/A  
+**Mitigation**: Not applicable
+
+## Trust Boundaries
+
+- **User ↔ YieldFarm**: Users trust YieldFarm to track stakes correctly
+- **YieldFarm ↔ GovernanceToken**: YieldFarm trusts GovernanceToken won't revert on mint
+- **Admin ↔ Protocol**: Users trust admin won't set malicious parameters (mitigated by timelock)
+
+## Assumptions
+
+1. Solidity compiler is not backdoored
+2. EVM executes bytecode correctly
+3. Block timestamps are within ±15 seconds of real time
+4. Multi-sig signers are not colluding maliciously
+5. Users review timelock proposals before they execute
+```
+
+#### Test coverage report
+
+```bash
+# Generate coverage report
+forge coverage --report lcov
+
+# Convert to HTML (requires lcov)
+genhtml lcov.info -o coverage-report
+
+# View in browser
+open coverage-report/index.html
+```
+
+**Ideal coverage targets:**
+- **Overall**: 95%+ line coverage
+- **Critical functions**: 100% branch coverage (withdraw, mint, access control)
+- **Edge cases**: Tested overflow, underflow, zero amounts, max amounts
+- **Attack scenarios**: At least one test per known vulnerability type
+
+## Mock audit scenario walkthrough
+
+Let's walk through preparing a contract for professional audit.
+
+**Scenario**: You've built a lending protocol. Before spending $100K on an audit, you need to:
+1. Run static analysis
+2. Write comprehensive tests
+3. Document architecture
+4. Create threat model
+
+### Step 1: Run Slither
+
+```bash
+slither . --filter-paths "node_modules|test" --json slither-report.json
+```
+
+**Results**:
+- 2 High: Reentrancy in `borrow()`, unchecked return in `transferFrom()`
+- 5 Medium: Missing events, unused variables
+- 12 Low: Style issues
+
+**Action**: Fix all High and Medium issues before audit.
+
+### Step 2: Write exploit tests
+
+```javascript
+// test/Exploits.test.js
+describe("Known Attack Vectors", function() {
+  it("should resist reentrancy on borrow()", async function() {
+    // Deploy malicious contract
+    const Attacker = await ethers.getContractFactory("ReentrancyAttacker");
+    const attacker = await Attacker.deploy(lending.address);
+    
+    // Attempt reentrancy attack
+    await expect(
+      attacker.attack({ value: ethers.utils.parseEther("1") })
+    ).to.be.revertedWith("ReentrancyGuard: reentrant call");
+  });
+  
+  it("should prevent flash loan attacks", async function() {
+    // Test scenario where attacker borrows max in single tx
+    // and tries to manipulate interest rate
+  });
+  
+  it("should handle liquidations correctly under extreme conditions", async function() {
+    // Test when collateral price crashes 90% in one block
+  });
+});
+```
+
+### Step 3: Document everything
+
+Create these files:
+- `docs/ARCHITECTURE.md`: Contract overview, interactions, access control
+- `docs/THREAT_MODEL.md`: Known risks and mitigations
+- `docs/AUDIT_SCOPE.md`: Which contracts/functions are in scope
+- `docs/DEPLOYMENT_NOTES.md`: Constructor params, expected initial state
+
+### Step 4: Create audit readiness checklist
+
+```markdown
+# Audit Readiness Checklist
+
+## Code Quality
+- [x] All contracts compile without warnings
+- [x] Slither scan shows 0 High/Critical findings
+- [x] Test coverage > 95%
+- [x] All functions have NatSpec comments
+- [x] No commented-out code in production files
+- [x] No TODO/FIXME comments in production code
+
+## Security
+- [x] All external functions have access control or are intentionally public
+- [x] All external calls use Checks-Effects-Interactions
+- [x] All arithmetic uses Solidity 0.8+ or SafeMath
+- [x] All token transfers checked (SafeERC20 or require())
+- [x] Reentrancy guards on all value-transfer functions
+- [x] No delegatecall to untrusted addresses
+
+## Testing
+- [x] Unit tests for all functions
+- [x] Integration tests for cross-contract interactions
+- [x] Fuzz tests for arithmetic/state transitions
+- [x] Invariant tests for core protocol guarantees
+- [x] Exploit tests for known attack vectors
+
+## Documentation
+- [x] Architecture doc with contract purposes and interactions
+- [x] Threat model with known risks and mitigations
+- [x] Access control matrix (who can do what)
+- [x] Deployment guide with exact steps and parameters
+- [x] Known issues documented (if any)
+
+## Admin
+- [x] Multi-sig configured (3-of-5 minimum)
+- [x] Timelock configured (48hrs minimum)
+- [x] Emergency pause mechanism tested
+- [x] Upgrade process documented (if applicable)
+- [x] Bug bounty program planned ($100K+ for critical finds)
+
+## Ready for Audit
+- [x] All checklist items complete
+- [x] Repository frozen (no changes during audit)
+- [x] Auditor has admin access to repo
+- [x] Communication channel established (Telegram/Discord)
+```
+
+## Integration: CI/CD security pipeline
+
+Automate security checks on every commit:
+
+```yaml
+# .github/workflows/security-pipeline.yml
+name: Security Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Slither
+        run: pip3 install slither-analyzer
+      
+      - name: Run Slither
+        run: |
+          slither . --filter-paths "node_modules|test" --json slither.json
+          
+      - name: Check for high severity issues
+        run: |
+          HIGH=$(jq '[.results.detectors[] | select(.impact == "High")] | length' slither.json)
+          if [ "$HIGH" -gt 0 ]; then
+            echo "❌ Found $HIGH high-severity issues"
+            exit 1
+          fi
+  
+  fuzz-testing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      
+      - name: Run fuzz tests
+        run: forge test --match-contract Fuzz -vvv
+      
+      - name: Run invariant tests
+        run: forge test --match-contract Invariant -vvv
+  
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      
+      - name: Generate coverage
+        run: forge coverage --report lcov
+      
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./lcov.info
+          fail_ci_if_error: true
+  
+  frontend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run ESLint
+        run: npm run lint
+      
+      - name: Check for unsafe patterns
+        run: |
+          # Fail if dangerouslySetInnerHTML without DOMPurify
+          grep -r "dangerouslySetInnerHTML" src/ && \
+          ! grep -r "DOMPurify" src/ && \
+          echo "❌ Found dangerouslySetInnerHTML without DOMPurify" && \
+          exit 1 || true
+```
+
+## Hands-on with AI Reviewer
+
+Submit this contract and verify the AI catches test-related vulnerabilities.
+
+### Exercise: Undertested protocol
+
+**Submit this code:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract LendingPool {
+    mapping(address => uint256) public deposits;
+    mapping(address => uint256) public borrows;
+    uint256 public totalLiquidity;
+    uint256 public interestRate = 5;  // 5% APY
+    
+    function deposit() external payable {
+        deposits[msg.sender] += msg.value;
+        totalLiquidity += msg.value;
+    }
+    
+    function borrow(uint256 amount) external {
+        require(amount <= totalLiquidity, "Insufficient liquidity");
+        require(borrows[msg.sender] == 0, "Existing loan");
+        
+        borrows[msg.sender] = amount + (amount * interestRate / 100);
+        totalLiquidity -= amount;
+        
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+    
+    function repay() external payable {
+        require(borrows[msg.sender] > 0, "No loan");
+        require(msg.value >= borrows[msg.sender], "Insufficient repayment");
+        
+        uint256 debt = borrows[msg.sender];
+        borrows[msg.sender] = 0;
+        totalLiquidity += debt;
+        
+        // Refund excess
+        if (msg.value > debt) {
+            (bool success, ) = msg.sender.call{value: msg.value - debt}("");
+            require(success, "Refund failed");
+        }
+    }
+}
+```
+
+**Expected AI findings:**
+1. CRITICAL (10/10): Reentrancy in `borrow()` (external call before state update of totalLiquidity)
+2. HIGH (8/10): Reentrancy in `repay()` (refund call after state updates)
+3. MEDIUM (6/10): Interest calculation can overflow for large amounts
+4. MEDIUM (5/10): No collateral requirement (undercollateralized lending)
+5. LOW (4/10): No events for deposits/borrows/repays
+
+**Your task:**
+1. Write fuzz tests for `borrow()` with random amounts
+2. Write invariant test: `totalLiquidity + sum(borrows) == contract balance`
+3. Write exploit test for reentrancy attack
+4. Fix vulnerabilities and re-test
+5. Re-submit to AI Reviewer and verify all cleared
+
+## Production security checklist
+
+Before mainnet deployment:
+
+**Smart Contracts**
+- [ ] Slither shows 0 High/Critical findings
+- [ ] 95%+ test coverage with fuzz + invariant tests
+- [ ] All functions have NatSpec documentation
+- [ ] Access control tested on every external function
+- [ ] Reentrancy guards on all value transfers
+- [ ] Professional audit completed ($50K+ for protocols > $1M TVL)
+- [ ] Audit findings remediated and re-audited
+
+**Frontend**
+- [ ] All address inputs validated with `isAddress()` and `getAddress()`
+- [ ] All numeric inputs validated with bounds checking
+- [ ] All metadata sanitized with DOMPurify
+- [ ] CSP headers configured to block inline scripts
+- [ ] Wallet provider verified (not tampered with)
+- [ ] No `dangerouslySetInnerHTML` without sanitization
+- [ ] Error messages never expose sensitive data
+
+**Infrastructure**
+- [ ] Multi-sig configured (3-of-5 minimum)
+- [ ] Timelock configured (48hrs for non-emergency actions)
+- [ ] Emergency pause tested and documented
+- [ ] Monitoring alerts configured (unusual transactions, gas spikes)
+- [ ] Bug bounty program launched ($100K+ for critical)
+- [ ] Incident response team identified (who to call at 3am)
+
+## Wrap-up and next steps
+
+You've mastered comprehensive security testing: Foundry fuzzing for edge cases, Slither for static analysis, frontend input validation, provider verification, and audit preparation documentation.
+
+**Key skills mastered:**
+- Writing fuzz tests that find hidden vulnerabilities
+- Creating invariant tests for core protocol guarantees
+- Running static analysis and integrating into CI/CD
+- Validating frontend inputs to prevent user errors and attacks
+- Preparing documentation that saves audit costs
+
+**Next lesson (emergency-response-circuit-breakers)**: Emergency Response & Circuit Breakers—pause/unpause mechanisms, emergency withdrawal patterns, upgrade procedures under duress, incident response playbooks, and communication templates for when things go wrong. You'll combine the testing skills from this lesson with real-time response strategies.
+
+**Practice challenge**: Take your favorite contract from Islands 1-4 and build a complete security test suite: 5 fuzz tests, 3 invariant tests, Slither scan with 0 High findings, and frontend validation for all user inputs. Then write a mock audit report documenting your findings and fixes.
+
+Testing isn't overhead—it's the foundation of secure protocols. Every hour spent writing tests saves thousands in audit costs and millions in potential exploits.
+

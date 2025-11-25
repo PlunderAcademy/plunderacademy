@@ -1,0 +1,248 @@
+---
+id: intro-to-evm
+module: evm-fundamentals
+number: 2.1
+title: Introduction to Ethereum Virtual Machine (EVM)
+objective: >-
+  Gain a thorough understanding of Ethereum Virtual Machine, the virtualized
+  computing environment that executes smart contracts for Ethereum-compatible
+  blockchains including Zilliqa 2.0.
+practicalTakeaway: >-
+  The Ethereum Virtual Machine is the core runtime that enables the execution of
+  trustless, decentralized applications on EVM-compatible blockchains.
+slug: intro-to-evm
+---
+
+## What is Ethereum Virtual Machine?
+
+### The Simple Explanation
+
+**Real-world analogy:** Imagine a universal computer that exists in thousands of identical copies around the world. No matter which copy you use, if you run the same program with the same input, you'll always get exactly the same result. This "computer" doesn't belong to any single person or company - it's shared by everyone and maintained by a global network.
+
+This is essentially what the Ethereum Virtual Machine (EVM) is: a decentralized virtual computer that runs executable code on thousands of nodes simultaneously across the blockchain network.
+
+### The Technical Definition
+
+The Ethereum Virtual Machine is a deterministic, sandboxed environment that abstracts away hardware and software differences between nodes to deliver a consistent runtime for all smart contracts. It's the execution environment where all smart contracts live and run.
+
+### Why the EVM is Revolutionary
+
+**Traditional computing problems:**
+- **Single points of failure:** If one server goes down, your application stops working
+- **Trust requirements:** You must trust the company running the servers
+- **Censorship risks:** Centralized authorities can shut down or modify your application
+- **Geographic limitations:** Applications may not be accessible everywhere
+
+**How EVM solves these problems:**
+- **Distributed execution:** Your code runs on thousands of computers simultaneously
+- **Trustless operation:** No single entity controls the execution environment
+- **Censorship resistance:** No central authority can stop or modify your application
+- **Global accessibility:** Available anywhere with internet access
+
+### Core Characteristics of EVM
+
+#### Deterministic Execution: Mathematical Certainty
+
+**What it means:** No matter where or when you run the same smart contract with the same inputs, you'll always get exactly the same result.
+
+**Real-world analogy:** Think of a mathematical formula like 2 + 2 = 4. This equation gives the same result regardless of who calculates it, where they calculate it, or what calculator they use. EVM contracts work the same way.
+
+**Why this matters:**
+- **Network consensus:** All nodes can independently verify results
+- **Predictable behavior:** Developers know exactly how their code will behave
+- **Trust through math:** Users don't need to trust individuals, just mathematics
+- **Reproducible outcomes:** Anyone can verify what happened by re-running the same code
+
+#### Isolation: Protected Sandbox Environment
+
+**What it means:** Each smart contract runs in its own isolated environment, completely separated from the underlying computer's operating system and other contracts.
+
+**Real-world analogy:** Think of each smart contract like a person in a sealed room with only specific, controlled ways to communicate with the outside world. They can't access your computer's files, can't install malware, and can't interfere with other contracts unless explicitly allowed.
+
+**Security benefits:**
+- **Malicious code protection:** Bad contracts can't harm the network or other contracts
+- **Resource isolation:** One contract can't use up all the computer's memory or processing power
+- **Consistent environment:** Contracts run the same way regardless of the underlying hardware
+- **Controlled interactions:** Contracts can only interact through defined interfaces
+
+#### Gas Metering: Computational Resource Management
+
+**What it means:** Every single operation a smart contract performs costs a small amount of "gas" - a unit that measures computational effort.
+
+**Real-world analogy:** Think of gas like fuel in your car. More complex operations (like driving uphill) use more fuel, and you need to pay for the fuel you use. This prevents people from writing programs that run forever and crash the network.
+
+**How it works:**
+- **Operation costs:** Each EVM instruction has a predefined gas cost
+- **Usage tracking:** The EVM tracks gas consumption as code executes
+- **Limit enforcement:** Transactions stop if they exceed their gas limit
+- **Fee payment:** Users pay for the gas they consume
+
+**Benefits:**
+- **Prevents infinite loops:** Code can't run forever and crash the network
+- **Fair resource allocation:** More complex operations cost more
+- **Economic incentives:** Users pay for network resources they consume
+- **Network protection:** Malicious actors can't overwhelm the system
+
+#### Stack-Based Computing: Simple and Efficient Architecture
+
+**What it means:** The EVM uses a "stack" data structure - like a stack of plates where you can only add or remove plates from the top.
+
+**Real-world analogy:** Imagine you're doing math with a calculator that can only remember a stack of numbers. To calculate (5 + 3) × 2, you'd:
+1. Put 5 on the stack
+2. Put 3 on the stack
+3. Add (removes 5 and 3, puts 8 on the stack)
+4. Put 2 on the stack
+5. Multiply (removes 8 and 2, puts 16 on the stack)
+
+**Why this design:**
+- **Simplicity:** Easy to implement and verify
+- **Efficiency:** Fast execution with minimal overhead
+- **Determinism:** Predictable behavior across all implementations
+- **Security:** Limited ways for things to go wrong
+
+#### Memory and Storage: Temporary vs Permanent Data
+
+**Memory: Temporary Workspace**
+- **What it is:** Like your computer's RAM - fast, temporary storage for calculations
+- **Lifetime:** Exists only during contract execution, then disappears
+- **Cost:** Cheaper than permanent storage
+- **Use cases:** Temporary variables, function parameters, intermediate calculations
+
+**Storage: Permanent Database**
+- **What it is:** Like your computer's hard drive - permanent storage that persists forever
+- **Lifetime:** Stored on the blockchain permanently across all nodes
+- **Cost:** Expensive because it uses blockchain space forever
+- **Use cases:** Contract state variables, user balances, important data
+
+**Real-world analogy:** Memory is like writing notes on a whiteboard during a meeting (temporary), while storage is like filing important documents in a permanent filing cabinet (persistent).
+
+### Why Does Zilliqa Use the EVM?
+
+#### The Power of Compatibility
+
+**Network effects advantage:** Ethereum has the largest blockchain developer ecosystem in the world. By adopting the EVM, Zilliqa 2.0 gains instant access to:
+- **Existing codebase:** Thousands of proven smart contracts
+- **Developer talent:** Hundreds of thousands of Solidity developers
+- **Tool ecosystem:** Mature development frameworks and libraries
+- **Educational resources:** Years of tutorials, documentation, and best practices
+
+#### Zilliqa 2.0's EVM Implementation
+
+**Seamless migration path:**
+Zilliqa 2.0's adoption of the EVM provides seamless compatibility with Ethereum's vast developer ecosystem. Solidity smart contracts designed for Ethereum can be deployed to Zilliqa with minimal changes.
+
+**Performance advantages:**
+Zilliqa complements EVM with its efficient Pipelined Fast-Hotstuff consensus mechanism, which enables:
+- **1-second block times:** Near-instant transaction confirmation
+- **Higher transaction throughput:** More transactions processed per second
+- **Lower fees:** Significantly cheaper than Ethereum mainnet
+- **Optimal validator set:** ~32 validators for efficient consensus
+
+#### Best of Both Worlds
+
+**Developer benefits:**
+- **Zero learning curve:** If you know Ethereum development, you know Zilliqa development
+- **Code reusability:** Port existing contracts with minimal modification
+- **Tool compatibility:** Use familiar frameworks like Remix, Hardhat, and OpenZeppelin
+- **Performance gains:** Same code, but with better speed and lower costs
+
+**User benefits:**
+- **Affordable transactions:** Lower gas fees make dApps accessible to more users
+- **Faster interactions:** 1-second block times improve user experience
+- **Proven security:** Battle-tested EVM with enhanced performance
+- **Rich ecosystem:** Access to both Ethereum and Zilliqa applications
+
+### EVM Architecture Deep Dive
+
+#### The Virtual Machine Model
+
+**What makes it "virtual":**
+The EVM doesn't exist as physical hardware. Instead, it's a software specification that every Ethereum-compatible blockchain implements. Think of it like a universal programming language that works the same way everywhere.
+
+**Components of the EVM:**
+1. **Execution Environment:** Where smart contract code runs
+2. **World State:** The global state of all accounts and contracts
+3. **Transaction Processing:** How transactions modify the world state
+4. **Gas Metering:** Resource usage tracking and payment system
+
+#### Smart Contracts: Programs on the Blockchain
+
+**What smart contracts enable:**
+- **Decentralized applications (dApps):** Full applications running on blockchain
+- **Token creation:** Create your own cryptocurrencies (ERC-20 tokens)
+- **NFTs:** Unique digital assets and collectibles
+- **DeFi protocols:** Lending, borrowing, and trading without banks
+- **DAOs:** Decentralized organizations with programmable governance
+
+**How smart contracts work:**
+1. **Deployment:** Contract code is uploaded to the blockchain
+2. **Immutability:** Once deployed, the code cannot be changed
+3. **Execution:** Anyone can trigger contract functions by sending transactions
+4. **State changes:** Contracts can modify their stored data and interact with other contracts
+
+### Real-World EVM Applications
+
+#### Financial Services (DeFi)
+- **Decentralized exchanges:** Trade tokens without centralized control
+- **Lending protocols:** Borrow and lend cryptocurrency programmatically
+- **Yield farming:** Earn rewards by providing liquidity
+- **Synthetic assets:** Create digital versions of real-world assets
+
+#### Digital Ownership (NFTs)
+- **Art and collectibles:** Prove ownership of digital creative works
+- **Gaming assets:** Own in-game items that work across different games
+- **Domain names:** Decentralized web domains you truly own
+- **Membership tokens:** Access passes for exclusive communities
+
+#### Organizational Tools (DAOs)
+- **Governance tokens:** Vote on organizational decisions
+- **Treasury management:** Collective control of shared funds
+- **Proposal systems:** Democratic decision-making processes
+- **Automated execution:** Rules that enforce themselves
+
+### EVM vs Traditional Computing
+
+#### Traditional Application Architecture
+```
+User → Web Browser → Web Server → Database → Response
+```
+- **Central control:** One organization controls the server and database
+- **Single point of failure:** If the server goes down, the app stops working
+- **Trust requirement:** Users must trust the company to operate fairly
+- **Geographic limitations:** May not be accessible in all countries
+
+#### EVM Application Architecture
+```
+User → Wallet → Blockchain Network → Smart Contract → Response
+```
+- **Distributed control:** Thousands of nodes run the application
+- **No single point of failure:** App continues working even if many nodes go offline
+- **Trustless operation:** Code execution is guaranteed by mathematics
+- **Global accessibility:** Available anywhere with internet access
+
+### Common Misconceptions About EVM
+
+**"EVM is slow and expensive"**
+- **Reality:** This depends on the specific blockchain implementation. While Ethereum mainnet can be slow and expensive, Zilliqa 2.0 offers the same EVM compatibility with 1-second blocks and low fees.
+
+**"Smart contracts are too complex for regular applications"**
+- **Reality:** Smart contracts can be as simple or complex as needed. A basic token contract is only a few dozen lines of code.
+
+**"EVM applications can't interact with the real world"**
+- **Reality:** Through oracles and bridging technologies, EVM applications can read external data and interact with traditional systems.
+
+**"Once deployed, smart contracts can never be updated"**
+- **Reality:** While the core principle is immutability, developers can design upgradeable contracts using proxy patterns and modular architectures.
+
+## 🎮 Interactive Practice
+
+Test your understanding of EVM concepts:
+
+<ConceptMatching pairs={[
+  {"conceptId": "evm", "definitionId": "def-evm", "concept": "EVM", "definition": "Virtual machine that executes smart contract bytecode", "category": "core"},
+  {"conceptId": "bytecode", "definitionId": "def-bytecode", "concept": "Bytecode", "definition": "Low-level machine instructions for the EVM", "category": "execution"},
+  {"conceptId": "gas", "definitionId": "def-gas", "concept": "Gas", "definition": "Unit measuring computational work on EVM", "category": "resources"},
+  {"conceptId": "smart-contract", "definitionId": "def-contract", "concept": "Smart Contract", "definition": "Self-executing code deployed on the blockchain", "category": "core"}
+]} />
+
+This interactive exercise reinforces the fundamental EVM concepts you've learned in this lesson.

@@ -1,0 +1,438 @@
+---
+id: advanced-security-quiz
+slug: advanced-security-quiz
+module: advanced-security
+title: "Module 4: Security Best Practices - Comprehensive Quiz"
+description: "Test your mastery of smart contract security across all 8 lessons: vulnerabilities, AI auditing, access control, testing, emergency response, advanced attacks, audit methodology, and incident response."
+totalQuestions: 25
+passingScore: 80
+timeLimit: 40
+---
+
+### Question 1
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.12 Common Vulnerability Patterns
+
+What is the root cause of reentrancy vulnerabilities like the one that drained $150M from The DAO?
+
+**Options:**
+- A) External calls allowing attackers to re-enter before state updates complete
+- B) Integer overflow in balance calculations
+- C) Oracle manipulation via flash loans
+- D) Missing access control on the withdrawal function
+
+**Explanation:** Reentrancy occurs when external calls (like transferring ETH or tokens) allow the recipient to call back into the contract before the original function completes its state updates. The DAO hack exploited this by having the attacker's receive() function call withdraw() again before balances were updated. The fix is the Checks-Effects-Interactions (CEI) pattern: update state BEFORE external calls, and use OpenZeppelin's ReentrancyGuard as defense-in-depth.
+
+---
+
+### Question 2
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.12 Common Vulnerability Patterns
+
+Which pattern is the PRIMARY defense against reentrancy attacks?
+
+**Options:**
+- A) Using SafeMath for all arithmetic operations
+- B) Checks-Effects-Interactions (CEI): update state before external calls
+- C) Requiring multi-signature approval for all withdrawals
+- D) Adding minimum withdrawal delays with timelock
+
+**Explanation:** The Checks-Effects-Interactions (CEI) pattern is the fundamental defense: perform all checks first, update all state second, then make external calls last. This ensures that even if an attacker re-enters, the state is already updated and checks will fail. OpenZeppelin's ReentrancyGuard provides additional defense-in-depth but CEI is the primary pattern.
+
+---
+
+### Question 3
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.12 Common Vulnerability Patterns
+
+What is the critical vulnerability in this code?
+```solidity
+function mint(address to, uint256 amount) external {
+    balances[to] += amount;
+}
+```
+
+**Options:**
+- A) Missing reentrancy guard on the mint function
+- B) Integer overflow in balance addition
+- C) Missing event emission for auditability
+- D) No access control—anyone can mint unlimited tokens
+
+**Explanation:** The function has no access control (no onlyOwner or onlyRole modifier), allowing any address to mint unlimited tokens and crash the token value. The fix is adding OpenZeppelin's AccessControl with a MINTER_ROLE: `function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE)`. While missing events (C) is also an issue, the critical vulnerability is unrestricted minting.
+
+---
+
+### Question 4
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.13 AI Auditor Findings Interpretation
+
+When the AI Auditor assigns a severity score of 9-10 (Critical), what does this indicate?
+
+**Options:**
+- A) Best practice violations with no clear exploit path
+- B) Protocol disruption or edge-case loss scenarios
+- C) Direct fund loss with simple, trivial exploit
+- D) Functionality breaks under specific rare conditions
+
+**Explanation:** Critical (9-10) severity means direct fund loss is possible with a simple exploit that works reliably. These findings require immediate fixes (<24 hours) before launch. Examples include reentrancy allowing contract drainage, missing access control on mint functions, or unchecked external calls that silently fail. High (7-8) is fund loss under specific conditions, Medium (5-6) is protocol disruption, and Low (1-4) is best practices without clear exploit.
+
+---
+
+### Question 5
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.13 AI Auditor Findings Interpretation
+
+What is a "false positive" in AI security analysis?
+
+**Options:**
+- A) A flagged issue that isn't actually exploitable in your context
+- B) A vulnerability that was missed by the AI scanner
+- C) An audit report with misleading attack scenarios
+- D) A finding with incorrect severity classification
+
+**Explanation:** A false positive is when the AI flags something as vulnerable but it's actually safe in your specific implementation. Example: AI flags "unchecked return value from transfer()" but you're using OpenZeppelin's SafeERC20 which automatically reverts on failure. The proper response is to write a test proving it's safe, document why in code comments, and track it in a "reviewed and accepted" log. Don't just dismiss findings—verify they're truly false positives.
+
+---
+
+### Question 6
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.14 Role-Based Access Control
+
+What is the key advantage of OpenZeppelin's AccessControl over simple Ownable?
+
+**Options:**
+- A) AccessControl uses less gas than Ownable
+- B) AccessControl allows granular permissions with multiple roles instead of single owner
+- C) AccessControl automatically includes reentrancy protection
+- D) AccessControl works with both upgradeable and non-upgradeable contracts
+
+**Explanation:** AccessControl enables Role-Based Access Control (RBAC) with multiple roles (MINTER_ROLE, PAUSER_ROLE, ADMIN_ROLE) instead of a single owner. This follows the principle of least privilege: a minter can't pause, a pauser can't mint. Ownable is simpler but creates a "god mode" single point of failure. For production protocols, use AccessControl with roles granted to multi-sigs or timelocks, not EOAs.
+
+---
+
+### Question 7
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.14 Role-Based Access Control
+
+Why should protocol admin functions use a multi-sig wallet instead of a single EOA (Externally Owned Account)?
+
+**Options:**
+- A) Multi-sig wallets have lower gas costs than EOAs
+- B) Multi-sig is required by most blockchain protocols
+- C) Multi-sig automatically includes timelock delays for security
+- D) Multi-sig eliminates single points of compromise and enforces consensus on critical actions
+
+**Explanation:** Multi-sig (e.g., 3-of-5 Gnosis Safe) requires M of N signatures to execute, preventing single key compromise from enabling rug pulls or malicious admin actions. If one key is compromised, attacker still needs 2 more to execute. Multi-sig also enforces team consensus on critical decisions. For additional security, combine multi-sig with a timelock (48hr delay) giving users warning to exit before changes execute. Multi-sig doesn't automatically include timelocks—that's a separate component.
+
+---
+
+### Question 8
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.14 Role-Based Access Control
+
+What is the purpose of OpenZeppelin's TimelockController?
+
+**Options:**
+- A) To rate-limit function calls and prevent spam attacks
+- B) To add delays between proposing and executing admin actions, giving users time to react
+- C) To automatically pause contracts after a specific duration
+- D) To enforce cooldown periods between user withdrawals
+
+**Explanation:** TimelockController adds a mandatory delay (typically 48 hours) between when an admin action is proposed and when it can be executed. This gives users time to review changes and exit if they disagree. Example: Admin proposes setFee(10%), users have 48 hours to withdraw before it executes. Emergency functions (pause) should bypass timelock for instant response, but routine changes (fee adjustments, upgrades) should require timelock for user protection.
+
+---
+
+### Question 9
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.15 Security Testing & Audit Preparation
+
+What is the purpose of fuzz testing in smart contract security?
+
+**Options:**
+- A) To generate thousands of random inputs to find edge cases humans miss
+- B) To test contract deployment gas costs under various conditions
+- C) To verify contract bytecode matches source code
+- D) To simulate network congestion and measure transaction success rates
+
+**Explanation:** Fuzz testing (available in Foundry) automatically generates random inputs to test functions thousands of times, finding edge cases like overflow boundaries, zero-value handling, and unexpected parameter combinations. Example: `function testFuzz_Withdraw(uint256 amount)` runs with 256 random amounts by default. Foundry reports the exact input that broke your contract, letting you fix bugs that manual testing would miss. Fuzz testing is complementary to unit tests, not a replacement.
+
+---
+
+### Question 10
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.15 Security Testing & Audit Preparation
+
+What is an invariant in the context of smart contract testing?
+
+**Options:**
+- A) A function that never changes state (view or pure)
+- B) A property that must ALWAYS be true, tested after every transaction
+- C) A contract that cannot be upgraded after deployment
+- D) A storage variable marked as constant or immutable
+
+**Explanation:** An invariant is a property that must hold true at all times, tested after every state change. Examples: "totalSupply equals sum of all balances," "contract balance >= total user deposits," "share price never decreases." Foundry's invariant testing runs random transaction sequences and checks invariants after each one. If any invariant breaks, you've found a vulnerability. This is particularly powerful for finding accounting bugs, economic exploits, and state inconsistencies that only appear in specific transaction sequences.
+
+---
+
+### Question 11
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.15 Security Testing & Audit Preparation
+
+What is the minimum test coverage recommended for security-critical smart contract functions?
+
+**Options:**
+- A) 50% line coverage is sufficient if functions are simple
+- B) 75% line coverage with focus on happy paths
+- C) 95%+ line coverage with 100% branch coverage for critical functions
+- D) 80% line coverage is the industry standard
+
+**Explanation:** Security-critical functions (withdraw, mint, access control) should have 100% branch coverage, testing all possible code paths including edge cases, reverts, and exploits. Overall codebase should have 95%+ line coverage. This means testing not just success cases but failure modes: what happens with zero amounts, max values, unauthorized callers, reentrancy attempts, etc. Coverage reports show untested code that could contain vulnerabilities. Most professional audits expect this level as baseline.
+
+---
+
+### Question 12
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.16 Emergency Response & Circuit Breakers
+
+What is the difference between pausing deposits and pausing withdrawals in a granular pause system?
+
+**Options:**
+- A) Pausing deposits is always safer because it doesn't lock user funds
+- B) There is no difference—both prevent all contract operations equally
+- C) Granular pausing is a legacy pattern replaced by full contract pausing
+- D) Pausing withdrawals locks user funds but prevents exploits; pausing deposits stops new capital at risk
+
+**Explanation:** Granular pausing allows surgical responses: pause deposits if deposit function has a bug (users can still withdraw existing funds), or pause withdrawals if withdrawal function is vulnerable (prevents fund drainage but temporarily locks funds). Full contract pause is "nuclear option" when multiple functions are at risk. Granular pausing maintains partial service during incidents. Best practice: pause the specific vulnerable function, investigate, then decide whether to unpause or pause additional functions. This minimizes user impact while maintaining security.
+
+---
+
+### Question 13
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.16 Emergency Response & Circuit Breakers
+
+Why should emergency withdrawal functions remain operational even when a contract is paused?
+
+**Options:**
+- A) To let users withdraw their funds even during emergencies, providing an escape hatch
+- B) To allow the admin to recover funds and return them to users manually
+- C) To enable attackers to return stolen funds during the pause period
+- D) Emergency withdrawals should also be paused for maximum security
+
+**Explanation:** Emergency withdrawal functions give users an escape hatch when contracts are paused for extended periods. Implementation: allow users to withdraw their funds after 24 hours of pause, bypassing normal operations. This prevents permanent fund lock-up if a vulnerability requires long-term contract disabling. Critical: emergency withdrawals must be per-user (users withdraw their own funds), NOT admin-controlled mass withdrawal which creates rug pull risk. This pattern appears in protocols like Compound and Aave for user protection during incidents.
+
+---
+
+### Question 14
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.16 Emergency Response & Circuit Breakers
+
+In the Cream Finance exploit ($130M loss), what was the primary reason the team couldn't prevent the loss?
+
+**Options:**
+- A) The contract had no pause mechanism implemented
+- B) The vulnerability was in the Aave lending pool, outside their control
+- C) Manual detection took 20 minutes; by then funds were in Tornado Cash
+- D) The team didn't have a multi-sig wallet to authorize the pause
+
+**Explanation:** Cream Finance had a pause mechanism, but human detection took 20+ minutes (users reported it on Twitter). By the time the team paused the contract, the attacker had already completed the flash loan exploit and moved funds to Tornado Cash (unrecoverable). The lesson: automated monitoring is essential—flash loan attacks complete in 1 block (~12 seconds on Ethereum). Human response is too slow. Modern protocols need Tenderly/Defender monitoring with auto-pause on anomalies like rapid withdrawals or large single transactions.
+
+---
+
+### Question 15
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.17 Advanced Attack Vectors
+
+What is the primary defense against flash loan price manipulation attacks?
+
+**Options:**
+- A) Banning flash loan protocols from interacting with your contract
+- B) Using time-weighted average price (TWAP) instead of spot price from AMMs
+- C) Requiring all borrows to post collateral for at least 24 hours
+- D) Adding reentrancy guards to all price query functions
+
+**Explanation:** Flash loan attacks manipulate AMM spot prices by swapping large amounts in a single transaction. Defense: use time-weighted average price (TWAP) from Uniswap V2/V3, which averages price over 10+ minutes and cannot be manipulated in a single block. Additional defense layers: use Chainlink oracles as primary source (manipulation-resistant), compare Chainlink vs TWAP (require <10% deviation), add sanity checks (reject >50% price changes per hour), implement circuit breakers (pause if deviation detected). Multiple protocols have lost $100M+ to flash loan price manipulation.
+
+---
+
+### Question 16
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.17 Advanced Attack Vectors
+
+What is cross-contract reentrancy and why does standard ReentrancyGuard fail to prevent it?
+
+**Options:**
+- A) Reentrancy across multiple blockchain networks; ReentrancyGuard only works on single chains
+- B) Reentrancy through delegatecall; ReentrancyGuard doesn't cover delegatecall contexts
+- C) Cross-contract reentrancy is a theoretical attack with no real-world exploits
+- D) Reentrancy via shared state across contracts; standard guard only protects single contract's lock
+
+**Explanation:** Cross-contract reentrancy occurs when Contract A (with ReentrancyGuard) calls Contract B, which reads Contract A's state. Attacker re-enters Contract B during Contract A's execution, exploiting inconsistent state. Example: TokenVault.withdraw() calls RewardDistributor.updateRewards(), attacker's receive() calls RewardDistributor.claimRewards() before TokenVault completes. Standard ReentrancyGuard only checks its own lock. Defense: shared reentrancy lock across related contracts, or read-only reentrancy protection. The Curve Finance hack ($62M) exploited this pattern.
+
+---
+
+### Question 17
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.17 Advanced Attack Vectors
+
+What is a storage collision in upgradeable contracts and how is it prevented?
+
+**Options:**
+- A) New implementation's storage layout conflicts with old, corrupting state; prevented with storage gaps
+- B) Two contracts using the same storage slot; prevented by using different slot numbers
+- C) Collision between contract storage and proxy storage; prevented by using TransparentProxy pattern
+- D) Multiple proxies pointing to the same implementation; prevented by using separate deployments
+
+**Explanation:** Storage collisions occur when you add new variables at the beginning of a contract during an upgrade, shifting all existing variables to different slots and corrupting state. Example: V1 has `address owner` at slot 0, V2 adds `bool paused` at slot 0, shifting `owner` to slot 1—now `paused` reads the old `owner` address as a boolean. Defense: always add new variables at the end, and include `uint256[50] private __gap;` in base contracts. Reduce gap size when adding variables. OpenZeppelin's upgrade plugin validates storage layouts before upgrades to catch collisions automatically.
+
+---
+
+### Question 18
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.17 Advanced Attack Vectors
+
+Why is EIP-712 required for secure signature verification in smart contracts?
+
+**Options:**
+- A) EIP-712 provides faster signature verification than standard ECDSA
+- B) EIP-712 automatically encrypts signatures to prevent interception
+- C) EIP-712 includes nonce, deadline, chainId, and contract address to prevent replay attacks
+- D) EIP-712 allows signatures to be verified without spending gas
+
+**Explanation:** EIP-712 creates a structured signature including: nonce (prevents multiple replays), deadline (prevents stale signature reuse years later), chainId (prevents replay on forks/L2s), and verifyingContract address (prevents replay on different contracts). Without these, a signature can be replayed unlimited times, across all chains, on any similar contract, forever. Example vulnerability: Permit function without EIP-712 allows attacker to intercept one signature and gain infinite approvals. EIP-712 also provides wallet UI visibility—users see what they're signing.
+
+---
+
+### Question 19
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.17 Advanced Attack Vectors
+
+What is the purpose of slippage protection in DEX transactions?
+
+**Options:**
+- A) To prevent the DEX from charging excessive trading fees
+- B) To ensure transactions revert if price moves beyond user's acceptable range, preventing frontrunning exploitation
+- C) To automatically retry failed transactions with higher gas prices
+- D) To protect against integer overflow in price calculations
+
+**Explanation:** Slippage protection lets users specify max acceptable price change: `buy(amount, maxPrice)`. If price moves beyond maxPrice (e.g., due to frontrunning bots), transaction reverts instead of executing at bad price. Example: User wants to buy at $100, sets maxPrice=$105 (5% slippage). Bot frontruns, price jumps to $110. User's transaction reverts instead of buying at inflated price. Alternative: commit-reveal pattern (hide trade details for 1 block before executing). Without slippage protection, MEV bots extract millions in value from users.
+
+---
+
+### Question 20
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.18 Smart Contract Audit Methodology
+
+What is the typical cost range for a professional smart contract audit from a top-tier firm?
+
+**Options:**
+- A) $5,000 - $15,000 for most protocols
+- B) $20,000 - $40,000 depending on complexity
+- C) $1,000,000+ for any production protocol
+- D) $50,000 - $500,000 based on LOC and complexity
+
+**Explanation:** Professional audits from top-tier firms (Trail of Bits, OpenZeppelin, ConsenSys Diligence) cost $50K-$500K depending on code complexity, lines of code, and scope. Mid-tier firms (Cyfrin, Spearbit) range $50K-$150K. Community audits (Code4rena, Sherlock) range $30K-$120K. Duration: 2-6 weeks. Any "auditor" charging <$10K is a red flag. Budget for 2-3 audits for protocols handling >$10M TVL. Also budget for remediation phase and potential re-audit if major changes needed. Audits are expensive but essential—skipping audits to save costs is how protocols lose millions.
+
+---
+
+### Question 21
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.18 Smart Contract Audit Methodology
+
+What should you do if an auditor finds a Critical severity vulnerability in your code?
+
+**Options:**
+- A) Delay launch by 1-2 weeks to fix properly and get auditor sign-off
+- B) Mark it as "acknowledged" in the report and document the risk for users
+- C) Fix immediately (<24 hours), write comprehensive tests, and get auditor verification before launch
+- D) Request the auditor reduce severity to High to avoid alarming investors
+
+**Explanation:** Critical findings (direct fund loss, trivial exploit) must be fixed immediately before launch. Process: implement fix, write exploit test proving original vulnerability, write test proving fix works, document root cause and fix rationale, submit for re-review within 24-48 hours. Auditor verifies fix doesn't introduce new issues. NEVER launch with unresolved Critical findings—this is how hacks happen. "Acknowledged" is only acceptable for Low/Informational findings where you've decided the risk is acceptable. Critical = must fix, no exceptions.
+
+---
+
+### Question 22
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.18 Smart Contract Audit Methodology
+
+What is the purpose of a bug bounty program and when should it be launched?
+
+**Options:**
+- A) To provide continuous security monitoring after audit, incentivizing white-hat disclosure
+- B) To find vulnerabilities before professional audit, saving audit costs
+- C) To generate marketing buzz by offering large bounty amounts
+- D) To replace professional audits with crowdsourced security
+
+**Explanation:** Bug bounty programs (e.g., via Immunefi, HackerOne) provide ongoing security after point-in-time audits. Typical structure: $100K-$500K for Critical, $25K-$100K for High, active on mainnet. Launch AFTER professional audit and deployment. Benefits: continuous monitoring, incentivizes researchers to disclose responsibly instead of exploiting, taps into wider researcher pool than audits. Bug bounties complement (not replace) audits. Best practice: audit before launch, bug bounty after launch, re-audit for major upgrades.
+
+---
+
+### Question 23
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.19 Incident Response & Escalation
+
+What is the recommended response time for a P0 (Critical) incident where funds are actively draining?
+
+**Options:**
+- A) Under 2 hours to coordinate team response
+- B) Under 5 minutes to pause the contract
+- C) Under 24 hours to deploy a fix
+- D) Under 30 minutes to assess and respond
+
+**Explanation:** P0 incidents (active exploit, >$100K at risk) require <5 minute response: detect anomaly, page on-call, execute pause. Every minute of delay allows more fund drainage. Example: Cream Finance lost $130M because detection took 20 minutes; YieldVault prevented $9.9M loss by pausing in 8 minutes. To achieve <5min: automated Tenderly/Defender monitoring, PagerDuty alerts, pre-authorized pause keys (not multi-sig for emergency), and on-call engineer with laptop+hardware wallet ready 24/7. Practice quarterly drills to maintain response speed.
+
+---
+
+### Question 24
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.19 Incident Response & Escalation
+
+What is the purpose of a "war room" during an active security incident?
+
+**Options:**
+- A) To keep incident response secret from users until fully resolved
+- B) To conduct emergency code review with all developers simultaneously
+- C) To negotiate with attackers for fund return
+- D) To provide real-time coordination with assigned roles (IC, Technical Lead, Comms, Scribe) preventing chaos
+
+**Explanation:** War rooms are structured coordination channels during incidents. Key elements: dedicated Discord/Slack voice chat, assigned roles (Incident Commander = final decisions, Technical Lead = implements fixes, Communications Lead = user updates, Scribe = logs all actions), status checks every 5 minutes, all decisions documented with rationale. Structure prevents duplicate work, communication confusion, and missed actions during high-stress situations. Activate war room for: P0 incidents (always), P1 if can't resolve in 30min, any incident with user fund loss, admin key compromise. Practice war room procedures quarterly so team executes smoothly when real incident occurs.
+
+---
+
+### Question 25
+**Type:** Multiple Choice
+**Points:** 4
+**Lesson:** 5.19 Incident Response & Escalation
+
+What is the purpose of a "blameless post-mortem" after an incident?
+
+**Options:**
+- A) To analyze root cause, what went well/poorly, and extract learnings without assigning blame
+- B) To identify which team member caused the vulnerability for disciplinary action
+- C) To satisfy audit requirements for incident documentation
+- D) To write marketing materials explaining how quickly the team responded
+
+**Explanation:** Blameless post-mortems analyze incidents to prevent recurrence without blaming individuals. Key sections: timeline, root cause (immediate and contributing factors), what went well, what didn't go well, action items (with owners and deadlines), lessons learned. "Blameless" is critical—blame culture causes people to hide mistakes instead of learning from them. Example: "Why wasn't reentrancy caught?" Answer: Tests focused on math, not adversarial scenarios + auditor assumed OpenZeppelin base covered it. Action: Add exploit tests for all Module 4 vulnerability patterns. Conduct post-mortem within 48 hours while details are fresh.

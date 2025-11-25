@@ -1,0 +1,197 @@
+---
+slug: getting-started-the-graph-zilliqa
+title: "Getting Started with The Graph on Zilliqa - Build Your First Subgraph"
+excerpt: "A practical, step-by-step guide to creating your first subgraph on Zilliqa, from setup to querying real data using PlunderSwap as the working example."
+level: intermediate
+tags:
+  - zilliqa
+  - the graph
+  - graphnode
+  - subgraphs
+  - indexing
+---
+
+If you've deployed a smart contract on **Zilliqa 2.0** and want fast, structured access to its on-chain data, **The Graph** makes it simple.  
+In this guide, you’ll create and deploy your first **subgraph**, showing how **PlunderSwap** can index and query swap events from its liquidity pool contracts.
+
+---
+
+## ⚙️ What You’ll Learn
+
+By the end of this tutorial, you’ll be able to:
+
+1. Install and configure the Graph CLI  
+2. Initialize a subgraph for a Zilliqa contract  
+3. Define entities and mappings  
+4. Deploy the subgraph to The Graph’s hosted service  
+5. Run GraphQL queries to access indexed data  
+
+---
+
+## 🧰 Prerequisites
+
+Before starting, make sure you have:
+
+- **Node.js ≥ 16**  
+- **npm** or **yarn**  
+- A deployed **Zilliqa smart contract** (e.g. a PlunderSwap Pool Factory)  
+- A **GitHub account** and an **access token** from [The Graph Hosted Service](https://thegraph.com/hosted-service/)  
+
+---
+
+## ⚓ Step 1 – Install the Graph CLI
+
+Install the CLI globally:
+
+```bash
+npm install -g @graphprotocol/graph-cli
+```
+
+Verify installation:
+
+```bash
+graph --version
+```
+
+---
+
+## 🧭 Step 2 – Initialize a Subgraph for Zilliqa
+
+Run this command to scaffold your project:
+
+```bash
+graph init   --product hosted-service   --from-contract 0xYourPlunderSwapContract   --network zilliqa   plunderswap/plunderswap-subgraph
+```
+
+This creates a project structure like the following:
+
+<table>
+  <thead>
+    <tr>
+      <th>File</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>subgraph.yaml</code></td>
+      <td>Manifest describing data sources and events to index.</td>
+    </tr>
+    <tr>
+      <td><code>schema.graphql</code></td>
+      <td>Data model for your entities.</td>
+    </tr>
+    <tr>
+      <td><code>src/mapping.ts</code></td>
+      <td>Logic that transforms blockchain events into entities.</td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## 🧩 Step 3 – Define Entities
+
+Open `schema.graphql` and define a simple entity for PlunderSwap swap events:
+
+```graphql
+type Swap @entity {
+  id: ID!
+  trader: Bytes!
+  tokenIn: Bytes!
+  tokenOut: Bytes!
+  amountIn: BigInt!
+  amountOut: BigInt!
+  timestamp: BigInt!
+}
+```
+
+Each entity represents a record stored by The Graph indexer.
+
+---
+
+## ⚙️ Step 4 – Map Events to Entities
+
+In `src/mapping.ts`, import your contract events and save them to the schema:
+
+```ts
+import { Swap as SwapEvent } from "../generated/PlunderSwap/PlunderSwap";
+import { Swap } from "../generated/schema";
+
+export function handleSwap(event: SwapEvent): void {
+  let entity = new Swap(event.transaction.hash.toHex());
+  entity.trader = event.params.trader;
+  entity.tokenIn = event.params.tokenIn;
+  entity.tokenOut = event.params.tokenOut;
+  entity.amountIn = event.params.amountIn;
+  entity.amountOut = event.params.amountOut;
+  entity.timestamp = event.block.timestamp;
+  entity.save();
+}
+```
+
+Every time a `Swap` event occurs on Zilliqa, Graphnode executes this function to store the data.
+
+---
+
+## 🚀 Step 5 – Deploy the Subgraph
+
+Authenticate and deploy:
+
+```bash
+graph auth --product hosted-service <ACCESS_TOKEN>
+graph deploy --product hosted-service plunderswap/plunderswap-subgraph
+```
+
+Once deployed, you’ll receive a GraphQL endpoint such as:
+
+```
+https://api.thegraph.com/subgraphs/name/plunderswap/plunderswap-subgraph
+```
+
+---
+
+## 🔍 Step 6 – Query Your Data
+
+Use the GraphQL Playground or a client library to query indexed swap data:
+
+```graphql
+{
+  swaps(first: 5, orderBy: timestamp, orderDirection: desc) {
+    trader
+    tokenIn
+    tokenOut
+    amountIn
+    amountOut
+    timestamp
+  }
+}
+```
+
+The response will return structured PlunderSwap data from the Zilliqa blockchain — ready for dashboards or analytics.
+
+---
+
+## 🧠 Recap
+
+- **Graphnode** handles indexing automatically once configured.  
+- A **subgraph** defines which contract data to index.  
+- With Zilliqa’s EVM support, The Graph can now power rich analytics for Zilliqa dApps.  
+- The deployed GraphQL endpoint becomes a real-time data API for your project.  
+
+---
+
+## ✅ Next Steps
+
+- Add additional event handlers for `Mint` and `Burn` events.  
+- Integrate the GraphQL endpoint into your analytics dashboard.  
+- Explore advanced mapping features such as derived fields and batching.
+
+---
+
+## Additional Resources
+
+- [The Graph Documentation](https://thegraph.com/docs/)
+- [Graph CLI Reference](https://thegraph.com/docs/en/developer/define-subgraph-hosted/)
+- [Zilliqa EVM Documentation](https://dev.zilliqa.com/zilliqa2/)
+- [Zilliqa Graph Documentation](https://dev.zilliqa.com/zilliqa2/thegraph/)

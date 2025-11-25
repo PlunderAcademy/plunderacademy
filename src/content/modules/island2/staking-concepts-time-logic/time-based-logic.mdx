@@ -1,0 +1,509 @@
+---
+id: time-based-logic
+module: staking-concepts-time-logic
+number: 2.4.2
+title: Time‑Based Logic and Reward Calculations
+objective: >-
+  Implement safe time math for reward accruals, duration tiers, and lock periods using the patterns you'll deploy in your staking contract.
+slug: time-based-logic
+---
+
+## Set the Stage
+
+Staking accrues value over time—users lock tokens for 30, 60, or 120 days and earn rewards proportional to duration and APY. But time in Solidity is just numbers, and getting time math wrong means users lose rewards or the contract pays too much.
+
+Your staking contract will calculate rewards using this formula:
+```
+reward = (amount × elapsedTime × APY) / (365 days) / 100
+```
+
+This lesson shows you how to implement this calculation safely, handle multiple deposits with different start times, enforce lock periods, and test time-based behavior deterministically.
+
+## Real-World Example: The Staking Contract Pattern
+
+**The contract you'll build in Module 2.5 uses this structure:**
+
+### User Deposits Multiple Times
+
+```solidity
+struct DepositItem {
+    uint256 apy;        // 10, 15, or 27 (representing 10%, 15%, 27%)
+    uint256 duration;   // 30 days, 60 days, or 120 days
+    uint256 amount;     // Tokens deposited
+    uint256 timestamp;  // When this deposit happened
+}
+
+struct UserInfo {
+    uint256 amount;             // Total amount across all deposits
+    DepositItem[] depositItems; // Array of individual deposits
+}
+```
+
+**Why arrays of deposits?**
+- Alice stakes 1000 tokens for 30 days on January 1st
+- She stakes another 500 tokens for 60 days on January 15th  
+- Each deposit has its own timeline, APY, and maturity date
+- We track them separately to calculate rewards accurately
+
+### Duration Tiers With Different APYs
+
+```solidity
+uint256 public apy1 = 10;  // 10% APY for 30-day lock
+uint256 public apy2 = 15;  // 15% APY for 60-day lock
+uint256 public apy3 = 27;  // 27% APY for 120-day lock
+```
+
+**Real-world analogy:** Like bank CDs—longer commitment = higher rate.
+
+## Conceptual Foundations
+
+### Block Timestamp Reality
+
+`block.timestamp` is miner-controlled within ~15-second consensus bounds on most chains. On Zilliqa 2.0 with 1-second blocks, timestamps are very reliable but still not perfectly precise.
+
+**Design patterns:**
+- ✅ Use `>=` or `>` for time comparisons (never `==`)
+- ✅ Design tolerances around second-level precision
+- ✅ Document rounding behavior clearly
+
+### Calculating Elapsed Time Safely
+
+Your staking contract needs to handle a global "start" timestamp that can be set after deployment:
+
+```solidity
+uint256 public startedTimestamp;  // When rewards begin accruing
+
+function startReward() external onlyOwner {
+    require(startedTimestamp == 0, "Can only start rewards once");
+    startedTimestamp = block.timestamp;
+}
+```
+
+**The time delta calculation:**
+```solidity
+function _calculateReward(address _user, uint256 _index) internal view returns (uint256) {
+    UserInfo storage user = userInfo[_user];
+    require(_index < user.depositItems.length, "Index out of bound");
+    
+    if (startedTimestamp == 0 || user.amount == 0)
+        return 0;
+    
+    // Calculate elapsed time
+    uint256 dt;
+    if (startedTimestamp > user.depositItems[_index].timestamp)
+        dt = block.timestamp - startedTimestamp;
+    else
+        dt = block.timestamp - user.depositItems[_index].timestamp;
+    
+    // Cap elapsed time at the lock duration
+    if (dt > user.depositItems[_index].duration)
+        dt = user.depositItems[_index].duration;
+    
+    // Calculate reward
+    return (user.depositItems[_index].amount * dt) * user.depositItems[_index].apy 
+           / 100 / 365 days;
+}
+```
+
+**Key insights:**
+1. **Two possible start times:** Either when the user deposited OR when rewards globally started (whichever is later)
+2. **Cap at duration:** Don't accrue beyond the lock period
+3. **Integer math:** All calculations in uint256 to avoid overflow
+4. **Division order:** Multiply first, divide last to preserve precision
+
+### Duration-Based Penalties
+
+**Early withdrawal penalty:**
+```solidity
+uint256 public exitPenaltyPerc = 5;  // 5% penalty for early exit
+
+// In the withdraw function:
+if (dt < user.depositItems[_index].duration) {
+    // Early withdraw - apply penalty
+    uint256 total = rewardToken.balanceOf(address(this));
+    amount -= amount * exitPenaltyPerc / 100;
+    // ... transfer reduced amount
+}
+```
+
+**Normal withdrawal with fee:**
+```solidity
+uint256 public withdrawFee = 2;  // 2% fee on normal withdrawals
+
+// After lock period completes:
+else {
+    // Normal Withdraw
+    uint256 fee = amount * withdrawFee / 100;
+    stakingToken.safeTransfer(feeAddress, fee);
+    
+    amount -= fee;
+    amount += _calculateReward(msg.sender, _index);
+    // ... transfer amount + rewards
+}
+```
+
+## Guided Code Walk-Throughs
+
+### 1) Safe Deposit With Duration Selection
+
+Users choose a duration tier (1, 2, or 3) which determines APY and lock period:
+
+```solidity
+function deposit(uint256 _amount, uint256 _option) public nonReentrant {
+    require(_amount > 0, "Invalid Amount");
+    require(_option == 1 || _option == 2 || _option == 3, "Invalid Option");
+
+    UserInfo storage user = userInfo[msg.sender];
+    
+    // Handle token transfer with deflationary token support
+    uint256 initialBalance = stakingToken.balanceOf(address(this));
+    stakingToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+    uint256 amountTransferred = stakingToken.balanceOf(address(this)) - initialBalance;
+    
+    user.amount = user.amount.add(amountTransferred);
+    totalStaked += amountTransferred;
+
+    // Set APY and duration based on option
+    uint256 apy;
+    uint256 duration;
+    if (_option == 1) {
+        apy = apy1;
+        duration = 30 days;
+    }
+    else if (_option == 2) {
+        apy = apy2;
+        duration = 60 days;
+    }
+    else {
+        apy = apy3;
+        duration = 120 days;
+    }
+
+    // Create new deposit item
+    user.depositItems.push(DepositItem({
+        apy: apy,
+        duration: duration,
+        amount: _amount,
+        timestamp: block.timestamp
+    }));
+
+    emit Deposit(msg.sender, _amount);
+}
+```
+
+**Takeaway:** Each deposit is independent with its own timeline and rate.
+
+### 2) Elapsed Time Helpers for UIs
+
+Frontends need to display time remaining and elapsed:
+
+```solidity
+function getStakedItemElapsed(address _user, uint256 _index) 
+    external view returns (uint256) 
+{
+    UserInfo storage user = userInfo[_user];
+    require(_index < user.depositItems.length, "Index out of bound");
+
+    uint256 depositTimestamp = user.depositItems[_index].timestamp;
+    if (startedTimestamp > depositTimestamp)
+        depositTimestamp = startedTimestamp;
+
+    return block.timestamp - depositTimestamp;
+}
+
+function getStakedItemTimestamp(address _user, uint256 _index) 
+    external view returns (uint256) 
+{
+    UserInfo storage user = userInfo[_user];
+    require(_index < user.depositItems.length, "Index out of bound");
+    
+    if (startedTimestamp > user.depositItems[_index].timestamp)
+        return startedTimestamp;
+    return user.depositItems[_index].timestamp;
+}
+```
+
+**Why separate functions?**
+- UIs can show "Days Remaining" by comparing elapsed vs duration
+- Each deposit item can be displayed individually
+- Users understand when they can withdraw penalty-free
+
+### 3) Withdraw With Array Management
+
+When a user withdraws, we remove that deposit from the array:
+
+```solidity
+function withdraw(uint256 _index) public nonReentrant {
+    require(startedTimestamp > 0, "Not started yet");
+    
+    UserInfo storage user = userInfo[msg.sender];
+    require(_index < user.depositItems.length, "Index out of bound");
+    
+    uint256 amount = user.depositItems[_index].amount;
+    user.amount -= amount;
+    totalStaked -= amount;
+
+    uint256 dt;
+    if (startedTimestamp > user.depositItems[_index].timestamp)
+        dt = block.timestamp - startedTimestamp;
+    else
+        dt = block.timestamp - user.depositItems[_index].timestamp;
+    
+    // Handle early vs normal withdrawal...
+    // (penalty or fee + rewards)
+    
+    // Remove this deposit item from the array
+    for (uint256 i = _index; i < user.depositItems.length - 1; i++)
+        user.depositItems[i] = user.depositItems[i + 1];
+    user.depositItems.pop();
+}
+```
+
+**Array removal pattern:**
+- Shift all items after `_index` one position left
+- Pop the last (now duplicate) item
+- Gas cost scales with array position, but keeps storage clean
+
+## Practice and Reflection
+
+Apply these time-based patterns to solidify your understanding:
+
+- **Timeline sketch:** Draw a timeline showing three deposits at different times, with different durations, and calculate when each matures
+- **Reward calculation:** Given amount=1000, apy=15, duration=60 days, elapsed=30 days, calculate the reward manually
+- **Edge cases:** What happens if someone deposits before `startedTimestamp` is set? Trace the reward calculation
+- **Early exit:** If Alice withdraws after 20 days of a 60-day lock, what does she receive? (Assume 5% penalty, no rewards for early exit)
+- **Array indexing:** If a user has 3 deposits [0, 1, 2] and withdraws index 1, what does the array look like after?
+
+{/* Drag & Drop Code Puzzle */}
+<DragDropPuzzle codeBlocks={[
+  {"id":"b1","content":"uint256 dt = block.timestamp - depositTimestamp;","correctPosition":0},
+  {"id":"b2","content":"if (dt > duration) dt = duration;","correctPosition":1},
+  {"id":"b3","content":"uint256 reward = (amount * dt * apy) / 100 / 365 days;","correctPosition":2},
+  {"id":"b4","content":"return reward;","correctPosition":3}
+]}/>
+
+## Security and Pitfalls
+
+### Timestamp Manipulation Resistance
+
+**Danger:** Exact-second equality checks can be gamed by miners.
+
+**Bad:**
+```solidity
+if (block.timestamp == lockEnd) { /* unlock */ }
+```
+
+**Good:**
+```solidity
+if (block.timestamp >= lockEnd) { /* unlock */ }
+```
+
+**Rule:** Always use `>=` or `>` for time boundaries, never `==`.
+
+### Integer Division Precision Loss
+
+**Danger:** Dividing before multiplying loses precision.
+
+**Bad:**
+```solidity
+uint256 reward = (amount / 365 days) * dt * apy / 100;  // Loses precision!
+```
+
+**Good:**
+```solidity
+uint256 reward = (amount * dt * apy) / 100 / 365 days;  // Multiply first
+```
+
+**Rule:** Structure calculations to multiply first, divide last.
+
+### Uncapped Time Deltas
+
+**Danger:** Not capping elapsed time means users earn beyond the lock period.
+
+**Bad:**
+```solidity
+uint256 dt = block.timestamp - depositTimestamp;
+// No cap! If duration is 30 days but user waits 90 days, they get 90 days of rewards
+```
+
+**Good:**
+```solidity
+uint256 dt = block.timestamp - depositTimestamp;
+if (dt > duration) dt = duration;  // Cap at lock period
+```
+
+**Rule:** Always cap accrual at the intended duration.
+
+### Array Iteration Gas Costs
+
+**Danger:** Looping over unbounded arrays can exceed gas limits.
+
+**Pattern used in our contract:**
+- Users can have multiple deposits, but they interact with them **one at a time** (by index)
+- We never loop over all deposits in a transaction
+- View functions can loop (no gas cost), but state-changing functions work on single items
+
+**Safe:**
+```solidity
+function withdraw(uint256 _index) public {
+    // Operates on ONE deposit item
+}
+
+function getStakedItemReward(address _user, uint256 _index) 
+    external view returns (uint256) 
+{
+    // View function - can be called off-chain for each index
+}
+```
+
+### Rewards Pool Depletion
+
+**Danger:** Contract might not have enough reward tokens to pay out.
+
+**Protection in our contract:**
+```solidity
+function withdraw(uint256 _index) public nonReentrant {
+    // ... calculate amount + reward
+    
+    uint256 total = rewardToken.balanceOf(address(this));
+    if (amount > total)
+        amount = total;  // Only transfer what's available
+        
+    if (amount > 0) {
+        stakingToken.safeTransfer(address(msg.sender), amount);
+    }
+}
+```
+
+**Additional helper:**
+```solidity
+function rewardsRemaining() public view returns (uint256) {
+    uint256 reward = rewardToken.balanceOf(address(this));
+    if (reward > totalStaked)
+        reward -= totalStaked;
+    else
+        reward = 0;
+    return reward;
+}
+```
+
+## Time Math Testing Patterns
+
+### Controlling Time in Tests
+
+**Using Hardhat's time helpers:**
+
+```typescript
+import { time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+
+describe("Staking Time Logic", function () {
+  it("accrues rewards over 30 days", async function () {
+    const { staking, user, token } = await loadFixture(deployStakingFixture);
+    
+    // User deposits 1000 tokens for 30-day lock (option 1)
+    await token.connect(user).approve(staking.address, 1000n);
+    await staking.connect(user).deposit(1000n, 1);
+    
+    // Start rewards
+    await staking.startReward();
+    
+    // Fast-forward 15 days
+    await time.increase(15 * 24 * 60 * 60);
+    
+    // Check reward after 15 days
+    const reward = await staking.getStakedItemReward(user.address, 0);
+    
+    // Expected: (1000 * 15 days * 10) / 100 / 365 days
+    const expected = (1000n * 15n * 24n * 60n * 60n * 10n) / 100n / 365n / 24n / 60n / 60n;
+    expect(reward).to.be.closeTo(expected, 1n);  // Allow 1 wei rounding
+  });
+  
+  it("caps rewards at lock duration", async function () {
+    // ... deposit for 30 days
+    await staking.startReward();
+    
+    // Fast-forward 60 days (double the lock period)
+    await time.increase(60 * 24 * 60 * 60);
+    
+    const reward = await staking.getStakedItemReward(user.address, 0);
+    
+    // Reward should only be for 30 days, not 60
+    const expected30Days = (1000n * 30n * 24n * 60n * 60n * 10n) / 100n / 365n / 24n / 60n / 60n;
+    expect(reward).to.be.closeTo(expected30Days, 1n);
+  });
+});
+```
+
+### Testing Edge Cases
+
+```typescript
+it("handles deposits before rewards start", async function () {
+  // Deposit BEFORE startReward() is called
+  await token.connect(user).approve(staking.address, 1000n);
+  await staking.connect(user).deposit(1000n, 1);
+  
+  const depositTime = await time.latest();
+  
+  // Wait 5 days
+  await time.increase(5 * 24 * 60 * 60);
+  
+  // NOW start rewards
+  await staking.startReward();
+  const rewardStartTime = await time.latest();
+  
+  // Wait another 10 days
+  await time.increase(10 * 24 * 60 * 60);
+  
+  const reward = await staking.getStakedItemReward(user.address, 0);
+  
+  // Reward should only accrue for the 10 days AFTER startReward, not the 5 days before
+  const expected = (1000n * 10n * 24n * 60n * 60n * 10n) / 100n / 365n / 24n / 60n / 60n;
+  expect(reward).to.be.closeTo(expected, 1n);
+});
+
+it("applies early withdrawal penalty correctly", async function () {
+  await token.connect(user).approve(staking.address, 1000n);
+  await staking.connect(user).deposit(1000n, 1);  // 30-day lock
+  await staking.startReward();
+  
+  // Withdraw after only 10 days (early!)
+  await time.increase(10 * 24 * 60 * 60);
+  
+  const balanceBefore = await token.balanceOf(user.address);
+  await staking.connect(user).withdraw(0);
+  const balanceAfter = await token.balanceOf(user.address);
+  
+  const received = balanceAfter - balanceBefore;
+  
+  // Should receive 95% of principal (5% penalty), no rewards
+  const expected = 1000n * 95n / 100n;
+  expect(received).to.equal(expected);
+});
+```
+
+## Security Checklist
+
+Before shipping time-based staking logic:
+
+- [ ] **No timestamp equality:** All comparisons use `>=` or `>`, never `==`
+- [ ] **Multiply before divide:** Preserve precision in reward calculations
+- [ ] **Cap elapsed time:** Don't accrue beyond intended duration
+- [ ] **Handle pre-start deposits:** Correctly manage deposits before `startedTimestamp`
+- [ ] **Safe array operations:** Never unbounded loops; index-based access only
+- [ ] **Reward pool checks:** Verify sufficient balance before transfers
+- [ ] **Deterministic tests:** All time tests use `time.increase()`, not real delays
+- [ ] **Edge case coverage:** Test early withdrawal, late withdrawal, multiple deposits
+- [ ] **Rounding documented:** Clear comments on division order and rounding direction
+- [ ] **View functions safe:** Helpers for UI don't mutate state
+
+## Wrap‑Up
+
+You now understand how to implement time-based staking logic safely:
+- Calculate rewards using safe integer math
+- Handle multiple deposits with independent timelines
+- Enforce lock periods with penalties for early exit
+- Test time-dependent behavior deterministically
+
+**In Module 2.5, you'll implement this exact pattern** in your production staking contract, deploy it to Zilliqa testnet, and write comprehensive tests using these time manipulation techniques.
+
+The foundations are complete—let's build the real contract!

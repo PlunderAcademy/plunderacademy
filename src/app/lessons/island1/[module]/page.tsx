@@ -1,0 +1,223 @@
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { 
+  ChevronLeft, 
+  TreePine,
+  BookOpen
+} from "lucide-react";
+import { getModules, getMissionByModule, getLessonByIds, getQuizByModule } from "@/lib/mdx";
+import { WalletAuthGuard } from "@/components/wallet-auth-guard";
+import { LessonTabsWithNavigation } from "@/components/lesson-tabs-with-navigation";
+
+// Import jungle module components
+import { JungleModule1Image } from "@/components/island1/island1-module1-image";
+import { JungleModule2Image } from "@/components/island1/island1-module2-image";
+import { JungleModule3Image } from "@/components/island1/island1-module3-image";
+import { JungleModule4Image } from "@/components/island1/island1-module4-image";
+import { JungleModule5Image } from "@/components/island1/island1-module5-image";
+import { JungleStory } from "@/components/island1/story";
+import { TokenFactoryInterface } from "@/components/token-factory-interface";
+
+interface JungleModulePageProps {
+  params: Promise<{
+    module: string;
+  }>;
+}
+
+// Define the jungle modules in order
+const JUNGLE_MODULES = [
+  'blockchain-fundamentals',
+  'evm-fundamentals', 
+  'intro-to-solidity',
+  'zilliqa-evm-setup',
+  'creating-erc20-tokens'
+];
+
+const MODULE_TITLES = {
+  'blockchain-fundamentals': 'Blockchain Fundamentals',
+  'evm-fundamentals': 'EVM Fundamentals',
+  'intro-to-solidity': 'Intro to Solidity',
+  'zilliqa-evm-setup': 'Setting Up Zilliqa EVM Development Environment',
+  'creating-erc20-tokens': 'Creating Your Own Token on Zilliqa EVM'
+};
+
+// Component mappings for each module
+const MODULE_IMAGE_COMPONENTS = {
+  'blockchain-fundamentals': JungleModule1Image,
+  'evm-fundamentals': JungleModule2Image,
+  'intro-to-solidity': JungleModule3Image,
+  'zilliqa-evm-setup': JungleModule4Image,
+  'creating-erc20-tokens': JungleModule5Image
+};
+
+
+export async function generateStaticParams() {
+  return JUNGLE_MODULES.map(module => ({
+    module
+  }));
+}
+
+export default async function JungleModulePage({ params }: JungleModulePageProps) {
+  const resolvedParams = await params;
+  
+  // Check if this is a valid jungle module
+  if (!JUNGLE_MODULES.includes(resolvedParams.module)) {
+    notFound();
+  }
+  
+  const modules = await getModules();
+  const currentModule = modules.find(m => m.slug === resolvedParams.module);
+  
+  if (!currentModule) {
+    notFound();
+  }
+
+  // Load mission data from MDX
+  const missionData = await getMissionByModule(resolvedParams.module);
+  
+  // Load quiz data from MDX
+  const quizData = await getQuizByModule(resolvedParams.module);
+
+  // Load lesson content for tabs
+  const lessonContents = await Promise.all(
+    currentModule.lessons.map(async (lesson) => {
+      try {
+        const lessonData = await getLessonByIds(resolvedParams.module, lesson.slug);
+        return {
+          ...lesson,
+          content: lessonData.content
+        };
+      } catch (error) {
+        console.error(`Error loading lesson ${lesson.slug}:`, error);
+        return {
+          ...lesson,
+          content: null
+        };
+      }
+    })
+  );
+
+  const moduleIndex = JUNGLE_MODULES.indexOf(resolvedParams.module);
+
+  // Get the appropriate components for this module
+  const ImageComponent = MODULE_IMAGE_COMPONENTS[resolvedParams.module as keyof typeof MODULE_IMAGE_COMPONENTS];
+
+  return (
+    <WalletAuthGuard 
+      title="Wallet Required for Module Access"
+      description="Please connect your wallet to access learning modules and track your progress."
+    >
+      <div className="mx-auto max-w-6xl space-y-8">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link href="/" className="hover:text-foreground">
+          Home
+        </Link>
+        <ChevronLeft className="size-4 rotate-180" />
+        <Link href="/lessons" className="hover:text-foreground">
+          Lessons
+        </Link>
+        <ChevronLeft className="size-4 rotate-180" />
+        <Link href="/lessons/island1" className="hover:text-foreground flex items-center gap-1">
+          <TreePine className="size-3" />
+          Jungle Island
+        </Link>
+        <ChevronLeft className="size-4 rotate-180" />
+        <span className="text-foreground">{MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}</span>
+      </div>
+
+      {/* Module Header */}
+      <div className="space-y-4">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="font-mono">
+                Module {moduleIndex + 1}
+              </Badge>
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <TreePine className="size-3" />
+                Jungle Island
+              </Badge>
+            </div>
+            <h1 className="text-4xl font-bold tracking-tight">
+              {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+            </h1>
+          </div>
+        </div>
+      </div>
+
+      {/* Animated Image Section */}
+      <div>
+        {ImageComponent ? <ImageComponent /> : (
+          <Card className="p-8 text-center">
+            <div className="bg-muted/30 rounded-lg p-12 border-2 border-dashed border-muted-foreground/20">
+              <p className="text-lg text-muted-foreground">IMAGE TBA</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Animated adventure scene for Module {moduleIndex + 1}
+              </p>
+            </div>
+          </Card>
+        )}
+      </div>
+
+      {/* Mission Story Section */}
+      <div>
+        {missionData ? (
+          <JungleStory missionData={missionData} />
+        ) : (
+          <Card className="p-8 text-center">
+            <div className="bg-muted/30 rounded-lg p-12 border-2 border-dashed border-muted-foreground/20">
+              <p className="text-lg text-muted-foreground">MISSION TEXT TBA</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Typewriter story for {MODULE_TITLES[resolvedParams.module as keyof typeof MODULE_TITLES]}
+              </p>
+            </div>
+          </Card>
+        )}
+      </div>
+
+      {/* Module Content Tabs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="size-5" />
+            Module Content
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LessonTabsWithNavigation
+            lessonContents={lessonContents}
+            quizData={quizData}
+            missionData={missionData}
+            moduleSlug={resolvedParams.module}
+            islandTheme={{
+              badge: "bg-primary/20",
+              bgColor: "bg-muted/30",
+              borderColor: "border-muted-foreground/20",
+              textColor: "text-muted-foreground",
+              textColorSecondary: "text-muted-foreground"
+            }}
+            beforeInteractive={resolvedParams.module === 'creating-erc20-tokens' ? <TokenFactoryInterface /> : undefined}
+          />
+        </CardContent>
+      </Card>
+
+      <Separator />
+
+      {/* Navigation */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Button asChild variant="outline">
+          <Link href="/lessons/island1">
+            <TreePine className="mr-2 size-4" />
+            Back to Jungle Map
+          </Link>
+        </Button>
+      </div>
+    </div>
+    </WalletAuthGuard>
+  );
+}

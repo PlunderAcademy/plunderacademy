@@ -1,0 +1,838 @@
+---
+id: writing-your-token-contract
+module: creating-erc20-tokens
+number: 5.2
+title: Creating Your First ERC-20 Token
+objective: >-
+  Build your first ERC-20 token using OpenZeppelin, starting simple and learning 
+  how to add professional features as you grow.
+slug: writing-your-token-contract
+---
+
+## Two Paths to Your First Token
+
+### Choose Your Learning Adventure
+
+**We offer two approaches to create your first ERC-20 token:**
+
+🚀 **Quick Creation (Recommended):** Use our Token Factory
+- ✅ Create tokens in minutes with just a few clicks
+- ✅ No development setup required
+- ✅ Works with any wallet (mobile-friendly)
+- ✅ Perfect for learning token fundamentals
+
+🛠️ **Professional Development:** Full Hardhat Setup
+- ✅ Complete development environment
+- ✅ Learn professional deployment workflows
+- ✅ Understand contract compilation and testing
+- ✅ Industry-standard practices
+
+**Most learners should start with the Token Factory approach!** You can always come back and try the professional setup later.
+
+---
+
+## Path 1: Token Factory (Quick & Easy)
+
+### Why the Factory Approach?
+
+**Real-world relevance:** Most DeFi users interact with existing contracts rather than deploying new ones. Using our token factory teaches you the same skills you'll use with Uniswap, Aave, and other protocols.
+
+**What you'll learn:**
+- How to connect your wallet to a dApp
+- How to call smart contract functions
+- How to monitor transactions and events
+- How to verify your tokens on block explorers
+
+### Using the Plunder Academy Token Factory
+
+**How the Factory Works:**
+
+Our factory is a pre-deployed smart contract that creates standardized ERC-20 tokens for learners. When you use the factory:
+
+1. **You call a function** on our deployed contract
+2. **The factory creates** a new token contract for you
+3. **You become the owner** of the newly created token
+4. **The factory emits an event** that we can verify for your achievement
+
+**Factory Interaction Flow:**
+
+1. **Connect your wallet** to the submission form below
+2. **Choose "Factory Method"** in the submission options
+3. **Go to your wallet** and interact with our factory contract:
+   - **Contract Address:** Will be displayed in the submission form
+   - **Function:** `createToken(name, symbol, initialSupply)`
+   - **Parameters:** Your token details
+4. **Approve the transaction** in your wallet
+5. **Copy the transaction hash** and submit it for verification
+
+**Example Factory Call:**
+```solidity
+// What happens when you call our factory
+factory.createToken(
+    "My Learning Token",  // name
+    "MLT",               // symbol  
+    1000000              // initial supply (will be multiplied by 10^18)
+);
+```
+
+**Your Token Contract:**
+The factory creates a contract equivalent to:
+```solidity
+contract MyLearningToken is ERC20 {
+    address public claimant = msg.sender;  // Your wallet
+    address public creator = msg.sender;   // Your wallet
+    uint256 public createdAt = block.timestamp;
+    
+    constructor() ERC20("My Learning Token", "MLT") {
+        _mint(msg.sender, 1000000 * 10**18);
+    }
+}
+```
+
+**Factory Benefits:**
+- ✅ **Gas efficient:** ~50% less gas than individual deployment
+- ✅ **Battle-tested:** Uses proven OpenZeppelin patterns
+- ✅ **Instant verification:** Automatic claimant tracking
+- ✅ **Mobile-friendly:** Works with any Web3 wallet
+- ✅ **No coding required:** Pure wallet interaction
+
+---
+
+## Path 2: Professional Development (Advanced)
+
+### Why Start Simple?
+
+**Real-world analogy:** Learning to build tokens is like learning to drive. You don't start with a Formula 1 race car—you begin with a reliable car that gets you from point A to point B safely. Once you master the basics, you can add advanced features.
+
+**Our approach:**
+1. ✅ **Simple token first:** Just 10 lines of code that works
+2. ✅ **Understand every line:** Know exactly what your code does
+3. ✅ **Deploy and test:** Get hands-on experience
+4. ✅ **Add features gradually:** Learn professional patterns step by step
+
+### Setting Up Your Token Project
+
+Building on your existing Hardhat 3 environment, let's create a dedicated token project:
+
+1. **Open your terminal** (WSL2 Ubuntu for Windows users, regular terminal for others)
+2. **Navigate to your development directory:**
+   ```bash
+   cd ~/ZilliqaDevelopment  # or your preferred location
+   ```
+3. **Create a new project:**
+   ```bash
+   mkdir my-first-token
+   cd my-first-token
+   ```
+4. **Initialize Hardhat 3 project:**
+   ```bash
+   npm init -y
+   npx hardhat@latest --init
+   ```
+5. **Choose the following when prompted:**
+   - ✅ **Hardhat 3** (recommended - all of the modules will use this)
+   - ✅ **Use default path** (current directory - default)
+   - ✅ **A TypeScript Hardhat project using Node Test Runner and Viem** (recommended)
+   - ✅ **Hardhat only supports ESM - true or Y to switch** (required)
+   - ✅ **Install dependencies** (will install required packages automatically)
+
+### Installing OpenZeppelin Contracts
+
+**Add the OpenZeppelin library to your project:**
+
+```bash
+npm install @openzeppelin/contracts
+```
+
+OpenZeppelin provides battle-tested, secure implementations that are used by thousands of projects. Think of it as your security foundation—never reinvent critical security code when proven solutions exist.
+
+### Project Configuration
+
+**Update your `hardhat.config.ts` for Zilliqa:**
+
+```typescript
+import type { HardhatUserConfig } from "hardhat/config";
+
+import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import hardhatVerifyPlugin from "@nomicfoundation/hardhat-verify";
+import { configVariable } from "hardhat/config";
+import "dotenv/config";
+
+const config: HardhatUserConfig = {
+  plugins: [hardhatToolboxViemPlugin, hardhatVerifyPlugin],
+  solidity: {
+    profiles: {
+      default: {
+        version: "0.8.28",
+        settings: {
+          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+        },
+      },
+      production: {
+        version: "0.8.28",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+        },
+      },
+    },
+  },
+  networks: {
+    hardhatMainnet: {
+      type: "edr-simulated",
+      chainType: "l1",
+    },
+    hardhatOp: {
+      type: "edr-simulated",
+      chainType: "op",
+    },
+    zilliqaMainnet: {
+      type: "http",
+      chainType: "l1",
+      chainId: 32769,
+      url: "https://api.zilliqa.com",
+      accounts: [configVariable("ZILLIQA_MAINNET_PRIVATE_KEY")]
+    },
+    zilliqaTestnet: {
+      type: "http",
+      chainType: "l1",
+      chainId: 33101,
+      url: "https://api.testnet.zilliqa.com",
+      accounts: [configVariable("ZILLIQA_TESTNET_PRIVATE_KEY")]
+    },
+  },
+  verify: {
+    // Disable Etherscan since we're using Zilliqa networks
+    etherscan: {
+      enabled: false,
+    },
+    // Blockscout verification (no API key needed)
+    blockscout: {
+      enabled: true,
+    },
+  },
+  // Add custom chain descriptors for Zilliqa networks
+  chainDescriptors: {
+    // Zilliqa Mainnet
+    32769: {
+      name: "Zilliqa",
+      blockExplorers: {
+        blockscout: {
+          name: "Zilliqa Explorer",
+          url: "https://zilliqa.blockscout.com",
+          apiUrl: "https://zilliqa.blockscout.com/api",
+        },
+      },
+    },
+    // Zilliqa Testnet
+    33101: {
+      name: "Zilliqa Testnet",
+      blockExplorers: {
+        blockscout: {
+          name: "Zilliqa Testnet Explorer",
+          url: "https://testnet.zilliqa.blockscout.com",
+          apiUrl: "https://testnet.zilliqa.blockscout.com/api",
+        },
+      },
+    },
+  },
+};
+
+export default config;
+```
+
+**Create environment variables file** (`.env`):
+```bash
+# Create .env file (never commit this to version control)
+echo "# Environment variables for development" > .env
+echo "ZILLIQA_TESTNET_PRIVATE_KEY=your_testnet_private_key_here" >> .env
+echo "" >> .env
+echo "# Note: Never commit this file to version control" >> .env
+echo "# Add .env to your .gitignore file" >> .env
+```
+
+**Install additional dependencies:**
+```bash
+npm install --save-dev dotenv
+npm install --save-dev @nomicfoundation/hardhat-verify
+```
+
+## Creating Your Simple Token Contract
+
+### The Simplest Working Token
+
+**Remove the default Counter contract:**
+```bash
+rm contracts/Counter.sol contracts/Counter.t.sol test/Counter.ts
+```
+
+**Create `contracts/MyFirstToken.sol`:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract MyFirstToken is ERC20 {
+    address public claimant;  // The wallet that can claim achievement credit
+    
+    constructor(address _claimant) ERC20("My First Token", "MFT") {
+        require(_claimant != address(0), "Claimant cannot be zero address");
+        claimant = _claimant;
+        // Mint 1 million tokens to the deployer
+        _mint(msg.sender, 1000000 * 10**18);
+    }
+}
+```
+
+**Just 12 lines of functional code with verification support!**
+
+This token can:
+- ✅ **Transfer tokens** between addresses
+- ✅ **Show balances** in wallets
+- ✅ **Be traded** on exchanges
+- ✅ **Approve spending** for other contracts
+- ✅ **Work with all ERC-20 compatible tools**
+
+### Understanding Every Line
+
+Let's break down what each line does:
+
+#### Line 1: License Declaration
+```solidity
+// SPDX-License-Identifier: MIT
+```
+**What it does:** Specifies the software license (MIT is permissive and commonly used)
+**Why it matters:** Required by Solidity compiler, provides legal clarity
+
+#### Line 2: Solidity Version
+```solidity
+pragma solidity ^0.8.28;
+```
+**What it does:** Tells the compiler which Solidity version to use
+**Why this version:** 0.8.28 includes security improvements and is compatible with Zilliqa
+
+#### Line 4: Import Statement
+```solidity
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+```
+**What it does:** Imports OpenZeppelin's battle-tested ERC20 implementation
+**What you get:** All standard token functions (transfer, approve, balanceOf, etc.)
+
+#### Line 6: Contract Declaration
+```solidity
+contract MyFirstToken is ERC20 {
+```
+**What it does:** Creates your contract that inherits from OpenZeppelin's ERC20
+**Inheritance means:** Your token automatically gets all ERC20 functionality
+
+#### Line 7: Claimant Storage
+```solidity
+address public claimant;  // The wallet that can claim achievement credit
+```
+**What it does:** Stores the wallet address that can claim achievement credit
+**Why this matters:** Separates deployment security from achievement claiming
+
+#### Line 9: Constructor Function
+```solidity
+constructor(address _claimant) ERC20("My First Token", "MFT") {
+```
+**What it does:** Runs once when the contract is deployed
+**Parameters explained:**
+- `address _claimant` = Your connected MetaMask wallet address
+- `"My First Token"` = The full name (like "Bitcoin")
+- `"MFT"` = The symbol/ticker (like "BTC")
+
+#### Line 10-11: Security Validation
+```solidity
+require(_claimant != address(0), "Claimant cannot be zero address");
+claimant = _claimant;
+```
+**What it does:** Validates and stores the claimant address
+**Security benefit:** Ensures only the intended wallet can claim achievement credit
+
+#### Line 13: Minting Tokens
+```solidity
+_mint(msg.sender, 1000000 * 10**18);
+```
+**What it does:** Creates 1 million tokens and gives them to the deployer
+**Breaking it down:**
+- `_mint()` = OpenZeppelin function to create new tokens
+- `msg.sender` = The address deploying the contract (deployment wallet)
+- `1000000` = One million tokens
+- `10**18` = Multiplied by 18 decimal places (standard)
+
+**Why 18 decimals?** Just like 1 dollar = 100 cents, 1 token = 1,000,000,000,000,000,000 base units. This allows for precise fractional amounts.
+
+### Understanding the Security Model
+
+**Why separate deployment and claiming addresses?**
+
+**Real-world analogy:** Think of this like having a work laptop (for sensitive operations) and a personal phone (for daily use). You wouldn't use your work credentials on your personal device, and vice versa.
+
+**Best Practice Security Setup:**
+**Connected Wallet (MetaMask):** Your main wallet for claiming achievements
+  - This is your "hot" wallet that's connected to websites
+  - Contains smaller amounts for regular transactions
+  - Used for interacting with DApps and learning platforms
+
+**Deployment Wallet:** A separate wallet for deploying contracts
+  - Can be a new wallet with just enough ZIL for deployment
+  - Not connected to websites regularly
+  - More secure for serious development work
+
+**How the claimant system works:**
+1. **You connect** your main MetaMask wallet to Plunder Academy
+2. **You copy** your wallet address from MetaMask
+3. **You deploy** the contract using a deployment wallet, passing your MetaMask address as the claimant
+4. **You submit** the transaction ID using your connected MetaMask wallet
+5. **We verify** that the deployed contract has your MetaMask address as the claimant
+
+This ensures only you can claim credit for the deployment, while keeping your main wallet secure.
+
+### Compiling Your Token
+
+**Compile your contract:**
+
+```bash
+npx hardhat compile
+```
+
+**Expected output:**
+```
+Compiled 1 Solidity file successfully (and its dependencies)
+```
+
+If you see errors, double-check:
+- OpenZeppelin is installed: `npm install @openzeppelin/contracts`
+- Solidity version matches in `hardhat.config.ts`
+- No typos in the contract code
+
+### Testing Your Simple Token
+
+Hardhat 3 offers two distinct testing approaches, each with unique advantages. Let's explore both to understand when to use each approach.
+
+## Node.js Tests vs Solidity Tests
+
+**Node.js Tests** use TypeScript/JavaScript with blockchain simulation, ideal for:
+- Complex integration testing
+- Frontend/backend integration
+- Gas cost analysis and optimization
+- Async operations and event handling
+
+**Solidity Tests** run directly on the EVM, perfect for:
+- Unit testing smart contract logic
+- Fuzzing and property-based testing
+- Gas-efficient test execution
+- Testing edge cases and invariants
+
+## Option 1: Node.js Testing (TypeScript)
+
+**Create `test/MyFirstToken.test.ts`:**
+
+```typescript
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { parseEther, zeroAddress, getAddress } from "viem";
+
+import { network } from "hardhat";
+
+describe("MyFirstToken", async function () {
+  const { viem } = await network.connect();
+  const publicClient = await viem.getPublicClient();
+  const [owner, claimant] = await viem.getWalletClients();
+
+  it("Should deploy with correct initial state", async function () {
+    const token = await viem.deployContract("MyFirstToken", [claimant.account.address]);
+    
+    // Check basic properties
+    assert.equal(await token.read.name(), "My First Token");
+    assert.equal(await token.read.symbol(), "MFT");
+    assert.equal(await token.read.decimals(), 18);
+    assert.equal(await token.read.totalSupply(), parseEther("1000000"));
+    
+    // Check claimant is set correctly
+    assert.equal(getAddress(await token.read.claimant()), getAddress(claimant.account.address));
+    
+    // Check that deployer received all tokens
+    assert.equal(await token.read.balanceOf([owner.account.address]), parseEther("1000000"));
+  });
+  
+  it("Should transfer tokens correctly", async function () {
+    const [ownerClient, claimantClient, addr1Client] = await viem.getWalletClients();
+    
+    const token = await viem.deployContract("MyFirstToken", [claimantClient.account.address]);
+    
+    // Transfer 1000 tokens to addr1
+    await token.write.transfer([addr1Client.account.address, parseEther("1000")]);
+    
+    assert.equal(await token.read.balanceOf([addr1Client.account.address]), parseEther("1000"));
+    assert.equal(await token.read.balanceOf([ownerClient.account.address]), parseEther("999000"));
+  });
+  
+  it("Should reject zero address as claimant", async function () {
+    await assert.rejects(
+      async () => {
+        await viem.deployContract("MyFirstToken", [zeroAddress]);
+      },
+      /Claimant cannot be zero address/
+    );
+  });
+});
+```
+
+## Option 2: Solidity Testing
+
+**Create `contracts/MyFirstToken.t.sol`:**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {MyFirstToken} from "./MyFirstToken.sol";
+import {Test} from "forge-std/Test.sol";
+
+contract MyFirstTokenTest is Test {
+    MyFirstToken token;
+    address owner;
+    address claimant;
+    address user1;
+    address user2;
+
+    function setUp() public {
+        owner = address(this);
+        claimant = makeAddr("claimant");
+        user1 = makeAddr("user1");
+        user2 = makeAddr("user2");
+        
+        token = new MyFirstToken(claimant);
+    }
+
+    function test_InitialState() public view {
+        require(keccak256(bytes(token.name())) == keccak256(bytes("My First Token")), "Name should be 'My First Token'");
+        require(keccak256(bytes(token.symbol())) == keccak256(bytes("MFT")), "Symbol should be 'MFT'");
+        require(token.decimals() == 18, "Decimals should be 18");
+        require(token.totalSupply() == 1000000 * 10**18, "Total supply should be 1 million tokens");
+        require(token.claimant() == claimant, "Claimant should be set correctly");
+        require(token.balanceOf(owner) == 1000000 * 10**18, "Owner should have all tokens initially");
+    }
+
+    function test_Transfer() public {
+        uint256 transferAmount = 1000 * 10**18;
+        uint256 initialOwnerBalance = token.balanceOf(owner);
+        
+        token.transfer(user1, transferAmount);
+        
+        require(token.balanceOf(user1) == transferAmount, "User1 should receive transferred tokens");
+        require(token.balanceOf(owner) == initialOwnerBalance - transferAmount, "Owner balance should decrease");
+    }
+
+    function test_ZeroAddressClaimant() public {
+        vm.expectRevert("Claimant cannot be zero address");
+        new MyFirstToken(address(0));
+    }
+
+    function testFuzz_Transfer(uint256 amount) public {
+        // Bound the amount to be within the owner's balance
+        amount = bound(amount, 0, token.balanceOf(owner));
+        
+        uint256 initialOwnerBalance = token.balanceOf(owner);
+        uint256 initialUser1Balance = token.balanceOf(user1);
+        
+        token.transfer(user1, amount);
+        
+        require(token.balanceOf(user1) == initialUser1Balance + amount, "User1 balance should increase by amount");
+        require(token.balanceOf(owner) == initialOwnerBalance - amount, "Owner balance should decrease by amount");
+    }
+
+    function test_TransferMoreThanBalance() public {
+        uint256 ownerBalance = token.balanceOf(owner);
+        uint256 excessiveAmount = ownerBalance + 1;
+        
+        vm.expectRevert();
+        token.transfer(user1, excessiveAmount);
+    }
+
+    function test_ClaimantIsImmutable() public view {
+        // Test that claimant cannot be changed (it's a public variable, no setter)
+        require(token.claimant() == claimant, "Claimant should remain unchanged");
+    }
+}
+```
+
+## Key Differences Explained
+
+### 1. **Setup and Imports**
+- **Node.js**: Uses `viem` for type-safe Ethereum interactions, `node:test` for testing framework
+- **Solidity**: Imports Foundry's `Test` contract, uses `vm` cheatcodes for testing utilities
+
+### 2. **Test Structure**
+- **Node.js**: Async/await pattern, describes tests in JavaScript functions
+- **Solidity**: Synchronous functions prefixed with `test_`, native Solidity syntax
+
+### 3. **Assertions**
+- **Node.js**: Uses `assert.equal()` and `assert.rejects()` for validation
+- **Solidity**: Uses `require()` statements and `vm.expectRevert()` for error handling
+
+### 4. **Advanced Features**
+- **Node.js**: Better for complex async operations, event testing, gas analysis
+- **Solidity**: Includes fuzzing with `testFuzz_Transfer()`, property-based testing
+
+### 5. **Performance**
+- **Node.js**: Slower due to JSON-RPC communication with test network
+- **Solidity**: Faster execution directly on EVM, efficient for unit tests
+
+## Running Your Tests
+
+```bash
+npx hardhat test
+```
+
+**Expected output:**
+```
+Running Solidity tests
+
+  contracts/MyFirstToken.t.sol:MyFirstTokenTest
+    ✔ test_ZeroAddressClaimant()
+    ✔ test_TransferMoreThanBalance()
+    ✔ test_Transfer()
+    ✔ test_InitialState()
+    ✔ test_ClaimantIsImmutable()
+    ✔ testFuzz_Transfer(uint256) (runs: 256)
+
+
+  6 passing
+
+Running node:test tests
+
+  MyFirstToken
+    ✔ Should deploy with correct initial state (210ms)
+    ✔ Should transfer tokens correctly (183ms)
+    ✔ Should reject zero address as claimant (143ms)
+
+
+  3 passing (32945ms)
+```
+
+## What Your Simple Token Can Do
+
+### Immediate Functionality
+
+Your 10-line token contract is already fully functional:
+
+**✅ Transfer tokens:**
+```solidity
+// In a wallet or dApp
+token.transfer(recipientAddress, amount);
+```
+
+**✅ Check balances:**
+```solidity
+uint256 balance = token.balanceOf(userAddress);
+```
+
+**✅ Approve spending:**
+```solidity
+// Allow another address to spend your tokens
+token.approve(spenderAddress, amount);
+```
+
+**✅ Transfer on behalf:**
+```solidity
+// If approved, can transfer from another address
+token.transferFrom(ownerAddress, recipientAddress, amount);
+```
+
+**✅ View token info:**
+```solidity
+string name = token.name();      // "My First Token"
+string symbol = token.symbol();  // "MFT"
+uint8 decimals = token.decimals(); // 18
+uint256 total = token.totalSupply(); // 1000000000000000000000000
+```
+
+### Real-World Integration
+
+Your token works immediately with:
+- **MetaMask:** Add as custom token
+- **Block explorers:** View transactions and holders
+- **DEXes:** Can be listed and traded
+- **DeFi protocols:** Can be used as collateral, staking, etc.
+- **Other smart contracts:** Full ERC-20 compatibility
+
+## Want More Features? Here's How to Add Them
+
+Now that you understand the basics, let's explore professional features you can add:
+
+### 1. Owner Controls (Ownable)
+
+**What it adds:** Only the contract owner can perform certain actions
+
+**Use case:** Mint new tokens, pause contract, change settings
+
+**How to add:**
+
+```solidity
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MyFirstToken is ERC20, Ownable {
+    constructor() ERC20("My First Token", "MFT") Ownable(msg.sender) {
+        _mint(msg.sender, 1000000 * 10**18);
+    }
+    
+    // Only owner can mint more tokens
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
+}
+```
+
+### 2. Token Burning (ERC20Burnable)
+
+**What it adds:** Ability to permanently destroy tokens
+
+**Use case:** Reduce supply, implement deflationary economics
+
+**How to add:**
+
+```solidity
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+
+contract MyFirstToken is ERC20, ERC20Burnable {
+    constructor() ERC20("My First Token", "MFT") {
+        _mint(msg.sender, 1000000 * 10**18);
+    }
+}
+```
+
+Now users can call `burn(amount)` to destroy their own tokens.
+
+### 3. Supply Cap (ERC20Capped)
+
+**What it adds:** Maximum number of tokens that can ever exist
+
+**Use case:** Create scarcity, prevent infinite inflation
+
+**How to add:**
+
+```solidity
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
+
+contract MyFirstToken is ERC20, ERC20Capped {
+    constructor() ERC20("My First Token", "MFT") ERC20Capped(10000000 * 10**18) {
+        _mint(msg.sender, 1000000 * 10**18);
+    }
+    
+    function _mint(address to, uint256 amount) internal override(ERC20, ERC20Capped) {
+        super._mint(to, amount);
+    }
+}
+```
+
+### 4. Emergency Pause (Pausable)
+
+**What it adds:** Ability to freeze all transfers in emergencies
+
+**Use case:** Stop trading during security incidents, major bugs
+
+**How to add:**
+
+```solidity
+import "@openzeppelin/contracts/security/Pausable.sol";
+
+contract MyFirstToken is ERC20, Pausable, Ownable {
+    constructor() ERC20("My First Token", "MFT") Ownable(msg.sender) {
+        _mint(msg.sender, 1000000 * 10**18);
+    }
+    
+    function pause() public onlyOwner {
+        _pause();
+    }
+    
+    function unpause() public onlyOwner {
+        _unpause();
+    }
+    
+    function _beforeTokenTransfer(address from, address to, uint256 amount)
+        internal
+        whenNotPaused
+        override
+    {
+        super._beforeTokenTransfer(from, to, amount);
+    }
+}
+```
+
+### 5. Role-Based Access Control
+
+**What it adds:** Multiple roles with specific permissions
+
+**Use case:** Separate minting, pausing, and admin responsibilities
+
+**How to add:**
+
+```solidity
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract MyFirstToken is ERC20, AccessControl {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    
+    constructor() ERC20("My First Token", "MFT") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(MINTER_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender);
+        
+        _mint(msg.sender, 1000000 * 10**18);
+    }
+    
+    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+        _mint(to, amount);
+    }
+}
+```
+
+## Choosing Your Approach
+
+### Start with Simple (Recommended)
+
+**Perfect for:**
+- Learning ERC-20 fundamentals
+- Quick prototyping and testing
+- Understanding token mechanics
+- Community or gaming tokens
+- Educational projects
+
+**Your simple token:**
+```solidity
+contract MyFirstToken is ERC20 {
+    constructor() ERC20("My First Token", "MFT") {
+        _mint(msg.sender, 1000000 * 10**18);
+    }
+}
+```
+
+### Upgrade When Needed
+
+**Add features only when you need them:**
+- **Growing project?** → Add owner controls
+- **Need scarcity?** → Add supply cap  
+- **Security concerns?** → Add pause functionality
+- **Multiple admins?** → Add role-based access control
+
+## Next Steps
+
+**Ready to deploy your simple token?** Let's test it thoroughly and get it on the Zilliqa testnet in the next module!
+
+**Your learning path:**
+1. ✅ **Created simple token** with OpenZeppelin
+2. ✅ **Understood every line** of code
+3. ✅ **Learned professional features** available
+4. 🔄 **Next: Deployment** with Hardhat 3
+5. 🔄 **Then: Integration and management** best practices
+
+Remember: The best token is one that serves your actual needs. Start simple, deploy early, and add complexity only when necessary!

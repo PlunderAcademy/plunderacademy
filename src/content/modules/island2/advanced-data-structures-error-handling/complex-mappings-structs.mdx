@@ -1,0 +1,457 @@
+---
+id: complex-mappings-structs
+module: advanced-data-structures-error-handling
+number: 2.2.1
+title: Complex Mappings, Structs, and Arrays
+objective: >-
+  Design efficient, iterable-friendly data models for staking using nested mappings, packed structs, and safe array patterns to reduce gas and avoid footguns.
+slug: complex-mappings-structs
+---
+
+## Set the stage
+
+Imagine your staking vault as a massive filing cabinet. Each user has a folder, each pool has a drawer, and inside each folder-drawer pair lives a position record: how much they staked, when they last claimed rewards, and any special flags (VIP tier, locked until X date). How you organize this cabinet determines everything: Can you find a user's position in one lookup? Can you iterate all positions when you need to distribute rewards? If you choose the wrong structure—say, a single giant array of all positions—you'll burn 10× the gas and make upgrades a nightmare.
+
+Solidity gives you three primitives to build this cabinet: **mappings** (instant lookup, no iteration), **structs** (group related fields, pack for efficiency), and **arrays** (ordered lists, dangerous if unbounded). The art is combining them so reads are cheap, writes are minimal, and your contract can evolve without breaking state. For a staking system, the canonical pattern is a nested mapping: `mapping(address user => mapping(uint256 poolId => Position))`. One lookup fetches the user's position in a specific pool; no loops, no wasted storage. But naïve implementations still waste gas: unpacked structs, redundant writes, and missing index arrays for off-chain queries.
+
+By the end of this lesson you'll master nested mappings, struct packing, safe array patterns, and the event-over-storage trick for historical data. In Module 5's staking contract, every position will be a packed struct in a nested mapping, every array will be bounded, and every historical fact will live in events, not storage. Your users will pay 50k gas per deposit instead of 200k, and auditors will smile at your clean, iterable-friendly design.
+
+## Conceptual foundations
+
+### Mappings: instant lookup, zero defaults, no iteration
+
+A **mapping** is a key-value store with O(1) lookups. Under the hood, keys are hashed to storage slots: `slot = keccak256(abi.encode(key, mappingSlot))`. Missing keys return zero (for value types) or default-initialized structs.
+
+**Key properties**:
+- **Not iterable**: You can't loop over keys or values on-chain
+- **Sparse**: Only stores non-zero values; no wasted space for unused keys
+- **Default-zero**: `balanceOf[unknownUser]` returns `0`, not an error
+
+**When to use**: User balances, position tracking, allowlists. Any sparse dataset where you know the key and need instant access.
+
+**Anti-pattern**: Storing a counter to "iterate" mappings. Instead, emit events or maintain a separate index array (bounded).
+
+### Nested mappings: composite keys without hashing
+
+For two-dimensional lookups (e.g., `user` × `poolId`), **nested mappings** are cleaner than hashing keys together:
+
+```solidity
+// Good: nested mapping
+mapping(address => mapping(uint256 => Position)) public positions;
+Position storage p = positions[user][poolId]; // Clear, type-safe
+
+// Alternative: flat key
+mapping(bytes32 => Position) public positionsByKey;
+bytes32 key = keccak256(abi.encode(user, poolId)); // Extra hashing cost
+Position storage p = positionsByKey[key]; // Less readable
+```
+
+**When to use nested**: When keys are naturally separate dimensions (user × pool, token × spender). Stick with nested unless you hit struct packing limits or need dynamic key composition.
+
+**Gotcha**: Each nested mapping adds ~100 gas per lookup (extra hash computation). For 2-3 dimensions it's negligible; for 5+ dimensions, consider flattening.
+
+### Structs: grouping and packing
+
+A **struct** groups related fields. If fields are small (`uint128`, `uint64`, `bool`, `address`), Solidity packs them into 256-bit slots to reduce storage costs.
+
+**Packing rules**:
+- Declared in order; smaller types pack until slot is full
+- A new 256-bit type (`uint256`, `bytes32`, `address` if alone) starts a new slot
+- Reading/writing packed fields in one transaction is cheaper than separate slots
+
+**Example** (for staking):
+```solidity
+struct Position {
+    uint128 amount;       // 128 bits
+    uint64 lastAccruedAt; // 64 bits  } packed into 1 slot
+    uint64 flags;         // 64 bits  }
+}
+// 1 SLOAD reads all three fields; 1 SSTORE updates all three
+```
+
+**When to pack**: Fields updated together (e.g., deposit updates `amount` and `lastAccruedAt`). Don't pack fields updated independently (wastes gas rewriting the whole slot).
+
+### Arrays: ordered lists with iteration risks
+
+An **array** (`T[]`) is a dynamically-sized or fixed-size list. Reading/writing by index is O(1), but iterating is O(n), dangerous for unbounded arrays.
+
+**Safe pattern**: Bounded arrays with enforced caps:
+```solidity
+uint256[] public poolIds; // User's active pool IDs
+require(poolIds.length < 10, "Too many pools");
+```
+
+**Unsafe pattern**: Unbounded iteration over user-provided data:
+```solidity
+// DON'T: attacker passes 10,000-element array, hits gas limit
+for (uint256 i = 0; i < userArray.length; i++) { /*...*/ }
+```
+
+**When to use**: Small, bounded collections (user's active positions, admin whitelist). Avoid for anything that grows without limit.
+
+### Composite key hashing: flattening nested mappings
+
+When nested mappings get unwieldy (3+ dimensions) or you need dynamic key composition, hash keys into `bytes32`:
+
+```solidity
+function key(address user, uint256 poolId, uint256 epoch) internal pure returns (bytes32) {
+    return keccak256(abi.encode(user, poolId, epoch)); // Safe: includes lengths
+}
+mapping(bytes32 => uint256) public rewardsByKey;
+```
+
+**Use `abi.encode`, not `abi.encodePacked`** (avoids collisions; see Lesson 2 Security).
+
+**When to use**: 3+ dimensions, or when keys are computed dynamically (e.g., from calldata). Otherwise, prefer nested mappings for clarity.
+
+### Event-over-storage: historical data belongs in logs
+
+Don't store historical data in state if you only need it off-chain. Emit indexed events; clients reconstruct history by filtering logs.
+
+**Bad**:
+```solidity
+struct Claim { uint256 amount; uint256 timestamp; }
+Claim[] public claimHistory; // Grows forever, unbounded cost
+```
+
+**Good**:
+```solidity
+event Claimed(address indexed user, uint256 amount, uint256 timestamp);
+function claim() external {
+    // ... logic ...
+    emit Claimed(msg.sender, amount, block.timestamp); // Off-chain indexer stores this
+}
+```
+
+**Rule**: If you don't query it on-chain, don't store it. Events are 10× cheaper than storage and just as durable.
+
+## Guided code walk-throughs
+
+These examples show how to combine mappings, structs, and arrays for efficient, auditable staking systems.
+
+### 1) Real staking contract: Arrays of structs (from Module 2.5)
+
+**The staking contract you'll build uses an array of deposits per user.** Each user can make multiple deposits with different durations and APY rates. This pattern is perfect when users need independent stakes that mature at different times.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+// From the actual Staking contract you'll deploy in Module 2.5
+contract Staking {
+    // Each individual deposit
+    struct DepositItem {
+        uint256 apy;        // Annual percentage yield (10, 15, or 27)
+        uint256 duration;   // Lock period (30/60/120 days in seconds)
+        uint256 amount;     // Tokens deposited
+        uint256 timestamp;  // When this deposit was made
+    }
+
+    // User's complete staking info
+    struct UserInfo {
+        uint256 amount;             // Total amount across all deposits
+        DepositItem[] depositItems; // Array of individual deposits
+    }
+
+    mapping(address => UserInfo) private userInfo;
+
+    event Deposit(address indexed user, uint256 amount);
+    event Withdraw(address indexed user, uint256 amount);
+
+    function deposit(uint256 _amount, uint256 _option) external {
+        UserInfo storage user = userInfo[msg.sender];
+        
+        // Determine APY and duration based on option (1, 2, or 3)
+        uint256 apy = _option == 1 ? 10 : (_option == 2 ? 15 : 27);
+        uint256 duration = _option == 1 ? 30 days : (_option == 2 ? 60 days : 120 days);
+        
+        // Add new deposit to user's array
+        user.depositItems.push(DepositItem({
+            apy: apy,
+            duration: duration,
+            amount: _amount,
+            timestamp: block.timestamp
+        }));
+        
+        user.amount += _amount;
+        emit Deposit(msg.sender, _amount);
+    }
+    
+    function withdraw(uint256 _index) external {
+        UserInfo storage user = userInfo[msg.sender];
+        require(_index < user.depositItems.length, "Index out of bound");
+        
+        uint256 amount = user.depositItems[_index].amount;
+        user.amount -= amount;
+        
+        // Remove deposit using shift-and-pop pattern
+        for (uint256 i = _index; i < user.depositItems.length - 1; i++) {
+            user.depositItems[i] = user.depositItems[i + 1];
+        }
+        user.depositItems.pop();
+        
+        emit Withdraw(msg.sender, amount);
+    }
+}
+```
+
+**Why this pattern?**
+- **Multiple independent deposits**: Alice stakes 1000 tokens for 30 days, then 500 tokens for 60 days
+- **Different maturity dates**: Each deposit has its own timeline
+- **Individual withdrawal**: User withdraws by index when that specific deposit matures
+- **Gas cost**: Bounded (users won't have 1000 deposits, typically 1-10)
+
+**Takeaway**: Arrays work great for bounded, per-user data. The staking contract uses `DepositItem[]` because users make a small number of deposits, and each needs independent tracking for rewards and maturity.
+
+### 2) Array removal: Shift vs Swap-and-Pop
+
+**Two patterns for removing items from arrays:**
+
+**Shift-and-pop** (preserves order, O(n) cost):
+```solidity
+// Used in Staking.sol withdraw function
+for (uint256 i = _index; i < user.depositItems.length - 1; i++) {
+    user.depositItems[i] = user.depositItems[i + 1];
+}
+user.depositItems.pop();
+```
+
+**Swap-and-pop** (O(1) cost, changes order):
+```solidity
+// Alternative pattern for order-agnostic data
+uint256[] storage items = user.depositItems;
+items[_index] = items[items.length - 1];
+items.pop();
+```
+
+**Which to use?**
+- **Staking contract uses shift-and-pop** because deposit order matters for UIs (chronological display)
+- **Swap-and-pop is faster** if order doesn't matter (e.g., pool ID lists)
+- Both are safe for **bounded** arrays (users have 1-10 deposits, not 10,000)
+
+**Example from withdraw:**
+```
+Before: [Deposit0, Deposit1, Deposit2, Deposit3]
+Remove index 1 (shift-and-pop):
+
+Step 1: Shift items left
+Deposit2 → index 1
+Deposit3 → index 2
+
+Step 2: Pop duplicate
+Result: [Deposit0, Deposit2, Deposit3]
+```
+
+**Takeaway**: Use shift-and-pop when order matters and array is small. Use swap-and-pop for maximum gas efficiency when order doesn't matter.
+
+### 3) Composite keys to flatten lookups
+
+When key pairs get unwieldy (3+ dimensions) or you need dynamic key composition, flatten them into a single `bytes32` key. This keeps the API compact and lets you store by a deterministic hash. Use `abi.encode` (not `abi.encodePacked`) to avoid collisions.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract FlatKeys {
+    struct Info { uint128 amount; uint128 acc; }
+    mapping(bytes32 => Info) public infoByKey;
+
+    function key(address user, uint256 poolId) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(user, poolId));
+    }
+
+    function set(address user, uint256 poolId, uint128 amount, uint128 acc) external {
+        infoByKey[key(user, poolId)] = Info({amount: amount, acc: acc});
+    }
+}
+```
+
+**Takeaway**: Composite keys simplify storage shapes and ABI surface when nested maps become noisy (3+ dimensions). For staking, two dimensions (user, poolId) stay nested; three dimensions (user, poolId, epoch) flatten to a hash.
+
+<svg viewBox="0 0 650 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      {`.box { fill: var(--background); stroke: var(--border); stroke-width: 2; rx: 6; }
+        .mapping { fill: var(--primary); fill-opacity: 0.1; stroke: var(--primary); stroke-width: 2; }
+        .struct { fill: var(--accent); fill-opacity: 0.1; stroke: var(--accent); stroke-width: 2; }
+        .label { fill: var(--foreground); font-size: 12px; font-family: ui-monospace, monospace; }
+        .small { fill: var(--foreground); font-size: 10px; font-family: ui-monospace, monospace; }
+        .code { fill: var(--foreground); font-size: 9px; font-family: ui-monospace, monospace; }
+        .arrow { stroke: var(--foreground); stroke-width: 2; fill: none; marker-end: url(#arr); }`}
+    </style>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" style={{fill: 'var(--foreground)'}} />
+    </marker>
+  </defs>
+  
+  {/* Nested Mapping Structure */}
+  <text className="label" x="10" y="25" style={{fontWeight: 'bold'}}>Nested Mapping: user =&gt; poolId =&gt; Position</text>
+  <rect className="mapping" x="10" y="40" width="630" height="120" />
+  
+  <text className="small" x="20" y="65">Outer mapping: address =&gt; Inner</text>
+  <rect className="box" x="20" y="75" width="280" height="70" />
+  <text className="code" x="30" y="95">0x Alice... =&gt; InnerMapping</text>
+  <text className="code" x="30" y="110">0x Bob... =&gt; InnerMapping</text>
+  <text className="code" x="30" y="125">0x Carol... =&gt; InnerMapping</text>
+  
+  <path className="arrow" d="M 305 105 L 335 105" />
+  
+  <text className="small" x="345" y="65">Inner mapping: poolId =&gt; Position</text>
+  <rect className="box" x="345" y="75" width="280" height="70" />
+  <text className="code" x="355" y="95">1 =&gt; Position&#123;200, 1699...&#125;</text>
+  <text className="code" x="355" y="110">2 =&gt; Position&#123;500, 1700...&#125;</text>
+  <text className="code" x="355" y="125">3 =&gt; Position&#123;0, 0...&#125; (default)</text>
+  
+  {/* Struct Layout */}
+  <text className="label" x="10" y="185" style={{fontWeight: 'bold'}}>Position Struct (packed into 1 slot)</text>
+  <rect className="struct" x="10" y="200" width="630" height="80" />
+  
+  <rect className="box" x="20" y="210" width="200" height="30" />
+  <text className="small" x="25" y="230">uint128 amount</text>
+  <text className="code" x="160" y="230">(128 bits)</text>
+  
+  <rect className="box" x="225" y="210" width="200" height="30" />
+  <text className="small" x="230" y="230">uint64 lastAccruedAt</text>
+  <text className="code" x="360" y="230">(64 bits)</text>
+  
+  <rect className="box" x="430" y="210" width="200" height="30" />
+  <text className="small" x="435" y="230">uint64 flags</text>
+  <text className="code" x="545" y="230">(64 bits)</text>
+  
+  <text className="small" x="20" y="265" style={{fill: 'var(--primary)'}}>✓ Total: 256 bits = 1 storage slot</text>
+  <text className="small" x="20" y="280" style={{fill: 'var(--primary)'}}>✓ Read all 3 fields: 1 SLOAD (~2,100 gas cold)</text>
+</svg>
+
+## Practice and reflection
+
+Apply these data modeling patterns to your staking design:
+
+- **Struct design**: Sketch a `RewardAccrual` struct that stores: start timestamp (`uint64`), end timestamp (`uint64`), and total accrued rewards (`uint128`). Confirm that all three fields pack into one 256-bit slot. Write one sentence explaining why packing helps here.
+- **Mapping choice**: Your staking contract needs to track: (a) user balances, (b) user → poolId positions, (c) user → poolId → epoch rewards. For each, choose `mapping`, nested `mapping`, or composite key hash. Defend your choices.
+- **Array safety**: You want to track a user's active pool IDs so they can claim all rewards in one transaction. Write pseudocode for a function that iterates this array. What bound should you enforce, and why?
+- **Event-over-storage**: List three pieces of historical data in a staking system (e.g., "every deposit timestamp"). For each, decide: store in state, or emit as event? Justify your choice.
+- **Zero-value ambiguity**: In `mapping(address => uint256) public balanceOf`, how do you distinguish "user never deposited" from "user deposited then withdrew everything"? Propose two solutions (hint: explicit flag, or event logs).
+
+{/* Concept Matching */}
+<ConceptMatching pairs={[
+  {"conceptId":"map","definitionId":"def-map","concept":"mapping","definition":"Sparse key→value lookup; default‑zero; not iterable","category":"data"},
+  {"conceptId":"pack","definitionId":"def-pack","concept":"struct packing","definition":"Combine small types to fill a 256‑bit slot","category":"gas"},
+  {"conceptId":"array","definitionId":"def-array","concept":"array","definition":"Ordered list; avoid unbounded loops","category":"data"},
+  {"conceptId":"flat","definitionId":"def-flat","concept":"composite key hash","definition":"Flatten multiple keys into bytes32","category":"design"}
+]}/>
+
+Short reflection: Your staking contract emits a `Deposited` event with `indexed user, indexed poolId, amount, timestamp`. Why index the first two parameters but not the last two? (Hint: off-chain filtering.)
+
+## Security and pitfalls
+
+Data modeling choices have security implications. Follow these rules to avoid footguns:
+
+### Unbounded iteration: the silent killer
+
+**Danger**: Iterating over an unbounded array in a public function. An attacker (or unlucky user) with 10,000 positions hits the block gas limit and the function becomes unusable.
+
+**Bad**:
+```solidity
+address[] public allUsers; // Grows forever
+function distributeToAll() external {
+    for (uint256 i = 0; i < allUsers.length; i++) {
+        // ... send rewards ...
+    } // Gas cost grows linearly; eventually exceeds block limit
+}
+```
+
+**Good**:
+```solidity
+// Pull pattern: users claim individually
+function claimRewards() external {
+    uint256 reward = calculateReward(msg.sender);
+    // ... transfer ...
+}
+```
+
+**Rule**: Never iterate unbounded arrays in user-facing functions. Use pull patterns, bounded arrays (enforce `require(arr.length <= 100)`), or pagination with off-chain indexers.
+
+### Storage reference footgun: accidental mutation
+
+**Danger**: Using `storage` pointers when you meant to read-only. Mutations are permanent.
+
+**Bad**:
+```solidity
+function getPosition(address user) public returns (Position storage) {
+    return positions[user]; // Returns a storage pointer; caller can mutate!
+}
+```
+
+**Good**:
+```solidity
+function getPosition(address user) public view returns (Position memory) {
+    return positions[user]; // Returns a copy; safe
+}
+```
+
+**Rule**: External/public functions should return `memory` copies, not `storage` pointers. Reserve `storage` for internal functions that intentionally mutate.
+
+### Zero-value ambiguity
+
+**Danger**: Mapping defaults (`0`, `false`, empty struct) can't distinguish "never set" from "explicitly set to zero." This breaks logic like "has user ever deposited?"
+
+**Mitigation**:
+- Add an explicit flag: `mapping(address => bool) public hasDeposited`
+- Use a sentinel value: store `amount + 1`; subtract when reading
+- Check events: off-chain, query `Deposited` events to distinguish
+
+**Example**:
+```solidity
+mapping(address => bool) public hasDeposited;
+function deposit(uint256 amount) external {
+    hasDeposited[msg.sender] = true;
+    balanceOf[msg.sender] += amount;
+}
+```
+
+### Packing overflow (revisited)
+
+**Danger**: Packed `uint128` or `uint64` fields overflow silently if you don't validate bounds.
+
+**Mitigation**: Use `SafeCast` (from OpenZeppelin) to downcast safely:
+```solidity
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+using SafeCast for uint256;
+position.amount = depositAmount.toUint128(); // Reverts if > 2^128-1
+```
+
+**Rule**: Never pack without bounds checks. For timestamps, `uint64` is safe until 2262; for amounts, `uint128` is safe for realistic token supplies.
+
+## Pitfalls summary
+
+Quick reference for common mistakes:
+
+- Never iterate mappings on-chain; emit events or maintain bounded index arrays instead
+- Avoid unbounded loops over arrays in public functions; enforce caps (≤100) or use pull patterns
+- Be careful with storage references (`T storage s = arr[i]`); mutations are permanent
+- Don't store derived data you can compute or reconstruct from events (events are 10× cheaper)
+- Zero values are indistinguishable from non-existent keys; add explicit flags (`hasDeposited`) if needed
+- Use `SafeCast` when packing to smaller types; never assume amounts fit in `uint128` without checking
+- Public getters should return `memory` copies, not `storage` pointers; avoid accidental mutations
+
+## Security checklist
+
+Before shipping data models:
+
+- [ ] **No unbounded iteration**: All loops over arrays enforce explicit bounds (≤100) or use pull patterns
+- [ ] **Arrays bounded**: User-facing arrays (e.g., active positions) have enforced max size
+- [ ] **Storage pointers internal**: External/public functions return `memory`, never `storage` pointers
+- [ ] **Packing bounds checked**: All packed fields (`uint128`, `uint64`) validated with `SafeCast` or explicit checks
+- [ ] **Zero-value flags**: Ambiguous mappings (e.g., balance) have explicit "has deposited" flags if needed
+- [ ] **Event-over-storage applied**: Historical data emitted as events, not stored (except when queried on-chain)
+- [ ] **Composite keys use abi.encode**: If hashing keys, use `abi.encode` not `abi.encodePacked` to avoid collisions
+- [ ] **Test edge cases**: Tests include zero values, max `uint128`, empty arrays, and repeated removals
+- [ ] **Swap-and-pop tested**: Array removal logic tested for order independence and boundary conditions (empty, single element)
+- [ ] **Nested mapping depth reasonable**: No more than 2-3 dimensions; flatten with composite keys if deeper
+
+## Wrap-up and next steps
+
+You've learned how to shape data for gas efficiency and auditability: nested mappings for sparse lookups (`user => poolId => Position`), packed structs for co-updated fields, bounded arrays for small indices, and composite key hashing for 3+ dimensions. You saw how to avoid unbounded loops, use events instead of storage for history, and sidestep zero-value ambiguity with explicit flags.
+
+Combined with storage optimizations (Lesson 2) and custom errors (Lesson 3), you now have a complete data layer for staking contracts. Next, in Lesson 4 (Revert Patterns and Error Recovery), you'll learn when to fail fast, when to soft-fail with pull patterns, and how to design idempotent operations. By Module 5 you'll assemble all these patterns into a production-ready staking contract: positions packed into single slots, batch operations reading from calldata, and every failure mode explicit and tested.
+

@@ -1,0 +1,69 @@
+# Plunder Academy – Cursor Rules
+
+## Project overview
+
+- This is a Next.js App Router project for an interactive EVM developer training hub.
+- Key areas: homepage (`/`), articles (`/articles`, `/articles/[slug]`), AI Solidity reviewer (`/reviewer`), and chat (`/chat`).
+
+## Tech stack
+
+- Next.js 15 (App Router, RSC)
+- TypeScript (strict)
+- Tailwind CSS v4
+- shadcn/ui (managed via CLI)
+- next-themes (theme: system/light/dark)
+
+## Conventions
+
+- Path alias: `@/*` → `./src/*` (use `@/components/...`, `@/lib/...`).
+- Fonts: `Geist` and `Geist_Mono` already configured in `src/app/layout.tsx`.
+- Theming: `ThemeProvider` from `next-themes` is wired via `src/components/providers.tsx` and used in `src/app/layout.tsx`.
+- Global layout: `SiteHeader` + `SiteFooter` wrap a `main` container. Keep pages minimal and composable.
+
+## shadcn/ui policy (critical)
+
+- ALWAYS install and update shadcn components using the official CLI.
+  - Example: `npx shadcn@latest add button input textarea card label --yes`
+- NEVER manually add, copy/paste, or directly edit files under `src/components/ui/*`.
+  - If a change is needed: prefer composition (wrap the UI component elsewhere) or regenerate with the CLI.
+  - If a component is missing: add it via the CLI only.
+
+## Tailwind v4 notes
+
+- Uses CSS variables defined in `src/app/globals.css` with `@theme inline`.
+- Prefer utility classes; avoid bespoke global styles unless truly shared.
+
+## Pages and routing
+
+- `/` (Home): high-level CTAs to Articles, Reviewer, and Chat.
+- `/articles` (List) and `/articles/[slug]` (Detail): migrate to MDX later; keep RSC-friendly.
+- `/reviewer`: client page; text input/textarea and results panel; will call an AI API endpoint.
+- `/chat`: client page; simple chat log + input; will stream responses from an AI backend.
+
+## Coding style
+
+- Keep components small, typed, and accessible. Use semantic HTML.
+- Prefer composition over modification of shadcn UI primitives.
+- Use `cn` from `@/lib/utils` to combine class names.
+
+## Commands (examples)
+
+- Add new shadcn components: `npx shadcn@latest add dialog sheet dropdown-menu --yes`
+- Do not hand-edit anything in `src/components/ui/*` after generation.
+
+## Non-negotiables
+
+- shadcn components must be installed and updated via the CLI only.
+- Do not directly modify generated shadcn files; wrap or extend externally if needed.
+
+## Web3 integration
+
+- Wallets: Use wagmi + RainbowKit. Do not hand-roll connectors.
+- Chains: Prefer importing chains from `viem/chains`. Primary chain is `zilliqa` (add testnet if needed). Avoid hardcoding custom chain objects unless not available in viem.
+- Config: `wagmiConfig` in `src/lib/wagmi.ts` using `getDefaultConfig` with `chains: [zilliqa]`, `ssr: true`, and `transports` keyed by chain id.
+- Providers: Wrap app in `WagmiProvider`, `QueryClientProvider`, `ThemeProvider`, `RainbowKitProvider` inside `src/components/providers.tsx`.
+- UI: Use `ConnectButton` from `@rainbow-me/rainbowkit` in the header.
+- Styles: Import `@rainbow-me/rainbowkit/styles.css` in `src/app/layout.tsx`.
+- Env: Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` for WalletConnect.
+- Security: Do not expose private keys or secrets; only use public env (`NEXT_PUBLIC_*`) on the client.
+- Network scope: Keep chains limited to Zilliqa (and optionally its testnet) unless explicitly expanded.

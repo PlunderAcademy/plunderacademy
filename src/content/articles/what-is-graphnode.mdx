@@ -1,0 +1,112 @@
+---
+slug: what-is-graphnode-zilliqa
+title: "What Is Graphnode on Zilliqa and Why It's a Game-Changer"
+excerpt: "Learn what The Graph and Graphnode are, how they power Zilliqa 2.0, and why they're crucial for developers building data-driven dApps like PlunderSwap."
+level: beginner
+tags:
+  - zilliqa
+  - the graph
+  - graphnode
+  - subgraphs
+---
+
+If you’ve explored the world of **Zilliqa 2.0**, you’ve likely come across **Graphnode** — the indexing engine that powers *The Graph Protocol*.  
+But what exactly is Graphnode, and why is it so important for developers building on Zilliqa?
+
+---
+
+## ⚙️ The Short Version
+
+**Graphnode** is the core service behind **The Graph**, an open-source protocol for indexing and querying blockchain data.  
+Instead of manually scanning entire blockchains, developers create **subgraphs** — configuration files that define which smart contract data should be indexed and how it should be stored.
+
+On **Zilliqa 2.0**, Graphnode enables:
+
+- ⚡ **Fast and structured access** to blockchain data  
+- 🧩 **Powerful GraphQL queries** for real-time applications  
+- 💾 **Efficient indexing** without running your own node  
+- 🔍 **Automatic updates** as new Zilliqa blocks are added  
+
+---
+
+## 🪙 Why It Matters for Zilliqa Developers
+
+With **EVM compatibility** and **The Graph integration**, Zilliqa developers can now use industry-standard tools to access and analyse blockchain data.
+
+For example, **PlunderSwap** can use Graphnode to:
+
+- Track **liquidity pool events** such as swaps and deposits  
+- Power **analytics dashboards** and historical charts  
+- Offer **open APIs** for partners and external data consumers  
+- Monitor **real-time on-chain metrics** with minimal overhead  
+
+> **Tip:** Graphnode helps Zilliqa projects turn raw on-chain data into structured, queryable datasets ready for analytics, dashboards, and reporting.
+
+---
+
+## 🧩 How It Works
+
+<table>
+  <thead>
+    <tr>
+      <th>Concept</th>
+      <th>Meaning</th>
+      <th>Analogy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>The Graph</strong></td>
+      <td>A decentralized protocol for indexing blockchain data</td>
+      <td>The entire data ocean</td>
+    </tr>
+    <tr>
+      <td><strong>Graphnode</strong></td>
+      <td>The engine that indexes and stores blockchain events</td>
+      <td>The ship exploring the data</td>
+    </tr>
+    <tr>
+      <td><strong>Subgraph</strong></td>
+      <td>The configuration describing what to index</td>
+      <td>The map marking important locations</td>
+    </tr>
+    <tr>
+      <td><strong>GraphQL</strong></td>
+      <td>The language used to query your indexed data</td>
+      <td>The tool that helps find what you need</td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## ⚡ The Zilliqa Advantage
+
+Zilliqa’s **parallelized architecture** and **low transaction costs** make it ideal for high-performance indexing.  
+By integrating Graphnode, developers can benefit from:
+
+- 🚀 Faster and more efficient data retrieval  
+- 💾 Structured analytics from Zilliqa smart contracts  
+- 🔗 Easier integration with front-end dashboards, APIs, and analytics tools  
+
+This enables dApps like PlunderSwap to offer richer, data-driven experiences to their users — without relying on custom indexing servers.
+
+---
+
+## 🧠 Example: Indexing PlunderSwap Data
+
+Suppose **PlunderSwap** wants to display real-time trading activity and liquidity statistics.  
+Instead of querying RPC endpoints repeatedly, the team can build a **subgraph** that listens to contract events such as `Swap`, `Mint`, and `Burn`.  
+
+Once deployed, any front-end can instantly query this structured data:
+
+```graphql
+{
+  swaps(first: 5, orderBy: timestamp, orderDirection: desc) {
+    trader
+    tokenIn
+    tokenOut
+    amountIn
+    amountOut
+  }
+}

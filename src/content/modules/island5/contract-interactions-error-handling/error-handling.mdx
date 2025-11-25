@@ -1,0 +1,87 @@
+---
+id: "contract-interactions-lesson-2"
+slug: "error-handling"
+module: "contract-interactions-error-handling"
+number: "5.5"
+title: "Error Handling and Event Listening"
+objective: "Implement comprehensive error handling and real-time event monitoring for responsive dApps."
+practicalTakeaway: "Create robust dApps that gracefully handle errors and provide real-time updates."
+---
+
+# Error Handling and Event Listening
+
+## Why this matters now
+
+Writes fail: users reject signatures, contracts revert, or the network hiccups. Great dApps anticipate failure and communicate clearly. Meanwhile, on-chain events let you update the UI in real time without polling. You’ll map errors to friendly messages and subscribe to contract events.
+
+## Conceptual foundations for Web3 frontend
+
+- **Definition — Custom errors (Solidity)**: Rich revert reasons with data. **When to use it**: Decode revert causes and map to user‑friendly messages.
+- **Definition — `useWatchContractEvent`**: wagmi hook to subscribe to events. **When to use it**: Reflect mints, transfers, or status changes immediately.
+- **Definition — “Retry with context”**: Offer the next best action with a reason, not a generic “try again”.
+
+## Guided code walk‑throughs
+
+### 1) Map errors to friendly messages
+
+Wrap error handling to catch common cases (user rejection, insufficient funds) and show actionable messages.
+
+```tsx
+function friendlyError(e: unknown): string {
+  const msg = (e as Error)?.message || "Unknown error";
+  if (msg.includes("User rejected")) return "You rejected the request in your wallet.";
+  if (msg.includes("insufficient funds")) return "You don't have enough funds for gas.";
+  if (msg.includes("execution reverted")) return "The contract rejected this action.";
+  return msg;
+}
+```
+
+Takeaway: Centralize error mapping to keep UI copy consistent.
+
+### 2) Listen to events and update UI
+
+Use `useWatchContractEvent` to reflect live changes (e.g., token `Transfer`). Keep handlers fast and minimal.
+
+```tsx
+import { useWatchContractEvent } from "wagmi";
+import { erc20Abi } from "viem";
+
+export function TransfersWatcher({ token }: { token: `0x${string}` }) {
+  useWatchContractEvent({
+    address: token,
+    abi: erc20Abi,
+    eventName: "Transfer",
+    onLogs: (logs) => {
+      console.log("Live transfers detected:", logs);
+      // Minimal state updates here - avoid heavy computation
+      // Example: setState(prev => [...prev, ...logs]);
+    },
+  });
+  return null; // This component doesn't render UI, just listens
+}
+```
+
+Takeaway: Event subscriptions make UI feel instant—avoid heavy work in handlers.
+
+## Practical exercises
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"err1","text":"Always show raw error messages to users","correctAnswer":false,"explanation":"Map to friendly copy and suggest the next action."},
+  {"id":"err2","text":"Event handlers should do minimal work","correctAnswer":true,"explanation":"Schedule updates and keep handlers fast."}
+]}/>
+
+### Reflection
+
+- Which errors deserve specific copy in your app? Draft two now.
+- Which events meaningfully change your UI? Where will you subscribe?
+
+## UX and error handling best practices
+
+- Distinguish user‑rejected from on‑chain reverts.
+- Offer a clear recovery ("Switch network", "Top up funds", "Retry later").
+- Debounce event‑driven updates; batch where possible.
+
+## Wrap‑up and next steps
+
+You can translate errors into helpful guidance and reflect chain events in real time. Next, you’ll combine these patterns into a complete dApp interface.

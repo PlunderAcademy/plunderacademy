@@ -1,0 +1,192 @@
+---
+id: developer-tooling-overview
+module: evm-fundamentals
+number: 2.5
+title: Developer Tooling Overview
+objective: >-
+  Explore essential development tools for building on EVM-compatible
+  blockchains.
+practicalTakeaway: >-
+  An in-depth understanding of EVM's operation equips developers to write
+  performant smart contracts and build scalable applications in today's evolving
+  blockchain ecosystem.
+slug: developer-tooling-overview
+---
+
+## Comprehensive Developer Tooling Ecosystem
+
+### Understanding the Development Landscape
+
+**Real-world analogy:** Think of blockchain development tools like a carpenter's workshop. Different tools serve different purposes:
+- **Remix** = A simple workbench for quick projects
+- **Hardhat** = A full woodworking shop with every tool imaginable
+- **Foundry** = High-end power tools for professional craftsmen
+- **OpenZeppelin** = Pre-made components and safety equipment
+
+Each tool has its strengths, and experienced developers often use multiple tools for different aspects of their projects.
+
+## Browser-Based Development: Remix IDE
+
+### What is Remix?
+
+**Perfect for beginners:** Remix is a browser-based Solidity editor and testing environment that requires zero installation. It's ideal for learning, rapid prototyping, and quick deployments.
+
+**Key features:**
+- **No setup required:** Works immediately in any web browser
+- **Built-in compiler:** Compiles Solidity contracts automatically
+- **Integrated debugger:** Step through code execution line by line
+- **Deploy anywhere:** Connect to any EVM network including Zilliqa
+- **Plugin ecosystem:** Extend functionality with community plugins
+
+### When to Use Remix
+
+**Perfect scenarios:**
+- **Learning Solidity:** Best tool for beginners and educational content
+- **Quick prototyping:** Test ideas without setting up a development environment
+- **Contract interaction:** Easy interface for calling deployed contract functions
+- **Code sharing:** Share contracts easily with others via GitHub integration
+- **Simple deployments:** Deploy contracts without complex build processes
+
+**Example workflow:**
+1. **Open Remix:** Navigate to https://remix.ethereum.org
+2. **Create contract:** Write your Solidity code in the editor
+3. **Compile:** Use the built-in compiler (set EVM version to Shanghai for Zilliqa)
+4. **Deploy:** Connect MetaMask and deploy to Zilliqa testnet
+5. **Interact:** Use the generated interface to call contract functions
+
+## Professional Framework: Hardhat
+
+### What is Hardhat?
+
+**For serious development:** Hardhat is a flexible local development framework designed for professional Ethereum development. It provides scripting, testing, and deployment capabilities for complex projects.
+
+**Core strengths:**
+- **Local blockchain:** Built-in Ethereum network for testing
+- **Advanced testing:** Comprehensive testing framework with time manipulation
+- **Plugin architecture:** Extensive ecosystem of community plugins
+- **Network management:** Easy switching between different networks
+- **Debugging tools:** Advanced debugging and error reporting
+
+### Hardhat Configuration for Zilliqa
+
+**hardhat.config.js example:**
+```javascript
+require("@nomicfoundation/hardhat-toolbox");
+
+module.exports = {
+  solidity: {
+    version: "0.8.19",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+      evmVersion: "shanghai", // Required for Zilliqa 2.0
+    },
+  },
+  networks: {
+    zilliqaTestnet: {
+      url: "https://api.testnet.zilliqa.com",
+      chainId: 33101,
+      accounts: [process.env.PRIVATE_KEY],
+    },
+    zilliqaMainnet: {
+      url: "https://api.zilliqa.com", 
+      chainId: 32769,
+      accounts: [process.env.PRIVATE_KEY],
+    },
+  },
+};
+```
+
+## High-Performance Framework: Foundry
+
+### What is Foundry?
+
+**For performance-focused development:** Foundry is a high-performance Solidity build and test framework written in Rust. It's designed for developers who prioritize speed and advanced testing capabilities.
+
+**Key advantages:**
+- **Blazing fast:** Tests run significantly faster than JavaScript-based frameworks
+- **Solidity testing:** Write tests in Solidity instead of JavaScript
+- **Advanced features:** Fuzzing, invariant testing, and gas optimization
+- **No JavaScript:** Pure Solidity development environment
+
+## Security-First Development: OpenZeppelin
+
+### What is OpenZeppelin?
+
+**Battle-tested security:** OpenZeppelin provides widely-used contract libraries and security modules, offering secure implementations of common token standards and security patterns.
+
+**Core offerings:**
+- **Smart contract libraries:** ERC-20, ERC-721, ERC-1155 implementations
+- **Security patterns:** Access control, pausable contracts, reentrancy guards
+- **Upgradeable contracts:** Proxy patterns for contract upgrades
+- **Defender platform:** Runtime security monitoring and automation
+
+**Example implementation:**
+```solidity
+pragma solidity ^0.8.19;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+
+contract MyToken is ERC20, Ownable, Pausable {
+    constructor() ERC20("MyToken", "MTK") {}
+
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
+
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
+    }
+}
+```
+
+## Tool Selection Guide
+
+### When to Use Each Tool
+
+**Choose Remix when:**
+- Learning Solidity and blockchain development
+- Creating simple contracts or prototypes
+- Teaching or demonstrating concepts
+- Need quick deployment without setup
+
+**Choose Hardhat when:**
+- Building production applications
+- Need extensive testing and debugging
+- Working with complex deployment scripts
+- Team development with established workflows
+
+**Choose Foundry when:**
+- Performance is critical (large test suites)
+- Writing complex Solidity tests
+- Doing gas optimization work
+- Building security-critical applications
+
+**Use OpenZeppelin always when:**
+- Implementing standard token functionality
+- Need proven security patterns
+- Building upgradeable contracts
+- Want to minimize security risks
+
+### Best Practices
+
+**Start simple, scale up:**
+- Begin with Remix for learning and prototyping
+- Graduate to Hardhat for serious development
+- Add Foundry for performance-critical testing
+- Always incorporate OpenZeppelin for security
+
+**Multi-tool workflow:**
+1. **Prototype in Remix:** Quick idea validation
+2. **Develop in Hardhat:** Full development with testing
+3. **Optimize with Foundry:** Gas optimization
+4. **Secure with OpenZeppelin:** Use battle-tested components
+5. **Deploy via Hardhat:** Production deployment

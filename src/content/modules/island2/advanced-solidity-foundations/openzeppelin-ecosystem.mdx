@@ -1,0 +1,308 @@
+---
+id: openzeppelin-ecosystem
+module: advanced-solidity-foundations
+number: 2.1.5
+title: OpenZeppelin Ecosystem Deep Dive
+objective: >-
+  Choose, configure, and safely extend OpenZeppelin primitives (ERC20, Ownable, AccessControl, Pausable, ReentrancyGuard) to accelerate secure staking builds.
+slug: openzeppelin-ecosystem
+---
+
+## Set the stage
+
+Think of OpenZeppelin Contracts like a ship's proven safety equipment: life vests, fire extinguishers, emergency protocols. You could build your own from scratch, but why risk your crew when battle-tested gear already exists? For staking contracts that hold real value, starting with OpenZeppelin primitives means you inherit years of audits, bug fixes, and community scrutiny. Your job shifts from inventing security to composing it wisely.
+
+In Module 5 you'll build a complete staking system. That system needs access control (who can pause?), circuit breakers (emergency stop), reentrancy guards (protect deposits/withdrawals), and safe token handling (non-standard ERC20s exist). OpenZeppelin provides all of these—but only if you choose the right primitives and extend them carefully. This lesson shows you how to pick, configure, and compose OpenZeppelin building blocks without introducing new vulnerabilities.
+
+## Conceptual foundations
+
+### The OpenZeppelin philosophy
+
+OpenZeppelin Contracts follow a "secure by default, composable by design" model. Each primitive does one thing well: `Ownable` manages a single owner, `Pausable` adds emergency stops, `ReentrancyGuard` prevents nested calls. You combine them via inheritance or delegation to build your protocol's unique rules. The key insight: **small, audited surfaces compose into large, auditable systems**. If you add custom logic, keep it minimal and layer it on top rather than modifying the core.
+
+For staking, this means:
+- Your reward token extends `ERC20` plus optional extensions (`Burnable`, `Capped`)
+- Your vault uses `ReentrancyGuard` on deposit/withdraw functions
+- Your access control picks `Ownable` (single admin) or `AccessControl` (multi-role team)
+- Your emergency stop uses `Pausable` on critical entry points
+
+### Mental model: primitives as Lego blocks
+
+Imagine each OpenZeppelin contract as a Lego brick with specific connection points. `Ownable` has an `onlyOwner` modifier socket; `Pausable` has `whenNotPaused`/`whenPaused` sockets; `ReentrancyGuard` has `nonReentrant`. You snap these bricks together via inheritance and then write your protocol logic inside the protected shape. The bricks handle edge cases (ownership transfer, pause state, reentrancy locks); you handle business rules (staking formulas, reward distribution).
+
+### Core primitives for staking
+
+- **Definition — ERC20**: The base token contract; provides `transfer`, `approve`, `balanceOf`. **When to use it**: As the parent for reward tokens or staking receipt tokens. **Extensions to consider**: `ERC20Burnable` (if you burn on unstake), `ERC20Capped` (if supply is fixed), `ERC20Permit` (gasless approvals).
+- **Definition — Ownable**: Single-owner access control; one address can call `onlyOwner` functions. **When to use it**: Small protocols with one trusted admin or DAO contract. **When not**: Multi-team operations needing separation of duties.
+- **Definition — AccessControl**: Role-based access control; multiple addresses can hold different roles (e.g., `PAUSER_ROLE`, `REWARD_MANAGER_ROLE`). **When to use it**: Protocols with ops/treasury/rewards teams, or when you need fine-grained permissions. **Trade-off**: More complexity, more storage.
+- **Definition — Pausable**: Adds `paused` state and `whenNotPaused`/`whenPaused` modifiers. **When to use it**: On critical entry points (deposit, withdraw, claim) so you can freeze activity during incidents. **Common pitfall**: Pausing too much (e.g., blocking view functions) or too little (e.g., not pausing transfers).
+- **Definition — ReentrancyGuard**: Adds `nonReentrant` modifier that prevents a function from calling itself (directly or via external call). **When to use it**: On any function that transfers value or calls untrusted contracts before state settles. **Combine with**: CEI pattern for defense in depth.
+- **Definition — SafeERC20**: Wrapper library for ERC20 calls; handles tokens that don't return `bool` or that revert. **When to use it**: Always, when interacting with external tokens. **Anti-pattern**: Trusting raw `transfer`/`transferFrom` returns.
+
+### Decision tree: Ownable vs AccessControl
+
+Use this heuristic to pick the right access primitive:
+
+<svg viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      {`.box { fill: var(--background); stroke: var(--border); stroke-width: 2; rx: 8; }
+        .decision { fill: var(--primary); fill-opacity: 0.1; stroke: var(--primary); stroke-width: 2; }
+        .label { fill: var(--foreground); font-size: 13px; font-family: ui-monospace, monospace; }
+        .arrow { stroke: var(--foreground); stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+        .choice { fill: var(--muted-foreground); font-size: 11px; font-style: italic; }`}
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" style={{fill: 'var(--foreground)'}} />
+    </marker>
+  </defs>
+  {/* Start */}
+  <rect className="decision" x="200" y="20" width="200" height="50" />
+  <text className="label" x="300" y="50" textAnchor="middle">Single admin enough?</text>
+  {/* Left branch: Yes -> Ownable */}
+  <path className="arrow" d="M 250 70 L 150 140" />
+  <text className="choice" x="170" y="100">Yes</text>
+  <rect className="box" x="50" y="140" width="200" height="50" />
+  <text className="label" x="150" y="170" textAnchor="middle">Use Ownable</text>
+  {/* Right branch: No -> multi-role? */}
+  <path className="arrow" d="M 350 70 L 450 140" />
+  <text className="choice" x="410" y="100">No</text>
+  <rect className="decision" x="350" y="140" width="200" height="50" />
+  <text className="label" x="450" y="170" textAnchor="middle">Need separate roles?</text>
+  {/* Right-right: Yes -> AccessControl */}
+  <path className="arrow" d="M 450 190 L 450 240" />
+  <text className="choice" x="460" y="220">Yes</text>
+  <rect className="box" x="350" y="240" width="200" height="50" />
+  <text className="label" x="450" y="270" textAnchor="middle">Use AccessControl</text>
+</svg>
+
+For your staking contract: if it's a solo project or single-DAO-controlled, `Ownable` is simpler. If ops pauses, treasury withdraws fees, and rewards team adjusts APR, `AccessControl` keeps responsibilities clear.
+
+### Extension landscape
+
+OpenZeppelin provides modular extensions you can mix in. Here's a quick reference for staking use cases:
+
+| Extension | What it adds | When to use | Gas cost |
+|-----------|--------------|-------------|----------|
+| `ERC20Burnable` | `burn(amount)` and `burnFrom(account, amount)` | If unstaking destroys receipt tokens | Low |
+| `ERC20Capped` | Max supply cap enforced in `_update` | If total rewards are fixed | Low |
+| `ERC20Permit` | Gasless approvals via EIP-2612 signatures | Better UX for stakers (one tx instead of two) | Medium |
+| `ERC20Votes` | On-chain governance vote tracking | If stakers vote on protocol changes | High |
+| `ERC20Pausable` | Blocks all transfers when paused | Emergency freeze of reward token | Low |
+
+**Recommendation for staking MVP**: Start with plain `ERC20` + `Ownable` + `Pausable` + `ReentrancyGuard`. Add `ERC20Burnable` if your design burns receipt tokens on unstake. Defer `Permit` and `Votes` until your UX and governance needs are clear.
+
+## Guided code walk-throughs
+
+The following examples show how to compose OpenZeppelin primitives safely. Each snippet is small, focused, and ties directly to staking needs. Comments highlight non-obvious decisions.
+
+### 1) Ownable staking token with pause gates
+
+This reward token uses `Ownable` for admin control and overrides `_update` to block transfers when paused. This is a common pattern: extend the base, add a single cross-cutting rule, call `super` to preserve invariants.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+
+/// @notice Reward token for staking; owner can pause transfers in emergencies
+contract RewardToken is ERC20, Ownable, Pausable {
+    event EmergencyPause(address indexed by);
+    event EmergencyUnpause(address indexed by);
+
+    constructor(address initialOwner)
+        ERC20("Reward Token", "RWD")
+        Ownable(initialOwner)
+    {
+        _mint(initialOwner, 1_000_000e18); // initial reward pool
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+        emit EmergencyPause(msg.sender);
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+        emit EmergencyUnpause(msg.sender);
+    }
+
+    /// @dev Override _update to enforce pause; call super to preserve ERC20 logic
+    function _update(address from, address to, uint256 value)
+        internal
+        override
+        whenNotPaused
+    {
+        super._update(from, to, value);
+    }
+}
+```
+
+**Takeaway**: `Ownable` + `Pausable` + small override = simple, auditable emergency control. Your staking vault will hold this token and mint rewards; pausing transfers stops reward withdrawals without touching vault logic.
+
+### 2) AccessControl with multi-role staking system
+
+When operations, treasury, and rewards are separate concerns, `AccessControl` shines. Here we define three roles and show how each team member gets scoped permissions. Note the careful role setup in the constructor and the explicit role checks in modifiers.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+
+contract StakingManager is AccessControl, Pausable {
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant REWARDS_ROLE = keccak256("REWARDS_ROLE");
+
+    uint256 public rewardRate; // basis points per second
+
+    event RewardRateUpdated(uint256 oldRate, uint256 newRate, address indexed by);
+
+    constructor(address admin, address pauser, address rewardsManager) {
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(PAUSER_ROLE, pauser);
+        _grantRole(REWARDS_ROLE, rewardsManager);
+        rewardRate = 100; // 1% APR example (scaled)
+    }
+
+    function pause() external onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(PAUSER_ROLE) {
+        _unpause();
+    }
+
+    function setRewardRate(uint256 newRate) external onlyRole(REWARDS_ROLE) whenNotPaused {
+        emit RewardRateUpdated(rewardRate, newRate, msg.sender);
+        rewardRate = newRate;
+    }
+}
+```
+
+**Takeaway**: `AccessControl` separates duties cleanly. Ops can pause without touching reward logic; rewards team can tune rates without admin keys. Document each role in your deployment runbook and plan key rotation procedures.
+
+### 3) ReentrancyGuard + SafeERC20 staking vault
+
+This vault accepts deposits and withdrawals of an external token. We use `SafeERC20` to handle non-standard token returns and `ReentrancyGuard` to block reentrancy on value-moving functions. CEI discipline (Checks-Effects-Interactions) further reduces risk.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract StakingVault is ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable stakingToken;
+    mapping(address => uint256) public balanceOf;
+
+    event Deposited(address indexed account, uint256 amount);
+    event Withdrawn(address indexed account, uint256 amount);
+
+    constructor(IERC20 _stakingToken) {
+        stakingToken = _stakingToken;
+    }
+
+    function deposit(uint256 amount) external nonReentrant {
+        require(amount > 0, "ZERO_AMOUNT");
+        balanceOf[msg.sender] += amount; // Effects
+        stakingToken.safeTransferFrom(msg.sender, address(this), amount); // Interactions
+        emit Deposited(msg.sender, amount);
+    }
+
+    function withdraw(uint256 amount) external nonReentrant {
+        require(amount > 0 && amount <= balanceOf[msg.sender], "INVALID_AMOUNT");
+        balanceOf[msg.sender] -= amount; // Effects
+        stakingToken.safeTransfer(msg.sender, amount); // Interactions
+        emit Withdrawn(msg.sender, amount);
+    }
+}
+```
+
+**Takeaway**: `nonReentrant` + CEI + `SafeERC20` = robust value-moving functions. Even if `stakingToken` is malicious or buggy, this vault won't double-spend or corrupt balances. Your final staking contract will expand this with reward accrual logic while keeping the same safety baseline.
+
+## Practice and reflection
+
+Now that you've seen composable primitives in action, try these exercises to cement your understanding. Each focuses on a decision you'll face in your staking build.
+
+- **Role mapping**: List three privileged actions in your staking design (e.g., pause, adjust reward rate, emergency withdraw). Map each to either `onlyOwner` or a named `AccessControl` role. Justify your choice in one sentence per action.
+- **Pause surface**: Identify which functions in your staking vault should be `whenNotPaused` and which should remain callable even during a pause (hint: view functions usually stay open). Explain why in two sentences.
+- **SafeERC20 rationale**: Name two real-world ERC20 tokens (e.g., USDT, BNB) that don't follow the standard perfectly and explain how `SafeERC20` mitigates the issue.
+- **Extension necessity**: Your staking design burns receipt tokens on unstake. Should you add `ERC20Burnable` or implement a custom `_burn` wrapper? Defend your answer in two sentences.
+
+{/* Timeline Builder */}
+<TimelineBuilder events={[
+  {"id":"evt-1","text":"Choose primitives (ERC20 + guards)","correctPosition":0},
+  {"id":"evt-2","text":"Define roles & responsibilities","correctPosition":1},
+  {"id":"evt-3","text":"Design event schemas for monitoring","correctPosition":2},
+  {"id":"evt-4","text":"Implement small overrides & tests","correctPosition":3}
+]}/>
+
+Short reflection: If you could only pick **two** OpenZeppelin primitives for your staking MVP, which would they be and why? Write three sentences defending your priorities.
+
+## Security and pitfalls
+
+OpenZeppelin primitives are hardened, but misuse introduces risk. Follow these rules to stay safe:
+
+### Access control pitfalls
+
+- **Never use `tx.origin` for auth**: Use `msg.sender` and `Ownable`/`AccessControl` modifiers
+- **Document role assignments**: Keep a table of who holds which role and how to rotate keys
+- **Test ownership transfer**: Ensure `transferOwnership` or role grants work as expected; test revoking roles
+- **Avoid role bloat**: More roles = more complexity = more attack surface; keep it minimal
+
+### Pausable pitfalls
+
+- **Pause the right surface**: Block state changes (deposit, withdraw, claim), not view functions
+- **Emit pause events**: Frontends and monitoring need to observe pause state changes
+- **Plan unpause criteria**: What conditions must be met before you call `unpause`? Document in a runbook
+- **Test paused paths**: Write unit tests that assert reverts when paused and success when not
+
+### ReentrancyGuard pitfalls
+
+- **Combine with CEI**: `nonReentrant` is not a substitute for proper state ordering; use both
+- **Don't over-guard**: View functions don't need `nonReentrant`; it wastes gas
+- **Understand cross-function reentrancy**: If `functionA` calls external code, and that code calls `functionB` on your contract, both need guards or CEI discipline
+
+### SafeERC20 pitfalls
+
+- **Always use `safeTransferFrom` and `safeTransfer`**: Raw `transfer`/`transferFrom` can silently fail with non-standard tokens
+- **Check return values for raw calls**: If you must use low-level `call` for some reason, validate the return
+- **Avoid infinite approvals**: Approve exact amounts; reset allowances after use when interacting with third parties
+
+### Extension pitfalls
+
+- **Audit each extension**: Even OpenZeppelin code has interactions; read the source before adding
+- **Test interactions**: `ERC20Pausable` + `ERC20Burnable` + custom logic = potential for unexpected ordering; write integration tests
+- **Avoid dead features**: If you add `ERC20Votes` but never use governance, you've increased attack surface for no benefit
+
+## Security checklist
+
+Before you ship your staking contract, verify:
+
+- [ ] **Minimal primitives**: Only the OpenZeppelin contracts you actually use are inherited
+- [ ] **Explicit role plan**: If using `AccessControl`, document each role and who holds keys; if using `Ownable`, document owner and transfer plan
+- [ ] **Pause gates in place**: Critical entry points (deposit, withdraw, claim) are `whenNotPaused`
+- [ ] **Reentrancy guards on value functions**: Any function that transfers tokens or calls external contracts is `nonReentrant`
+- [ ] **SafeERC20 everywhere**: All external token interactions use `safeTransfer` and `safeTransferFrom`
+- [ ] **CEI discipline**: State updates happen before external calls in every function
+- [ ] **Event schemas stable**: Emit `indexed` subjects for monitoring; don't break event names across versions
+- [ ] **Test coverage**: Unit tests for each primitive's behavior (pause, ownership transfer, role grants, reentrancy attempts)
+- [ ] **Emergency runbook**: Written procedures for pause, unpause, and role rotation
+- [ ] **Upgrade plan (if applicable)**: Storage layout and initialization order documented for future proxy upgrades
+
+## Wrap-up and next steps
+
+You've learned how to pick the right OpenZeppelin primitives for your staking contract: `Ownable` or `AccessControl` for permissions, `Pausable` for emergency stops, `ReentrancyGuard` for safe value transfers, and `SafeERC20` for robust token handling. You saw how to compose these via inheritance and small, focused overrides that preserve the security guarantees of the base contracts.
+
+This completes Module 1 (Advanced Solidity Foundations). You now have the tools to design inheritance hierarchies, code to interfaces, emit clean events, interact with external contracts safely, and leverage industry-standard primitives. In Module 2 (Data Structures & Error Handling) you'll learn to model staking state efficiently—tracking balances, rewards, and time—while surfacing errors that UIs can parse. By Module 5 you'll assemble all these pieces into a production-ready staking contract deployed on Zilliqa.
+
+

@@ -1,0 +1,328 @@
+---
+id: contract-interactions
+module: advanced-solidity-foundations
+number: 2.1.4
+title: Contract-to-Contract Interactions (Safely!)
+objective: >-
+  Call external contracts using interfaces with CEI discipline, non‑reentrancy guards, and robust error handling to keep staking flows safe.
+slug: contract-interactions
+---
+
+## Set the stage
+
+Your staking system isn't an island—it must talk to external tokens, reward distributors, and maybe even routers or oracles. Every external call is like opening a hatch to another ship: you don't control what's inside, and if you're not careful, they can take over your deck (reentrancy), send you bad cargo (malicious tokens), or simply fail halfway through (partial state corruption). Safe defaults—CEI, reentrancy guards, typed interfaces, and bounded failures—let you compose powerful multi-contract flows without leaking control.
+
+In Module 5 your staking contract will call out to reward tokens, fee collectors, and pluggable strategy modules. If any of those calls go wrong, your users lose funds or confidence. This lesson shows you how to structure external interactions so failures are graceful, reentrancy is blocked, and every call is auditable.
+
+## Conceptual foundations
+
+### The CEI pattern: your first line of defense
+
+**CEI** stands for **Checks → Effects → Interactions**. It's a discipline, not a keyword:
+
+1. **Checks**: Validate inputs, authorization, and preconditions (`require`, `if/revert`)
+2. **Effects**: Update your contract's state (balances, timestamps, flags)
+3. **Interactions**: Call external contracts (transfers, external function calls)
+
+Why this order? If you call external code *before* updating state, that external code can re-enter your contract and see stale state. Classic example: withdrawing twice because `balanceOf[user]` hasn't been decremented yet. CEI forces you to finalize state before handing control to untrusted code.
+
+**Mental model**: Think of CEI like locking your vault before opening the door to strangers. Once the vault is locked (state updated), they can try anything—they won't get double withdrawals.
+
+### Reentrancy: the attack and the guard
+
+**Reentrancy** happens when:
+1. Your contract calls external code (e.g., `token.transfer(attacker, amount)`)
+2. That external code calls back into your contract before the first call finishes
+3. Your contract's state is stale (e.g., `balanceOf[attacker]` still shows old balance)
+4. The attacker exploits the stale state (e.g., withdraws again)
+
+**Defense**: OpenZeppelin's `ReentrancyGuard` adds a `nonReentrant` modifier that sets a lock before your function runs and clears it after. If an attacker tries to re-enter, the lock is already set and the call reverts. Combine `nonReentrant` with CEI for defense in depth.
+
+<svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      {`.box { fill: var(--background); stroke: var(--border); stroke-width: 2; rx: 6; }
+        .attack { fill: var(--destructive); fill-opacity: 0.15; stroke: var(--destructive); stroke-width: 2; }
+        .safe { fill: var(--primary); fill-opacity: 0.15; stroke: var(--primary); stroke-width: 2; }
+        .label { fill: var(--foreground); font-size: 12px; font-family: ui-monospace, monospace; }
+        .arrow { stroke: var(--foreground); stroke-width: 2; fill: none; marker-end: url(#arr); }
+        .attack-arrow { stroke: var(--destructive); stroke-width: 2; fill: none; marker-end: url(#arr-attack); }`}
+    </style>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" style={{fill: 'var(--foreground)'}} />
+    </marker>
+    <marker id="arr-attack" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" style={{fill: 'var(--destructive)'}} />
+    </marker>
+  </defs>
+  {/* Unsafe: Interactions before Effects */}
+  <text className="label" x="10" y="20">Unsafe (no CEI):</text>
+  <rect className="attack" x="10" y="30" width="280" height="120" />
+  <text className="label" x="20" y="55">1. Checks (amount valid?)</text>
+  <path className="arrow" d="M 20 65 L 20 85" />
+  <text className="label" x="20" y="95">2. Interactions (transfer)</text>
+  <path className="attack-arrow" d="M 200 100 Q 250 80, 200 60" />
+  <text className="label" x="210" y="85" style={{fill: 'var(--destructive)', fontSize: '10px'}}>Reenters!</text>
+  <path className="arrow" d="M 20 105 L 20 125" />
+  <text className="label" x="20" y="135">3. Effects (update balance)</text>
+  {/* Safe: Effects before Interactions */}
+  <text className="label" x="310" y="20">Safe (CEI + nonReentrant):</text>
+  <rect className="safe" x="310" y="30" width="280" height="120" />
+  <text className="label" x="320" y="55">1. Checks (amount valid?)</text>
+  <path className="arrow" d="M 320 65 L 320 85" />
+  <text className="label" x="320" y="95">2. Effects (update balance)</text>
+  <path className="arrow" d="M 320 105 L 320 125" />
+  <text className="label" x="320" y="135">3. Interactions (transfer)</text>
+  <text className="label" x="450" y="145" style={{fill: 'var(--primary)', fontSize: '10px'}}>State locked ✓</text>
+</svg>
+
+### Pull vs push: who controls the call?
+
+- **Push payment**: Your contract sends value in the same transaction (e.g., `token.transfer(user, reward)` inside `claim()`)
+- **Pull payment**: Your contract records a claimable balance; user calls a separate function to withdraw (e.g., `pendingRewards[user] += reward`, then user calls `claimRewards()`)
+
+**When to prefer pull**:
+- Recipients are untrusted or unknown (e.g., reward claims to arbitrary addresses)
+- You want to isolate failure (if transfer fails, only that user's claim fails, not the whole batch)
+- Gas limits are tight (batch processing can hit block gas limits)
+
+**When push is okay**:
+- Recipient is your own controlled contract
+- Single recipient per transaction
+- Failure is acceptable (you handle it with `try/catch`)
+
+For staking, **prefer pull for user-facing claims**. Let users initiate their own withdrawals; your contract just tracks balances. This limits your liability if a user's address is a malicious contract.
+
+### Low-level calls: `call`, `delegatecall`, `staticcall`
+
+Solidity offers three low-level call primitives:
+
+- **`call`**: Execute code in the target contract's context (its storage). Returns `(bool success, bytes memory returnData)`. Use when calling untrusted contracts or when you need raw bytes.
+- **`delegatecall`**: Execute code in your contract's context (your storage). Used by proxies and libraries. **Dangerous**: target can write to your storage.
+- **`staticcall`**: Like `call`, but reverts if target tries to modify state. Use for `view` functions.
+
+**Default rule**: Use high-level interfaces (`IERC20`, `IRewardModule`) and `SafeERC20` wrappers. Only drop to low-level calls when:
+- You need to forward arbitrary calldata (e.g., generic router)
+- You must handle non-standard returns (but even then, prefer `SafeERC20`)
+- You're implementing a proxy pattern (covered in Island 4)
+
+If you must use low-level calls, always:
+- Check the `success` boolean
+- Decode `returnData` carefully (watch for malicious payloads)
+- Limit gas forwarded to prevent griefing
+- Emit events for monitoring
+
+### Error handling: `try/catch` and bounded failures
+
+When calling external contracts, assume they can revert. Solidity's `try/catch` lets you trap failures and convert them into safe outcomes:
+
+```solidity
+try externalContract.doSomething() returns (uint256 result) {
+    // Success path
+} catch Error(string memory reason) {
+    // Revert with reason string
+} catch (bytes memory lowLevelData) {
+    // Other failures (e.g., out of gas, custom errors)
+}
+```
+
+**Use cases for staking**:
+- Claiming from a rewards module that might be paused or out of funds
+- Calling an oracle that might be stale or offline
+- Batch operations where one failure shouldn't kill the whole batch
+
+**Pattern**: Emit an event on failure so off-chain systems can retry or alert. Return a safe default (e.g., `0` rewards) rather than reverting the whole transaction.
+
+## Guided code walk-throughs
+
+These examples show how to structure safe external interactions for staking use cases.
+
+### 1) CEI + ReentrancyGuard on deposit/withdraw
+
+This vault follows CEI strictly: update `balanceOf` before calling `safeTransferFrom`. `ReentrancyGuard` adds a second layer: even if CEI is violated elsewhere, reentrancy is blocked.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract StakingVault is ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable stakingToken;
+    mapping(address => uint256) public balanceOf;
+
+    event Deposited(address indexed account, uint256 amount);
+    event Withdrawn(address indexed account, uint256 amount);
+
+    constructor(IERC20 _token) { stakingToken = _token; }
+
+    /// @notice Deposit tokens; follows CEI
+    function deposit(uint256 amount) external nonReentrant {
+        require(amount > 0, "ZERO_AMOUNT"); // Checks
+        balanceOf[msg.sender] += amount; // Effects
+        stakingToken.safeTransferFrom(msg.sender, address(this), amount); // Interactions
+        emit Deposited(msg.sender, amount);
+    }
+
+    /// @notice Withdraw tokens; follows CEI
+    function withdraw(uint256 amount) external nonReentrant {
+        require(amount > 0 && amount <= balanceOf[msg.sender], "INVALID_AMOUNT"); // Checks
+        balanceOf[msg.sender] -= amount; // Effects
+        stakingToken.safeTransfer(msg.sender, amount); // Interactions
+        emit Withdrawn(msg.sender, amount);
+    }
+}
+```
+
+**Takeaway**: CEI + `nonReentrant` is the baseline for any function that moves value. Even if your token is well-behaved, this pattern protects you if the token is later upgraded or if you integrate with new modules.
+
+### 2) Pull pattern for reward claims with try/catch
+
+Here we show a pull-based reward system: users call `claimRewards()`, which calls an external rewards module. If the module reverts, we emit a failure event and let the user retry later. This keeps the contract observable and prevents one bad module from bricking the whole system.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+interface IRewardModule {
+    function claim(address account) external returns (uint256);
+}
+
+contract RewardsOrchestrator {
+    IRewardModule public rewardModule;
+    mapping(address => uint256) public pendingRewards;
+
+    event ClaimAttempt(address indexed account);
+    event ClaimSucceeded(address indexed account, uint256 amount);
+    event ClaimFailed(address indexed account, string reason);
+
+    constructor(IRewardModule _module) { rewardModule = _module; }
+
+    /// @notice Pull-based claim; user initiates
+    function claimRewards() external returns (uint256) {
+        emit ClaimAttempt(msg.sender);
+        try rewardModule.claim(msg.sender) returns (uint256 amount) {
+            pendingRewards[msg.sender] = 0; // Reset on success
+            emit ClaimSucceeded(msg.sender, amount);
+            return amount;
+        } catch Error(string memory reason) {
+            emit ClaimFailed(msg.sender, reason);
+            return 0; // Safe fallback
+        } catch (bytes memory) {
+            emit ClaimFailed(msg.sender, "Unknown error");
+            return 0;
+        }
+    }
+}
+```
+
+**Takeaway**: Pull + `try/catch` isolates risk. If the rewards module is paused or buggy, one user's claim fails gracefully; other users can still operate. Off-chain systems see `ClaimFailed` events and can investigate or retry.
+
+### 3) Low-level call with validation (advanced pattern)
+
+Sometimes you need to forward arbitrary calldata to a target (e.g., a generic router or adapter). Here we show a minimal safe wrapper: validate the target is not the vault itself (no self-destruct), limit gas forwarded (no griefing), and check the success flag.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract GenericCaller {
+    event CallExecuted(address indexed target, bool success, bytes returnData);
+
+    /// @notice Execute arbitrary call with safety checks
+    /// @dev Use only when high-level interfaces aren't available
+    function executeCall(address target, bytes calldata data, uint256 gasLimit)
+        external
+        returns (bool success, bytes memory returnData)
+    {
+        require(target != address(this), "NO_SELF_CALL");
+        require(gasLimit <= 500_000, "GAS_LIMIT_TOO_HIGH"); // prevent griefing
+        (success, returnData) = target.call{gas: gasLimit}(data);
+        emit CallExecuted(target, success, returnData);
+    }
+}
+```
+
+**Takeaway**: Low-level calls are powerful but risky. Always validate the target, limit gas, and emit events for monitoring. For staking, you'll rarely need this—stick with typed interfaces (`IERC20`, `IRewardModule`) unless you're building a meta-protocol.
+
+## Practice and reflection
+
+Apply these patterns to your staking design:
+
+- **Push to pull conversion**: Sketch a function that currently does `rewardToken.transfer(user, amount)` inside a loop (push). Rewrite it as a pull pattern where users call `claimRewards()` individually. List one security benefit and one UX trade-off.
+- **Reentrancy analysis**: Review your staking contract's deposit, withdraw, and claim functions. For each, state whether it needs `nonReentrant` and why. Hint: any function that calls external code before state is finalized is a candidate.
+- **Interface boundary**: Design an interface `IStakingStrategy` with one function `execute(bytes calldata params) external returns (uint256)`. Write a two-sentence explanation of when you'd use this abstraction (hint: pluggable strategies, governance-controlled modules).
+- **Error handling**: Identify one external call in your staking flow where failure should *not* revert the whole transaction. Wrap it in `try/catch` and emit an event on failure. Explain why this is better than reverting.
+
+{/* True/False */}
+<TrueFalse statements={[
+  {"id":"s1","text":"CEI means call external code first, then update state","correctAnswer":false,"explanation":"Always Checks → Effects → Interactions. Update state before calling external code."},
+  {"id":"s2","text":"Pull payments reduce blast radius when recipients are untrusted","correctAnswer":true,"explanation":"Users claim in a separate tx; if one fails, others aren't affected."},
+  {"id":"s3","text":"Use low-level calls by default for flexibility","correctAnswer":false,"explanation":"Prefer typed interfaces and SafeERC20. Low-level calls are for advanced cases only."},
+  {"id":"s4","text":"ReentrancyGuard makes CEI discipline unnecessary","correctAnswer":false,"explanation":"Use both for defense in depth. CEI is your primary defense; nonReentrant is backup."}
+]}/>
+
+Short reflection: Imagine your staking contract calls an external oracle for reward rates. The oracle can fail or go offline. Would you use `try/catch` or let it revert? Write two sentences defending your choice.
+
+## Security and pitfalls
+
+External interactions are the riskiest part of any contract. Follow these rules:
+
+### CEI violations
+
+- **Always** update state before calling external contracts
+- **Test** the call order: write a unit test with a malicious token that re-enters; ensure it fails
+- **Review** every `external` call: does state get updated first? If not, refactor or add `nonReentrant`
+
+### Reentrancy guard misuse
+
+- **Don't over-guard**: `view` functions don't need `nonReentrant`; it wastes gas
+- **Cross-function reentrancy**: If `functionA` calls external code, and that code calls `functionB`, both functions need guards or CEI discipline
+- **Test**: Write a test where an attacker contract calls your function recursively; ensure it reverts
+
+### Pull vs push trade-offs
+
+- **Pull pros**: Isolated failures, better gas control, simpler audits
+- **Pull cons**: Users must initiate claims (extra tx), more complex UX
+- **Push pros**: Single-transaction UX (e.g., auto-claim on deposit)
+- **Push cons**: Batch failures cascade, gas limits bite sooner, more attack surface
+
+### Low-level call pitfalls
+
+- **No type safety**: You can call anything; compiler won't help
+- **Return data manipulation**: Malicious contracts can return fake data
+- **Gas griefing**: Target can consume all forwarded gas and revert; limit gas explicitly
+- **Self-destruct risk**: Never allow calls to `address(this)` or critical system contracts
+- **No `SafeERC20` protection**: You must manually validate returns
+
+### Try/catch pitfalls
+
+- **Silent failures**: Don't ignore `catch` blocks; always emit events or revert with context
+- **Gas estimation**: `try` forwards all available gas by default; limit if needed
+- **Partial state**: If you updated state before `try`, and `catch` returns a default, ensure state is consistent (e.g., reset pending balances)
+
+## Security checklist
+
+Before shipping external interactions:
+
+- [ ] **CEI discipline**: All state updates happen before external calls in every function
+- [ ] **ReentrancyGuard applied**: Functions that transfer value or call untrusted contracts have `nonReentrant`
+- [ ] **SafeERC20 everywhere**: All token transfers use `safeTransfer` and `safeTransferFrom`
+- [ ] **Pull pattern for claims**: Untrusted recipients claim via separate transactions, not pushed in batch
+- [ ] **Interfaces typed**: External contracts are called via explicit interfaces (`IERC20`, `IRewardModule`), not raw addresses
+- [ ] **Try/catch on risky calls**: External calls that can fail without breaking the system are wrapped in `try/catch`
+- [ ] **Events on failures**: `catch` blocks emit events with `indexed` subjects for monitoring
+- [ ] **Low-level calls validated**: If using `call`/`delegatecall`, target and gas are validated, and `success` is checked
+- [ ] **Test coverage**: Unit tests simulate reentrancy, malicious tokens, failing modules, and gas limits
+- [ ] **No self-calls**: Functions never call `address(this)` or other critical addresses via low-level primitives
+
+## Wrap-up and next steps
+
+You've learned how to structure safe external interactions: CEI discipline to prevent reentrancy, `ReentrancyGuard` as a backup, pull patterns to isolate failures, and `try/catch` to surface bounded errors. You saw when to use low-level calls (rarely) and how to validate them when necessary.
+
+Combined with the interfaces (Lesson 2), events and libraries (Lesson 3), and OpenZeppelin primitives (Lesson 5) from earlier in this module, you now have a complete toolkit for building modular, auditable staking contracts. Next, you'll integrate all these patterns as you explore the OpenZeppelin ecosystem and choose the right primitives for your staking MVP.
+
