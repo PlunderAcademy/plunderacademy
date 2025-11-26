@@ -39,11 +39,51 @@ Before starting, ensure you have:
 
 > **WalletConnect Project ID:** Go to [cloud.walletconnect.com](https://cloud.walletconnect.com), sign up (free), and create a project. Copy the Project ID—you'll need it in .env.local.
 
+## 🚨 Starting Fresh - Important!
+
+<Callout type="warning">
+**Before you begin:** If you completed the Upgradeable Contracts module or any previous practicals, you should close that project and start with a completely new folder. Each practical module should be its own independent project!
+</Callout>
+
+**Why start fresh?**
+- This is a **Next.js frontend project**, completely different from your Hardhat/Foundry Solidity projects
+- Mixing projects leads to confusing file structures and dependency conflicts
+- Professional developers keep separate projects in separate folders
+- It's easier to troubleshoot issues when projects are isolated
+
+**Follow these steps:**
+
+1. **Close your current project in VS Code:**
+   - File → Close Folder (or Ctrl/Cmd + K then F)
+
+2. **Choose a clean location for the new project:**
+   - Navigate to your main development folder (e.g., `Documents/GitHub/`, `~/projects/`, etc.)
+   - Do NOT create this inside your previous project folders!
+
+3. **Create the project** (instructions below)
+
+<Callout type="tip">
+**Good folder structure example:**
+```
+Documents/
+├── my-zilliqa-token/          ← Island 1 ERC-20 project
+├── my-staking-contract/       ← Island 2 staking project
+├── my-nft-collection/         ← Island 3 NFT project
+├── zilliqa-rng/               ← Island 4 RNG project
+├── training-registry/         ← Island 4 upgradeable project
+├── my-token-dapp/             ← Your new Island 5 dApp (create this fresh!)
+└── future-projects/           ← More projects later...
+```
+</Callout>
+
 ## Step 1: Create Next.js project
 
-Open your terminal and create a new Next.js project:
+Open your terminal, navigate to your main development directory, and create a new Next.js project:
 
 ```bash
+# First, navigate to your main development directory (NOT inside your old project!)
+# Example: cd ~/Documents/GitHub  or  cd ~/projects
+
 npx create-next-app@latest my-token-dapp
 ```
 

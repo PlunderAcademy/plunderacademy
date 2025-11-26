@@ -14,10 +14,9 @@ In this lesson, you'll deploy a production-ready NFT collection to Zilliqa testn
 
 1. **Project setup** with Hardhat 3 and OpenZeppelin
 2. **Contract preparation** with claimant integration
-3. **Local testing** with Hardhat node
-4. **Deployment scripts** for automated deployment
-5. **Zilliqa testnet deployment** with verification
-6. **Achievement claiming** using your transaction hash
+3. **Deployment scripts** for automated deployment
+4. **Zilliqa testnet deployment** with verification
+5. **Achievement claiming** using your transaction hash
 
 ### Interactive: Deployment Flow
 
@@ -29,9 +28,46 @@ Visualize the journey of your smart contract from source code to live deployment
 
 ## Project Setup
 
+### 🚨 Starting Fresh - Important!
+
+<Callout type="warning">
+**Before you begin:** If you completed the Staking Contract module (Island 2) or any previous practicals, you should close that project and start with a completely new folder. Each practical module should be its own independent project!
+</Callout>
+
+**Why start fresh?**
+- Each module teaches different concepts with different dependencies
+- Mixing projects leads to confusing file structures and import conflicts
+- Professional developers keep separate projects in separate folders
+- It's easier to troubleshoot issues when projects are isolated
+
+**Follow these steps:**
+
+1. **Close your current project in VS Code:**
+   - File → Close Folder (or Ctrl/Cmd + K then F)
+
+2. **Choose a clean location for the new project:**
+   - Navigate to your main development folder (e.g., `Documents/GitHub/`, `~/projects/`, etc.)
+   - Do NOT create this inside your previous project folders!
+
+3. **Create and open the new project** (instructions below)
+
+<Callout type="tip">
+**Good folder structure example:**
+```
+Documents/
+├── my-zilliqa-token/      ← Island 1 ERC-20 project
+├── my-staking-contract/   ← Island 2 staking project
+├── my-nft-collection/     ← Your new Island 3 project (create this fresh!)
+└── future-projects/       ← More projects later...
+```
+</Callout>
+
 ### Create New Project
 
 ```bash
+# First, navigate to your main development directory (NOT inside your old project!)
+# Example: cd ~/Documents/GitHub  or  cd ~/projects
+
 # Create project directory
 mkdir my-nft-collection
 cd my-nft-collection
@@ -594,7 +630,7 @@ async function main() {
     console.log("Claimant:", claimantAddress);
     
     console.log("\n📋 Next Steps:");
-    console.log("1. Test minting locally with mint-nft.ts script");
+    console.log("1. Test minting with mint-nft.ts script");
     console.log("2. In next lesson, generate metadata and pin to IPFS");
     console.log("3. Update contract URIs with real IPFS links");
     console.log("4. Reveal the collection");
@@ -631,61 +667,9 @@ Add convenient npm scripts:
 }
 ```
 
-## Local Deployment Testing
+### Creating the Minting Script
 
-### Start Local Hardhat Network
-
-**Terminal 1:**
-```bash
-npx hardhat node
-```
-
-This starts a local blockchain with pre-funded test accounts.
-
-### Deploy Locally
-
-**Terminal 2:**
-
-Set environment variables and deploy:
-```bash
-export CLAIMANT_ADDRESS=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-npm run deploy:local
-```
-
-**Expected output:**
-```
-Deploying NFT Collection to localhost...
-Deploying from account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-Collection name: Plunder NFT Collection
-Collection symbol: PNFT
-Base URI (placeholder): ipfs://placeholder-revealed/
-Hidden URI (placeholder): ipfs://placeholder-hidden/hidden.json
-Claimant: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-Network: localhost
-Chain ID: 31337
-
-Deploying NFT Collection...
-⏳ Deployment transaction submitted...
-Transaction hash: 0x...
-✅ NFT Collection deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
-
-📋 Verifying deployment...
-Collection Name: Plunder NFT Collection
-Symbol: PNFT
-Max Supply: 100
-Mint Price: 1000000000000000000 wei (1 ZIL)
-Total Minted: 0
-Is Revealed: false
-Claimant: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-Owner: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-
-✅ All verifications passed!
-🎉 Deployment completed successfully!
-```
-
-### Test Minting Locally
-
-Create `scripts/mint-nft.ts`:
+Create `scripts/mint-nft.ts` for minting NFTs:
 
 ```typescript
 import { network } from "hardhat";
@@ -786,13 +770,6 @@ async function main() {
 }
 
 main().catch(console.error);
-```
-
-**Test it:**
-```bash
-export NFT_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
-export MINT_QUANTITY=3
-npm run mint:local
 ```
 
 ## Zilliqa Testnet Deployment
@@ -1105,7 +1082,6 @@ You've successfully:
 ✅ **Set up Hardhat 3** with Zilliqa network configurations  
 ✅ **Created the NFT contract** with claimant integration  
 ✅ **Written deployment scripts** with comprehensive verification  
-✅ **Tested locally** with Hardhat node  
 ✅ **Deployed to Zilliqa testnet** with proper configuration  
 ✅ **Verified deployment** on block explorer  
 ✅ **Tested minting** and tracking NFT ownership  

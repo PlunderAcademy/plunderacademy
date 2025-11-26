@@ -14,17 +14,54 @@ In this lesson, you'll deploy a production-ready random number generator to Zill
 
 1. **Project setup** with Hardhat 3 and required dependencies
 2. **Contract preparation** with claimant integration
-3. **Local testing** with Hardhat node
-4. **Deployment scripts** for automated deployment
-5. **Helper scripts** for commit and reveal operations
-6. **Zilliqa testnet deployment** with verification
-7. **Achievement claiming** using your transaction hash
+3. **Deployment scripts** for automated deployment
+4. **Helper scripts** for commit and reveal operations
+5. **Zilliqa testnet deployment** with verification
+6. **Achievement claiming** using your transaction hash
 
 ## Project Setup
+
+### 🚨 Starting Fresh - Important!
+
+<Callout type="warning">
+**Before you begin:** If you completed the NFT Collection module (Island 3) or any previous practicals, you should close that project and start with a completely new folder. Each practical module should be its own independent project!
+</Callout>
+
+**Why start fresh?**
+- Each module teaches different concepts with different dependencies
+- Mixing projects leads to confusing file structures and import conflicts
+- Professional developers keep separate projects in separate folders
+- It's easier to troubleshoot issues when projects are isolated
+
+**Follow these steps:**
+
+1. **Close your current project in VS Code:**
+   - File → Close Folder (or Ctrl/Cmd + K then F)
+
+2. **Choose a clean location for the new project:**
+   - Navigate to your main development folder (e.g., `Documents/GitHub/`, `~/projects/`, etc.)
+   - Do NOT create this inside your previous project folders!
+
+3. **Create and open the new project** (instructions below)
+
+<Callout type="tip">
+**Good folder structure example:**
+```
+Documents/
+├── my-zilliqa-token/      ← Island 1 ERC-20 project
+├── my-staking-contract/   ← Island 2 staking project
+├── my-nft-collection/     ← Island 3 NFT project
+├── zilliqa-rng/           ← Your new Island 4 RNG project (create this fresh!)
+└── future-projects/       ← More projects later...
+```
+</Callout>
 
 ### Create New Project
 
 ```bash
+# First, navigate to your main development directory (NOT inside your old project!)
+# Example: cd ~/Documents/GitHub  or  cd ~/projects
+
 # Create project directory
 mkdir zilliqa-rng
 cd zilliqa-rng
@@ -1020,140 +1057,6 @@ Add convenient npm scripts:
 }
 ```
 
-## Local Deployment Testing
-
-### Start Local Hardhat Network
-
-**Terminal 1:**
-```bash
-npx hardhat node
-```
-
-This starts a local blockchain with pre-funded test accounts.
-
-### Deploy Locally
-
-**Terminal 2:**
-
-Set environment variables and deploy:
-```bash
-export CLAIMANT_ADDRESS=0xyourwalletfortrainingportalacheivement
-npm run deploy:local
-```
-
-**Expected output:**
-```
-Deploying RNG Contract to localhost...
-Deploying from account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-Claimant: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-Network: localhost
-Chain ID: 31337
-
-Deploying ZilliqaRandomNumber2 contract...
-⏳ Deployment transaction submitted...
-Transaction hash: 0x...
-✅ RNG Contract deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
-
-🎯 Transaction ID for Achievement Submission:
-0x...
-
-📋 Verifying deployment...
-Claimant: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-Min Blocks Delay: 5
-Max Blocks Delay: 1000
-Max Random Limit: 2000000000
-
-✅ Claimant verification passed!
-🎉 Deployment completed successfully!
-```
-
-### Test Commit/Reveal Flow Locally
-
-**1. Save contract address:**
-```bash
-export RNG_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
-```
-
-**2. Make a commitment:**
-```bash
-export BLOCKS_AHEAD=10
-export MIN_RANDOM=1
-export MAX_RANDOM=100
-npm run commit:local
-```
-
-**Expected output:**
-```
-Committing to random number on localhost...
-Current block: 0
-
-📋 Commitment Parameters:
-Target block: 10
-Blocks to wait: 10
-Random range: 1 to 100
-
-🎲 Committing to random number...
-✅ Commitment successful!
-
-⏰ You can reveal in ~10 seconds
-Target block: 10
-```
-
-**3. Check commitment status:**
-```bash
-export CHECK_ADDRESS=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 (this is a local wallet only for testing)
-npm run check:local
-```
-
-NOTE: locally, this will advance the blocks 15 blocks.
-
-**Expected output:**
-```
-Current block: 2
-
-📋 Active Commitment:
-═══════════════════════════════════════
-Target block: 11
-Random range: 1 to 100
-Revealed: false
-
-✅ Status: Ready to reveal!
-Run: npm run reveal:local
-═══════════════════════════════════════
-```
-
-**4. Reveal the random number:**
-```bash
-npm run reveal:local
-```
-
-**Expected output:**
-```
-Revealing random number on localhost...
-Current block: 12
-
-📋 Your Commitment:
-Target block: 10
-Range: 1 to 100
-Revealed: false
-
-🎲 Revealing random number...
-✅ Reveal successful!
-
-🎉 Random Number Generated!
-═══════════════════════════════════════
-Result: 42
-Range: 1 to 100
-
-📊 Entropy Sources:
-Raw Random: 115792089237316195423570985008687907853269984665640564039457584007913129639935
-Prevrandao: 0
-Blockhash: 0xabcdef...
-═══════════════════════════════════════
-
-✅ You can now make a new commitment!
-```
-
 ## Zilliqa Testnet Deployment
 
 ### Prerequisites
@@ -1387,7 +1290,6 @@ You've successfully:
 ✅ **Created the RNG contract** with claimant integration  
 ✅ **Written deployment scripts** with comprehensive verification  
 ✅ **Created helper scripts** for commit/reveal workflow  
-✅ **Tested locally** with Hardhat node  
 ✅ **Deployed to Zilliqa testnet** with proper configuration  
 ✅ **Verified deployment** on block explorer  
 ✅ **Tested full commit-reveal flow** on testnet  

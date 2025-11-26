@@ -201,45 +201,6 @@ main().catch(console.error);
 - Press **Ctrl+S** (Windows/Linux) or **Cmd+S** (Mac) to save `scripts/deploy-myfirsttoken.ts`
 - **If you don't save, you'll run the old version or get errors!**
 
-### Local Deployment Testing
-
-**Deploy to local Hardhat network:**
-
-```bash
-# Terminal 1: Start local blockchain
-npx hardhat node
-
-# Terminal 2: Deploy to local network using npm script
-npm run deploy:local
-```
-
-**Expected local deployment output:**
-```
-Deploying MyFirstToken contract to localhost...
-Deploying from account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-Claimant will be: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-Network: localhost
-Chain ID: 31337
-Deploying MyFirstToken...
-✅ MyFirstToken deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
-
-📋 Verifying deployment...
-Token name: My First Token
-Token symbol: MFT
-Decimals: 18
-Total supply: 1,000,000 tokens
-Claimant address: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-Deployer balance: 1,000,000 tokens
-
-🔄 Transferring 1000 tokens to claimant...
-Transfer transaction hash: 0x1234...
-✅ Transfer confirmed in block: 2n
-Deployer balance after transfer: 999,000 tokens
-Claimant balance: 1,000 tokens
-
-🎉 Deployment completed successfully!
-```
-
 ### Setting Up Testnet Deployment
 
 Before deploying to Zilliqa testnet, you need a dedicated development wallet with testnet ZIL.

@@ -14,16 +14,51 @@ In this lesson, you'll deploy a production-ready staking contract to Zilliqa tes
 
 1. **Project setup** with Hardhat 3 and OpenZeppelin
 2. **Contract preparation** with claimant integration
-3. **Local testing** with Hardhat node
-4. **Deployment scripts** for automated deployment
-5. **Zilliqa testnet deployment** with verification
-6. **Achievement claiming** using your transaction hash
+3. **Deployment scripts** for automated deployment
+4. **Zilliqa testnet deployment** with verification
+5. **Achievement claiming** using your transaction hash
 
 ## Project Setup
+
+### 🚨 Starting Fresh - Important!
+
+<Callout type="warning">
+**Before you begin:** If you completed the ERC-20 Token module (Island 1), you should close that project and start with a completely new folder. Each practical module should be its own independent project!
+</Callout>
+
+**Why start fresh?**
+- Each module teaches different concepts with different dependencies
+- Mixing projects leads to confusing file structures and import conflicts
+- Professional developers keep separate projects in separate folders
+- It's easier to troubleshoot issues when projects are isolated
+
+**Follow these steps:**
+
+1. **Close your current project in VS Code:**
+   - File → Close Folder (or Ctrl/Cmd + K then F)
+
+2. **Choose a clean location for the new project:**
+   - Navigate to your main development folder (e.g., `Documents/GitHub/`, `~/projects/`, etc.)
+   - Do NOT create this inside your previous `my-zilliqa-token` folder!
+
+3. **Create and open the new project** (instructions below)
+
+<Callout type="tip">
+**Good folder structure example:**
+```
+Documents/
+├── my-zilliqa-token/      ← Your Island 1 ERC-20 project (keep it here!)
+├── my-staking-contract/   ← Your new Island 2 project (create this fresh!)
+└── future-projects/       ← More projects later...
+```
+</Callout>
 
 ### Create New Project
 
 ```bash
+# First, navigate to your main development directory (NOT inside your old project!)
+# Example: cd ~/Documents/GitHub  or  cd ~/projects
+
 # Create project directory
 mkdir my-staking-contract
 cd my-staking-contract
@@ -41,7 +76,14 @@ npx hardhat --init
 # "use the default for relative or absolute path"
 # "Create a TypeScript project (with Viem)"
 # Accept all other defaults
+
+# Open this fresh project in VS Code
+code .
 ```
+
+<Callout type="info">
+**Opening in VS Code:** The `code .` command opens the current folder in a new VS Code window. If VS Code doesn't open, you can manually open VS Code and use File → Open Folder to select `my-staking-contract`.
+</Callout>
 
 ### Install Dependencies
 
@@ -690,28 +732,11 @@ Add convenient npm scripts:
 }
 ```
 
-## Local Deployment Testing
+### Creating a Test Token (Optional)
 
-### Start Local Hardhat Network
+If you don't already have an ERC20 token from Island 1, you can create a simple test token to stake.
 
-**Terminal 1:**
-```bash
-npx hardhat node
-```
-
-This starts a local blockchain with pre-funded test accounts.
-
-### Deploy Locally
-
-**Terminal 2:**
-
-First, you need a token to stake. Either:
-- Use an existing ERC20 token address, OR
-- Deploy a simple test token:
-
-**Quick test token (for local testing only):**
-
-Create `contracts/TestToken.sol`:
+**Create `contracts/TestToken.sol`:**
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
@@ -724,9 +749,13 @@ contract TestToken is ERC20 {
     }
 }
 ```
-rerun 'npx hardhat compile'
 
-Create `scripts/deploy-test-token.ts`:
+Recompile after adding:
+```bash
+npx hardhat compile
+```
+
+**Create `scripts/deploy-test-token.ts`:**
 ```typescript
 import { network } from "hardhat";
 
@@ -817,46 +846,6 @@ async function main() {
 }
 
 main().catch(console.error);
-```
-
-
-Deploy it first:
-```bash
-# In Terminal 2
-export HARDHAT_NETWORK=hardhatMainnet
-npx hardhat run scripts/deploy-test-token.ts
-# Note the deployed token address
-```
-
-Then set environment variables and deploy staking:
-```bash
-export STAKING_TOKEN_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
-export CLAIMANT_ADDRESS=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-npm run deploy:local
-```
-
-**Expected output:**
-```
-Deploying Staking contract to localhost...
-Deploying from account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-Staking token: 0x5FbDB2315678afecb367f032d93F642f64180aa3
-Fee address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-Claimant: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-Network: localhost
-Chain ID: 31337
-
-Deploying Staking contract...
-✅ Staking contract deployed to: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-
-📋 Verifying deployment...
-APY Tier 1 (30 days): 10%
-APY Tier 2 (60 days): 15%
-APY Tier 3 (120 days): 27%
-Early Exit Penalty: 5%
-Withdrawal Fee: 2%
-Total Staked: 0
-
-🎉 Deployment completed successfully!
 ```
 
 ## Zilliqa Testnet Deployment
@@ -1689,7 +1678,6 @@ You've successfully:
 ✅ **Set up Hardhat 3** with Zilliqa network configurations  
 ✅ **Created the Staking contract** with claimant integration  
 ✅ **Written deployment scripts** with comprehensive verification  
-✅ **Tested locally** with Hardhat node  
 ✅ **Deployed to Zilliqa testnet** with proper configuration  
 ✅ **Verified deployment** on block explorer  
 ✅ **Funded the reward pool** with tokens  

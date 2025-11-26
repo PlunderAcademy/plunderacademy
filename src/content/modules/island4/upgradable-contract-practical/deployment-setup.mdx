@@ -239,9 +239,48 @@ anvil --version
 
 ## Project Setup
 
+### 🚨 Starting Fresh - Important!
+
+<Callout type="warning">
+**Before you begin:** If you completed the RNG module or any previous practicals, you should close that project and start with a completely new folder. Each practical module should be its own independent project!
+</Callout>
+
+**Why start fresh?**
+- This module uses **Foundry**, not Hardhat - completely different toolchain!
+- Mixing projects leads to confusing file structures and import conflicts
+- Professional developers keep separate projects in separate folders
+- It's easier to troubleshoot issues when projects are isolated
+
+**Follow these steps:**
+
+1. **Close your current project in VS Code:**
+   - File → Close Folder (or Ctrl/Cmd + K then F)
+
+2. **Choose a clean location for the new project:**
+   - Navigate to your main development folder (e.g., `Documents/GitHub/`, `~/projects/`, etc.)
+   - Do NOT create this inside your previous project folders!
+
+3. **Create and open the new project** (instructions below)
+
+<Callout type="tip">
+**Good folder structure example:**
+```
+Documents/
+├── my-zilliqa-token/              ← Island 1 ERC-20 project (Hardhat)
+├── my-staking-contract/           ← Island 2 staking project (Hardhat)
+├── my-nft-collection/             ← Island 3 NFT project (Hardhat)
+├── zilliqa-rng/                   ← Island 4 RNG project (Hardhat)
+├── training-registry-upgradeable/ ← Your new Foundry project (create this fresh!)
+└── future-projects/               ← More projects later...
+```
+</Callout>
+
 ### Create New Foundry Project
 
 ```bash
+# First, navigate to your main development directory (NOT inside your old project!)
+# Example: cd ~/Documents/GitHub  or  cd ~/projects
+
 # Create project directory
 mkdir training-registry-upgradeable
 cd training-registry-upgradeable
