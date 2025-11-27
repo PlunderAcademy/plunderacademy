@@ -224,7 +224,7 @@ export default function Home() {
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-foreground mb-1">
-                    22
+                    23
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Core Modules
@@ -232,7 +232,7 @@ export default function Home() {
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-foreground mb-1">
-                    20-40h
+                    35-50h
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Total Duration

@@ -209,7 +209,7 @@ const islandMetadata: Record<string, { name: string; title: string; description:
     title: 'Jungle Island - Fundamentals', 
     description: 'Master the fundamental concepts of blockchain technology and EVM development in this comprehensive starting adventure.',
     status: 'available',
-    estimatedHours: '3-5h',
+    estimatedHours: '5-7h',
     icon: '🌴',
     color: 'green',
     order: 1
@@ -218,8 +218,8 @@ const islandMetadata: Record<string, { name: string; title: string; description:
     name: 'Frost Peak',
     title: 'Frost Peak - Advanced Solidity',
     description: 'Scale the heights of advanced Solidity development with inheritance, testing, staking contracts, and complex data structures.',
-    status: 'coming-soon', 
-    estimatedHours: '5-8h',
+    status: 'available', 
+    estimatedHours: '8-10h',
     icon: '❄️',
     color: 'blue',
     order: 2
@@ -228,8 +228,8 @@ const islandMetadata: Record<string, { name: string; title: string; description:
     name: 'Desert Bluff',
     title: 'Desert Bluff - Token & NFT Launchpad',
     description: 'Navigate the vast dunes of NFT creation, metadata handling, and token collection deployments with modern standards.',
-    status: 'coming-soon',
-    estimatedHours: '3-4h', 
+    status: 'available',
+    estimatedHours: '5-7h', 
     icon: '🏜️',
     color: 'orange',
     order: 3
@@ -238,8 +238,8 @@ const islandMetadata: Record<string, { name: string; title: string; description:
     name: 'Gilded Bastion',
     title: 'Gilded Bastion - On-Chain Systems',
     description: 'Discover the treasures of DeFi protocols, oracles, upgradeability patterns, and advanced blockchain architecture.',
-    status: 'coming-soon',
-    estimatedHours: '6-9h',
+    status: 'available',
+    estimatedHours: '9-12h',
     icon: '🏰',
     color: 'yellow',
     order: 4
@@ -248,8 +248,8 @@ const islandMetadata: Record<string, { name: string; title: string; description:
     name: 'Neon Haven', 
     title: 'Neon Haven - Frontend Integration',
     description: 'Enter the digital metropolis and connect smart contracts to web applications with modern Web3 libraries and user interfaces.',
-    status: 'coming-soon',
-    estimatedHours: '3-5h',
+    status: 'available',
+    estimatedHours: '6-8h',
     icon: '🌃',
     color: 'cyan',
     order: 5
