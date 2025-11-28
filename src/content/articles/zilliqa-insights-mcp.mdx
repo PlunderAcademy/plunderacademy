@@ -22,14 +22,47 @@ The [Zilliqa Insights MCP Server](https://github.com/Zilliqa/insights-mcp-server
 
 The server exposes several key functions:
 
-| Tool | Description | Example Query |
-|------|-------------|---------------|
-| `get_validator_stake` | Current ZIL delegated to a validator | "How much ZIL is staked with PlunderSwap?" |
-| `get_validator_info` | Validator details including addresses | "What is the ZIL address for Binance?" |
-| `get_total_validator_earnings` | Total ZIL rewards earned | "What were Moonlet's total earnings last 3 months?" |
-| `get_validator_earnings_breakdown` | Breakdown of proposal vs cosigning rewards | "Show me PlunderSwap's earnings breakdown for the past week" |
-| `get_proposer_success_rate` | Block proposal performance | "How reliable was Binance at proposing blocks in November 2025?" |
-| `get_cosigner_success_rate` | Consensus participation reliability | "What was Torch's cosigner success rate yesterday?" |
+<table>
+  <thead>
+    <tr>
+      <th>Tool</th>
+      <th>Description</th>
+      <th>Example Query</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>get_validator_stake</code></td>
+      <td>Current ZIL delegated to a validator</td>
+      <td>"How much ZIL is staked with PlunderSwap?"</td>
+    </tr>
+    <tr>
+      <td><code>get_validator_info</code></td>
+      <td>Validator details including addresses</td>
+      <td>"What is the ZIL address for PlunderSwap?"</td>
+    </tr>
+    <tr>
+      <td><code>get_total_validator_earnings</code></td>
+      <td>Total ZIL rewards earned</td>
+      <td>"Amazing Pool's total earnings last 3 months"</td>
+    </tr>
+    <tr>
+      <td><code>get_validator_earnings_breakdown</code></td>
+      <td>Breakdown of proposal vs cosigning rewards</td>
+      <td>"Moonlet earnings breakdown last week"</td>
+    </tr>
+    <tr>
+      <td><code>get_proposer_success_rate</code></td>
+      <td>Block proposal performance</td>
+      <td>"How reliable was Torch at proposing blocks in November?"</td>
+    </tr>
+    <tr>
+      <td><code>get_cosigner_success_rate</code></td>
+      <td>Consensus participation reliability</td>
+      <td>"What's Binance's cosigner success rate last month?"</td>
+    </tr>
+  </tbody>
+</table>
 
 ### Time-Based Queries
 
@@ -156,8 +189,11 @@ Without MCP, an LLM might guess a validator's stake based on training data from 
 You can test this right now in our [Chat Assistant](/chat). Try asking:
 
 - "How much ZIL is staked with PlunderSwap?"
-- "What are Binance's earnings this week?"
-- "How reliable was Moonlet at proposing blocks?"
+- "What's Binance's cosigner success rate last month?"
+- "Moonlet earnings breakdown last week"
+- "How reliable was Torch at proposing blocks in November?"
+- "What is the ZIL address for PlunderSwap?"
+- "Amazing Pool's total earnings last 3 months"
 
 ## Resources
 
