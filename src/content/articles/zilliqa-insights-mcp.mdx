@@ -1,0 +1,166 @@
+---
+slug: zilliqa-insights-mcp
+title: "Zilliqa Insights MCP: Real-Time Blockchain Data for AI Agents"
+excerpt: Learn how to integrate the Zilliqa Insights Model Context Protocol (MCP) server to give your AI agents access to real-time validator metrics, staking data, and network performance stats.
+level: intermediate
+tags:
+  - mcp
+  - zilliqa
+  - ai
+  - tools
+---
+
+The Model Context Protocol (MCP) is transforming how AI agents interact with the world. Instead of relying solely on training data (which is always outdated), MCP allows AI models to access real-time tools and data sources through a standardized interface.
+
+Zilliqa has released the **Zilliqa Insights MCP Server**, a powerful tool that exposes real-time network data to LLMs. In this guide, we'll explore what it is and how to integrate it into your own AI applications.
+
+## What is Zilliqa Insights MCP?
+
+The [Zilliqa Insights MCP Server](https://github.com/Zilliqa/insights-mcp-server) acts as a bridge between Large Language Models (LLMs) and Zilliqa's network data. It provides a set of executable tools that an AI can "call" to answer user questions accurately.
+
+### Available Tools
+
+The server exposes several key functions:
+
+| Tool | Description | Example Query |
+|------|-------------|---------------|
+| `get_validator_stake` | Current ZIL delegated to a validator | "How much ZIL is staked with PlunderSwap?" |
+| `get_validator_info` | Validator details including addresses | "What is the ZIL address for Binance?" |
+| `get_total_validator_earnings` | Total ZIL rewards earned | "What were Moonlet's total earnings last 3 months?" |
+| `get_validator_earnings_breakdown` | Breakdown of proposal vs cosigning rewards | "Show me PlunderSwap's earnings breakdown for the past week" |
+| `get_proposer_success_rate` | Block proposal performance | "How reliable was Binance at proposing blocks in November 2025?" |
+| `get_cosigner_success_rate` | Consensus participation reliability | "What was Torch's cosigner success rate yesterday?" |
+
+### Time-Based Queries
+
+Most tools support optional `startTime` and `endTime` parameters. The AI interprets natural language time ranges:
+
+- "yesterday" → Previous day
+- "last week" → Past 7 days
+- "last 3 months" → Past 90 days
+- "November 2025" → Specific month
+
+## Example Queries & Responses
+
+Here are real examples from our integration:
+
+**Stake Query:**
+> "How much ZIL is staked with PlunderSwap?"
+> 
+> 📊 **PlunderSwap Stake**: 248,021,246.40 ZIL (≈248.02M ZIL)
+
+**Validator Info:**
+> "What is the ZIL address for Binance?"
+> 
+> ℹ️ **Binance Info**
+> • public key: 0x848886d0f3...
+> • zil address: zil1u3h9mxkuyct3g8zs4x2lh67cnz2rkgxazu5swq
+> • address: 0xe46e5d9adc2617141c50a995fbebd898943b20dd
+
+**Earnings with Time Range:**
+> "What were PlunderSwap's earnings last 3 months?"
+> 
+> 💰 The total ZIL rewards for validator PlunderSwap were 9,345,478.41 between Aug 28, 2025 and Nov 28, 2025.
+
+**Performance Metrics:**
+> "How reliable was Binance at proposing blocks in November 2025?"
+> 
+> 🎯 Proposer success rate for validator Binance was 99.98% between Nov 1, 2025 and Nov 30, 2025.
+
+## Integration Guide
+
+We've integrated this directly into Plunder Academy's Chat Assistant. Here is how you can do it using the [Vercel AI SDK](https://sdk.vercel.ai).
+
+### 1. Install Dependencies
+
+```bash
+npm install ai @ai-sdk/mcp
+```
+
+### 2. Create the MCP Module
+
+Create a dedicated module for MCP integration (`lib/zilliqa-mcp.ts`):
+
+```typescript
+import { experimental_createMCPClient as createMCPClient } from '@ai-sdk/mcp';
+
+const ZILLIQA_MCP_URL = 'https://insights.mcp.zilliqa.com/mcp';
+
+let mcpClient: Awaited<ReturnType<typeof createMCPClient>> | null = null;
+let mcpTools: Record<string, any> | null = null;
+
+export async function getZilliqaInsightsTools() {
+  if (mcpTools) return mcpTools;
+
+  mcpClient = await createMCPClient({
+    transport: {
+      type: 'http',
+      url: ZILLIQA_MCP_URL,
+    },
+  });
+
+  mcpTools = await mcpClient.tools();
+  console.log('[MCP] Connected! Tools:', Object.keys(mcpTools));
+  
+  return mcpTools;
+}
+```
+
+### 3. Use in Your Chat Route
+
+```typescript
+import { streamText, generateText } from 'ai';
+import { getZilliqaInsightsTools } from '@/lib/zilliqa-mcp';
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+  
+  const tools = await getZilliqaInsightsTools();
+
+  const result = await streamText({
+    model: 'openai/gpt-4o',
+    messages,
+    tools,
+    maxSteps: 5,
+  });
+
+  return result.toDataStreamResponse();
+}
+```
+
+### 4. Add Validator Nickname Mapping (Optional)
+
+To improve UX, map common names to the exact validator names the MCP server expects:
+
+```typescript
+const VALIDATOR_NICKNAMES: Record<string, string> = {
+  'torch': 'torchwallet.io',
+  'huobi': 'HTX',
+  'plunder': 'PlunderSwap',
+  // ... more mappings
+};
+
+function normalizeValidatorName(name: string): string {
+  return VALIDATOR_NICKNAMES[name.toLowerCase()] || name;
+}
+```
+
+## Why This Matters
+
+This integration solves one of the biggest hurdles in blockchain AI: **Hallucination**.
+
+Without MCP, an LLM might guess a validator's stake based on training data from 2023. With MCP, it queries the live chain state, ensuring 100% accuracy.
+
+### Try It Out
+
+You can test this right now in our [Chat Assistant](/chat). Try asking:
+
+- "How much ZIL is staked with PlunderSwap?"
+- "What are Binance's earnings this week?"
+- "How reliable was Moonlet at proposing blocks?"
+
+## Resources
+
+- [Zilliqa Insights MCP GitHub](https://github.com/Zilliqa/insights-mcp-server)
+- [Model Context Protocol Docs](https://modelcontextprotocol.io)
+- [Vercel AI SDK MCP Guide](https://sdk.vercel.ai/docs/ai-sdk-core/mcp-tools)

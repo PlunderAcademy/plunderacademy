@@ -75,6 +75,16 @@ const starterPrompts = [
   "Show a safe pattern for sending ETH from a contract.",
 ] as const;
 
+// Zilliqa validator query prompts (uses MCP tools)
+const validatorPrompts = [
+  "How much ZIL is staked with PlunderSwap?",
+  "What's Binance's cosigner success rate last month?",
+  "Moonlet earnings breakdown last week",
+  "How reliable was Torch at proposing blocks in November?",
+  "What is the ZIL address for PlunderSwap?",
+  "Amazing Pool's total earnings last 3 months",
+] as const;
+
 export default function ChatPage() {
   const { address, sessionId } = useSession();
   
@@ -105,6 +115,7 @@ export default function ChatPage() {
   }, [currentConversationId, pendingLoadMessages, messages.length, setMessages]);
   
   const [input, setInput] = React.useState("");
+  const [hideValidatorPrompts, setHideValidatorPrompts] = React.useState(false);
   const isLoading = status === "submitted" || status === "streaming";
 
   const [interactionIds, setInteractionIds] = React.useState<Record<number, string>>({});
@@ -154,6 +165,12 @@ export default function ChatPage() {
   }, []);
 
   const handleSuggestionSelect = (suggestion: string) => {
+    setInput(suggestion);
+    focusPromptTextarea(suggestion);
+  };
+
+  const handleValidatorPromptSelect = (suggestion: string) => {
+    setHideValidatorPrompts(true);
     setInput(suggestion);
     focusPromptTextarea(suggestion);
   };
@@ -464,6 +481,26 @@ export default function ChatPage() {
                 />
               ))}
             </Suggestions>
+          </section>
+        )}
+        
+        {/* Zilliqa Validator Queries - hide after first use */}
+        {!hideValidatorPrompts && (
+          <section className="rounded-2xl border border-emerald-500/30 bg-emerald-50/20 p-3 dark:bg-emerald-950/20">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              🔗 Live Validator Data
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {validatorPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => handleValidatorPromptSelect(prompt)}
+                  className="rounded-lg border border-emerald-500/30 bg-emerald-50/50 px-3 py-2 text-left text-xs text-emerald-900 transition-colors hover:bg-emerald-100/70 dark:bg-emerald-950/30 dark:text-emerald-100 dark:hover:bg-emerald-900/40"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </section>
         )}
 
