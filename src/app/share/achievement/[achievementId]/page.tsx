@@ -24,6 +24,23 @@ interface AchievementData {
   attributes: AchievementAttribute[];
 }
 
+const IMAGES_BASE_URL = 'https://static.plunderswap.com/training/images';
+
+function getBackgroundId(achievementId: string): string | null {
+  if (achievementId.startsWith('000')) {
+    return '0001-background';
+  } else if (achievementId.startsWith('002')) {
+    return '0020-background';
+  } else if (achievementId.startsWith('003')) {
+    return '0030-background';
+  } else if (achievementId.startsWith('004')) {
+    return '0040-background';
+  } else if (achievementId.startsWith('005')) {
+    return '0050-background';
+  }
+  return null;
+}
+
 // Fetch achievement data from API
 async function fetchAchievementData(achievementId: string): Promise<AchievementData | null> {
   try {
@@ -145,7 +162,10 @@ export default async function ShareAchievementPage({ params }: ShareAchievementP
   }
 
   const moduleTitle = getModuleFromAttributes(achievementData.attributes);
-
+  
+  // Get background image URL based on achievement ID
+  const backgroundId = getBackgroundId(resolvedParams.achievementId);
+  const backgroundImageUrl = backgroundId ? `${IMAGES_BASE_URL}/${backgroundId}.webp` : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 flex items-center justify-center p-4">
@@ -163,18 +183,30 @@ export default async function ShareAchievementPage({ params }: ShareAchievementP
         </CardHeader>
         
         <CardContent className="text-center space-y-6">
-          {/* Achievement Image */}
+          {/* Achievement Image with Background Layer */}
           <div className="relative">
             <div className="inline-block border-4 border-yellow-400 rounded-lg p-3 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 shadow-lg">
-              <Image 
-                src={achievementData.image} 
-                alt={`${achievementData.name} Achievement NFT`}
-                width={200}
-                height={266}
-                className="w-48 h-64 object-contain rounded"
-                unoptimized
-                priority
-              />
+              <div className="relative w-48 h-64">
+                {/* Background Frame Layer */}
+                {backgroundImageUrl && (
+                  <Image 
+                    src={backgroundImageUrl} 
+                    alt="Background frame"
+                    fill
+                    className="object-contain rounded"
+                    unoptimized
+                  />
+                )}
+                {/* Achievement Image */}
+                <Image 
+                  src={achievementData.image} 
+                  alt={`${achievementData.name} Achievement NFT`}
+                  fill
+                  className="object-contain rounded"
+                  unoptimized
+                  priority
+                />
+              </div>
             </div>
           </div>
 

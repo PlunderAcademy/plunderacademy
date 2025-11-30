@@ -12,6 +12,23 @@ interface AchievementData {
   }>;
 }
 
+const IMAGES_BASE_URL = 'https://static.plunderswap.com/training/images';
+
+function getBackgroundId(achievementId: string): string | null {
+  if (achievementId.startsWith('000')) {
+    return '0001-background';
+  } else if (achievementId.startsWith('002')) {
+    return '0020-background';
+  } else if (achievementId.startsWith('003')) {
+    return '0030-background';
+  } else if (achievementId.startsWith('004')) {
+    return '0040-background';
+  } else if (achievementId.startsWith('005')) {
+    return '0050-background';
+  }
+  return null;
+}
+
 async function fetchAchievementData(achievementId: string): Promise<AchievementData | null> {
   try {
     const response = await fetch(`https://static.plunderswap.com/training/${achievementId}.json`);
@@ -44,6 +61,10 @@ export async function GET(
 
     const moduleAttribute = achievementData.attributes.find(attr => attr.trait_type === 'Module');
     const moduleTitle = moduleAttribute?.value as string || 'Unknown Module';
+    
+    // Get background image URL based on achievement ID
+    const backgroundId = getBackgroundId(resolvedParams.achievementId);
+    const backgroundImageUrl = backgroundId ? `${IMAGES_BASE_URL}/${backgroundId}.png` : null;
 
     // Generate PNG using ImageResponse with proper headers
     const imageResponse = new ImageResponse(
@@ -57,46 +78,69 @@ export async function GET(
             position: 'relative',
           }}
         >
-          {/* Achievement Image - PNG version for next/og compatibility */}
-          {achievementData.image ? (
-            <img
-              src={achievementData.image}
-              alt={achievementData.name}
-              style={{
-                position: 'absolute',
-                left: '30px',
-                top: '60px',
-                width: '480px',
-                height: '508px',
-                objectFit: 'contain',
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                position: 'absolute',
-                left: '30px',
-                top: '60px',
-                width: '480px',
-                height: '508px',
-                background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                border: '3px solid #fbbf24',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'column',
-              }}
-            >
-              <div style={{ fontSize: '80px', marginBottom: '20px' }}>🏴‍☠️</div>
-              <div style={{ fontSize: '24px', color: '#fbbf24', fontWeight: 'bold', textAlign: 'center' }}>
-                NFT Achievement
+          {/* Achievement Image Container with Background Layer */}
+          <div
+            style={{
+              position: 'absolute',
+              left: '30px',
+              top: '60px',
+              width: '480px',
+              height: '508px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {/* Background Frame Layer */}
+            {backgroundImageUrl && (
+              <img
+                src={backgroundImageUrl}
+                alt="Background"
+                style={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                }}
+              />
+            )}
+            {/* Achievement Image - PNG version for next/og compatibility */}
+            {achievementData.image ? (
+              <img
+                src={achievementData.image}
+                alt={achievementData.name}
+                style={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                  border: '3px solid #fbbf24',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'column',
+                }}
+              >
+                <div style={{ fontSize: '80px', marginBottom: '20px' }}>🏴‍☠️</div>
+                <div style={{ fontSize: '24px', color: '#fbbf24', fontWeight: 'bold', textAlign: 'center' }}>
+                  NFT Achievement
+                </div>
+                <div style={{ fontSize: '18px', color: '#e2e8f0', textAlign: 'center', marginTop: '10px' }}>
+                  {achievementData.name}
+                </div>
               </div>
-              <div style={{ fontSize: '18px', color: '#e2e8f0', textAlign: 'center', marginTop: '10px' }}>
-                {achievementData.name}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Text Content */}
           <div
