@@ -24,7 +24,7 @@ Now comes the exciting part: **upgrading the live contract!** This is why we bui
 
 **What you'll do:**
 1. **Create TrainingRegistryV2** (add batch submission)
-2. **Maintain storage layout** (append-only, adjust __gap)
+2. **Maintain storage layout** (append-only, adjust _gap)
 3. **Deploy V2 implementation**
 4. **Upgrade proxy** to point at V2
 5. **Test state preservation** (V1 data intact)
@@ -73,7 +73,7 @@ Claim 5 achievements:
 2. **Never delete** existing state variables
 3. **Never change types** of existing variables
 4. **Always append** new variables at the end
-5. **Reduce __gap** by slots consumed
+5. **Reduce _gap** by slots consumed
 
 ### src/TrainingRegistryV2.sol
 
@@ -140,7 +140,7 @@ contract TrainingRegistryV2 is
 
     function setBaseURI(string memory newBaseURI) external onlyOwner {
         _setURI(newBaseURI);
-        _baseDirectoryURI = newBaseURI;
+        _baseDirectoryUri = newBaseURI;
         emit BaseURISet(newBaseURI);
     }
 
@@ -243,7 +243,7 @@ contract TrainingRegistryV2 is
     }
 
     function uri(uint256 tokenId) public view override returns (string memory) {
-        return string(abi.encodePacked(_baseDirectoryURI, _paddedDecimal(tokenId, uriPadDigits), ".json"));
+        return string(abi.encodePacked(_baseDirectoryUri, _paddedDecimal(tokenId, uriPadDigits), ".json"));
     }
 
     function _paddedDecimal(uint256 value, uint8 minDigits) internal pure returns (string memory) {
@@ -252,7 +252,7 @@ contract TrainingRegistryV2 is
         if (len >= minDigits) return dec;
         uint256 pad = uint256(minDigits) - len;
         bytes memory zeros = new bytes(pad);
-        for (uint256 i = 0; i < pad; i++) zeros[i] = bytes1("0");
+        for (uint256 i = 0; i < pad; i++) zeros[i] = 0x30;
         return string(abi.encodePacked(zeros, dec));
     }
 
@@ -281,9 +281,9 @@ contract TrainingRegistryV2 is
     // ========================================
     // STORAGE LAYOUT (matches V1 exactly, then adds V2)
     // ========================================
-    string private _baseDirectoryURI;     // Slot 5 (from V1)
+    string private _baseDirectoryUri;     // Slot 5 (from V1)
     uint8 public uriPadDigits;            // Slot 6 (from V1)
-    uint256[37] private __gap;            // Slots 7-43 (reduced from 38)
+    uint256[37] private _gap;            // Slots 7-43 (reduced from 38)
     uint256 public batchSubmissionCount;  // Slot 44 (NEW in V2)
 }
 ```
@@ -294,7 +294,7 @@ contract TrainingRegistryV2 is
 3. ✅ New event: `BatchSubmitted` (line 45)
 4. ✅ V1 function unchanged: `submitVoucher()` (lines 70-83)
 5. ✅ New function added: `submitVoucherBatch()` (lines 90-133)
-6. ✅ __gap reduced: 38 → 37 (line 190)
+6. ✅ _gap reduced: 38 → 37 (line 190)
 7. ✅ Still has `_authorizeUpgrade()` (line 187) - CRITICAL!
 
 ## Upgrade Process
@@ -964,7 +964,7 @@ contract TrainingRegistryV2 {
 You've successfully:
 
 ✅ **Created TrainingRegistryV2** with batch voucher submission  
-✅ **Maintained storage layout** (append-only, adjusted __gap)  
+✅ **Maintained storage layout** (append-only, adjusted _gap)  
 ✅ **Deployed V2 implementation**  
 ✅ **Upgraded proxy** from V1 to V2  
 ✅ **Tested state preservation** (all V1 data intact)  

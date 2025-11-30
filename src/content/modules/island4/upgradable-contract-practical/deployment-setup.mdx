@@ -222,13 +222,13 @@ anvil --version
 
 ```bash
 forge --version
-# Output: forge 0.2.0 (...)
+# Output: forge 1.5.0 (...)
 
 cast --version
-# Output: cast 0.2.0 (...)
+# Output: cast 1.5.0 (...)
 
 anvil --version
-# Output: anvil 0.2.0 (...)
+# Output: anvil 1.5.0 (...)
 ```
 
 **What did we install?**
@@ -312,12 +312,20 @@ Your project is now ready for the TrainingRegistry contracts!
 
 ### Install OpenZeppelin Upgradeable
 
+We'll use [OpenZeppelin Contracts Upgradeable](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable) - the upgradeable variant of OpenZeppelin's battle-tested smart contract library.
+
+<Callout type="warning" title="Version Compatibility">
+These instructions use **v5.4.0** (December 2025). OpenZeppelin v5.5.0+ requires the **Cancun** EVM version, but Zilliqa 2.0 uses **Shanghai**, so we must pin to v5.4.0 or earlier.
+
+OpenZeppelin uses semantic versioning - major versions can have breaking changes, particularly in storage layout which is critical for upgradeable contracts. If you need a different version, specify it with the `@tag` syntax (e.g., `@v5.3.0`).
+</Callout>
+
 ```bash
-# Install OpenZeppelin upgradeable contracts
-forge install OpenZeppelin/openzeppelin-contracts-upgradeable
+# Install OpenZeppelin upgradeable contracts (pinned to v5.4.0 for Shanghai EVM)
+forge install OpenZeppelin/openzeppelin-contracts-upgradeable@v5.4.0
 
 # Install OpenZeppelin regular contracts (needed as dependency)
-forge install OpenZeppelin/openzeppelin-contracts
+forge install OpenZeppelin/openzeppelin-contracts@v5.4.0
 
 # These get added as git submodules in lib/
 ```
@@ -332,7 +340,7 @@ ls lib/
 
 ### Configure foundry.toml
 
-Update `foundry.toml` for Zilliqa compatibility:
+Update `foundry.toml` for Zilliqa compatibility (Replace everything in the file):
 
 ```toml
 [profile.default]
@@ -497,7 +505,6 @@ contract TrainingRegistryV1 is
         __ERC1155_init(baseURI);
         __Pausable_init();
         __Ownable2Step_init();
-        __UUPSUpgradeable_init();
         __EIP712_init(eip712Name, eip712Version);
 
         _transferOwnership(initialOwner);
@@ -505,7 +512,7 @@ contract TrainingRegistryV1 is
         require(_claimant != address(0), "Invalid claimant address");  // LINE 3 ADDED
         claimant = _claimant;  // LINE 4 ADDED
 
-        _baseDirectoryURI = baseURI;
+        _baseDirectoryUri = baseURI;
         uriPadDigits = 4;
     }
 
@@ -516,7 +523,7 @@ contract TrainingRegistryV1 is
 
     function setBaseURI(string memory newBaseURI) external onlyOwner {
         _setURI(newBaseURI);
-        _baseDirectoryURI = newBaseURI;
+        _baseDirectoryUri = newBaseURI;
         emit BaseURISet(newBaseURI);
     }
 
@@ -531,6 +538,7 @@ contract TrainingRegistryV1 is
     function submitVoucher(uint256 taskCode, bytes calldata signature) external whenNotPaused {
         require(!completed[msg.sender][taskCode], "already completed");
 
+        // using abi.encode instead of inline assembly as its more readable and easier to understand
         bytes32 structHash = keccak256(abi.encode(VOUCHER_TYPEHASH, taskCode, msg.sender));
         bytes32 digest = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
         address signer = ECDSA.recover(digest, signature);
@@ -571,7 +579,7 @@ contract TrainingRegistryV1 is
     }
 
     function uri(uint256 tokenId) public view override returns (string memory) {
-        return string(abi.encodePacked(_baseDirectoryURI, _paddedDecimal(tokenId, uriPadDigits), ".json"));
+        return string(abi.encodePacked(_baseDirectoryUri, _paddedDecimal(tokenId, uriPadDigits), ".json"));
     }
 
     function _paddedDecimal(uint256 value, uint8 minDigits) internal pure returns (string memory) {
@@ -580,7 +588,7 @@ contract TrainingRegistryV1 is
         if (len >= minDigits) return dec;
         uint256 pad = uint256(minDigits) - len;
         bytes memory zeros = new bytes(pad);
-        for (uint256 i = 0; i < pad; i++) zeros[i] = bytes1("0");
+        for (uint256 i = 0; i < pad; i++) zeros[i] = 0x30;
         return string(abi.encodePacked(zeros, dec));
     }
 
@@ -606,9 +614,9 @@ contract TrainingRegistryV1 is
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    string private _baseDirectoryURI;
+    string private _baseDirectoryUri;
     uint8 public uriPadDigits;
-    uint256[38] private __gap;
+    uint256[38] private _gap;
 }
 ```
 
@@ -633,6 +641,33 @@ forge build
 [⠢] Solc 0.8.28 finished in 3.21s
 Compiler run successful!
 ```
+
+<Callout type="info" title="Compiler Note">
+You may see this linting note:
+
+```
+note[asm-keccak256]: use of inefficient hashing mechanism; consider using inline assembly
+  --> src/TrainingRegistryV1.sol:95:30
+   |
+95 |         bytes32 structHash = keccak256(abi.encode(VOUCHER_TYPEHASH, taskCode, msg.sender));
+```
+
+This is expected! We intentionally use `abi.encode` for readability and ease of understanding. For production contracts where gas optimization is critical, you can use inline assembly instead:
+
+```solidity
+bytes32 structHash;
+bytes32 typeHash = VOUCHER_TYPEHASH;
+assembly {
+    let ptr := mload(0x40)
+    mstore(ptr, typeHash)
+    mstore(add(ptr, 0x20), taskCode)
+    mstore(add(ptr, 0x40), caller())
+    structHash := keccak256(ptr, 0x60)
+}
+```
+
+This saves gas by avoiding `abi.encode` overhead - the assembly directly writes the three 32-byte values (typehash, taskCode, and msg.sender) to memory and hashes the 96-byte (0x60) chunk.
+</Callout>
 
 **What just happened:**
 - Downloaded Solidity 0.8.28 compiler
@@ -762,15 +797,9 @@ This simulates the deployment without spending gas. Perfect for testing!
 - Block Explorer: `https://testnet.zilliqa.blockscout.com`
 
 **2. Get Testnet ZIL:**
-```bash
-# Visit faucet
-https://faucet.testnet.zilliqa.com
-
-# Import development wallet to MetaMask
-# (Extract address from PRIVATE_KEY in .env)
-
-# Request testnet ZIL
-```
+- Visit the faucet: [https://faucet.testnet.zilliqa.com](https://faucet.testnet.zilliqa.com)
+- Import your development wallet to MetaMask (extract address from `PRIVATE_KEY` in `.env`)
+- Request testnet ZIL
 
 **3. Verify .env file:**
 ```bash
@@ -928,6 +957,30 @@ cast call $PROXY_ADDRESS "uri(uint256)" 1 --rpc-url zilliqaTestnet
 ```toml
 # In foundry.toml, ensure:
 solc_version = "0.8.28"
+```
+
+### Issue: "mcopy instruction is only available for Cancun-compatible VMs"
+
+If you see an error like:
+```
+Error (7755): The "mcopy" instruction is only available for Cancun-compatible VMs 
+(you are currently compiling for "shanghai").
+
+  --> lib/openzeppelin-contracts/contracts/utils/Bytes.sol:94:13:
+   |
+94 |             mcopy(add(result, 0x20), add(add(buffer, 0x20), start), sub(end, start))
+```
+
+**Cause:** You've installed OpenZeppelin v5.5.0 or later, which uses Cancun-only EVM instructions. Zilliqa 2.0 uses the Shanghai EVM version.
+
+**Solution:** Pin to v5.4.0 which is compatible with Shanghai:
+```bash
+# Remove existing installations
+rm -rf lib/openzeppelin-contracts lib/openzeppelin-contracts-upgradeable
+
+# Reinstall pinned to v5.4.0
+forge install OpenZeppelin/openzeppelin-contracts-upgradeable@v5.4.0
+forge install OpenZeppelin/openzeppelin-contracts@v5.4.0
 ```
 
 ### Issue: "Import not found"
