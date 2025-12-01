@@ -137,20 +137,26 @@ export async function checkClaimedStatus(address: string, moduleSlug: string): P
   return null;
 }
 
-// Generate Twitter share URL
+// Generate Twitter share URL from module slug
 export function generateTwitterShare(moduleSlug: string): string {
   const achievementId = getAchievementNumber(moduleSlug) || '0001';
-  
+  return generateTwitterShareFromAchievementNumber(achievementId);
+}
+
+// Generate Twitter share URL directly from achievement number
+export function generateTwitterShareFromAchievementNumber(achievementNumber: string, achievementName?: string): string {
   // Use dynamic URLs based on environment
   const baseUrl = typeof window !== 'undefined' 
     ? window.location.origin 
     : process.env.NEXT_PUBLIC_SITE_URL || 
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://plunderacademy.vercel.app');
   
-  const sharePageUrl = `${baseUrl}/share/achievement/${achievementId}`;
+  const sharePageUrl = `${baseUrl}/share/achievement/${achievementNumber}`;
   
-  // Simple share text that will be enhanced by the share page's Open Graph meta tags
-  const shareText = `🏴‍☠️ Just unlocked a new achievement at @PlunderAcademy! Check it out:`;
+  // Customize share text if achievement name is provided
+  const shareText = achievementName 
+    ? `🏴‍☠️ Just unlocked "${achievementName}" at @PlunderAcademy! Check it out:`
+    : `🏴‍☠️ Just unlocked a new achievement at @PlunderAcademy! Check it out:`;
   
   const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(sharePageUrl)}`;
   

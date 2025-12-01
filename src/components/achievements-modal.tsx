@@ -12,15 +12,16 @@ import { AnimatedAchievementCard } from "@/components/animated-achievement-card"
 import { ALL_ACHIEVEMENTS, type Achievement, isTimeLimitedAchievement } from "@/lib/achievements-config";
 import { 
   Award, 
-  CheckCircle, 
   Clock, 
   AlertCircle, 
   ExternalLink,
   Trophy,
   Shield,
   Gauge,
-  RefreshCw
+  RefreshCw,
+  Share2
 } from "lucide-react";
+import { generateTwitterShareFromAchievementNumber } from "@/components/interactive-elements/shared/utils";
 
 interface AchievementsModalProps {
   isOpen: boolean;
@@ -289,20 +290,28 @@ export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }:
                                 <div className={`absolute inset-0 bg-black/80 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200 flex flex-col p-4 text-white overflow-y-auto`}>
                                   {/* Top Section */}
                                   <div className="space-y-2 flex-shrink-0">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-1 flex-wrap">
-                                        <Badge className="bg-white/20 text-white border-white/20 hover:bg-white/20">
-                                          {getCategoryIcon(demoAchievement.category)}
-                                          <span className="ml-1 capitalize">{demoAchievement.category}</span>
-                                        </Badge>
-                                        {isTimeLimitedAchievement(demoAchievement.taskCode) && (
-                                          <Badge className="bg-amber-500/90 text-white border-0">
-                                            <Clock className="size-3 mr-1" />
-                                            Limited
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <CheckCircle className="size-5 text-green-400 flex-shrink-0" />
+                                    <div className="flex items-center justify-between gap-2">
+                                      <Badge className="bg-white/20 text-white border-white/20 hover:bg-white/20">
+                                        {getCategoryIcon(demoAchievement.category)}
+                                        <span className="ml-1 capitalize">{demoAchievement.category}</span>
+                                      </Badge>
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          window.open(
+                                            generateTwitterShareFromAchievementNumber(
+                                              walletAchievement.achievementNumber,
+                                              metadata?.name || demoAchievement.title
+                                            ),
+                                            '_blank'
+                                          );
+                                        }}
+                                        className="h-7 px-2 bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 flex-shrink-0"
+                                      >
+                                        <Share2 className="size-3.5" />
+                                        <span className="text-xs">Share</span>
+                                      </Button>
                                     </div>
                                     
                                     <div>
@@ -381,20 +390,28 @@ export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }:
                                 <div className={`absolute inset-0 bg-black/80 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200 flex flex-col p-4 text-white overflow-y-auto`}>
                                   {/* Top Section */}
                                   <div className="space-y-2 flex-shrink-0">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-1 flex-wrap">
-                                        <Badge className="bg-white/20 text-white border-white/20 hover:bg-white/20">
-                                          {getCategoryIcon(demoAchievement.category)}
-                                          <span className="ml-1 capitalize">{demoAchievement.category}</span>
-                                        </Badge>
-                                        {isTimeLimitedAchievement(demoAchievement.taskCode) && (
-                                          <Badge className="bg-amber-500/90 text-white border-0">
-                                            <Clock className="size-3 mr-1" />
-                                            Limited
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <CheckCircle className="size-5 text-green-400 flex-shrink-0" />
+                                    <div className="flex items-center justify-between gap-2">
+                                      <Badge className="bg-white/20 text-white border-white/20 hover:bg-white/20">
+                                        {getCategoryIcon(demoAchievement.category)}
+                                        <span className="ml-1 capitalize">{demoAchievement.category}</span>
+                                      </Badge>
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          window.open(
+                                            generateTwitterShareFromAchievementNumber(
+                                              walletAchievement.achievementNumber,
+                                              metadata?.name || demoAchievement.title
+                                            ),
+                                            '_blank'
+                                          );
+                                        }}
+                                        className="h-7 px-2 bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 flex-shrink-0"
+                                      >
+                                        <Share2 className="size-3.5" />
+                                        <span className="text-xs">Share</span>
+                                      </Button>
                                     </div>
                                     
                                     <div>
