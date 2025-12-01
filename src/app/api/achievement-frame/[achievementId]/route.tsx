@@ -25,6 +25,10 @@ function getBackgroundId(achievementId: string): string | null {
     return '0040-background';
   } else if (achievementId.startsWith('005')) {
     return '0050-background';
+  } else if (achievementId.startsWith('100')) {
+    return '1001-background';
+  } else if (achievementId.startsWith('200')) {
+    return '2001-background';
   }
   return null;
 }
