@@ -60,12 +60,22 @@ export function AnimatedAchievementCard({
       case "0053": return "tada";
       case "0054": return "glow";
       
-      // Secret achievements
+      // Secret achievements (1001+)
       case "1001": return "glow";
       case "1002": return "heartbeat";
       case "1003": return "tada";
       case "1004": return "flip";
       case "1005": return "spin";
+      
+      // Ultimate achievement
+      case "1006": return "none"; // Static only
+      
+      // Secret achievements (2001+)
+      case "2001": return "none"; // Static only
+      case "2002": return "none"; // Static only
+      case "2003": return "none"; // Static only
+      case "2004": return "none"; // Static only
+      case "2005": return "none"; // Static only
       
       default: return "wobble";
     }
@@ -73,6 +83,12 @@ export function AnimatedAchievementCard({
 
   // Use provided animation or auto-assign based on achievement number
   const effectiveAnimation = animation ?? getDefaultAnimation(achievementNumber);
+
+  // Check if this achievement only has static assets (no split card/trinket)
+  const isStaticOnly = (number: string): boolean => {
+    const staticAchievements = ["1006", "2001", "2002", "2003", "2004", "2005"];
+    return staticAchievements.includes(number);
+  };
 
   // Size configurations
   const sizeConfig = {
@@ -126,6 +142,7 @@ export function AnimatedAchievementCard({
 
   // Check if className contains w-full (responsive mode)
   const isResponsive = className?.includes("w-full");
+  const useStaticOnly = isStaticOnly(achievementNumber);
   
   return (
     <div 
@@ -137,48 +154,66 @@ export function AnimatedAchievementCard({
       )}
       onClick={onClick}
     >
-      {/* Base Card Layer */}
-      <div className="absolute inset-0">
-        <Image
-          src={cardBackUrl}
-          alt={`${alt} - Base Card`}
-          {...(isResponsive 
-            ? { fill: true, className: "object-contain" }
-            : { width: config.width, height: config.height, className: "w-full h-full object-contain" }
-          )}
-          onError={(e) => {
-            // Fallback to original static image if layered assets fail
-            const target = e.target as HTMLImageElement;
-            target.src = fallbackUrl;
-          }}
-          unoptimized
-          priority
-        />
-      </div>
-
-      {/* Trinket/Center Animation Layer */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className={cn("relative", isResponsive ? "w-full h-full" : config.container)}>
+      {useStaticOnly ? (
+        /* Static-only achievements (no split card/trinket assets) */
+        <div className="absolute inset-0">
           <Image
-            src={trinketUrl}
-            alt={`${alt} - Trinket`}
+            src={fallbackUrl}
+            alt={alt}
             {...(isResponsive 
-              ? { fill: true }
-              : { width: config.width, height: config.height }
+              ? { fill: true, className: "object-contain" }
+              : { width: config.width, height: config.height, className: "w-full h-full object-contain" }
             )}
-            className={cn(
-              isResponsive ? "absolute inset-0 object-contain" : "absolute inset-0 w-full h-full object-contain",
-              getAnimationClass("trinket")
-            )}
-            onError={(e) => {
-              // Hide this layer if it fails to load
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-            }}
             unoptimized
+            priority
           />
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Base Card Layer */}
+          <div className="absolute inset-0">
+            <Image
+              src={cardBackUrl}
+              alt={`${alt} - Base Card`}
+              {...(isResponsive 
+                ? { fill: true, className: "object-contain" }
+                : { width: config.width, height: config.height, className: "w-full h-full object-contain" }
+              )}
+              onError={(e) => {
+                // Fallback to original static image if layered assets fail
+                const target = e.target as HTMLImageElement;
+                target.src = fallbackUrl;
+              }}
+              unoptimized
+              priority
+            />
+          </div>
+
+          {/* Trinket/Center Animation Layer */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className={cn("relative", isResponsive ? "w-full h-full" : config.container)}>
+              <Image
+                src={trinketUrl}
+                alt={`${alt} - Trinket`}
+                {...(isResponsive 
+                  ? { fill: true }
+                  : { width: config.width, height: config.height }
+                )}
+                className={cn(
+                  isResponsive ? "absolute inset-0 object-contain" : "absolute inset-0 w-full h-full object-contain",
+                  getAnimationClass("trinket")
+                )}
+                onError={(e) => {
+                  // Hide this layer if it fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+                unoptimized
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Interactive Hover Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-transparent group-hover:from-primary/10 group-hover:via-transparent group-hover:to-primary/10 transition-all duration-300 rounded-lg" />

@@ -44,6 +44,95 @@ import {
   type StoredConversation,
 } from "@/lib/chat-storage";
 import { Button } from "@/components/ui/button";
+import { config } from "@/lib/config";
+import { useAchievements } from "@/hooks/use-achievements";
+import { cn } from "@/lib/utils";
+
+// ============================================================================
+// Secret Achievement Configuration
+// ============================================================================
+const SECRET_ACHIEVEMENTS = {
+  PARLEY: {
+    taskCode: 2001,
+    achievementNumber: "2001",
+    secretAnswer: "aiuniverse",
+    title: "Parley",
+    description: "You've mastered the art of cryptographic negotiation by exploring Zilliqa 2.0!",
+    emoji: "🏴‍☠️",
+    gradientFrom: "from-indigo-500",
+    gradientTo: "to-purple-700",
+    borderColor: "border-indigo-300",
+  },
+  BURIED_TREASURE_MAP: {
+    taskCode: 2002,
+    achievementNumber: "2002",
+    secretAnswer: "biscuitsai",
+    title: "Buried Treasure Map",
+    description: "You've discovered the secrets of hidden achievements!",
+    emoji: "🗺️",
+    gradientFrom: "from-amber-500",
+    gradientTo: "to-yellow-600",
+    borderColor: "border-amber-300",
+  },
+  MASTER_CONTROL_PROGRAM: {
+    taskCode: 2005,
+    achievementNumber: "2005",
+    secretAnswer: "aientrepreneurship",
+    title: "Master Control Program",
+    description: "You've successfully queried live validator data from the Zilliqa network!",
+    emoji: "🤖",
+    gradientFrom: "from-cyan-500",
+    gradientTo: "to-blue-700",
+    borderColor: "border-cyan-300",
+  },
+} as const;
+
+// Zilliqa 2.0 specific detection patterns (for Parley achievement)
+const ZILLIQA_SPECIFIC_PATTERNS = [
+  /zilliqa\s*2\.?0?/i,
+  /\bzq2\b/i,
+  /zilliqa.*rpc/i,
+  /zilliqa.*api/i,
+  /zilliqa.*endpoint/i,
+  /chain\s*id.*32769/i,
+  /chain\s*id.*33101/i,
+  /\bscilla\b/i,
+  /fast[- ]?hotstuff/i,
+  /pipelined.*consensus/i,
+  /ds\s*epoch/i,
+  /zilliqa.*sharding/i,
+  /zilliqa.*mainnet/i,
+  /zilliqa.*testnet/i,
+];
+
+// Achievement discovery patterns (for Buried Treasure Map)
+const ACHIEVEMENT_PATTERNS = [
+  /\bachievement/i,
+  /\bsecret/i,
+  /\btreasure/i,
+  /\bhidden/i,
+  /\bunlock.*achievement/i,
+  /\beaster\s*egg/i,
+  /find.*achievement/i,
+  /how.*get.*nft/i,
+  /how.*claim.*nft/i,
+];
+
+// MCP response patterns (for Master Control Program)
+// These are the formatted outputs from zilliqa-mcp.ts
+const MCP_RESPONSE_PATTERNS = [
+  /📊\s*\*\*.*Stake\*\*/,           // get_validator_stake
+  /💰\s*\*\*.*Earnings\*\*/,        // get_total_validator_earnings  
+  /📈\s*\*\*.*Earnings\*\*/,        // get_validator_earnings_breakdown
+  /🎯\s*\*\*.*Success Rate\*\*/,    // get_proposer_success_rate
+  /✅\s*\*\*.*Success Rate\*\*/,    // get_cosigner_success_rate
+  /ℹ️\s*\*\*.*Info\*\*/,            // get_validator_info
+  /ZIL staked/i,
+  /validator.*\d+.*ZIL/i,
+  /Cosigner Success Rate/i,
+  /Proposer Success Rate/i,
+  /staked with.*validator/i,
+];
 
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
 
@@ -123,6 +212,119 @@ export default function ChatPage() {
     Record<number, { startTime: number; inputText: string }>
   >({});
   const trackedInteractionsRef = React.useRef<Set<string>>(new Set());
+
+  // ============================================================================
+  // Secret Achievement State
+  // ============================================================================
+  const { walletAchievements, fetchWalletAchievements, fetchUnclaimedVouchers } = useAchievements();
+  const [secretAchievementModal, setSecretAchievementModal] = React.useState<{
+    show: boolean;
+    achievement: typeof SECRET_ACHIEVEMENTS.PARLEY | typeof SECRET_ACHIEVEMENTS.BURIED_TREASURE_MAP | typeof SECRET_ACHIEVEMENTS.MASTER_CONTROL_PROGRAM | null;
+  }>({ show: false, achievement: null });
+  const [isSubmittingSecret, setIsSubmittingSecret] = React.useState(false);
+  const [secretError, setSecretError] = React.useState<string | null>(null);
+  
+  // Track which achievements have been triggered this session
+  const triggeredAchievementsRef = React.useRef<Set<string>>(new Set());
+  
+  // Check if user already has these achievements
+  const hasParleyAchievement = React.useMemo(() => 
+    walletAchievements.some(a => a.tokenId === SECRET_ACHIEVEMENTS.PARLEY.taskCode),
+    [walletAchievements]
+  );
+  const hasBuriedTreasureMapAchievement = React.useMemo(() => 
+    walletAchievements.some(a => a.tokenId === SECRET_ACHIEVEMENTS.BURIED_TREASURE_MAP.taskCode),
+    [walletAchievements]
+  );
+  const hasMasterControlProgramAchievement = React.useMemo(() => 
+    walletAchievements.some(a => a.tokenId === SECRET_ACHIEVEMENTS.MASTER_CONTROL_PROGRAM.taskCode),
+    [walletAchievements]
+  );
+
+  // Detection functions
+  const detectsZilliqaSpecific = React.useCallback((text: string): boolean => {
+    return ZILLIQA_SPECIFIC_PATTERNS.some(pattern => pattern.test(text));
+  }, []);
+
+  const detectsAchievementQuery = React.useCallback((text: string): boolean => {
+    return ACHIEVEMENT_PATTERNS.some(pattern => pattern.test(text));
+  }, []);
+
+  const detectsMCPResponse = React.useCallback((text: string): boolean => {
+    return MCP_RESPONSE_PATTERNS.some(pattern => pattern.test(text));
+  }, []);
+
+  // Submit secret achievement to API
+  const submitSecretAchievement = React.useCallback(async (
+    achievement: typeof SECRET_ACHIEVEMENTS.PARLEY | typeof SECRET_ACHIEVEMENTS.BURIED_TREASURE_MAP | typeof SECRET_ACHIEVEMENTS.MASTER_CONTROL_PROGRAM
+  ) => {
+    if (!address) {
+      setSecretError('Please connect your wallet to claim this secret');
+      return;
+    }
+
+    setIsSubmittingSecret(true);
+    setSecretError(null);
+
+    const requestPayload = {
+      walletAddress: address,
+      achievementNumber: achievement.achievementNumber,
+      submissionType: "secret",
+      submissionData: {
+        secretAnswer: achievement.secretAnswer
+      },
+      metadata: {
+        timestamp: new Date().toISOString(),
+        discoveryMethod: "ai_chat_discovery"
+      }
+    };
+
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/api/v1/vouchers/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload),
+      });
+
+      const responseText = await response.text();
+      let apiResult;
+
+      try {
+        apiResult = JSON.parse(responseText);
+      } catch {
+        throw new Error(`API returned invalid JSON. Status: ${response.status}`);
+      }
+
+      if (response.ok && apiResult.success) {
+        // Success! Show modal
+        setSecretAchievementModal({ show: true, achievement });
+        // Refresh achievement data
+        window.dispatchEvent(new CustomEvent('achievementClaimed', { 
+          detail: { timestamp: Date.now() } 
+        }));
+        fetchWalletAchievements();
+        fetchUnclaimedVouchers();
+      } else {
+        // Check if this is an "already completed" error
+        const errorMessage = apiResult.error || 'Failed to claim secret achievement';
+        if (errorMessage.toLowerCase().includes('already completed') || 
+            errorMessage.toLowerCase().includes('already claimed') ||
+            errorMessage.toLowerCase().includes('already exists')) {
+          // Already claimed - silently mark as triggered to prevent future attempts
+          triggeredAchievementsRef.current.add(achievement.achievementNumber);
+          return;
+        }
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error('Error submitting secret achievement:', error);
+      setSecretError(error instanceof Error ? error.message : 'Failed to claim secret achievement');
+    } finally {
+      setIsSubmittingSecret(false);
+    }
+  }, [address, fetchWalletAchievements, fetchUnclaimedVouchers]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -319,6 +521,76 @@ export default function ChatPage() {
     sessionId,
     interactionIds,
     messageTiming,
+  ]);
+
+  // ============================================================================
+  // Secret Achievement Detection
+  // ============================================================================
+  React.useEffect(() => {
+    // Only check when not loading and we have messages
+    if (isLoading || messages.length < 2 || !address) return;
+
+    // Get the last user message and assistant response
+    const lastMessage = messages[messages.length - 1];
+    const secondLastMessage = messages[messages.length - 2];
+    
+    if (lastMessage.role !== "assistant" || secondLastMessage.role !== "user") return;
+
+    // Extract text content from messages
+    const userText = Array.isArray(secondLastMessage.parts)
+      ? secondLastMessage.parts
+          .filter((p) => p?.type === "text")
+          .map((p) => (p.type === "text" ? p.text : ""))
+          .join(" ")
+      : "";
+
+    const assistantText = Array.isArray(lastMessage.parts)
+      ? lastMessage.parts
+          .filter((p) => p?.type === "text")
+          .map((p) => (p.type === "text" ? p.text : ""))
+          .join(" ")
+      : "";
+
+    // Check for Parley achievement (Zilliqa-specific query)
+    if (
+      !hasParleyAchievement &&
+      !triggeredAchievementsRef.current.has(SECRET_ACHIEVEMENTS.PARLEY.achievementNumber) &&
+      detectsZilliqaSpecific(userText)
+    ) {
+      triggeredAchievementsRef.current.add(SECRET_ACHIEVEMENTS.PARLEY.achievementNumber);
+      submitSecretAchievement(SECRET_ACHIEVEMENTS.PARLEY);
+    }
+
+    // Check for Buried Treasure Map achievement (asking about achievements/secrets)
+    if (
+      !hasBuriedTreasureMapAchievement &&
+      !triggeredAchievementsRef.current.has(SECRET_ACHIEVEMENTS.BURIED_TREASURE_MAP.achievementNumber) &&
+      detectsAchievementQuery(userText)
+    ) {
+      triggeredAchievementsRef.current.add(SECRET_ACHIEVEMENTS.BURIED_TREASURE_MAP.achievementNumber);
+      submitSecretAchievement(SECRET_ACHIEVEMENTS.BURIED_TREASURE_MAP);
+    }
+
+    // Check for Master Control Program achievement (MCP response detected)
+    if (
+      !hasMasterControlProgramAchievement &&
+      !triggeredAchievementsRef.current.has(SECRET_ACHIEVEMENTS.MASTER_CONTROL_PROGRAM.achievementNumber) &&
+      detectsMCPResponse(assistantText)
+    ) {
+      triggeredAchievementsRef.current.add(SECRET_ACHIEVEMENTS.MASTER_CONTROL_PROGRAM.achievementNumber);
+      submitSecretAchievement(SECRET_ACHIEVEMENTS.MASTER_CONTROL_PROGRAM);
+    }
+  }, [
+    isLoading,
+    messages,
+    address,
+    hasParleyAchievement,
+    hasBuriedTreasureMapAchievement,
+    hasMasterControlProgramAchievement,
+    detectsZilliqaSpecific,
+    detectsAchievementQuery,
+    detectsMCPResponse,
+    submitSecretAchievement,
   ]);
 
   return (
@@ -614,6 +886,67 @@ export default function ChatPage() {
         </div>
         </div>
       </div>
+
+      {/* Secret Achievement Success Modal */}
+      {secretAchievementModal.show && secretAchievementModal.achievement && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div 
+            className={cn(
+              "bg-gradient-to-br p-8 rounded-xl shadow-2xl text-center max-w-md mx-4 border-4 animate-pulse",
+              secretAchievementModal.achievement.gradientFrom,
+              secretAchievementModal.achievement.gradientTo,
+              secretAchievementModal.achievement.borderColor
+            )}
+          >
+            <div className="text-6xl mb-4">{secretAchievementModal.achievement.emoji}</div>
+            <h2 className="text-2xl font-bold text-white mb-2">Secret Achievement Discovered!</h2>
+            <h3 className="text-lg font-semibold text-white/90 mb-4">
+              {secretAchievementModal.achievement.title}
+            </h3>
+            <p className="text-white/80 mb-6">
+              {secretAchievementModal.achievement.description}
+            </p>
+            <div className="space-y-3">
+              <p className="text-sm text-white/70 bg-black/20 p-3 rounded-lg">
+                📜 Check your achievements and unclaimed vouchers to claim your NFT!
+              </p>
+              <button
+                onClick={() => setSecretAchievementModal({ show: false, achievement: null })}
+                className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg transition-colors border border-white/30"
+              >
+                Continue Chatting
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Secret Achievement Error Message */}
+      {secretError && (
+        <div className="fixed top-4 right-4 bg-red-500/90 backdrop-blur text-white p-4 rounded-lg shadow-lg max-w-md z-40">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg">⚠️</span>
+            <span className="font-semibold">Secret Achievement Failed</span>
+          </div>
+          <p className="text-sm">{secretError}</p>
+          <button
+            onClick={() => setSecretError(null)}
+            className="mt-2 text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded transition-colors"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Loading overlay for secret achievement submission */}
+      {isSubmittingSecret && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-40">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-xl text-center">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+            <p className="text-sm text-muted-foreground">Claiming secret achievement...</p>
+          </div>
+        </div>
+      )}
     </WalletAuthGuard>
   );
 }

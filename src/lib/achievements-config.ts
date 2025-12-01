@@ -206,32 +206,201 @@ export const ALL_ACHIEVEMENTS: Achievement[] = [
     title: "Night Rider",
     description: "You found the night rider on the island!",
     category: "advanced"
-  }
+  },
+  
+  // Ultimate Achievement (1006)
+  {
+    taskCode: 1006,
+    title: "Plunder Master",
+    description: "You have achieved the ultimate rank of Plunder Master, conquering all challenges across the seven seas!",
+    category: "advanced"
+  },
+  
+  // Secret Achievements (2001+)
+  {
+    taskCode: 2001,
+    title: "Parley",
+    description: "You've mastered the art of cryptographic negotiation.",
+    category: "advanced"
+  },
+  {
+    taskCode: 2002,
+    title: "Buried Treasure Map",
+    description: "You've deciphered the ancient cryptographic treasure map.",
+    category: "advanced"
+  },
+  {
+    taskCode: 2003,
+    title: "Mutiny Prevention",
+    description: "You've successfully prevented a mutiny through cryptographic consensus.",
+    category: "advanced"
+  },
+  {
+    taskCode: 2004,
+    title: "Dead Man's Chest",
+    description: "You've unlocked the legendary Dead Man's Chest and claimed its secrets.",
+    category: "advanced"
+  },
+  {
+    taskCode: 2005,
+    title: "Master Control Program",
+    description: "You've mastered the art of controlling the fleet's operations.",
+    category: "advanced"
+  },
 ];
 
+// ============================================================================
+// Achievement Type Helpers
+// ============================================================================
+
 /**
- * Helper to check if an achievement is time-limited
+ * Check if an achievement is a module achievement (training modules)
+ * Module achievements: 1-5, 21-25, 31-33, 41-46, 51-54
+ */
+export function isModuleAchievement(taskCode: number): boolean {
+  return (
+    (taskCode >= 1 && taskCode <= 5) ||      // Island 1
+    (taskCode >= 21 && taskCode <= 25) ||    // Island 2
+    (taskCode >= 31 && taskCode <= 33) ||    // Island 3
+    (taskCode >= 41 && taskCode <= 46) ||    // Island 4
+    (taskCode >= 51 && taskCode <= 54)       // Island 5
+  );
+}
+
+/**
+ * Check if an achievement is time-limited (1100-1199)
  */
 export function isTimeLimitedAchievement(taskCode: number): boolean {
-  return taskCode >= 1100 && taskCode < 2000;
+  return taskCode >= 1100 && taskCode < 1200;
 }
 
 /**
- * Helper to get all time-limited achievements
+ * Check if an achievement is the Plunder Master (1006)
+ */
+export function isPlunderMasterAchievement(taskCode: number): boolean {
+  return taskCode === 1006;
+}
+
+/**
+ * Check if an achievement is a secret achievement
+ * Secret achievements: 1001-1005, 2001-2010 (NOT 1006 - that's Plunder Master)
+ */
+export function isSecretAchievement(taskCode: number): boolean {
+  return (
+    (taskCode >= 1001 && taskCode <= 1005) ||  // Island secrets
+    (taskCode >= 2001 && taskCode <= 2010)     // AI discovery secrets
+  );
+}
+
+/**
+ * @deprecated Use isPlunderMasterAchievement instead
+ */
+export function isUltimateAchievement(taskCode: number): boolean {
+  return isPlunderMasterAchievement(taskCode);
+}
+
+// ============================================================================
+// Achievement Group Getters
+// ============================================================================
+
+/**
+ * Get all module achievements (training modules)
+ */
+export function getModuleAchievements(): Achievement[] {
+  return ALL_ACHIEVEMENTS.filter(a => isModuleAchievement(a.taskCode));
+}
+
+/**
+ * Get all secret achievements (1001-1005, 2001-2010)
+ */
+export function getSecretAchievements(): Achievement[] {
+  return ALL_ACHIEVEMENTS.filter(a => isSecretAchievement(a.taskCode));
+}
+
+/**
+ * Get all time-limited achievements (1100-1199)
  */
 export function getTimeLimitedAchievements(): Achievement[] {
-  return ALL_ACHIEVEMENTS.filter(achievement => isTimeLimitedAchievement(achievement.taskCode));
+  return ALL_ACHIEVEMENTS.filter(a => isTimeLimitedAchievement(a.taskCode));
 }
 
 /**
- * Helper function to get achievement by task code
+ * Get the Plunder Master achievement (1006)
+ */
+export function getPlunderMasterAchievement(): Achievement | undefined {
+  return ALL_ACHIEVEMENTS.find(a => isPlunderMasterAchievement(a.taskCode));
+}
+
+// ============================================================================
+// Plunder Master Requirements
+// ============================================================================
+
+/**
+ * Task codes required to claim Plunder Master (1006)
+ * Includes all module achievements (23) + all secret achievements (10) = 33 total
+ */
+export const PLUNDER_MASTER_REQUIRED_ACHIEVEMENTS = [
+  // Island 1 - Jungle Island (5)
+  1, 2, 3, 4, 5,
+  // Island 2 - Frost Peak (5)
+  21, 22, 23, 24, 25,
+  // Island 3 - Desert Bluff (3)
+  31, 32, 33,
+  // Island 4 - Gilded Bastion (6)
+  41, 42, 43, 44, 45, 46,
+  // Island 5 - Neon Haven (4)
+  51, 52, 53, 54,
+  // Secret Achievements - Island secrets (5)
+  1001, 1002, 1003, 1004, 1005,
+  // Secret Achievements - AI discoveries (5)
+  2001, 2002, 2003, 2004, 2005,
+] as const;
+
+/**
+ * Get the count of achievements required for Plunder Master
+ */
+export function getPlunderMasterRequiredCount(): number {
+  return PLUNDER_MASTER_REQUIRED_ACHIEVEMENTS.length;
+}
+
+/**
+ * Check how many required achievements a user has completed
+ */
+export function getPlunderMasterProgress(claimedTaskCodes: number[]): {
+  completed: number;
+  required: number;
+  missing: number[];
+  isEligible: boolean;
+} {
+  const completed = PLUNDER_MASTER_REQUIRED_ACHIEVEMENTS.filter(
+    code => claimedTaskCodes.includes(code)
+  ).length;
+  
+  const missing = PLUNDER_MASTER_REQUIRED_ACHIEVEMENTS.filter(
+    code => !claimedTaskCodes.includes(code)
+  );
+  
+  return {
+    completed,
+    required: PLUNDER_MASTER_REQUIRED_ACHIEVEMENTS.length,
+    missing: [...missing],
+    isEligible: missing.length === 0,
+  };
+}
+
+// ============================================================================
+// General Helpers
+// ============================================================================
+
+/**
+ * Get achievement by task code
  */
 export function getAchievementByTaskCode(taskCode: number): Achievement | undefined {
   return ALL_ACHIEVEMENTS.find(achievement => achievement.taskCode === taskCode);
 }
 
 /**
- * Helper function to get achievements by category
+ * Get achievements by category
  */
 export function getAchievementsByCategory(category: Achievement["category"]): Achievement[] {
   return ALL_ACHIEVEMENTS.filter(achievement => achievement.category === category);

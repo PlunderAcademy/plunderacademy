@@ -19,6 +19,59 @@ import { AIFeedback } from "@/components/ai-feedback";
 import { useSession } from "@/lib/session-context";
 import { trackAIInteraction } from "@/lib/feedback-api";
 import { cn } from "@/lib/utils";
+import { config } from "@/lib/config";
+import { useAchievements } from "@/hooks/use-achievements";
+
+// Secret achievement configuration
+const SECRET_ACHIEVEMENTS = {
+  REENTRANCY: {
+    taskCode: 2003,
+    achievementNumber: "2003",
+    secretAnswer: "aiscience",
+    title: "Mutiny Prevention",
+    description: "You've successfully identified a reentrancy vulnerability!",
+    emoji: "⚔️",
+    gradientFrom: "from-purple-500",
+    gradientTo: "to-indigo-700",
+    borderColor: "border-purple-300",
+  },
+  DEAD_MANS_CHEST: {
+    taskCode: 2004,
+    achievementNumber: "2004",
+    secretAnswer: "aihealth",
+    title: "Dead Man's Chest",
+    description: "You've uncovered critical vulnerabilities: division before multiplication or tx.origin misuse!",
+    emoji: "💀",
+    gradientFrom: "from-amber-500",
+    gradientTo: "to-red-700",
+    borderColor: "border-amber-300",
+  },
+} as const;
+
+// Vulnerability detection patterns
+const REENTRANCY_PATTERNS = [
+  /reentrancy/i,
+  /re-entrancy/i,
+  /reentrant/i,
+  /recursive call/i,
+  /state.*after.*external call/i,
+  /call.*before.*state/i,
+  /checks-effects-interactions/i,
+];
+
+const DEAD_MANS_CHEST_PATTERNS = [
+  // Division before multiplication
+  /division before multiplication/i,
+  /divide before multiply/i,
+  /precision loss.*division/i,
+  /truncation.*division/i,
+  /integer division.*before.*multiplication/i,
+  // tx.origin authentication
+  /tx\.origin/i,
+  /phishing.*tx\.origin/i,
+  /origin.*authentication/i,
+  /origin.*authorization/i,
+];
 
 const starterSnippets = [
   {
@@ -157,6 +210,109 @@ export default function ReviewerPage() {
   // Track if we've already submitted tracking for current interaction
   const hasTrackedRef = React.useRef(false);
 
+  // Secret achievement state
+  const { walletAchievements, fetchWalletAchievements, fetchUnclaimedVouchers } = useAchievements();
+  const [secretAchievementModal, setSecretAchievementModal] = React.useState<{
+    show: boolean;
+    achievement: typeof SECRET_ACHIEVEMENTS.REENTRANCY | typeof SECRET_ACHIEVEMENTS.DEAD_MANS_CHEST | null;
+  }>({ show: false, achievement: null });
+  const [isSubmittingSecret, setIsSubmittingSecret] = React.useState(false);
+  const [secretError, setSecretError] = React.useState<string | null>(null);
+  
+  // Track which achievements have been triggered this session (to prevent duplicate modals)
+  const triggeredAchievementsRef = React.useRef<Set<string>>(new Set());
+  
+  // Check if user already has these achievements
+  const hasReentrancyAchievement = React.useMemo(() => 
+    walletAchievements.some(a => a.tokenId === SECRET_ACHIEVEMENTS.REENTRANCY.taskCode),
+    [walletAchievements]
+  );
+  const hasDeadMansChestAchievement = React.useMemo(() => 
+    walletAchievements.some(a => a.tokenId === SECRET_ACHIEVEMENTS.DEAD_MANS_CHEST.taskCode),
+    [walletAchievements]
+  );
+
+  // Vulnerability detection functions
+  const detectsReentrancy = React.useCallback((text: string): boolean => {
+    return REENTRANCY_PATTERNS.some(pattern => pattern.test(text));
+  }, []);
+
+  const detectsDeadMansChest = React.useCallback((text: string): boolean => {
+    return DEAD_MANS_CHEST_PATTERNS.some(pattern => pattern.test(text));
+  }, []);
+
+  // Submit secret achievement to API
+  const submitSecretAchievement = React.useCallback(async (
+    achievement: typeof SECRET_ACHIEVEMENTS.REENTRANCY | typeof SECRET_ACHIEVEMENTS.DEAD_MANS_CHEST
+  ) => {
+    if (!address) {
+      setSecretError('Please connect your wallet to claim this secret');
+      return;
+    }
+
+    setIsSubmittingSecret(true);
+    setSecretError(null);
+
+    const requestPayload = {
+      walletAddress: address,
+      achievementNumber: achievement.achievementNumber,
+      submissionType: "secret",
+      submissionData: {
+        secretAnswer: achievement.secretAnswer
+      },
+      metadata: {
+        timestamp: new Date().toISOString(),
+        discoveryMethod: "ai_vulnerability_detection"
+      }
+    };
+
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/api/v1/vouchers/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload),
+      });
+
+      const responseText = await response.text();
+      let apiResult;
+
+      try {
+        apiResult = JSON.parse(responseText);
+      } catch {
+        throw new Error(`API returned invalid JSON. Status: ${response.status}`);
+      }
+
+      if (response.ok && apiResult.success) {
+        // Success! Show modal
+        setSecretAchievementModal({ show: true, achievement });
+        // Refresh achievement data
+        window.dispatchEvent(new CustomEvent('achievementClaimed', { 
+          detail: { timestamp: Date.now() } 
+        }));
+        fetchWalletAchievements();
+        fetchUnclaimedVouchers();
+      } else {
+        // Check if this is an "already completed" error
+        const errorMessage = apiResult.error || 'Failed to claim secret achievement';
+        if (errorMessage.toLowerCase().includes('already completed') || 
+            errorMessage.toLowerCase().includes('already claimed') ||
+            errorMessage.toLowerCase().includes('already exists')) {
+          // Already claimed - silently mark as triggered to prevent future attempts
+          triggeredAchievementsRef.current.add(achievement.achievementNumber);
+          return;
+        }
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error('Error submitting secret achievement:', error);
+      setSecretError(error instanceof Error ? error.message : 'Failed to claim secret achievement');
+    } finally {
+      setIsSubmittingSecret(false);
+    }
+  }, [address, fetchWalletAchievements, fetchUnclaimedVouchers]);
+
   const { completion, complete, isLoading, error } = useCompletion({
     api: "/api/reviewer",
     streamProtocol: "text",
@@ -259,6 +415,44 @@ export default function ReviewerPage() {
     lastSubmittedCodeLength,
     startTime,
     sessionId,
+  ]);
+
+  // Secret achievement detection - triggers when AI finds vulnerabilities
+  React.useEffect(() => {
+    // Only check when:
+    // 1. Stream has finished (isLoading is false)
+    // 2. We have a completion
+    // 3. User is connected
+    if (!isLoading && completion && address) {
+      // Check for reentrancy achievement
+      if (
+        !hasReentrancyAchievement && 
+        !triggeredAchievementsRef.current.has(SECRET_ACHIEVEMENTS.REENTRANCY.achievementNumber) &&
+        detectsReentrancy(completion)
+      ) {
+        triggeredAchievementsRef.current.add(SECRET_ACHIEVEMENTS.REENTRANCY.achievementNumber);
+        submitSecretAchievement(SECRET_ACHIEVEMENTS.REENTRANCY);
+      }
+
+      // Check for Dead Man's Chest achievement
+      if (
+        !hasDeadMansChestAchievement && 
+        !triggeredAchievementsRef.current.has(SECRET_ACHIEVEMENTS.DEAD_MANS_CHEST.achievementNumber) &&
+        detectsDeadMansChest(completion)
+      ) {
+        triggeredAchievementsRef.current.add(SECRET_ACHIEVEMENTS.DEAD_MANS_CHEST.achievementNumber);
+        submitSecretAchievement(SECRET_ACHIEVEMENTS.DEAD_MANS_CHEST);
+      }
+    }
+  }, [
+    isLoading,
+    completion,
+    address,
+    hasReentrancyAchievement,
+    hasDeadMansChestAchievement,
+    detectsReentrancy,
+    detectsDeadMansChest,
+    submitSecretAchievement,
   ]);
 
   return (
@@ -542,6 +736,67 @@ export default function ReviewerPage() {
             </p>
           </CardContent>
         </Card>
+
+        {/* Secret Achievement Success Modal */}
+        {secretAchievementModal.show && secretAchievementModal.achievement && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div 
+              className={cn(
+                "bg-gradient-to-br p-8 rounded-xl shadow-2xl text-center max-w-md mx-4 border-4 animate-pulse",
+                secretAchievementModal.achievement.gradientFrom,
+                secretAchievementModal.achievement.gradientTo,
+                secretAchievementModal.achievement.borderColor
+              )}
+            >
+              <div className="text-6xl mb-4">{secretAchievementModal.achievement.emoji}</div>
+              <h2 className="text-2xl font-bold text-white mb-2">Secret Achievement Discovered!</h2>
+              <h3 className="text-lg font-semibold text-white/90 mb-4">
+                {secretAchievementModal.achievement.title}
+              </h3>
+              <p className="text-white/80 mb-6">
+                {secretAchievementModal.achievement.description}
+              </p>
+              <div className="space-y-3">
+                <p className="text-sm text-white/70 bg-black/20 p-3 rounded-lg">
+                  📜 Check your achievements and unclaimed vouchers to claim your NFT!
+                </p>
+                <button
+                  onClick={() => setSecretAchievementModal({ show: false, achievement: null })}
+                  className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg transition-colors border border-white/30"
+                >
+                  Continue Reviewing
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Secret Achievement Error Message */}
+        {secretError && (
+          <div className="fixed top-4 right-4 bg-red-500/90 backdrop-blur text-white p-4 rounded-lg shadow-lg max-w-md z-40">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">⚠️</span>
+              <span className="font-semibold">Secret Achievement Failed</span>
+            </div>
+            <p className="text-sm">{secretError}</p>
+            <button
+              onClick={() => setSecretError(null)}
+              className="mt-2 text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Loading overlay for secret achievement submission */}
+        {isSubmittingSecret && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-40">
+            <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-xl text-center">
+              <div className="animate-spin h-8 w-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground">Claiming secret achievement...</p>
+            </div>
+          </div>
+        )}
       </div>
     </WalletAuthGuard>
   );

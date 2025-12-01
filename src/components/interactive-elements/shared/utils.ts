@@ -39,12 +39,19 @@ export const MODULE_TO_ACHIEVEMENT_MAP: Record<string, string> = {
   'dapp-interface-practical': '0053',
   'advanced-security': '0054',
   
-  // Secret Achievements (1001-1005)
+  // Secret Achievements (1001-1006)
   'secret-island1': '1001',
   'secret-island2': '1002',
   'secret-island3': '1003',
   'secret-island4': '1004',
-  'secret-island5': '1005'
+  'secret-island5': '1005',
+  'secret-island6': '1006',
+  // Secret Achievements (2001-2005)
+  'secret-ai-discovery1': '2001',
+  'secret-ai-discovery2': '2002',
+  'secret-ai-discovery3': '2003',
+  'secret-ai-discovery4': '2004',
+  'secret-ai-discovery5': '2005'
 };
 
 // Get achievement number for a module

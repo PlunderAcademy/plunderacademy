@@ -9,7 +9,21 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAchievements } from "@/hooks/use-achievements";
 import { AnimatedAchievementCard } from "@/components/animated-achievement-card";
-import { ALL_ACHIEVEMENTS, type Achievement, isTimeLimitedAchievement } from "@/lib/achievements-config";
+import { 
+  ALL_ACHIEVEMENTS, 
+  type Achievement, 
+  isTimeLimitedAchievement,
+  isSecretAchievement,
+  isPlunderMasterAchievement,
+  isModuleAchievement,
+  getModuleAchievements,
+  getSecretAchievements,
+  getTimeLimitedAchievements,
+  getPlunderMasterAchievement,
+  getPlunderMasterProgress,
+  getAchievementByTaskCode,
+} from "@/lib/achievements-config";
+import { config } from "@/lib/config";
 import { 
   Award, 
   Clock, 
@@ -21,6 +35,7 @@ import {
   RefreshCw,
   Share2
 } from "lucide-react";
+import { useAccount } from "wagmi";
 import { generateTwitterShareFromAchievementNumber } from "@/components/interactive-elements/shared/utils";
 
 interface AchievementsModalProps {
@@ -30,6 +45,7 @@ interface AchievementsModalProps {
 }
 
 export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }: AchievementsModalProps) {
+  const { address } = useAccount();
   const {
     unclaimedVouchers,
     walletAchievements,
@@ -76,6 +92,94 @@ export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }:
 
   // Track which achievement is selected (for mobile click-to-view)
   const [selectedAchievement, setSelectedAchievement] = React.useState<string | null>(null);
+
+  // Plunder Master (1006) state
+  const [plunderMasterStatus, setPlunderMasterStatus] = React.useState<{
+    checking: boolean;
+    error: string | null;
+    feedback: string | null;
+    nextSteps: string[] | null;
+    canClaim: boolean;
+  }>({ checking: false, error: null, feedback: null, nextSteps: null, canClaim: false });
+
+  // Calculate Plunder Master progress from wallet achievements AND unclaimed vouchers
+  const plunderMasterProgress = React.useMemo(() => {
+    // Include both claimed achievements AND unclaimed vouchers
+    const claimedTaskCodes = walletAchievements
+      .filter(a => a.isClaimed)
+      .map(a => a.tokenId);
+    const unclaimedTaskCodes = unclaimedVouchers.map(v => v.taskCode);
+    // Combine and deduplicate
+    const allEarnedCodes = [...new Set([...claimedTaskCodes, ...unclaimedTaskCodes])];
+    return getPlunderMasterProgress(allEarnedCodes);
+  }, [walletAchievements, unclaimedVouchers]);
+
+  // Check if user already has Plunder Master
+  const hasPlunderMaster = React.useMemo(() => 
+    walletAchievements.some(a => a.isClaimed && a.tokenId === 1006),
+    [walletAchievements]
+  );
+
+  // Check and claim Plunder Master
+  const checkAndClaimPlunderMaster = React.useCallback(async () => {
+    if (!address) {
+      setPlunderMasterStatus({
+        checking: false,
+        error: 'Please connect your wallet first',
+        feedback: null,
+        nextSteps: null,
+        canClaim: false
+      });
+      return;
+    }
+    
+    setPlunderMasterStatus(prev => ({ ...prev, checking: true, error: null }));
+    
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/api/v1/vouchers/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: address,
+          achievementNumber: "1006",
+          submissionType: "secret",
+          submissionData: { secretAnswer: "biscuits" },
+          metadata: { timestamp: new Date().toISOString(), discoveryMethod: "plunder_master_claim" }
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Success! Refresh achievements
+        setPlunderMasterStatus({ checking: false, error: null, feedback: "🎉 Plunder Master claimed!", nextSteps: null, canClaim: true });
+        window.dispatchEvent(new CustomEvent('achievementClaimed', { detail: { timestamp: Date.now() } }));
+        fetchWalletAchievements();
+        fetchUnclaimedVouchers();
+      } else {
+        // Check for eligibility error
+        const errorMessage = result.error || 'Failed to claim';
+        const feedback = result.feedback || null;
+        const nextSteps = result.nextSteps || null;
+        
+        setPlunderMasterStatus({
+          checking: false,
+          error: errorMessage,
+          feedback,
+          nextSteps,
+          canClaim: false
+        });
+      }
+    } catch (error) {
+      setPlunderMasterStatus({
+        checking: false,
+        error: error instanceof Error ? error.message : 'Failed to check eligibility',
+        feedback: null,
+        nextSteps: null,
+        canClaim: false
+      });
+    }
+  }, [address, fetchWalletAchievements, fetchUnclaimedVouchers]);
 
   // No longer loading metadata for placeholders since we only show achievement number and ???
 
@@ -143,6 +247,198 @@ export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }:
       case "gas": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       case "fundamentals": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
       case "advanced": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+    }
+  };
+
+  // Helper function to render an achievement card (earned or placeholder)
+  const renderAchievementCard = (demoAchievement: Achievement) => {
+    const walletAchievement = walletAchievements.find(
+      wa => wa.isClaimed && wa.tokenId === demoAchievement.taskCode
+    );
+    
+    if (walletAchievement) {
+      // Show earned achievement with full styling
+      const metadata = achievementMetadata[walletAchievement.achievementNumber];
+      const isLoadingMeta = loadingMetadata.has(walletAchievement.achievementNumber);
+      
+      if (useAnimatedCards) {
+        // Use AnimatedAchievementCard with auto-assigned animation per achievement
+        const isSelected = selectedAchievement === walletAchievement.achievementNumber;
+        
+        return (
+          <AnimatedAchievementCard
+            key={walletAchievement.achievementNumber}
+            achievementNumber={walletAchievement.achievementNumber}
+            size="sm"
+            className="w-full aspect-[320/425] border rounded-lg overflow-hidden cursor-pointer"
+            alt={metadata?.name || demoAchievement.title}
+            onClick={() => setSelectedAchievement(isSelected ? null : walletAchievement.achievementNumber)}
+          >
+            {/* Hover/Click Overlay */}
+            <div className={`absolute inset-0 bg-black/80 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200 flex flex-col p-4 text-white overflow-y-auto`}>
+              <div className="space-y-2 flex-shrink-0">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge className="bg-white/20 text-white border-white/20 hover:bg-white/20">
+                    {getCategoryIcon(demoAchievement.category)}
+                    <span className="ml-1 capitalize">{demoAchievement.category}</span>
+                  </Badge>
+                  <Button
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(
+                        generateTwitterShareFromAchievementNumber(
+                          walletAchievement.achievementNumber,
+                          metadata?.name || demoAchievement.title
+                        ),
+                        '_blank'
+                      );
+                    }}
+                    className="h-7 px-2 bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 flex-shrink-0"
+                  >
+                    <Share2 className="size-3.5" />
+                    <span className="text-xs">Share</span>
+                  </Button>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold text-lg">{metadata?.name || demoAchievement.title}</h4>
+                  <p className="text-sm text-gray-200 mt-1">
+                    {metadata?.description || demoAchievement.description}
+                  </p>
+                </div>
+
+                {metadata?.attributes && metadata.attributes.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-gray-300">Attributes:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {metadata.attributes.map((attr, index) => (
+                        <span key={index} className="text-xs bg-white/20 px-2 py-1 rounded">
+                          {attr.trait_type}: {attr.value}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-h-4"></div>
+
+              <div className="space-y-1 text-xs text-gray-300 flex-shrink-0 mt-2">
+                <div>Achievement #{walletAchievement.achievementNumber}</div>
+                <div>Claimed: {new Date(walletAchievement.createdAt).toLocaleDateString()}</div>
+                <div>Token ID: #{walletAchievement.tokenId}</div>
+              </div>
+            </div>
+          </AnimatedAchievementCard>
+        );
+      } else {
+        // Use original static card rendering
+        const isSelected = selectedAchievement === walletAchievement.achievementNumber;
+        
+        return (
+          <div 
+            key={walletAchievement.achievementNumber} 
+            className="relative group border rounded-lg overflow-hidden cursor-pointer transition-transform hover:scale-105 aspect-[320/425]"
+            onClick={() => setSelectedAchievement(isSelected ? null : walletAchievement.achievementNumber)}
+          >
+            <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
+              {isLoadingMeta ? (
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              ) : metadata?.image ? (
+                <Image 
+                  src={metadata.image} 
+                  alt={metadata.name || "Achievement Badge"}
+                  fill
+                  className="object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (nextElement) nextElement.style.display = 'flex';
+                  }}
+                  unoptimized
+                />
+              ) : null}
+              <div className="flex-col items-center justify-center text-muted-foreground" style={{ display: metadata?.image ? 'none' : 'flex' }}>
+                <Award className="size-12 mb-2" />
+                <span className="text-sm">Achievement Badge</span>
+              </div>
+            </div>
+            
+            <div className={`absolute inset-0 bg-black/80 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200 flex flex-col p-4 text-white overflow-y-auto`}>
+              <div className="space-y-2 flex-shrink-0">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge className="bg-white/20 text-white border-white/20 hover:bg-white/20">
+                    {getCategoryIcon(demoAchievement.category)}
+                    <span className="ml-1 capitalize">{demoAchievement.category}</span>
+                  </Badge>
+                  <Button
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(
+                        generateTwitterShareFromAchievementNumber(
+                          walletAchievement.achievementNumber,
+                          metadata?.name || demoAchievement.title
+                        ),
+                        '_blank'
+                      );
+                    }}
+                    className="h-7 px-2 bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 flex-shrink-0"
+                  >
+                    <Share2 className="size-3.5" />
+                    <span className="text-xs">Share</span>
+                  </Button>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold text-lg">{metadata?.name || demoAchievement.title}</h4>
+                  <p className="text-sm text-gray-200 mt-1">
+                    {metadata?.description || demoAchievement.description}
+                  </p>
+                </div>
+
+                {metadata?.attributes && metadata.attributes.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-gray-300">Attributes:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {metadata.attributes.map((attr, index) => (
+                        <span key={index} className="text-xs bg-white/20 px-2 py-1 rounded">
+                          {attr.trait_type}: {attr.value}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-h-4"></div>
+
+              <div className="space-y-1 text-xs text-gray-300 flex-shrink-0 mt-2">
+                <div>Achievement #{walletAchievement.achievementNumber}</div>
+                <div>Claimed: {new Date(walletAchievement.createdAt).toLocaleDateString()}</div>
+                <div>Token ID: #{walletAchievement.tokenId}</div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+    } else {
+      // Show placeholder for unearned achievement
+      const achievementNumber = demoAchievement.taskCode.toString().padStart(4, "0");
+      
+      return (
+        <div 
+          key={`placeholder-${achievementNumber}`} 
+          className="relative border-2 border-dashed border-muted-foreground/30 rounded-lg aspect-[320/425] flex flex-col items-center justify-center text-muted-foreground/60 bg-muted/10 p-4"
+        >
+          <Award className="size-16 mb-4 opacity-40" />
+          <div className="text-center space-y-2">
+            <div className="font-semibold text-sm">Achievement #{achievementNumber}</div>
+            <div className="text-lg font-bold opacity-50">???</div>
+          </div>
+        </div>
+      );
     }
   };
 
@@ -254,222 +550,155 @@ export function AchievementsModal({ isOpen, onClose, useAnimatedCards = false }:
                       <p className="text-muted-foreground">Loading your achievements...</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {/* Show all possible achievements - earned ones with images, unearned ones with placeholders */}
-                      {/* Time-limited achievements (1100+) only show if claimed, no placeholder */}
-                      {ALL_ACHIEVEMENTS.map((demoAchievement) => {
-                        const walletAchievement = walletAchievements.find(
-                          wa => wa.isClaimed && wa.tokenId === demoAchievement.taskCode
-                        );
+                    <div className="space-y-8">
+                      {/* ========== MODULE ACHIEVEMENTS SECTION ========== */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 pb-2 border-b border-blue-500/30">
+                          <Award className="size-5 text-blue-500" />
+                          <h3 className="font-bold text-lg text-blue-600 dark:text-blue-400">Training Modules</h3>
+                          <Badge className="bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30">
+                            {walletAchievements.filter(a => a.isClaimed && isModuleAchievement(a.tokenId)).length} / {getModuleAchievements().length}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                          {getModuleAchievements().map((achievement) => renderAchievementCard(achievement))}
+                        </div>
+                      </div>
+
+                      {/* ========== SECRET ACHIEVEMENTS SECTION ========== */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 pb-2 border-b border-purple-500/30">
+                          <Shield className="size-5 text-purple-500" />
+                          <h3 className="font-bold text-lg text-purple-600 dark:text-purple-400">Secret Achievements</h3>
+                          <Badge className="bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30">
+                            {walletAchievements.filter(a => a.isClaimed && isSecretAchievement(a.tokenId)).length} / {getSecretAchievements().length}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                          {getSecretAchievements().map((achievement) => renderAchievementCard(achievement))}
+                        </div>
+                      </div>
+
+                      {/* ========== TIME-LIMITED ACHIEVEMENTS SECTION ========== */}
+                      {/* Only show if user has at least 1 claimed time-limited achievement */}
+                      {walletAchievements.some(a => a.isClaimed && isTimeLimitedAchievement(a.tokenId)) && (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 pb-2 border-b border-orange-500/30">
+                            <Clock className="size-5 text-orange-500" />
+                            <h3 className="font-bold text-lg text-orange-600 dark:text-orange-400">Time-Limited</h3>
+                            <Badge className="bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-500/30">
+                              Limited Edition
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {getTimeLimitedAchievements().map((achievement) => {
+                              // Only show time-limited if claimed
+                              const walletAchievement = walletAchievements.find(
+                                wa => wa.isClaimed && wa.tokenId === achievement.taskCode
+                              );
+                              if (!walletAchievement) return null;
+                              return renderAchievementCard(achievement);
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ========== PLUNDER MASTER SECTION (at bottom) ========== */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 pb-2 border-b border-amber-500/30">
+                          <Trophy className="size-5 text-amber-500" />
+                          <h3 className="font-bold text-lg text-amber-600 dark:text-amber-400">Plunder Master</h3>
+                          <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30">
+                            Ultimate
+                          </Badge>
+                        </div>
                         
-                        // Skip time-limited achievements if not claimed (don't show placeholder)
-                        if (isTimeLimitedAchievement(demoAchievement.taskCode) && !walletAchievement) {
-                          return null;
-                        }
-                        
-                        if (walletAchievement) {
-                          // Show earned achievement with full styling
-                          const metadata = achievementMetadata[walletAchievement.achievementNumber];
-                          const isLoadingMeta = loadingMetadata.has(walletAchievement.achievementNumber);
-                          
-                          if (useAnimatedCards) {
-                            // Use AnimatedAchievementCard with auto-assigned animation per achievement
-                            const isSelected = selectedAchievement === walletAchievement.achievementNumber;
-                            
-                            return (
-                              <AnimatedAchievementCard
-                                key={walletAchievement.achievementNumber}
-                                achievementNumber={walletAchievement.achievementNumber}
-                                // No animation prop - will auto-assign based on achievement number
-                                size="sm"
-                                className="w-full aspect-[320/425] border rounded-lg overflow-hidden cursor-pointer"
-                                alt={metadata?.name || demoAchievement.title}
-                                onClick={() => setSelectedAchievement(isSelected ? null : walletAchievement.achievementNumber)}
-                              >
-                                {/* Hover/Click Overlay - scrollable and works on mobile */}
-                                <div className={`absolute inset-0 bg-black/80 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200 flex flex-col p-4 text-white overflow-y-auto`}>
-                                  {/* Top Section */}
-                                  <div className="space-y-2 flex-shrink-0">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <Badge className="bg-white/20 text-white border-white/20 hover:bg-white/20">
-                                        {getCategoryIcon(demoAchievement.category)}
-                                        <span className="ml-1 capitalize">{demoAchievement.category}</span>
-                                      </Badge>
-                                      <Button
-                                        size="sm"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          window.open(
-                                            generateTwitterShareFromAchievementNumber(
-                                              walletAchievement.achievementNumber,
-                                              metadata?.name || demoAchievement.title
-                                            ),
-                                            '_blank'
-                                          );
-                                        }}
-                                        className="h-7 px-2 bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 flex-shrink-0"
-                                      >
-                                        <Share2 className="size-3.5" />
-                                        <span className="text-xs">Share</span>
-                                      </Button>
-                                    </div>
-                                    
-                                    <div>
-                                      <h4 className="font-semibold text-lg">{metadata?.name || demoAchievement.title}</h4>
-                                      <p className="text-sm text-gray-200 mt-1">
-                                        {metadata?.description || demoAchievement.description}
-                                      </p>
-                                    </div>
-
-                                    {/* Attributes */}
-                                    {metadata?.attributes && metadata.attributes.length > 0 && (
-                                      <div className="space-y-1">
-                                        <div className="text-xs font-medium text-gray-300">Attributes:</div>
-                                        <div className="flex flex-wrap gap-1">
-                                          {metadata.attributes.map((attr, index) => (
-                                            <span
-                                              key={index}
-                                              className="text-xs bg-white/20 px-2 py-1 rounded"
-                                            >
-                                              {attr.trait_type}: {attr.value}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Spacer */}
-                                  <div className="flex-1 min-h-4"></div>
-
-                                  {/* Bottom Section */}
-                                  <div className="space-y-1 text-xs text-gray-300 flex-shrink-0 mt-2">
-                                    <div>Achievement #{walletAchievement.achievementNumber}</div>
-                                    <div>Claimed: {new Date(walletAchievement.createdAt).toLocaleDateString()}</div>
-                                    <div>Token ID: #{walletAchievement.tokenId}</div>
-                                  </div>
+                        {hasPlunderMaster ? (
+                          // User has Plunder Master - show the achievement
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {renderAchievementCard(getPlunderMasterAchievement()!)}
+                          </div>
+                        ) : (
+                          // User doesn't have it - show progress and claim button
+                          <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-6">
+                            <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+                              <div className="flex-shrink-0">
+                                <div className="w-24 h-24 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                                  <Trophy className="size-12 text-amber-500" />
                                 </div>
-                              </AnimatedAchievementCard>
-                            );
-                          } else {
-                            // Use original static card rendering
-                            const isSelected = selectedAchievement === walletAchievement.achievementNumber;
-                            
-                            return (
-                              <div 
-                                key={walletAchievement.achievementNumber} 
-                                className="relative group border rounded-lg overflow-hidden cursor-pointer transition-transform hover:scale-105 aspect-[320/425]"
-                                onClick={() => setSelectedAchievement(isSelected ? null : walletAchievement.achievementNumber)}
-                              >
-                                {/* NFT Image */}
-                                <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
-                                  {isLoadingMeta ? (
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                                  ) : metadata?.image ? (
-                                    <Image 
-                                      src={metadata.image} 
-                                      alt={metadata.name || "Achievement Badge"}
-                                      fill
-                                      className="object-contain"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = 'none';
-                                        const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                                        if (nextElement) nextElement.style.display = 'flex';
-                                      }}
-                                      unoptimized
-                                    />
-                                  ) : null}
-                                  {/* Fallback icon */}
-                                  <div className="flex-col items-center justify-center text-muted-foreground" style={{ display: metadata?.image ? 'none' : 'flex' }}>
-                                    <Award className="size-12 mb-2" />
-                                    <span className="text-sm">Achievement Badge</span>
-                                  </div>
+                              </div>
+                              <div className="flex-1 space-y-3">
+                                <div>
+                                  <h4 className="font-bold text-xl text-amber-800 dark:text-amber-200">Plunder Master</h4>
+                                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                                    Complete all achievements to unlock the ultimate Plunder Master NFT!
+                                  </p>
                                 </div>
                                 
-                                {/* Hover/Click Overlay - scrollable and works on mobile */}
-                                <div className={`absolute inset-0 bg-black/80 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200 flex flex-col p-4 text-white overflow-y-auto`}>
-                                  {/* Top Section */}
-                                  <div className="space-y-2 flex-shrink-0">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <Badge className="bg-white/20 text-white border-white/20 hover:bg-white/20">
-                                        {getCategoryIcon(demoAchievement.category)}
-                                        <span className="ml-1 capitalize">{demoAchievement.category}</span>
-                                      </Badge>
-                                      <Button
-                                        size="sm"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          window.open(
-                                            generateTwitterShareFromAchievementNumber(
-                                              walletAchievement.achievementNumber,
-                                              metadata?.name || demoAchievement.title
-                                            ),
-                                            '_blank'
-                                          );
-                                        }}
-                                        className="h-7 px-2 bg-blue-500 hover:bg-blue-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 flex-shrink-0"
-                                      >
-                                        <Share2 className="size-3.5" />
-                                        <span className="text-xs">Share</span>
-                                      </Button>
-                                    </div>
-                                    
-                                    <div>
-                                      <h4 className="font-semibold text-lg">{metadata?.name || demoAchievement.title}</h4>
-                                      <p className="text-sm text-gray-200 mt-1">
-                                        {metadata?.description || demoAchievement.description}
-                                      </p>
-                                    </div>
+                                {/* Progress Bar */}
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-amber-700 dark:text-amber-300">Progress</span>
+                                    <span className="font-semibold text-amber-800 dark:text-amber-200">
+                                      {plunderMasterProgress.completed} / {plunderMasterProgress.required}
+                                    </span>
+                                  </div>
+                                  <div className="h-3 bg-amber-200 dark:bg-amber-900 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500"
+                                      style={{ width: `${(plunderMasterProgress.completed / plunderMasterProgress.required) * 100}%` }}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                                    {plunderMasterProgress.missing.length} achievement{plunderMasterProgress.missing.length !== 1 ? 's' : ''} remaining
+                                  </p>
+                                  {/* Show note if some are unclaimed */}
+                                  {unclaimedVouchers.length > 0 && (
+                                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                                      💡 You have {unclaimedVouchers.length} unclaimed voucher{unclaimedVouchers.length !== 1 ? 's' : ''} - claim them in the Unclaimed Vouchers tab!
+                                    </p>
+                                  )}
+                                </div>
 
-                                    {/* Attributes */}
-                                    {metadata?.attributes && metadata.attributes.length > 0 && (
-                                      <div className="space-y-1">
-                                        <div className="text-xs font-medium text-gray-300">Attributes:</div>
-                                        <div className="flex flex-wrap gap-1">
-                                          {metadata.attributes.map((attr, index) => (
-                                            <span
-                                              key={index}
-                                              className="text-xs bg-white/20 px-2 py-1 rounded"
-                                            >
-                                              {attr.trait_type}: {attr.value}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
+                                {/* Status/Error Messages */}
+                                {plunderMasterStatus.error && (
+                                  <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm">
+                                    <p className="text-red-700 dark:text-red-300 font-medium">{plunderMasterStatus.error}</p>
+                                    {plunderMasterStatus.feedback && (
+                                      <p className="text-red-600 dark:text-red-400 mt-1">{plunderMasterStatus.feedback}</p>
+                                    )}
+                                    {plunderMasterStatus.nextSteps && plunderMasterStatus.nextSteps.length > 0 && (
+                                      <ul className="mt-2 space-y-1 text-red-600 dark:text-red-400">
+                                        {plunderMasterStatus.nextSteps.map((step, i) => (
+                                          <li key={i}>• {step}</li>
+                                        ))}
+                                      </ul>
                                     )}
                                   </div>
-
-                                  {/* Spacer */}
-                                  <div className="flex-1 min-h-4"></div>
-
-                                  {/* Bottom Section */}
-                                  <div className="space-y-1 text-xs text-gray-300 flex-shrink-0 mt-2">
-                                    <div>Achievement #{walletAchievement.achievementNumber}</div>
-                                    <div>Claimed: {new Date(walletAchievement.createdAt).toLocaleDateString()}</div>
-                                    <div>Token ID: #{walletAchievement.tokenId}</div>
-                                  </div>
-                                </div>
+                                )}
                               </div>
-                            );
-                          }
-                        } else {
-                          // Show placeholder for unearned achievement
-                          const achievementNumber = demoAchievement.taskCode.toString().padStart(4, "0");
-                          
-                          return (
-                            <div 
-                              key={`placeholder-${achievementNumber}`} 
-                              className="relative border-2 border-dashed border-muted-foreground/30 rounded-lg aspect-[320/425] flex flex-col items-center justify-center text-muted-foreground/60 bg-muted/10 p-4"
-                            >
-                              <Award className="size-16 mb-4 opacity-40" />
-                              <div className="text-center space-y-2">
-                                <div className="font-semibold text-sm">Achievement #{achievementNumber}</div>
-                                <div className="text-lg font-bold opacity-50">???</div>
-                              </div>
+                              
+                              <Button
+                                onClick={checkAndClaimPlunderMaster}
+                                disabled={plunderMasterStatus.checking}
+                                className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-semibold px-6"
+                                size="lg"
+                              >
+                                {plunderMasterStatus.checking ? (
+                                  <>
+                                    <RefreshCw className="size-4 mr-2 animate-spin" />
+                                    Checking...
+                                  </>
+                                ) : plunderMasterProgress.isEligible ? (
+                                  "Claim Plunder Master"
+                                ) : (
+                                  "Check Eligibility"
+                                )}
+                              </Button>
                             </div>
-                          );
-                        }
-                      })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                   

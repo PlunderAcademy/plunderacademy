@@ -145,7 +145,9 @@ export async function generateStaticParams() {
     // Island 5 - Neon Haven
     '0051', '0052', '0053', '0054',
     // Secret Achievements
-    '1001', '1002', '1003', '1004', '1005'
+    '1001', '1002', '1003', '1004', '1005', '1006',
+    // Secret Achievements (AI Discoveries)
+    '2001', '2002', '2003', '2004', '2005'
   ];
   
   return achievementIds.map(achievementId => ({
