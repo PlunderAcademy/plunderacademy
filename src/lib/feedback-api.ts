@@ -46,6 +46,18 @@ export interface ModuleFeedbackData {
   aiToolsHelpful?: boolean;
 }
 
+export type GeneralFeedbackCategory = "bug" | "feature-request" | "ui" | "content" | "other";
+
+export interface GeneralFeedbackData {
+  walletAddress: string;
+  category: GeneralFeedbackCategory;
+  feedback: string;
+  title?: string;
+  rating?: number;
+  pageUrl?: string;
+  metadata?: Record<string, string>;
+}
+
 export interface UserAnalytics {
   walletAddress: string;
   stats: {
@@ -154,6 +166,32 @@ export async function submitModuleFeedback(
     return await response.json();
   } catch (error) {
     console.error("Error submitting module feedback:", error);
+    return { success: false };
+  }
+}
+
+/**
+ * Submit general platform feedback (bugs, feature requests, UI issues, etc.)
+ */
+export async function submitGeneralFeedback(
+  data: GeneralFeedbackData
+): Promise<{ success: boolean; feedbackId?: number }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/feedback/general`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to submit general feedback: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error submitting general feedback:", error);
     return { success: false };
   }
 }

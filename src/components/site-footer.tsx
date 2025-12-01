@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Twitter, Send, Github } from "lucide-react";
+import { FeedbackTrigger } from "@/components/general-feedback";
 
 export function SiteFooter() {
   return (
@@ -38,6 +41,9 @@ export function SiteFooter() {
         </div>
 
         <div className="flex items-center gap-4">
+          <FeedbackTrigger className="hover:text-foreground transition-colors">
+            Feedback
+          </FeedbackTrigger>
           <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
           <Link href="/terms" className="hover:text-foreground">Terms</Link>
         </div>
