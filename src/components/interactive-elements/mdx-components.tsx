@@ -53,6 +53,7 @@ export { default as WalletConnectionVisualizer } from "./island5/wallet-connecti
 // Technical Article Visualizers
 export { default as AIArchitectureFlow } from "./ai-architecture-flow";
 export { default as InferenceSpeedVisualizer } from "./inference-speed-visualizer";
+export { RPCCallVisualizer } from "./rpc-call-visualizer";
 
 // Word Jumble MDX Component
 export function WordJumble({ word, hint, scrambled }: { word: string; hint: string; scrambled?: string }) {

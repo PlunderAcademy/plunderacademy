@@ -31,6 +31,8 @@ import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
 import json from 'react-syntax-highlighter/dist/esm/languages/prism/json';
 import markdown from 'react-syntax-highlighter/dist/esm/languages/prism/markdown';
 import css from 'react-syntax-highlighter/dist/esm/languages/prism/css';
+import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
+import golang from 'react-syntax-highlighter/dist/esm/languages/prism/go';
 import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from "next-themes";
 import {
@@ -80,6 +82,7 @@ import {
   WalletConnectionVisualizer,
   AIArchitectureFlow,
   InferenceSpeedVisualizer,
+  RPCCallVisualizer,
 } from "@/components/interactive-elements/mdx-components";
 
 import { Bip39SeedPhraseGenerator } from "@/components/interactive-elements/bip39-seed-phrase-generator";
@@ -100,6 +103,8 @@ SyntaxHighlighter.registerLanguage('bash', bash);
 SyntaxHighlighter.registerLanguage('json', json);
 SyntaxHighlighter.registerLanguage('markdown', markdown);
 SyntaxHighlighter.registerLanguage('css', css);
+SyntaxHighlighter.registerLanguage('python', python);
+SyntaxHighlighter.registerLanguage('go', golang);
 
 // Hook for intersection observer (scroll-based animations)
 function useInView(options = {}) {
@@ -539,6 +544,7 @@ const components = {
   WalletConnectionVisualizer,
   AIArchitectureFlow,
   InferenceSpeedVisualizer,
+  RPCCallVisualizer,
   InteractiveBip39Generator: Bip39SeedPhraseGenerator,
 
   LLMProcessAnimation,

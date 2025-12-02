@@ -1,0 +1,652 @@
+---
+slug: reading-blockchain-data-python-golang
+title: "Reading Blockchain Data with Python & Go: A Practical Guide"
+excerpt: Learn how to read smart contract data from EVM blockchains using Python and Go. We walk through two sample repositories that fetch LST price data from Zilliqa, explaining project structure, RPC calls, and ABI encoding.
+level: beginner
+tags:
+  - python
+  - golang
+  - rpc
+  - tutorial
+  - zilliqa
+---
+
+Reading data from smart contracts is one of the most fundamental skills for any blockchain developer. Whether you're building a dashboard, monitoring prices, or integrating blockchain data into your application, understanding how to make RPC calls is essential.
+
+This guide walks through two sample repositories we built to demonstrate reading contract data—one in Python and one in Go. Both fetch the same data (LST token prices from Zilliqa), but showcase the different approaches each language takes.
+
+## What We're Building
+
+Both samples connect to Zilliqa's EVM RPC and fetch price data from Liquid Staking Token (LST) contracts. LSTs are tokens that represent staked ZIL, and each has a `getPrice()` function that returns the current exchange rate.
+
+<RPCCallVisualizer />
+
+The flow is straightforward:
+1. Connect to the blockchain via JSON-RPC
+2. Call the `getPrice()` function on each contract
+3. Decode the response from raw hex to a human-readable number
+4. Save results to JSON files
+
+## The Repositories
+
+Both repositories are available on GitHub:
+
+- **Python**: [PlunderAcademy/contract-read-data-sample-python](https://github.com/PlunderAcademy/contract-read-data-sample-python)
+- **Go**: [PlunderAcademy/contract-read-data-sample-golang](https://github.com/PlunderAcademy/contract-read-data-sample-golang)
+
+Let's dive into each one.
+
+---
+
+## Python Implementation
+
+### Project Structure
+
+Python projects are typically simple and flat. Here's what our sample looks like:
+
+```
+contract-read-data-sample-python/
+├── main.py           # Entry point - where execution starts
+├── requirements.txt  # Dependencies
+├── .gitignore
+└── README.md
+```
+
+**Key files:**
+- `main.py` — The entire application lives here. Python's simplicity shines for scripts like this.
+- `requirements.txt` — Lists dependencies with versions (e.g., `web3==6.15.1`)
+
+### How Python Projects Start
+
+When you run `python main.py`, Python:
+1. Loads the file from top to bottom
+2. Executes any code at the module level (imports, constant definitions)
+3. Looks for the `if __name__ == "__main__":` block and runs it
+
+```python
+# This runs when you execute: python main.py
+if __name__ == "__main__":
+    main()
+```
+
+This pattern lets you import functions from `main.py` in other files without auto-running the script.
+
+### Connecting to the RPC
+
+The Python sample uses `web3.py`, the most popular Ethereum library for Python:
+
+```python
+from web3 import Web3
+
+# Connect to Zilliqa's EVM RPC
+RPC_URL = "https://api.zilliqa.com"
+web3 = Web3(Web3.HTTPProvider(RPC_URL))
+
+# Verify connection
+if web3.is_connected():
+    print("Connected to Zilliqa EVM")
+```
+
+That's it! The `Web3` class handles all the HTTP connection details. You pass it a provider (HTTP, WebSocket, or IPC), and it gives you a client ready to make calls.
+
+### Defining the ABI
+
+To call a contract function, you need its ABI (Application Binary Interface). The ABI tells your code:
+- What functions exist
+- What parameters they take
+- What they return
+
+For a simple `getPrice()` view function:
+
+```python
+PRICE_ABI = [{
+    "name": "getPrice",
+    "type": "function",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [{"name": "amount", "type": "uint256"}]
+}]
+```
+
+This minimal ABI is all you need—you don't need the full contract ABI, just the functions you're calling.
+
+### Making the Call
+
+Here's how you call a contract function in Python:
+
+```python
+# Create contract instance
+contract = web3.eth.contract(
+    address=Web3.to_checksum_address(contract_address),
+    abi=PRICE_ABI
+)
+
+# Call the view function
+price = contract.functions.getPrice().call()
+
+# price is already a Python int!
+print(f"Price: {price}")
+```
+
+The `web3.py` library handles:
+- ABI encoding the function call
+- Sending the `eth_call` RPC request
+- Decoding the hex response back to Python types
+
+### Reading Historical Data
+
+One powerful feature is reading state at past blocks:
+
+```python
+# Current price
+current_price = contract.functions.getPrice().call()
+
+# Price at block 5,000,000
+historical_price = contract.functions.getPrice().call(
+    block_identifier=5000000
+)
+```
+
+This is how the sample fetches price history—it calls `getPrice()` at different block heights to see how the price changed over time.
+
+### Full Python Flow
+
+```python
+import json
+from web3 import Web3
+
+RPC_URL = "https://api.zilliqa.com"
+BLOCK_INTERVAL = 10000
+PRICE_POINTS = 10
+
+TOKENS = [
+    {"symbol": "tZIL", "address": "0x..."},
+    # ... more tokens
+]
+
+def main():
+    web3 = Web3(Web3.HTTPProvider(RPC_URL))
+    current_block = web3.eth.block_number
+    
+    for token in TOKENS:
+        contract = web3.eth.contract(
+            address=Web3.to_checksum_address(token["address"]),
+            abi=PRICE_ABI
+        )
+        
+        prices = []
+        for i in range(PRICE_POINTS):
+            block = current_block - (i * BLOCK_INTERVAL)
+            price = contract.functions.getPrice().call(
+                block_identifier=block
+            )
+            prices.append({
+                "block": block,
+                "price": str(price / 10**18)  # Convert from wei
+            })
+        
+        # Save to JSON
+        with open(f"data/{token['symbol']}_prices.json", "w") as f:
+            json.dump({"symbol": token["symbol"], "prices": prices}, f)
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+## Go Implementation
+
+### Project Structure
+
+Go projects have more structure due to the module system:
+
+```
+contract-read-data-sample-golang/
+├── main.go           # Entry point
+├── go.mod            # Module definition & dependencies
+├── go.sum            # Dependency checksums (auto-generated)
+├── .gitignore
+└── README.md
+```
+
+**Key files:**
+- `main.go` — Contains the `main` package with a `main()` function
+- `go.mod` — Defines the module name and dependencies
+- `go.sum` — Lock file with exact versions and checksums
+
+### How Go Projects Start
+
+Go has strict rules about entry points:
+
+1. The entry point must be in the `main` package
+2. It must have a `main()` function
+3. `main()` takes no arguments and returns nothing
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello, blockchain!")
+}
+```
+
+When you run `go run main.go`:
+1. Go compiles the code
+2. Finds the `main` package
+3. Calls the `main()` function
+
+### Go Module System
+
+The `go.mod` file defines your project:
+
+```go
+module contract-read-sample
+
+go 1.21
+
+require (
+    github.com/ethereum/go-ethereum v1.13.14
+)
+```
+
+Run `go mod tidy` to automatically resolve and download dependencies.
+
+### Connecting to the RPC
+
+Go uses the official `go-ethereum` library:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    
+    "github.com/ethereum/go-ethereum/ethclient"
+)
+
+func main() {
+    // Connect to RPC
+    client, err := ethclient.Dial("https://api.zilliqa.com")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer client.Close()
+    
+    fmt.Println("Connected to Zilliqa EVM")
+}
+```
+
+Go's explicit error handling means you check every operation. The `defer client.Close()` ensures cleanup when the function exits.
+
+### Defining the ABI in Go
+
+Go requires parsing the ABI from a JSON string:
+
+```go
+import (
+    "strings"
+    
+    "github.com/ethereum/go-ethereum/accounts/abi"
+)
+
+const priceABI = `[{
+    "name": "getPrice",
+    "type": "function",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [{"name": "amount", "type": "uint256"}]
+}]`
+
+func main() {
+    // Parse the ABI
+    contractABI, err := abi.JSON(strings.NewReader(priceABI))
+    if err != nil {
+        log.Fatal(err)
+    }
+}
+```
+
+### Making the Call
+
+Go requires more manual work than Python:
+
+```go
+import (
+    "context"
+    "math/big"
+    
+    "github.com/ethereum/go-ethereum"
+    "github.com/ethereum/go-ethereum/common"
+)
+
+func getPrice(client *ethclient.Client, contractABI abi.ABI, 
+              address common.Address, blockNumber *big.Int) (*big.Int, error) {
+    
+    // Pack the function call (ABI encode)
+    data, err := contractABI.Pack("getPrice")
+    if err != nil {
+        return nil, err
+    }
+    
+    // Build the call message
+    msg := ethereum.CallMsg{
+        To:   &address,
+        Data: data,
+    }
+    
+    // Make the RPC call
+    result, err := client.CallContract(context.Background(), msg, blockNumber)
+    if err != nil {
+        return nil, err
+    }
+    
+    // Unpack (ABI decode) the result
+    outputs, err := contractABI.Unpack("getPrice", result)
+    if err != nil {
+        return nil, err
+    }
+    
+    // First output is the uint256 price
+    price := outputs[0].(*big.Int)
+    return price, nil
+}
+```
+
+Notice the explicit steps:
+1. **Pack** — Encode the function call to bytes
+2. **CallContract** — Send the RPC request
+3. **Unpack** — Decode the response bytes
+
+### Reading Historical Data
+
+Pass a block number to `CallContract`:
+
+```go
+// Current state (nil = latest block)
+currentPrice, _ := client.CallContract(ctx, msg, nil)
+
+// State at block 5,000,000
+blockNum := big.NewInt(5000000)
+historicalPrice, _ := client.CallContract(ctx, msg, blockNum)
+```
+
+### Full Go Flow
+
+```go
+package main
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+    "log"
+    "math/big"
+    "os"
+    "strings"
+
+    "github.com/ethereum/go-ethereum"
+    "github.com/ethereum/go-ethereum/accounts/abi"
+    "github.com/ethereum/go-ethereum/common"
+    "github.com/ethereum/go-ethereum/ethclient"
+)
+
+const (
+    RPC_URL        = "https://api.zilliqa.com"
+    BLOCK_INTERVAL = 10000
+    PRICE_POINTS   = 10
+)
+
+type Token struct {
+    Symbol  string
+    Address string
+}
+
+func main() {
+    client, err := ethclient.Dial(RPC_URL)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer client.Close()
+
+    contractABI, _ := abi.JSON(strings.NewReader(priceABI))
+    currentBlock, _ := client.BlockNumber(context.Background())
+
+    tokens := []Token{
+        {Symbol: "tZIL", Address: "0x..."},
+        // ... more tokens
+    }
+
+    for _, token := range tokens {
+        address := common.HexToAddress(token.Address)
+        var prices []map[string]interface{}
+
+        for i := 0; i < PRICE_POINTS; i++ {
+            block := currentBlock - uint64(i*BLOCK_INTERVAL)
+            price, _ := getPrice(client, contractABI, address, big.NewInt(int64(block)))
+            
+            // Convert to decimal string
+            priceFloat := new(big.Float).SetInt(price)
+            divisor := new(big.Float).SetInt(big.NewInt(1e18))
+            priceFloat.Quo(priceFloat, divisor)
+
+            prices = append(prices, map[string]interface{}{
+                "block": block,
+                "price": priceFloat.Text('f', 18),
+            })
+        }
+
+        // Save to JSON
+        data, _ := json.MarshalIndent(map[string]interface{}{
+            "symbol": token.Symbol,
+            "prices": prices,
+        }, "", "  ")
+        os.WriteFile(fmt.Sprintf("data/%s_prices.json", token.Symbol), data, 0644)
+    }
+}
+```
+
+---
+
+## Python vs Go: Key Differences
+
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Python</th>
+<th>Go</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Entry Point</td>
+<td><code>if __name__ == "__main__":</code></td>
+<td><code>func main()</code> in <code>package main</code></td>
+</tr>
+<tr>
+<td>Dependencies</td>
+<td><code>requirements.txt</code> + pip</td>
+<td><code>go.mod</code> + go mod tidy</td>
+</tr>
+<tr>
+<td>Error Handling</td>
+<td>Exceptions (try/except)</td>
+<td>Explicit returns (if err != nil)</td>
+</tr>
+<tr>
+<td>Type System</td>
+<td>Dynamic typing</td>
+<td>Static typing</td>
+</tr>
+<tr>
+<td>ABI Decoding</td>
+<td>Automatic (web3.py)</td>
+<td>Manual pack/unpack</td>
+</tr>
+<tr>
+<td>Big Numbers</td>
+<td>Native int (arbitrary precision)</td>
+<td><code>*big.Int</code> type</td>
+</tr>
+<tr>
+<td>Best For</td>
+<td>Quick scripts, prototyping</td>
+<td>Production services, performance</td>
+</tr>
+</tbody>
+</table>
+
+## Understanding the RPC Layer
+
+Both languages ultimately make the same JSON-RPC call. Here's what happens under the hood:
+
+<BlockchainExplainer />
+
+### The eth_call Method
+
+When you call a view function, the library sends an `eth_call` request:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "eth_call",
+  "params": [{
+    "to": "0x1234567890abcdef...",
+    "data": "0xa035b1fe"
+  }, "latest"],
+  "id": 1
+}
+```
+
+The `data` field is the ABI-encoded function call:
+- `0xa035b1fe` is the function selector (first 4 bytes of `keccak256("getPrice()")`)
+- For functions with parameters, arguments would be appended
+
+### The Response
+
+The node returns raw hex data:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000"
+}
+```
+
+This is a 256-bit (32-byte) unsigned integer representing `1000000000000000000` (1 × 10¹⁸), which equals 1.0 when converted from wei.
+
+## Running the Samples
+
+### Python
+
+```bash
+# Clone the repo
+git clone https://github.com/PlunderAcademy/contract-read-data-sample-python
+cd contract-read-data-sample-python
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run
+python main.py
+```
+
+### Go
+
+```bash
+# Clone the repo
+git clone https://github.com/PlunderAcademy/contract-read-data-sample-golang
+cd contract-read-data-sample-golang
+
+# Download dependencies
+go mod tidy
+
+# Run
+go run main.go
+```
+
+Both will create a `data/` directory with JSON files containing price history for each LST token.
+
+## Adapting for Your Use Case
+
+These samples are starting points. Here's how to adapt them:
+
+### Different Contracts
+
+Change the contract addresses and ABI to match your target:
+
+```python
+# Your custom ABI
+MY_ABI = [{
+    "name": "balanceOf",
+    "type": "function",
+    "stateMutability": "view",
+    "inputs": [{"name": "account", "type": "address"}],
+    "outputs": [{"name": "", "type": "uint256"}]
+}]
+
+# Call with parameters
+balance = contract.functions.balanceOf(wallet_address).call()
+```
+
+### Different Chains
+
+Just change the RPC URL:
+
+```python
+# Ethereum Mainnet
+web3 = Web3(Web3.HTTPProvider("https://eth.llamarpc.com"))
+
+# Polygon
+web3 = Web3(Web3.HTTPProvider("https://polygon-rpc.com"))
+
+# Zilliqa Testnet
+web3 = Web3(Web3.HTTPProvider("https://dev-api.zilliqa.com"))
+```
+
+### Real-Time Monitoring
+
+Add a loop with a delay:
+
+```python
+import time
+
+while True:
+    price = contract.functions.getPrice().call()
+    print(f"Current price: {price / 10**18}")
+    time.sleep(60)  # Check every minute
+```
+
+## Conclusion
+
+Reading blockchain data is foundational for any Web3 developer. Whether you prefer Python's simplicity or Go's performance, the core concepts are the same:
+
+1. **Connect** to an RPC endpoint
+2. **Define** the ABI for functions you want to call
+3. **Encode** your function call
+4. **Send** the request
+5. **Decode** the response
+
+The samples we've built demonstrate these concepts with real, working code. Clone them, run them, and modify them for your own projects.
+
+**Next steps:**
+- Try calling different functions on the LST contracts
+- Fetch data from other Zilliqa contracts
+- Build a simple dashboard displaying the data
+- Add WebSocket subscriptions for real-time updates
+
+---
+
+**Resources:**
+- [Python Sample Repository](https://github.com/PlunderAcademy/contract-read-data-sample-python)
+- [Go Sample Repository](https://github.com/PlunderAcademy/contract-read-data-sample-golang)
+- [web3.py Documentation](https://web3py.readthedocs.io/)
+- [go-ethereum Documentation](https://geth.ethereum.org/docs)
+- [Zilliqa EVM RPC](https://dev.zilliqa.com/docs/apis/evm-api/)
+
