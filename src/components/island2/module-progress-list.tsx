@@ -42,9 +42,9 @@ export function FrostModuleProgressList({
     const completed = new Set<number>();
 
     walletAchievements.forEach(achievement => {
-      // Frost Peak uses achievement IDs 6-10
-      if (achievement.isClaimed && achievement.tokenId >= 6 && achievement.tokenId <= 10) {
-        completed.add(achievement.tokenId - 6);
+      // Frost Peak uses achievement IDs 21-25
+      if (achievement.isClaimed && achievement.tokenId >= 21 && achievement.tokenId <= 25) {
+        completed.add(achievement.tokenId - 21);
       }
     });
 

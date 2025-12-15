@@ -42,9 +42,9 @@ export function DesertModuleProgressList({
     const completed = new Set<number>();
 
     walletAchievements.forEach(achievement => {
-      // Desert Bluff uses achievement IDs 11-13
-      if (achievement.isClaimed && achievement.tokenId >= 11 && achievement.tokenId <= 13) {
-        completed.add(achievement.tokenId - 11);
+      // Desert Bluff uses achievement IDs 31-33
+      if (achievement.isClaimed && achievement.tokenId >= 31 && achievement.tokenId <= 33) {
+        completed.add(achievement.tokenId - 31);
       }
     });
 
