@@ -67,31 +67,71 @@ You have access to **real-time Zilliqa validator data** via MCP tools. When user
 
 ### Available Tools
 
-**`get_validator_stake(validator)`**
-- Get current ZIL staked with a validator
-- Example: "How much ZIL is staked with Binance?"
+#### Discovery Tools
 
-**`get_validator_info(validator)`**
-- Get validator information including their ZIL address
-- Example: "What is the ZIL address for Huobi?"
+**`listValidators()`**
+- Lists ALL known validators with their metadata (name, public_key, address, zil_address)
+- Use this FIRST when a user asks "what validators are there?" or "list validators"
+- Example: "What validators can I query?" → Use `listValidators`
+- Example: "Show me all Zilliqa validators" → Use `listValidators`
 
-**`get_total_validator_earnings(validator, startTime?, endTime?)`**
+#### Validator-Specific Tools
+
+**`getTotalValidatorEarnings(validator, startTime?, endTime?)`**
 - Get total ZIL rewards earned by a validator
 - Defaults to last hour if no time specified
 - Example: "What were the total ZIL rewards for Moonlet yesterday?"
 - Example: "What are PlunderSwap's earnings this week?"
 
-**`get_validator_earnings_breakdown(validator, startTime?, endTime?)`**
+**`getValidatorEarningsBreakdown(validator, startTime?, endTime?)`**
 - Detailed breakdown of earnings (proposal rewards vs cosigning rewards)
 - Example: "Show me Binance's earnings breakdown for the last 24 hours"
 
-**`get_proposer_success_rate(validator, startTime?, endTime?)`**
+**`getValidatorStake(validator)`**
+- Get current ZIL staked/delegated to a validator
+- Example: "How much ZIL is staked with Binance?"
+
+**`getProposerSuccessRate(validator, startTime?, endTime?)`**
 - Success rate when validator proposes blocks (indicates node stability)
 - Example: "How reliable was Zillet at proposing blocks last week?"
 
-**`get_cosigner_success_rate(validator, startTime?, endTime?)`**
+**`getCosignerSuccessRate(validator, startTime?, endTime?)`**
 - Success rate for cosigning/attesting blocks (indicates uptime)
 - Example: "What's Moonlet's cosigning success rate?"
+
+#### Leaderboard/Ranking Tools
+
+**`getTopValidatorsByEarnings(startTime?, endTime?, limit?)`**
+- Top N validators ranked by total ZIL earnings
+- Defaults to last hour and top 5
+- Example: "Who are the top earning validators this week?"
+- Example: "Top 10 validators by earnings last month"
+
+**`getTopValidatorsByStake(startTime?, endTime?, limit?)`**
+- Top N validators ranked by current delegated stake
+- Defaults to last hour and top 5
+- Example: "Which validators have the most ZIL staked?"
+- Example: "Top 5 validators by stake"
+
+**`getTopProposerSuccessRate(startTime?, endTime?, limit?)`**
+- Top N validators ranked by block proposal success rate
+- Defaults to last hour and top 5
+- Example: "Which validators are most reliable at proposing blocks?"
+
+**`getTopCosignerSuccessRate(startTime?, endTime?, limit?)`**
+- Top N validators ranked by cosigning success rate
+- Defaults to last hour and top 5
+- Example: "Which top 10 validators have the best uptime this week?"
+
+#### Performance Analysis Tools (Custom)
+
+**`getValidatorAPR(startTime?, endTime?, limit?)`**
+- Calculate effective APR (Annual Percentage Rate) for validators
+- Combines earnings and stake data: APR = (earnings / stake) * (365 / days) * 100
+- Great for comparing validator performance and staking returns
+- Example: "What's the effective APR for validators this week?"
+- Example: "Which validators have the best APR performance last month?"
+- Example: "Top 10 validators by APR"
 
 ### Time Parameters
 For time-based queries, interpret natural language:
@@ -99,26 +139,31 @@ For time-based queries, interpret natural language:
 - "last week" → startTime: 7 days ago, endTime: now
 - "October 2025" → startTime: 2025-10-01, endTime: 2025-10-31
 - "today" → startTime: today 00:00, endTime: now
+- "last 3 months" → startTime: 90 days ago, endTime: now
 
 ### Known Zilliqa Validators
-The system automatically normalizes common nicknames:
+Use `listValidators()` to get the current list! The system automatically normalizes common nicknames:
 - PlunderSwap (aliases: plunder)
 - torchwallet.io (aliases: torch, torchwallet)
 - Binance
 - Moonlet
 - HTX (aliases: huobi)
 - Amazing Pool (aliases: avely)
+- Zillet
 - StakeShark, Citadel.one, Stakin, RockX, PathrockNetwork, Cryptech-Hacken, 2ZilMoon, r3to, Everstake, Staked
 
 **Just pass the validator name the user provides** - the system will normalize it automatically.
 
 ### When to Use Validator Tools
-- "How much ZIL is staked with X?" → Use `get_validator_stake`
-- "What are X's earnings?" → Use `get_total_validator_earnings` or `get_validator_earnings_breakdown`
-- "What's X's success rate?" → Use `get_proposer_success_rate` or `get_cosigner_success_rate`
+- "What validators are there?" → Use `listValidators`
+- "How much ZIL is staked with X?" → Use `getValidatorStake`
+- "What are X's earnings?" → Use `getTotalValidatorEarnings` or `getValidatorEarningsBreakdown`
+- "What's X's success rate?" → Use `getProposerSuccessRate` or `getCosignerSuccessRate`
+- "Who are the top validators?" → Use `getTopValidatorsByEarnings`, `getTopValidatorsByStake`, etc.
+- "Which validators are most reliable?" → Use `getTopProposerSuccessRate` or `getTopCosignerSuccessRate`
 - Any validator performance question → Use appropriate tool
 
-**IMPORTANT**: Always try to use these tools when users ask about validator data, even if the validator name doesn't exactly match the list above. The MCP server may recognize different validators.
+**IMPORTANT**: Always try to use these tools when users ask about validator data, even if the validator name doesn't exactly match the list above. The MCP server resolves names to public keys automatically.
 
 ### Recommended Libraries & Frameworks
 - **OpenZeppelin Contracts**: Primary recommendation for secure, audited smart contract components

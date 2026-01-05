@@ -121,17 +121,21 @@ const ACHIEVEMENT_PATTERNS = [
 // MCP response patterns (for Master Control Program)
 // These are the formatted outputs from zilliqa-mcp.ts
 const MCP_RESPONSE_PATTERNS = [
-  /📊\s*\*\*.*Stake\*\*/,           // get_validator_stake
-  /💰\s*\*\*.*Earnings\*\*/,        // get_total_validator_earnings  
-  /📈\s*\*\*.*Earnings\*\*/,        // get_validator_earnings_breakdown
-  /🎯\s*\*\*.*Success Rate\*\*/,    // get_proposer_success_rate
-  /✅\s*\*\*.*Success Rate\*\*/,    // get_cosigner_success_rate
-  /ℹ️\s*\*\*.*Info\*\*/,            // get_validator_info
+  /📊\s*\*\*.*Stake\*\*/,           // getValidatorStake
+  /💰\s*\*\*.*Earnings\*\*/,        // getTotalValidatorEarnings  
+  /📈\s*\*\*.*Earnings\*\*/,        // getValidatorEarningsBreakdown
+  /🎯\s*\*\*.*Success Rate\*\*/,    // getProposerSuccessRate
+  /✅\s*\*\*.*Success Rate\*\*/,    // getCosignerSuccessRate
+  /ℹ️\s*\*\*.*Info\*\*/,            // getValidatorInfo
+  /📋\s*\*\*Known Validators\*\*/,  // listValidators
+  /🏆\s*\*\*Top Validators/,        // getTopValidatorsByEarnings
   /ZIL staked/i,
   /validator.*\d+.*ZIL/i,
   /Cosigner Success Rate/i,
   /Proposer Success Rate/i,
   /staked with.*validator/i,
+  /Top.*by Stake/i,
+  /Top.*by Earnings/i,
 ];
 
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
@@ -166,12 +170,12 @@ const starterPrompts = [
 
 // Zilliqa validator query prompts (uses MCP tools)
 const validatorPrompts = [
-  "How much ZIL is staked with PlunderSwap?",
+  "What validators can I query?",
+  "Top 10 validators by APR this week",
+  "Who are the top 5 validators by earnings this week?",
   "What's Binance's cosigner success rate last month?",
-  "Moonlet earnings breakdown last week",
-  "How reliable was Torch at proposing blocks in November?",
-  "What is the ZIL address for PlunderSwap?",
-  "Amazing Pool's total earnings last 3 months",
+  "Which validators have the best uptime this week?",
+  "Top validators by stake",
 ] as const;
 
 export default function ChatPage() {
@@ -760,7 +764,7 @@ export default function ChatPage() {
         {!hideValidatorPrompts && (
           <section className="rounded-2xl border border-emerald-500/30 bg-emerald-50/20 p-3 dark:bg-emerald-950/20">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-              🔗 Live Validator Data
+              🔗 Live ZQ2 Validator Data
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {validatorPrompts.map((prompt) => (

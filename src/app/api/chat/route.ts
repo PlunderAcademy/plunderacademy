@@ -33,8 +33,30 @@ const DEFAULT_MODEL = "openai/gpt-oss-120b";
 function getSystemPrompt(): string {
   try {
     const promptPath = join(process.cwd(), 'src/app/api/chat/chat-system-prompt.md');
-    const content = readFileSync(promptPath, 'utf-8');
-    return content.replace(/^# .*\n\n/, '');
+    let content = readFileSync(promptPath, 'utf-8');
+    content = content.replace(/^# .*\n\n/, '');
+    
+    // Inject current date for accurate time-based queries
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const currentDateFormatted = now.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    const dateContext = `\n\n## Current Date\n**Today is ${currentDateFormatted} (${currentDate}).** Use this as the reference point for all time-based queries like "this week", "yesterday", "last month", etc.\n`;
+    
+    // Insert date context near the top (after the first section)
+    const firstSectionEnd = content.indexOf('\n## ', 10);
+    if (firstSectionEnd > 0) {
+      content = content.slice(0, firstSectionEnd) + dateContext + content.slice(firstSectionEnd);
+    } else {
+      content = dateContext + content;
+    }
+    
+    return content;
   } catch (error) {
     console.error('Error loading system prompt:', error);
     return "You are a specialized blockchain training assistant focused exclusively on Zilliqa 2.0 and EVM development. Help developers learn and build on the Zilliqa 2.0 ecosystem.";
@@ -95,21 +117,26 @@ export async function POST(req: Request) {
           .map(tr => formatMCPToolResult(tr.toolName, tr))
           .join('\n\n');
 
-        console.log(`[${requestId}] Formatting MCP response with minimal AI call`);
+        console.log(`[${requestId}] Formatted MCP results:`, formattedResults);
 
-        // Make a minimal AI call to format the response properly for the UI
-        const formattedResponse = await streamText({
-          model: modelName,
-          system: "You are a data formatter. Output ONLY the exact data given to you. Do not add greetings, explanations, context, recommendations, or any other text. Just the data.",
-          prompt: formattedResults,
-          providerOptions: {
-            gateway: {
-              only: ['cerebras'],
+        // If we have nicely formatted results, just pass them through with minimal AI formatting
+        if (formattedResults && formattedResults.trim()) {
+          const formattedResponse = await streamText({
+            model: modelName,
+            system: "You are a data presenter. Output the data exactly as provided. Do not refuse, apologize, or add commentary. Just present the data.",
+            prompt: `Present this validator data:\n\n${formattedResults}`,
+            providerOptions: {
+              gateway: {
+                only: ['cerebras'],
+              },
             },
-          },
-        });
+          });
 
-        return formattedResponse.toUIMessageStreamResponse();
+          return formattedResponse.toUIMessageStreamResponse();
+        }
+        
+        // Fallback if formatting failed
+        console.log(`[${requestId}] Formatting produced empty result, falling back`);
       }
 
       // No tools called - stream a proper response
