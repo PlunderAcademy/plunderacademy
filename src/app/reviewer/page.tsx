@@ -194,7 +194,7 @@ const focusAreas = [
   },
 ] as const;
 
-const REVIEW_MODEL_ID = "openai/gpt-oss-120b";
+const REVIEW_MODEL_ID = "google/gemini-3.1-flash-lite-preview";
 
 export default function ReviewerPage() {
   const { address, sessionId } = useSession();

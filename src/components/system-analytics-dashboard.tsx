@@ -53,7 +53,7 @@ export function SystemAnalyticsDashboard() {
   const [moduleFeedback, setModuleFeedback] = React.useState<ModuleFeedbackItem[]>([]);
   const [textFeedback, setTextFeedback] = React.useState<TextFeedbackItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [timeframe, setTimeframe] = React.useState("30d");
+  const [timeframe, setTimeframe] = React.useState("all");
 
   React.useEffect(() => {
     let mounted = true;

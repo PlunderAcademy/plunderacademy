@@ -104,7 +104,7 @@ export interface SystemAnalytics {
  */
 export async function getSystemAnalytics(): Promise<SystemAnalytics | null> {
   try {
-    const response = await fetch(`${API_BASE}/api/v1/analytics/summary`);
+    const response = await fetch(`${API_BASE}/api/v1/analytics/summary?timeframe=all`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch system analytics: ${response.statusText}`);
@@ -122,7 +122,7 @@ export async function getSystemAnalytics(): Promise<SystemAnalytics | null> {
  */
 export async function getLeaderboard(
   limit: number = 10,
-  timeframe: string = "30d"
+  timeframe: string = "all"
 ): Promise<{
   timeframe: string;
   topLearners: Array<{
@@ -154,7 +154,7 @@ export async function getLeaderboard(
  */
 export async function getModuleFeedback(
   limit: number = 50,
-  timeframe: string = "30d"
+  timeframe: string = "all"
 ): Promise<{
   timeframe: string;
   feedback: ModuleFeedbackItem[];
@@ -180,7 +180,7 @@ export async function getModuleFeedback(
  */
 export async function getTextFeedback(
   limit: number = 50,
-  timeframe: string = "30d"
+  timeframe: string = "all"
 ): Promise<{
   timeframe: string;
   feedback: TextFeedbackItem[];

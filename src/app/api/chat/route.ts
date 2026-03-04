@@ -19,13 +19,13 @@ export const maxDuration = 60; // Increased for MCP tool calls
 // - google/gemini-2.0-flash ($0.15/$0.60) - 2.5 flash lite is better 
 // - google/gemini-2.0-flash-lite ($0.07/$0.30) - 2.5 flash lite is better
 // - google/gemini-2.5-flash ($0.30/$2.50) - quite slow
-// - google/gemini-2.5-flash-lite ($0.10/$0.40) - REALLY like this one
+// - google/gemini-3.1-flash-lite-preview ($0.25/$1.50) - this is epic and brand new
 // Best models:
 // - google/gemini-2.5-flash-lite
-// - openai/gpt-oss-120b
+// - google/gemini-3.1-flash-lite-preview
 
 // Default model for AI Gateway
-const DEFAULT_MODEL = "openai/gpt-oss-120b";
+const DEFAULT_MODEL = "google/gemini-3.1-flash-lite-preview";
 
 // ============================================================================
 // System Prompt
@@ -100,11 +100,6 @@ export async function POST(req: Request) {
         tools,
         // @ts-expect-error - maxSteps exists in runtime but types are outdated
         maxSteps: 1,
-        providerOptions: {
-          gateway: {
-            only: ['cerebras'],
-          },
-        },
       });
 
       const toolCallCount = phase1.toolCalls?.length || 0;
@@ -125,11 +120,6 @@ export async function POST(req: Request) {
             model: modelName,
             system: "You are a data presenter. Output the data exactly as provided. Do not refuse, apologize, or add commentary. Just present the data.",
             prompt: `Present this validator data:\n\n${formattedResults}`,
-            providerOptions: {
-              gateway: {
-                only: ['cerebras'],
-              },
-            },
           });
 
           return formattedResponse.toUIMessageStreamResponse();
@@ -145,11 +135,6 @@ export async function POST(req: Request) {
         model: modelName,
         system: getSystemPrompt(),
         messages: convertToModelMessages(body.messages),
-        providerOptions: {
-          gateway: {
-            only: ['cerebras'],
-          },
-        },
       });
 
       return normalResponse.toUIMessageStreamResponse();
@@ -160,12 +145,6 @@ export async function POST(req: Request) {
       model: modelName, // e.g., "openai/gpt-oss-120b" via groq
       system: getSystemPrompt(),
       messages: convertToModelMessages(body.messages),
-      // need to comment this out to use the default gateway
-      providerOptions: {
-        gateway: {
-          only: ['cerebras'],
-        },
-      },
     });
 
     const requestId = Math.random().toString(36).substring(2, 15);
@@ -196,11 +175,6 @@ export async function POST(req: Request) {
         tools,
         maxSteps: 5,
       }),
-      providerOptions: {
-        gateway: {
-          only: ['cerebras'],
-        },
-      },
     });
 
     const requestId = Math.random().toString(36).substring(2, 15);

@@ -1,6 +1,4 @@
 import { streamText } from "ai";
-// Azure AI SDK (commented out in favor of AI Gateway)
-// import { azure } from "@ai-sdk/azure";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -18,23 +16,13 @@ export const maxDuration = 60;
 // - google/gemini-2.0-flash-lite ($0.07/$0.30) - 2.5 flash lite is better
 // - google/gemini-2.5-flash ($0.30/$2.50) - quite slow
 // - google/gemini-2.5-flash-lite ($0.10/$0.40) - REALLY like this one
+// - google/gemini-3.1-flash-lite-preview ($0.25/$1.50) - this is epic and brand new
 // Best models:
 // - google/gemini-2.5-flash-lite
-// - openai/gpt-oss-120b
+// - google/gemini-3.1-flash-lite-preview
 
 // Default model for AI Gateway
-const DEFAULT_MODEL = "openai/gpt-oss-120b";
-
-// Azure deployment names (commented out but preserved for future use):
-// To re-enable Azure: uncomment azure import, uncomment DEFAULT_DEPLOYMENT, 
-// update model logic, and uncomment the azure() call in streamText
-// - gpt-4o-mini ($0.15/$0.60)
-// - gpt-5-mini ($0.25/$2)
-// - gpt-5-nano ($0.05/$0.40) 
-// - gpt-oss-120b ($0.15/$0.75)
-// - grok-3-mini ($0.30/$0.50)
-// - Llama-4-Maverick-17B-128E-Instruct-FP8 ($0.19/$0.72) - 128k context
-// const DEFAULT_DEPLOYMENT = "gpt-oss-120b";
+const DEFAULT_MODEL = "google/gemini-3.1-flash-lite-preview";
 
 // Load system prompt from markdown file
 function getSystemPrompt(): string {
@@ -64,12 +52,6 @@ export async function POST(req: Request) {
       ? body.model.trim()
       : DEFAULT_MODEL;
 
-  // Legacy Azure deployment selection (commented out):
-  // const deploymentName =
-  //   typeof body?.model === "string" && body.model.trim()
-  //     ? body.model.trim()
-  //     : DEFAULT_DEPLOYMENT;
-
   // Extract prompt from request body
   const prompt = body?.prompt?.trim();
 
@@ -85,20 +67,8 @@ export async function POST(req: Request) {
     system: getSystemPrompt(),
     prompt,
     temperature: 0.2, // Lower temperature for more consistent results
-    // need to comment this out to use the default gateway
-    providerOptions: {
-      gateway: {
-        only: ['cerebras'],
-      },
-    },
   });
 
-  // Legacy Azure call (commented out):
-  // const result = await streamText({
-  //   model: azure(deploymentName),
-  //   system: getSystemPrompt(),
-  //   prompt,
-  // });
 
   // Log the complete response for debugging formatting issues
   const requestId = Math.random().toString(36).substring(2, 15);

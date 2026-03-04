@@ -138,7 +138,7 @@ const MCP_RESPONSE_PATTERNS = [
   /Top.*by Earnings/i,
 ];
 
-const DEFAULT_MODEL = "openai/gpt-oss-120b";
+const DEFAULT_MODEL = "google/gemini-3.1-flash-lite-preview";
 
 const heroHighlights = [
   {
