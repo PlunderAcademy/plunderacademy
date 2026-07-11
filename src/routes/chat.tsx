@@ -190,7 +190,14 @@ function ChatPage() {
     createConversationId()
   );
   const [conversations, setConversations] = React.useState<StoredConversation[]>([]);
-  const [showHistory, setShowHistory] = React.useState(true);
+  const [showHistory, setShowHistory] = React.useState(false);
+
+  // Open history by default on desktop only
+  React.useEffect(() => {
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      setShowHistory(true);
+    }
+  }, []);
   const [pendingLoadMessages, setPendingLoadMessages] = React.useState<UIMessage[] | null>(null);
   
   // Load conversations on mount and when address changes
@@ -606,10 +613,10 @@ function ChatPage() {
       title="Wallet Required for AI Chat"
       description="Connect your wallet to access our AI chat assistant for Solidity and EVM development help."
     >
-      <div className="mx-auto flex w-full max-w-7xl flex-1 gap-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 lg:flex-row">
         {/* History Sidebar */}
         {showHistory && (
-          <aside className="w-72 flex-shrink-0 space-y-3">
+          <aside className="w-full space-y-3 lg:w-72 lg:flex-shrink-0">
             <div className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-foreground">
@@ -634,7 +641,7 @@ function ChatPage() {
                 New Chat
               </Button>
 
-              <div className="space-y-1.5 max-h-[600px] overflow-y-auto">
+              <div className="space-y-1.5 max-h-72 overflow-y-auto lg:max-h-[600px]">
                 {conversations.length === 0 ? (
                   <p className="py-8 text-center text-xs text-muted-foreground">
                     No previous conversations
@@ -685,7 +692,7 @@ function ChatPage() {
         <div className="flex min-w-0 flex-1 flex-col gap-6">
         <section className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm sm:p-5">
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 Realtime mentor
               </p>
