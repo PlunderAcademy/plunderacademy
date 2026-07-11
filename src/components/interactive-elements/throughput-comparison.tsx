@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import { Zap, Clock, Layers } from "lucide-react";
 import { motion } from "framer-motion";

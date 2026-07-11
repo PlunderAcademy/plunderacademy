@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island3Module2Image() {
@@ -177,7 +175,7 @@ export function Island3Module2Image() {
             <div className="absolute top-[68%] left-[62%] w-[6px] h-[6px] bg-amber-300/95 rounded-full magic-dust animate-magic-dust-4"></div>
           </div>
         
-        <style jsx>{`
+        <style>{`
           /* BOLD Effect Styles */
           .lantern-flame {
             box-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 0 90px currentColor;

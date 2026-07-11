@@ -1,10 +1,8 @@
-"use client";
-
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useAccount } from "wagmi";
 import { CheckCircle2, Lock } from "lucide-react";
-import { ModuleMeta } from "@/lib/mdx";
+import type { ModuleMeta } from "@/lib/mdx";
 import { useAchievements } from "@/hooks/use-achievements";
 import { cn } from "@/lib/utils";
 import { DESERT_MODULES } from "./animated-map";
@@ -239,7 +237,7 @@ export function DesertModuleProgressList({
           return (
             <Link
               key={module.slug}
-              href={`/lessons/island3/${module.slug}`}
+              to="/lessons/island3/$module" params={{ module: module.slug }}
               className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500 rounded-2xl"
               {...commonProps}
             >

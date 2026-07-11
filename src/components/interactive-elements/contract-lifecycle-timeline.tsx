@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from "react";
 import { Code, Cpu, Rocket, MousePointer, RefreshCw, Check } from "lucide-react";
 import { motion } from "framer-motion";

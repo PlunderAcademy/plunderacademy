@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island4Module3Image() {
@@ -185,7 +183,7 @@ export function Island4Module3Image() {
             <div className="absolute top-[27%] right-[13%] w-[50px] h-[160px] bg-gradient-to-b from-blue-200/12 via-cyan-200/6 to-transparent moon-beam animate-moon-beam-2"></div>
           </div>
           
-          <style jsx>{`
+          <style>{`
           /* LANTERN EFFECTS */
           .lantern {
             filter: blur(3px);

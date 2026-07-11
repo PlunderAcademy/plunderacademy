@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function JungleModule2Image() {
@@ -136,7 +134,7 @@ export function JungleModule2Image() {
             <div className="absolute bottom-[22%] left-[55%] w-[40px] h-[6px] bg-cyan-100/14 rounded-full water-ripple animate-water-ripple-3"></div>
           </div>
         
-        <style jsx>{`
+        <style>{`
           .lantern-glow {
             filter: blur(8px);
             box-shadow: 0 0 40px currentColor, 0 0 80px currentColor, 0 0 120px currentColor, 0 0 160px currentColor;

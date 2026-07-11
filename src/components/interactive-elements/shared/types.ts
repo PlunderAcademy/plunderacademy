@@ -1,4 +1,4 @@
-import { QuizMeta, MissionMeta } from "@/lib/mdx";
+import type { QuizMeta, MissionMeta } from "@/lib/mdx";
 
 // Common result interfaces
 export interface QuizResult {

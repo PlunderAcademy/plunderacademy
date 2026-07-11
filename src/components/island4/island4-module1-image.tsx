@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 import { useAccount } from "wagmi";
 import { config } from "@/lib/config";
@@ -326,7 +324,7 @@ export function Island4Module1Image() {
         )}
 
         
-        <style jsx>{`
+        <style>{`
           /* SECRET ACHIEVEMENT ANIMATIONS ONLY */
           
           /* RED FLASH ANIMATION - For wrong archer click */

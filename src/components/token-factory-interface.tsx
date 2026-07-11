@@ -50,8 +50,8 @@ const FACTORY_ABI = [
 
 // Factory addresses (from environment variables)
 const FACTORY_ADDRESSES = {
-  testnet: process.env.NEXT_PUBLIC_FACTORY_ADDRESS_TESTNET as `0x${string}`,
-  mainnet: process.env.NEXT_PUBLIC_FACTORY_ADDRESS_MAINNET as `0x${string}`
+  testnet: import.meta.env.VITE_FACTORY_ADDRESS_TESTNET as `0x${string}`,
+  mainnet: import.meta.env.VITE_FACTORY_ADDRESS_MAINNET as `0x${string}`
 };
 
 const BLOCK_EXPLORERS = {

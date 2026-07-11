@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island2Module3Image() {
@@ -128,7 +126,7 @@ export function Island2Module3Image() {
           {/* Mountain Atmospheric Glow */}
           <div className="absolute inset-0 bg-gradient-to-b from-cyan-200/8 via-blue-100/4 to-transparent animate-mountain-atmosphere"></div>
         
-        <style jsx>{`
+        <style>{`
           .campfire {
             filter: blur(8px);
             box-shadow: 0 0 40px currentColor, 0 0 80px currentColor, 0 0 120px currentColor;

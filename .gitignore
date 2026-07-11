@@ -13,8 +13,9 @@
 # testing
 /coverage
 
-# next.js
-/.next/
+# vite / tanstack start
+/dist/
+/.tanstack/
 /out/
 
 # production
@@ -32,16 +33,18 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env
+.dev.vars*
 
-# vercel
-.vercel
+# cloudflare
+.wrangler/
+worker-configuration.d.ts
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 .cursorindexingignore
 .specstory/
 
 # Anthropic
 .claude/*.local.json
+.playwright-mcp

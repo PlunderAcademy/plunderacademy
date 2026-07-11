@@ -1,7 +1,5 @@
-"use client";
-
 import * as React from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 import { CheckCircle, Award, Sparkles, Star, Trophy } from "lucide-react";
 

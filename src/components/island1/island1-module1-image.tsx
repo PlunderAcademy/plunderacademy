@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function JungleModule1Image() {
@@ -119,7 +117,7 @@ export function JungleModule1Image() {
               <div className="absolute top-[38%] left-[78%] w-[2px] h-[2px] bg-white/45 rounded-full light-particle animate-light-drift-6"></div>
             </div>
           
-          <style jsx>{`
+          <style>{`
             /* Sun ray over temple */
             .thin-ray {
               filter: blur(3px);

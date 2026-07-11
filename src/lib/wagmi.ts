@@ -81,7 +81,7 @@ export const zilliqaTestnet: Chain = {
   testnet: true,
 };
 
-// Dynamically configure wagmi based on NEXT_PUBLIC_MAINNET flag
+// Dynamically configure wagmi based on VITE_MAINNET flag
 const activeChain = config.isMainnet ? zilliqaMainnet : zilliqaTestnet;
 const activeRpcUrl = config.isMainnet
   ? "https://api.zilliqa.com"

@@ -1,7 +1,5 @@
-"use client";
-
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 
 const CONSENT_KEY = "pa_cookie_consent";
@@ -33,7 +31,7 @@ export function CookieConsentBanner() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             Plunder Academy uses only necessary cookies to operate the site. By clicking Accept, you
-            consent to the use of strictly necessary cookies. See our <Link href="/privacy" className="underline">Privacy Policy</Link>.
+            consent to the use of strictly necessary cookies. See our <Link to="/privacy" className="underline">Privacy Policy</Link>.
           </p>
           <div className="flex items-center gap-2">
             <Button size="sm" onClick={accept}>Accept</Button>

@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island5Module1Image() {
@@ -192,7 +190,7 @@ export function Island5Module1Image() {
             <div className="absolute top-[22%] left-[64%] w-[40px] h-[36px] bg-green-500/13 rounded-full foliage-glow animate-foliage-glow-5"></div>
           </div>
           
-          <style jsx>{`
+          <style>{`
           .toxic-energy {
             filter: blur(45px);
           }

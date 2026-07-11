@@ -1,6 +1,34 @@
-import fs from 'fs';
-import path from 'path';
 import matter from 'gray-matter';
+
+// All MDX content is bundled at build time (this module only runs inside
+// server functions on the Worker, where there is no filesystem).
+const contentFiles = import.meta.glob('/src/content/**/*.mdx', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
+const ARTICLES_PREFIX = '/src/content/articles/';
+const GLOSSARY_PREFIX = '/src/content/glossary/';
+const MODULES_PREFIX = '/src/content/modules/';
+
+function filesUnder(prefix: string): Array<{ fileName: string; contents: string }> {
+  return Object.entries(contentFiles)
+    .filter(([key]) => key.startsWith(prefix) && !key.slice(prefix.length).includes('/'))
+    .map(([key, contents]) => ({ fileName: key.slice(prefix.length), contents }));
+}
+
+// Distinct island directory names under src/content/modules
+function getIslandDirs(): string[] {
+  const dirs = new Set<string>();
+  for (const key of Object.keys(contentFiles)) {
+    if (!key.startsWith(MODULES_PREFIX)) continue;
+    const rest = key.slice(MODULES_PREFIX.length);
+    const segments = rest.split('/');
+    if (segments.length > 1) dirs.add(segments[0]);
+  }
+  return [...dirs];
+}
 
 export type ArticleLevel = "beginner" | "intermediate" | "advanced";
 
@@ -98,19 +126,10 @@ export type IslandMeta = {
   modules: ModuleMeta[];
 };
 
-const articlesDirectory = path.join(process.cwd(), 'src/content/articles');
-const glossaryDirectory = path.join(process.cwd(), 'src/content/glossary');
-const modulesDirectory = path.join(process.cwd(), 'src/content/modules');
-
 export async function getArticles(): Promise<ArticleMeta[]> {
-  const fileNames = fs.readdirSync(articlesDirectory);
-  
-  const articles = fileNames
-    .filter(fileName => fileName.endsWith('.mdx'))
-    .map(fileName => {
-      const fullPath = path.join(articlesDirectory, fileName);
-      const fileContents = fs.readFileSync(fullPath, 'utf8');
-      const { data } = matter(fileContents);
+  const articles = filesUnder(ARTICLES_PREFIX)
+    .map(({ fileName, contents }) => {
+      const { data } = matter(contents);
       
       return {
         slug: data.slug || fileName.replace(/\.mdx$/, ''),
@@ -174,15 +193,9 @@ export async function getArticleBySlug(slug: string) {
   }
   
   // First try to find the file by matching the slug in frontmatter
-  const fileNames = fs.readdirSync(articlesDirectory);
-  
-  for (const fileName of fileNames) {
-    if (!fileName.endsWith('.mdx')) continue;
-    
-    const fullPath = path.join(articlesDirectory, fileName);
-    const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data, content } = matter(fileContents);
-    
+  for (const { fileName, contents } of filesUnder(ARTICLES_PREFIX)) {
+    const { data, content } = matter(contents);
+
     // Check if this file's slug matches
     if (data.slug === slug || fileName.replace(/\.mdx$/, '') === slug) {
       return {
@@ -198,7 +211,7 @@ export async function getArticleBySlug(slug: string) {
       };
     }
   }
-  
+
   throw new Error(`Article with slug "${slug}" not found`);
 }
 
@@ -276,10 +289,6 @@ export async function getIslands(): Promise<IslandMeta[]> {
 }
 
 export async function getModules(): Promise<ModuleMeta[]> {
-  // Check if new island-based structure exists
-  const islandDirs = fs.readdirSync(modulesDirectory)
-    .filter(name => fs.statSync(path.join(modulesDirectory, name)).isDirectory());
-  
   // Module metadata - now using slugs and including island info
   const moduleMetadata: Record<string, { title: string; description: string; order: number; island: string }> = {
     // Island 1: Jungle (Fundamentals)
@@ -428,118 +437,62 @@ export async function getModules(): Promise<ModuleMeta[]> {
   };
   
   const allModules: ModuleMeta[] = [];
-  
-  // Check for both old and new directory structures
-  for (const islandDir of islandDirs) {
-    const islandPath = path.join(modulesDirectory, islandDir);
-    
-    if (fs.statSync(islandPath).isDirectory()) {
-      // Check if this is an island directory (like 'jungle')
-      const moduleDirs = fs.readdirSync(islandPath)
-        .filter(name => fs.statSync(path.join(islandPath, name)).isDirectory());
-      
-      for (const moduleSlug of moduleDirs) {
-        if (moduleMetadata[moduleSlug]) {
-          const modulePath = path.join(islandPath, moduleSlug);
-          const lessonFiles = fs.readdirSync(modulePath)
-            .filter(file => file.endsWith('.mdx'));
-          
-          // Read all lessons and sort by number
-          const lessons = lessonFiles.map(lessonFile => {
-            const fullPath = path.join(modulePath, lessonFile);
-            const fileContents = fs.readFileSync(fullPath, 'utf8');
-            const { data } = matter(fileContents);
-            
-            return {
-              id: data.id || data.slug,
-              slug: data.slug || data.id,
-              module: data.module,
-              number: String(data.number),
-              title: data.title,
-              objective: data.objective,
-              practicalTakeaway: data.practicalTakeaway,
-            };
-          }).sort((a, b) => {
-            // Sort by lesson number (e.g., "1.1", "1.2", "2.5.1", "2.5.2", etc.)
-            const aParts = String(a.number).split('.').map(n => parseInt(n) || 0);
-            const bParts = String(b.number).split('.').map(n => parseInt(n) || 0);
-            
-            // Compare each part sequentially
-            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-              const aPart = aParts[i] || 0;
-              const bPart = bParts[i] || 0;
-              if (aPart !== bPart) {
-                return aPart - bPart;
-              }
-            }
-            return 0;
-          });
-          
-          const metadata = moduleMetadata[moduleSlug];
-          
-          allModules.push({
-            id: moduleSlug,
-            slug: moduleSlug,
-            title: metadata.title,
-            description: metadata.description,
-            island: metadata.island,
-            lessons,
-          });
+
+  // Group lesson files by module directory: modules/<island>/<module>/<lesson>.mdx
+  const lessonsByModule = new Map<string, string[]>();
+  for (const [key, contents] of Object.entries(contentFiles)) {
+    if (!key.startsWith(MODULES_PREFIX)) continue;
+    const segments = key.slice(MODULES_PREFIX.length).split('/');
+    if (segments.length !== 3) continue;
+    const moduleSlug = segments[1];
+    if (!moduleMetadata[moduleSlug]) continue;
+    const existing = lessonsByModule.get(moduleSlug) || [];
+    existing.push(contents);
+    lessonsByModule.set(moduleSlug, existing);
+  }
+
+  for (const [moduleSlug, lessonContents] of lessonsByModule) {
+    // Read all lessons and sort by number
+    const lessons = lessonContents.map(fileContents => {
+      const { data } = matter(fileContents);
+
+      return {
+        id: data.id || data.slug,
+        slug: data.slug || data.id,
+        module: data.module,
+        number: String(data.number),
+        title: data.title,
+        objective: data.objective,
+        practicalTakeaway: data.practicalTakeaway,
+      };
+    }).sort((a, b) => {
+      // Sort by lesson number (e.g., "1.1", "1.2", "2.5.1", "2.5.2", etc.)
+      const aParts = String(a.number).split('.').map(n => parseInt(n) || 0);
+      const bParts = String(b.number).split('.').map(n => parseInt(n) || 0);
+
+      // Compare each part sequentially
+      for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+        const aPart = aParts[i] || 0;
+        const bPart = bParts[i] || 0;
+        if (aPart !== bPart) {
+          return aPart - bPart;
         }
       }
-    } else {
-      // Handle old structure (direct module directories)
-      const moduleSlug = islandDir;
-      if (moduleMetadata[moduleSlug]) {
-        const modulePath = path.join(modulesDirectory, moduleSlug);
-        const lessonFiles = fs.readdirSync(modulePath)
-          .filter(file => file.endsWith('.mdx'));
-        
-        // Read all lessons and sort by number
-        const lessons = lessonFiles.map(lessonFile => {
-          const fullPath = path.join(modulePath, lessonFile);
-          const fileContents = fs.readFileSync(fullPath, 'utf8');
-          const { data } = matter(fileContents);
-          
-          return {
-            id: data.id || data.slug,
-            slug: data.slug || data.id,
-            module: data.module,
-            number: String(data.number),
-            title: data.title,
-            objective: data.objective,
-            practicalTakeaway: data.practicalTakeaway,
-          };
-        }).sort((a, b) => {
-          // Sort by lesson number (e.g., "1.1", "1.2", "2.5.1", "2.5.2", etc.)
-          const aParts = String(a.number).split('.').map(n => parseInt(n) || 0);
-          const bParts = String(b.number).split('.').map(n => parseInt(n) || 0);
-          
-          // Compare each part sequentially
-          for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-            const aPart = aParts[i] || 0;
-            const bPart = bParts[i] || 0;
-            if (aPart !== bPart) {
-              return aPart - bPart;
-            }
-          }
-          return 0;
-        });
-        
-        const metadata = moduleMetadata[moduleSlug];
-        
-        allModules.push({
-          id: moduleSlug,
-          slug: moduleSlug,
-          title: metadata.title,
-          description: metadata.description,
-          island: metadata.island,
-          lessons,
-        });
-      }
-    }
+      return 0;
+    });
+
+    const metadata = moduleMetadata[moduleSlug];
+
+    allModules.push({
+      id: moduleSlug,
+      slug: moduleSlug,
+      title: metadata.title,
+      description: metadata.description,
+      island: metadata.island,
+      lessons,
+    });
   }
-  
+
   // Sort all modules by order
   return allModules.sort((a, b) => {
     const aOrder = moduleMetadata[a.slug]?.order || 0;
@@ -549,52 +502,29 @@ export async function getModules(): Promise<ModuleMeta[]> {
 }
 
 export async function getLessonByIds(moduleSlug: string, lessonSlug: string) {
-  // Find the module path by checking all island directories
-  let modulePath: string | null = null;
-  
-  const islandDirs = fs.readdirSync(modulesDirectory)
-    .filter(name => fs.statSync(path.join(modulesDirectory, name)).isDirectory());
-  
-  // Check island-based structure first
-  for (const islandDir of islandDirs) {
-    const islandPath = path.join(modulesDirectory, islandDir);
-    const potentialModulePath = path.join(islandPath, moduleSlug);
-    
-    if (fs.existsSync(potentialModulePath) && fs.statSync(potentialModulePath).isDirectory()) {
-      modulePath = potentialModulePath;
-      break;
-    }
-  }
-  
-  // Fallback to old structure (direct module directories)
-  if (!modulePath) {
-    const oldModulePath = path.join(modulesDirectory, moduleSlug);
-    if (fs.existsSync(oldModulePath) && fs.statSync(oldModulePath).isDirectory()) {
-      modulePath = oldModulePath;
-    }
-  }
-  
-  if (!modulePath) {
+  // Collect lesson files inside modules/<island>/<moduleSlug>/
+  const lessonContents = Object.entries(contentFiles)
+    .filter(([key]) => {
+      if (!key.startsWith(MODULES_PREFIX)) return false;
+      const segments = key.slice(MODULES_PREFIX.length).split('/');
+      return segments.length === 3 && segments[1] === moduleSlug;
+    })
+    .map(([, contents]) => contents);
+
+  if (lessonContents.length === 0) {
     throw new Error(`Module ${moduleSlug} not found`);
   }
-  
-  const lessonFiles = fs.readdirSync(modulePath)
-    .filter(file => file.endsWith('.mdx'));
-  
+
   // Find the lesson file that matches the lessonSlug
-  const lessonFile = lessonFiles.find(file => {
-    const fullPath = path.join(modulePath!, file);
-    const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data } = matter(fileContents);
+  const fileContents = lessonContents.find(contents => {
+    const { data } = matter(contents);
     return data.slug === lessonSlug || data.id === lessonSlug;
   });
-  
-  if (!lessonFile) {
+
+  if (!fileContents) {
     throw new Error(`Lesson ${lessonSlug} not found in module ${moduleSlug}`);
   }
-  
-  const fullPath = path.join(modulePath, lessonFile);
-  const fileContents = fs.readFileSync(fullPath, 'utf8');
+
   const { data, content } = matter(fileContents);
   
   return {
@@ -614,16 +544,11 @@ export async function getLessonByIds(moduleSlug: string, lessonSlug: string) {
 export async function getMissionByModule(moduleSlug: string): Promise<MissionMeta | null> {
   try {
     // Find which island this module belongs to
-    const islandDirs = fs.readdirSync(modulesDirectory)
-      .filter(name => fs.statSync(path.join(modulesDirectory, name)).isDirectory());
-    
-    for (const islandDir of islandDirs) {
-      const missionsDirectory = path.join(modulesDirectory, islandDir, 'missions');
-      const missionFileName = `${moduleSlug}-mission.mdx`;
-      const fullPath = path.join(missionsDirectory, missionFileName);
-      
-      if (fs.existsSync(fullPath)) {
-        const fileContents = fs.readFileSync(fullPath, 'utf8');
+    for (const islandDir of getIslandDirs()) {
+      const fileContents =
+        contentFiles[`${MODULES_PREFIX}${islandDir}/missions/${moduleSlug}-mission.mdx`];
+
+      if (fileContents) {
         const { data, content } = matter(fileContents);
         
         // Parse content into intro and monologue sections
@@ -654,16 +579,11 @@ export async function getMissionByModule(moduleSlug: string): Promise<MissionMet
 export async function getQuizByModule(moduleSlug: string): Promise<QuizMeta | null> {
   try {
     // Find which island this module belongs to
-    const islandDirs = fs.readdirSync(modulesDirectory)
-      .filter(name => fs.statSync(path.join(modulesDirectory, name)).isDirectory());
-    
-    for (const islandDir of islandDirs) {
-      const quizzesDirectory = path.join(modulesDirectory, islandDir, 'quizzes');
-      const quizFileName = `${moduleSlug}-quiz.mdx`;
-      const fullPath = path.join(quizzesDirectory, quizFileName);
-      
-      if (fs.existsSync(fullPath)) {
-        const fileContents = fs.readFileSync(fullPath, 'utf8');
+    for (const islandDir of getIslandDirs()) {
+      const fileContents =
+        contentFiles[`${MODULES_PREFIX}${islandDir}/quizzes/${moduleSlug}-quiz.mdx`];
+
+      if (fileContents) {
         const { data, content } = matter(fileContents);
         
         // Parse quiz questions from content
@@ -693,14 +613,9 @@ export async function getQuizByModule(moduleSlug: string): Promise<QuizMeta | nu
 
 // Glossary functions
 export async function getGlossaries(): Promise<ArticleMeta[]> {
-  const fileNames = fs.readdirSync(glossaryDirectory);
-  
-  const glossaries = fileNames
-    .filter(fileName => fileName.endsWith('.mdx'))
-    .map(fileName => {
-      const fullPath = path.join(glossaryDirectory, fileName);
-      const fileContents = fs.readFileSync(fullPath, 'utf8');
-      const { data } = matter(fileContents);
+  const glossaries = filesUnder(GLOSSARY_PREFIX)
+    .map(({ fileName, contents }) => {
+      const { data } = matter(contents);
       
       return {
         slug: data.slug || fileName.replace(/\.mdx$/, ''),
@@ -751,15 +666,9 @@ export async function getGlossaryBySlug(slug: string) {
   }
   
   // First try to find the file by matching the slug in frontmatter
-  const fileNames = fs.readdirSync(glossaryDirectory);
-  
-  for (const fileName of fileNames) {
-    if (!fileName.endsWith('.mdx')) continue;
-    
-    const fullPath = path.join(glossaryDirectory, fileName);
-    const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data, content } = matter(fileContents);
-    
+  for (const { fileName, contents } of filesUnder(GLOSSARY_PREFIX)) {
+    const { data, content } = matter(contents);
+
     // Check if this file's slug matches
     if (data.slug === slug || fileName.replace(/\.mdx$/, '') === slug) {
       return {

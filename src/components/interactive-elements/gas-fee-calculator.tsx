@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from "react";
 import { Calculator, Fuel, Info } from "lucide-react";
 

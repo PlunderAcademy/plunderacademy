@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function JungleModule4Image() {
@@ -106,7 +104,7 @@ export function JungleModule4Image() {
           {/* Mystical Temple Aura */}
           <div className="absolute inset-0 bg-gradient-to-t from-amber-900/8 via-transparent to-orange-900/6 animate-mystical-aura"></div>
         
-        <style jsx>{`
+        <style>{`
           .treasure-coin {
             box-shadow: 0 0 25px currentColor, 0 0 50px currentColor, 0 0 75px currentColor;
             filter: blur(0.3px);

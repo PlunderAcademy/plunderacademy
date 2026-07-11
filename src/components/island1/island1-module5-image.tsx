@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function JungleModule5Image() {
@@ -119,7 +117,7 @@ export function JungleModule5Image() {
             <div className="absolute bottom-[0%] left-[0%] w-full h-[40%] bg-gradient-to-t from-green-400/8 via-yellow-300/5 to-transparent atmospheric-glow animate-island1-atmosphere"></div>
           </div>
 
-        <style jsx>{`
+        <style>{`
           .animate-effects {
             animation-play-state: running;
           }

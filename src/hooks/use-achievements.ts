@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { trainingRegistryABI } from "@/lib/training-registry-abi";

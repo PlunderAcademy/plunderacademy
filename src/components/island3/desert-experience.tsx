@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useState } from "react";
 import type { ModuleMeta } from "@/lib/mdx";
 import { DesertAnimatedMap, DESERT_MODULES } from "./animated-map";

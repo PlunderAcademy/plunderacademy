@@ -1,10 +1,8 @@
-"use client";
-
 import { useState, useEffect } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Image from "@/components/image";
+import { useNavigate } from "@tanstack/react-router";
 import { useAccount } from "wagmi";
-import { ModuleMeta } from "@/lib/mdx";
+import type { ModuleMeta } from "@/lib/mdx";
 import { Badge } from "@/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { CheckCircle2, BookOpen } from "lucide-react";
@@ -98,7 +96,7 @@ interface DesertAnimatedMapProps {
 }
 
 export function DesertAnimatedMap({ mode = "real", modules, highlightedModuleSlug = null }: DesertAnimatedMapProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { isConnected } = useAccount();
   const { walletAchievements, achievementMetadata } = useAchievements();
   const [progress, setProgress] = useState(0);
@@ -305,7 +303,7 @@ export function DesertAnimatedMap({ mode = "real", modules, highlightedModuleSlu
                     }}
                     onClick={() => {
                       if (isAvailable && moduleSlug) {
-                        router.push(`/lessons/island3/${moduleSlug}`);
+                        navigate({ to: `/lessons/island3/${moduleSlug}` });
                       }
                     }}
                   />

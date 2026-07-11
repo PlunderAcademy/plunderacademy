@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAccount } from "wagmi";
 import { Button } from "@/components/ui/button";

@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island4Module6Image() {
@@ -210,7 +208,7 @@ export function Island4Module6Image() {
             <div className="absolute top-[0%] left-[55%] w-[100px] h-[45%] bg-gradient-to-b from-amber-200/16 via-yellow-100/9 to-transparent sun-ray animate-sun-ray-2"></div>
           </div>
           
-          <style jsx>{`
+          <style>{`
           .waterfall-glow {
             filter: blur(35px);
             opacity: 0;

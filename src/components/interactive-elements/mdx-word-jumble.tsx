@@ -1,5 +1,3 @@
-"use client";
-
 import { WordJumbleCompact, WordJumbleData } from "./elements/word-jumble-compact";
 
 interface MDXWordJumbleProps {

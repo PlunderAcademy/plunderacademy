@@ -1,6 +1,4 @@
-"use client";
-
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { Twitter, Send, Github } from "lucide-react";
 import { FeedbackTrigger } from "@/components/general-feedback";
 
@@ -11,7 +9,7 @@ export function SiteFooter() {
         <div>© {new Date().getFullYear()} Plunder Academy. All rights reserved.</div>
         
         <div className="flex items-center gap-4">
-          <Link 
+          <a
             href="https://x.com/PlunderAcademy" 
             target="_blank" 
             rel="noopener noreferrer"
@@ -19,8 +17,8 @@ export function SiteFooter() {
             aria-label="Follow us on X (Twitter)"
           >
             <Twitter className="h-4 w-4" />
-          </Link>
-          <Link 
+          </a>
+          <a
             href="https://t.me/PlunderAcademy" 
             target="_blank" 
             rel="noopener noreferrer"
@@ -28,8 +26,8 @@ export function SiteFooter() {
             aria-label="Join our Telegram channel"
           >
             <Send className="h-4 w-4" />
-          </Link>
-          <Link 
+          </a>
+          <a
             href="https://github.com/PlunderAcademy" 
             target="_blank" 
             rel="noopener noreferrer"
@@ -37,15 +35,15 @@ export function SiteFooter() {
             aria-label="View our GitHub organization"
           >
             <Github className="h-4 w-4" />
-          </Link>
+          </a>
         </div>
 
         <div className="flex items-center gap-4">
           <FeedbackTrigger className="hover:text-foreground transition-colors">
             Feedback
           </FeedbackTrigger>
-          <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
-          <Link href="/terms" className="hover:text-foreground">Terms</Link>
+          <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
+          <Link to="/terms" className="hover:text-foreground">Terms</Link>
         </div>
       </div>
     </footer>

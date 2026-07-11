@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island4Module2Image() {
@@ -186,7 +184,7 @@ export function Island4Module2Image() {
             <div className="absolute top-[0%] left-[75%] w-[85px] h-[33%] bg-gradient-to-b from-yellow-100/30 via-amber-100/16 to-transparent sun-ray animate-sun-ray-3"></div>
           </div>
           
-          <style jsx>{`
+          <style>{`
           /* GOLDEN DOME EFFECTS */
           .dome-glow {
             filter: blur(30px);

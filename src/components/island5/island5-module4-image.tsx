@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island5Module4Image() {
@@ -255,7 +253,7 @@ export function Island5Module4Image() {
             <div className="absolute top-[20%] left-[70%] w-[55px] h-[2px] bg-gradient-to-r from-transparent via-cyan-400/48 to-transparent sky-crackle animate-sky-crackle-3"></div>
           </div>
           
-          <style jsx>{`
+          <style>{`
           /* OVER-THE-TOP Effect Styles */
           .energy-clash {
             filter: blur(50px);

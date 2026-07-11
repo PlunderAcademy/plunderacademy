@@ -1,10 +1,8 @@
-"use client";
-
 import { useState, useEffect } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Image from "@/components/image";
+import { useNavigate } from "@tanstack/react-router";
 import { useAccount } from "wagmi";
-import { ModuleMeta } from "@/lib/mdx";
+import type { ModuleMeta } from "@/lib/mdx";
 import { Badge } from "@/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { CheckCircle2, BookOpen, Shield, Gauge, Trophy } from "lucide-react";
@@ -123,7 +121,7 @@ export function AnimatedMap({
   modules = [],
   highlightedModuleSlug = null,
 }: AnimatedMapProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { address, isConnected } = useAccount();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -791,7 +789,7 @@ export function AnimatedMap({
                     }}
                     onClick={() => {
                       if (isAvailable && moduleSlug) {
-                        router.push(`/lessons/island1/${moduleSlug}`);
+                        navigate({ to: `/lessons/island1/${moduleSlug}` });
                       }
                     }}
                   />

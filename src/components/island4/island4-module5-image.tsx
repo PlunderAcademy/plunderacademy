@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island4Module5Image() {
@@ -179,7 +177,7 @@ export function Island4Module5Image() {
             <div className="absolute top-[32%] left-[80%] w-[2px] h-[2px] bg-blue-200/57 particle animate-particle-float-6"></div>
           </div>
           
-          <style jsx>{`
+          <style>{`
           /* LIGHTHOUSE EFFECTS */
           .lighthouse-beacon {
             filter: blur(45px);

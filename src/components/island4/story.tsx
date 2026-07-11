@@ -1,8 +1,6 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { MissionMeta } from "@/lib/mdx";
+import type { MissionMeta } from "@/lib/mdx";
 
 interface Island4StoryProps {
   missionData: MissionMeta;

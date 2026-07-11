@@ -1,5 +1,3 @@
-"use client";
-
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

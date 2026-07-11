@@ -1,5 +1,3 @@
-"use client";
-
 import { WordJumbleCompact, WordJumbleData } from "./elements/word-jumble-compact";
 import { ConceptMatchingCompact, ConceptMatchingData } from "./elements/concept-matching-compact";
 import { TimelineBuilderCompact, TimelineBuilderData } from "./elements/timeline-builder-compact";

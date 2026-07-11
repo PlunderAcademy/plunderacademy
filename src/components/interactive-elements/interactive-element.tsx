@@ -1,9 +1,7 @@
-"use client";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy } from "lucide-react";
-import { QuizMeta, MissionMeta } from "@/lib/mdx";
+import type { QuizMeta, MissionMeta } from "@/lib/mdx";
 import { TraditionalQuiz } from "./quiz/traditional-quiz";
 import { TokenDeployChallenge } from "./elements/token-deploy-challenge";
 import { StakingDeployChallenge } from "./elements/staking-deploy-challenge";

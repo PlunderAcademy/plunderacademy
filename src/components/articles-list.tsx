@@ -1,8 +1,6 @@
-"use client";
-
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearch } from "@tanstack/react-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,20 +12,18 @@ interface ArticlesListProps {
 }
 
 export function ArticlesList({ articles }: ArticlesListProps) {
-  const searchParams = useSearchParams();
+  const search = useSearch({ strict: false }) as { tags?: string };
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isTagFiltersExpanded, setIsTagFiltersExpanded] = useState<boolean>(false);
 
   // Initialize tags from URL params
   useEffect(() => {
-    const tagsParam = searchParams.get("tags");
-    if (tagsParam) {
-      const decodedTags = decodeURIComponent(tagsParam);
-      setSelectedTags([decodedTags]);
+    if (search.tags) {
+      setSelectedTags([search.tags]);
       setIsTagFiltersExpanded(true); // Auto-expand when coming from a tag link
     }
-  }, [searchParams]);
+  }, [search.tags]);
 
   // Get all unique tags from articles
   const allTags = Array.from(
@@ -66,7 +62,7 @@ export function ArticlesList({ articles }: ArticlesListProps) {
     <ul className="grid grid-cols-1 gap-6 md:grid-cols-2">
       {list.map((a) => (
         <li key={a.slug} className="rounded-xl border p-6">
-          <Link href={`/articles/${a.slug}`} className="block space-y-3">
+          <Link to="/articles/$slug" params={{ slug: a.slug }} className="block space-y-3">
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="capitalize">
                 {a.level}

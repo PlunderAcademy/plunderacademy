@@ -1,6 +1,4 @@
-"use client";
-
-import Image from "next/image";
+import Image from "@/components/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +11,7 @@ import {
   Copy,
   MessageSquare
 } from "lucide-react";
-import { MissionMeta } from "@/lib/mdx";
+import type { MissionMeta } from "@/lib/mdx";
 import { ApiResultData, QuizResult } from "./types";
 import { generateTwitterShare, isTransactionSubmissionModule } from "./utils";
 

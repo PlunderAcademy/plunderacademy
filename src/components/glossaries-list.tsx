@@ -1,6 +1,4 @@
-"use client";
-
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ArticleMeta } from "@/lib/mdx";
@@ -14,7 +12,7 @@ export function GlossariesList({ glossaries }: GlossariesListProps) {
     list.length > 0 ? (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {list.map((glossary) => (
-          <Link key={glossary.slug} href={`/glossary/${glossary.slug}`}>
+          <Link key={glossary.slug} to="/glossary/$slug" params={{ slug: glossary.slug }}>
             <Card className="h-full transition-all hover:shadow-lg hover:border-primary/50 cursor-pointer">
               <CardHeader>
                 <div className="flex items-start justify-between gap-2 mb-2">

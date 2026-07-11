@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island2Module1Image() {
@@ -136,7 +134,7 @@ export function Island2Module1Image() {
           {/* Cold Mountain Depth */}
           <div className="absolute inset-0 bg-gradient-to-t from-blue-200/5 via-transparent to-cyan-100/3 animate-mountain-depth"></div>
         
-        <style jsx>{`
+        <style>{`
           .lantern-glow {
             filter: blur(8px);
             box-shadow: 0 0 40px currentColor, 0 0 80px currentColor, 0 0 120px currentColor, 0 0 160px currentColor;

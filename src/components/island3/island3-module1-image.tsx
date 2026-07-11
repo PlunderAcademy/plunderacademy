@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island3Module1Image() {
@@ -131,7 +129,7 @@ export function Island3Module1Image() {
           {/* Desert Floor Heat Distortion */}
           <div className="absolute inset-0 bg-gradient-to-t from-orange-200/8 via-transparent to-transparent animate-desert-floor-heat"></div>
         
-        <style jsx>{`
+        <style>{`
           .water-ripple {
             filter: blur(15px);
           }

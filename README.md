@@ -6,40 +6,42 @@ Plunder Academy is an EVM training portal built around Zilliqa 2.0. It combines 
 
 - Structured "Treasure Map" curriculum with wallet-gated access, mission storytelling, interactive learning elements (quizzes, deploy challenges), and animated progress trackers.
 - MDX powered content library for long-form Zilliqa and Solidity articles that surface in-app cards and landing page highlights.
-- AI Solidity reviewer and chat assistant backed by the `ai` SDK, with configurable system prompts in `src/app/api/**/chat-system-prompt.md` and `reviewer-system-prompt.md`.
+- AI Solidity reviewer and chat assistant backed by the `ai` SDK, with configurable system prompts in `src/prompts/chat-system-prompt.md` and `src/prompts/reviewer-system-prompt.md`.
 - Achievement and voucher flow that talks to the Plunder Academy API, fetches NFT metadata, and submits proofs to the on-chain training registry.
 - Token factory practice interface that lets learners deploy ERC-20 tokens on Zilliqa testnet or mainnet directly from the module experience.
-- Modern Next.js 15 stack with React 19, Tailwind CSS v4, Radix UI primitives, RainbowKit wallet onboarding, and MDX based layout slots.
+- Modern Vite + TanStack Start stack with React 19, Tailwind CSS v4, Radix UI primitives, and RainbowKit wallet onboarding, deployed on Cloudflare Workers.
 
 ## Tech Stack
 
-- Next.js App Router (15.4) with TypeScript and Turbopack dev server.
+- Vite 7 + TanStack Start / TanStack Router with TypeScript, deployed to Cloudflare Workers via the Cloudflare Vite plugin and Wrangler.
 - Tailwind CSS v4, Shadcn UI components, Radix UI primitives, and Embla for interactive UI.
-- `@ai-sdk/react` streaming hooks hitting an AI Gateway (OpenAI, Google Gemini, etc.).
+- `@ai-sdk/react` streaming hooks hitting an AI Gateway (OpenAI, Google Gemini, etc.) through TanStack Start server routes.
 - wagmi + RainbowKit configured for the Zilliqa EVM testnet by default.
-- MDX content pipeline (`src/lib/mdx.ts`) for articles, lessons, quizzes, missions, and interactive MDX components.
+- MDX content pipeline (`src/lib/mdx.ts`) for articles, lessons, quizzes, missions, and interactive MDX components. Content is bundled at build time via `import.meta.glob` and served through TanStack Start server functions (`src/lib/content.ts`).
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18.18+ (or any version supported by Next.js 15).
+- Node.js 22+.
 - npm (ships with Node).
 
 ### Installation
 
 1. Clone the repository.
 2. Install dependencies: `npm install`.
-3. Copy `.env.sample` to `.env.local` (or `.env`) and fill in the environment variables below.
+3. Copy `.env.sample` to `.env` and fill in the environment variables below.
 4. Start the development server: `npm run dev`.
 5. Visit `http://localhost:3000` and connect a wallet to explore gated areas.
 
 ### Scripts
 
-- `npm run dev` - start the Turbopack development server.
-- `npm run build` - create a production build.
-- `npm run start` - serve the production build.
-- `npm run lint` - run ESLint with the Next.js config.
+- `npm run dev` - start the Vite development server.
+- `npm run build` - create a production build (client + Worker).
+- `npm run preview` - serve the production build locally in the Workers runtime.
+- `npm run deploy` - build and deploy to Cloudflare Workers with Wrangler.
+- `npm run typecheck` - run the TypeScript compiler.
+- `npm run cf-typegen` - generate Cloudflare Worker types from `wrangler.jsonc`.
 
 > The app stores progress and achievements against connected wallets. For local testing you can use any WalletConnect compatible wallet pointing at the Zilliqa EVM testnet.
 
@@ -49,7 +51,7 @@ Plunder Academy is an EVM training portal built around Zilliqa 2.0. It combines 
 
 The application supports seamless switching between mainnet and testnet through a single environment variable:
 
-**`NEXT_PUBLIC_MAINNET`** - Set to `true` for mainnet, `false` or omit for testnet (default)
+**`VITE_MAINNET`** - Set to `true` for mainnet, `false` or omit for testnet (default)
 
 When this flag is set, the application automatically:
 
@@ -61,31 +63,31 @@ When this flag is set, the application automatically:
 
 | Variable | Description | Required |
 | --- | --- | --- |
-| `NEXT_PUBLIC_MAINNET` | Network toggle: `true` for mainnet, `false` for testnet | Yes |
+| `VITE_MAINNET` | Network toggle: `true` for mainnet, `false` for testnet | Yes |
 | `AI_GATEWAY_API_KEY` | API key for the AI Gateway powering chat and reviewer routes | Yes |
 | `AZURE_RESOURCE_NAME` | Azure OpenAI resource (if using Azure instead of AI Gateway) | Optional |
 | `AZURE_API_KEY` | Azure OpenAI key | Optional |
-| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | WalletConnect Cloud project ID for RainbowKit | Yes |
-| `NEXT_PUBLIC_PLUNDER_ACADEMY_API_TESTNET` | Testnet API URL for voucher and achievement requests | Yes |
-| `NEXT_PUBLIC_PLUNDER_ACADEMY_API_MAINNET` | Mainnet API URL for voucher and achievement requests | Yes |
-| `NEXT_PUBLIC_PLUNDER_ACADEMY_CONTRACT_ADDRESS_TESTNET` | Testnet training registry contract address | Yes |
-| `NEXT_PUBLIC_PLUNDER_ACADEMY_CONTRACT_ADDRESS_MAINNET` | Mainnet training registry contract address | Yes |
-| `NEXT_PUBLIC_FACTORY_ADDRESS_TESTNET` | Testnet ERC-20 factory contract for Module 5 | Yes |
-| `NEXT_PUBLIC_FACTORY_ADDRESS_MAINNET` | Mainnet ERC-20 factory contract for Module 5 | Yes |
+| `VITE_WALLETCONNECT_PROJECT_ID` | WalletConnect Cloud project ID for RainbowKit | Yes |
+| `VITE_PLUNDER_ACADEMY_API_TESTNET` | Testnet API URL for voucher and achievement requests | Yes |
+| `VITE_PLUNDER_ACADEMY_API_MAINNET` | Mainnet API URL for voucher and achievement requests | Yes |
+| `VITE_PLUNDER_ACADEMY_CONTRACT_ADDRESS_TESTNET` | Testnet training registry contract address | Yes |
+| `VITE_PLUNDER_ACADEMY_CONTRACT_ADDRESS_MAINNET` | Mainnet training registry contract address | Yes |
+| `VITE_FACTORY_ADDRESS_TESTNET` | Testnet ERC-20 factory contract for Module 5 | Yes |
+| `VITE_FACTORY_ADDRESS_MAINNET` | Mainnet ERC-20 factory contract for Module 5 | Yes |
 
-**Example `.env.local` for testnet development:** 
+**Example `.env` for testnet development:** 
 
 ```env
-NEXT_PUBLIC_MAINNET=false
-NEXT_PUBLIC_PLUNDER_ACADEMY_API_TESTNET=https://plunder-academy-api-dev.plunderswap.workers.dev
-NEXT_PUBLIC_PLUNDER_ACADEMY_CONTRACT_ADDRESS_TESTNET=0x1dAC4421F77C43931c8f2671665f1b72cC4082ef
-NEXT_PUBLIC_FACTORY_ADDRESS_TESTNET=0x92aE8eA5a9eD94Bb230999E77376765a88bfEC09
+VITE_MAINNET=false
+VITE_PLUNDER_ACADEMY_API_TESTNET=https://plunder-academy-api-dev.plunderswap.workers.dev
+VITE_PLUNDER_ACADEMY_CONTRACT_ADDRESS_TESTNET=0x1dAC4421F77C43931c8f2671665f1b72cC4082ef
+VITE_FACTORY_ADDRESS_TESTNET=0x92aE8eA5a9eD94Bb230999E77376765a88bfEC09
 # ... add mainnet values and other required vars
 ```
 
-**For production mainnet deployment**, set `NEXT_PUBLIC_MAINNET=true` and ensure all mainnet contract addresses are deployed and verified.
+**For production mainnet deployment**, set `VITE_MAINNET=true` and ensure all mainnet contract addresses are deployed and verified.
 
-Store secrets in `.env.local`; Next.js loads them automatically during development. Copy `.env copy.sample` to get started.
+Store local values in `.env`; Vite loads it automatically during development. Variables prefixed with `VITE_` are embedded in the browser bundle and must not contain secrets. `AI_GATEWAY_API_KEY` is server-only — keep it out of `VITE_` and store it as a Worker secret in production.
 
 ## Content Authoring
 
@@ -314,8 +316,8 @@ See `src/components/interactive-elements/README.md` for detailed integration doc
 
 ## AI Copilots
 
-- Chat endpoint: `src/app/api/chat/route.ts` streams responses using the AI Gateway. Change the default model or provider routing in that file. Update the system prompt at `src/app/api/chat/chat-system-prompt.md`.
-- Reviewer endpoint: `src/app/api/reviewer/route.ts` performs contract reviews with temperature `0.2`. Adjust sections or formatting by editing `src/app/api/reviewer/reviewer-system-prompt.md`.
+- Chat endpoint: `src/routes/api.chat.ts` streams responses using the AI Gateway. Change the default model or provider routing in that file. Update the system prompt at `src/prompts/chat-system-prompt.md`.
+- Reviewer endpoint: `src/routes/api.reviewer.ts` performs contract reviews with temperature `0.2`. Adjust sections or formatting by editing `src/prompts/reviewer-system-prompt.md`.
 - Frontend hooks: `/chat` uses `useChat` and `/reviewer` uses `useCompletion`. Both pages are behind `WalletAuthGuard` so learners must connect a wallet.
 
 ## Feedback & Analytics
@@ -332,7 +334,7 @@ The frontend (`src/lib/feedback-api.ts`, `src/components/ai-feedback.tsx`, `src/
 
 ## Achievements and On-Chain Flow
 
-- Wallet gating uses `wagmi` + `RainbowKit` with chains dynamically configured in `src/lib/wagmi.ts` based on the `NEXT_PUBLIC_MAINNET` flag. All network-specific values (API URLs, contract addresses, RPC endpoints) are managed through the centralized config in `src/lib/config.ts`.
+- Wallet gating uses `wagmi` + `RainbowKit` with chains dynamically configured in `src/lib/wagmi.ts` based on the `VITE_MAINNET` flag. All network-specific values (API URLs, contract addresses, RPC endpoints) are managed through the centralized config in `src/lib/config.ts`.
 - The `useAchievements` hook calls the Plunder Academy API to fetch vouchers and NFT metadata, then submits signatures to the training registry contract. The correct endpoints and addresses are automatically selected based on your environment configuration.
 - The modular interactive elements system (`src/components/interactive-elements/`) handles different learning activities: traditional quizzes with automated scoring, deploy challenges with transaction verification, and achievement claiming flows. Module 5 uses the deploy challenge system alongside the `TokenFactoryInterface` for hands-on token deployments.
 - Additional implementation notes for the token factory live in `TOKEN_FACTORY_IMPLEMENTATION.md`.
@@ -371,9 +373,24 @@ The backend should detect JSON-formatted answers and parse them to extract the `
 
 ## Deployment Notes
 
-- The site is a standard Next.js app and can be deployed on Vercel or any Node hosting that supports Next.js 15.
-- Ensure production environments set the `NEXT_PUBLIC_*` variables and point WalletConnect to the correct domain.
-- If you rely on Azure OpenAI instead of the AI Gateway, uncomment the Azure lines inside both API routes and provide the Azure resource and API key.
+The site is a TanStack Start application deployed on Cloudflare Workers. Wrangler uses [wrangler.jsonc](./wrangler.jsonc) and the Worker output generated by the Cloudflare Vite plugin.
+
+1. Authenticate Wrangler and store the AI Gateway key as a Worker secret:
+
+   ```bash
+   npx wrangler login
+   npx wrangler secret put AI_GATEWAY_API_KEY
+   ```
+
+2. Set the public `VITE_*` variables in the build environment before building (they are inlined into the client bundle at build time).
+3. Build and deploy:
+
+   ```bash
+   npm run deploy
+   ```
+
+- Ensure production environments set the `VITE_*` variables and point WalletConnect to the correct domain.
+- If you rely on Azure OpenAI instead of the AI Gateway, uncomment the Azure lines inside both API routes and provide the Azure resource and API key as Worker secrets.
 
 ## Contributing
 

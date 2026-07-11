@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import MDXContent from "@/components/mdx-content";
 import { InteractiveElement, isTransactionSubmissionModule } from "@/components/interactive-elements";
-import { QuizMeta, MissionMeta } from "@/lib/mdx";
+import type { QuizMeta, MissionMeta } from "@/lib/mdx";
 
 interface LessonContent {
   slug: string;

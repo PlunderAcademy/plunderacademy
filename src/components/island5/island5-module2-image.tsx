@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island5Module2Image() {
@@ -192,7 +190,7 @@ export function Island5Module2Image() {
             <div className="absolute top-[62%] left-[52%] w-[24px] h-[32px] bg-white/38 rounded-full steam animate-steam-rise-3"></div>
           </div>
           
-          <style jsx>{`
+          <style>{`
           /* BOLD Effect Styles */
           .ceiling-light {
             filter: blur(35px);

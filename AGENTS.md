@@ -2,23 +2,25 @@
 
 ## Project overview
 
-- This is a Next.js App Router project for an interactive EVM developer training hub.
-- Key areas: homepage (`/`), articles (`/articles`, `/articles/[slug]`), AI Solidity reviewer (`/reviewer`), and chat (`/chat`).
+- This is a Vite + TanStack Start project (deployed on Cloudflare Workers) for an interactive EVM developer training hub.
+- Key areas: homepage (`/`), articles (`/articles`, `/articles/$slug`), AI Solidity reviewer (`/reviewer`), and chat (`/chat`).
 
 ## Tech stack
 
-- Next.js 15 (App Router, RSC)
+- Vite 7 + TanStack Start / TanStack Router (SPA mode, server routes and server functions on Cloudflare Workers)
 - TypeScript (strict)
 - Tailwind CSS v4
 - shadcn/ui (managed via CLI)
-- next-themes (theme: system/light/dark)
+- next-themes (theme: system/light/dark — works standalone, no Next.js dependency)
 
 ## Conventions
 
 - Path alias: `@/*` → `./src/*` (use `@/components/...`, `@/lib/...`).
-- Fonts: `Geist` and `Geist_Mono` already configured in `src/app/layout.tsx`.
-- Theming: `ThemeProvider` from `next-themes` is wired via `src/components/providers.tsx` and used in `src/app/layout.tsx`.
-- Global layout: `SiteHeader` + `SiteFooter` wrap a `main` container. Keep pages minimal and composable.
+- Theming: `ThemeProvider` from `next-themes` is wired via `src/components/providers.tsx` and used in `src/routes/__root.tsx`.
+- Global layout: `SiteHeader` + `SiteFooter` wrap a `main` container in `src/routes/__root.tsx`. Keep pages minimal and composable.
+- Routes live in `src/routes/` using TanStack Router file conventions (`articles.$slug.tsx`, `api.chat.ts`, etc.). `src/routeTree.gen.ts` is generated — never edit it by hand.
+- Server-only data (MDX content parsing) goes through server functions in `src/lib/content.ts`; MDX files are bundled via `import.meta.glob` in `src/lib/mdx.ts`.
+- Images: use the local `@/components/image` wrapper (plain `<img>` with next/image-style `fill`/`priority` props).
 
 ## shadcn/ui policy (critical)
 
@@ -36,9 +38,10 @@
 ## Pages and routing
 
 - `/` (Home): high-level CTAs to Articles, Reviewer, and Chat.
-- `/articles` (List) and `/articles/[slug]` (Detail): migrate to MDX later; keep RSC-friendly.
-- `/reviewer`: client page; text input/textarea and results panel; will call an AI API endpoint.
-- `/chat`: client page; simple chat log + input; will stream responses from an AI backend.
+- `/articles` (List) and `/articles/$slug` (Detail): MDX content loaded via route loaders + server functions.
+- `/reviewer`: client page; text input/textarea and results panel; calls `/api/reviewer`.
+- `/chat`: client page; simple chat log + input; streams responses from `/api/chat`.
+- `/share/achievement/$achievementId` and `/api/achievement-frame/$achievementId`: server routes emitting crawler-facing HTML and Open Graph PNGs (workers-og).
 
 ## Coding style
 
@@ -50,6 +53,7 @@
 
 - Add new shadcn components: `npx shadcn@latest add dialog sheet dropdown-menu --yes`
 - Do not hand-edit anything in `src/components/ui/*` after generation.
+- Verify with `npm run typecheck` and `npm run build`; test the Workers runtime with `npm run preview`.
 
 ## Non-negotiables
 
@@ -63,7 +67,7 @@
 - Config: `wagmiConfig` in `src/lib/wagmi.ts` using `getDefaultConfig` with `chains: [zilliqa]`, `ssr: true`, and `transports` keyed by chain id.
 - Providers: Wrap app in `WagmiProvider`, `QueryClientProvider`, `ThemeProvider`, `RainbowKitProvider` inside `src/components/providers.tsx`.
 - UI: Use `ConnectButton` from `@rainbow-me/rainbowkit` in the header.
-- Styles: Import `@rainbow-me/rainbowkit/styles.css` in `src/app/layout.tsx`.
-- Env: Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` for WalletConnect.
-- Security: Do not expose private keys or secrets; only use public env (`NEXT_PUBLIC_*`) on the client.
+- Styles: `@rainbow-me/rainbowkit/styles.css` is linked in `src/routes/__root.tsx`.
+- Env: Set `VITE_WALLETCONNECT_PROJECT_ID` for WalletConnect.
+- Security: Do not expose private keys or secrets; only use public env (`VITE_*`) on the client. Server secrets (e.g. `AI_GATEWAY_API_KEY`) live as Worker secrets.
 - Network scope: Keep chains limited to Zilliqa (and optionally its testnet) unless explicitly expanded.

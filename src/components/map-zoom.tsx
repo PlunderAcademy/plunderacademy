@@ -1,8 +1,6 @@
-"use client";
-
 import { useState, useMemo } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Image from "@/components/image";
+import { useNavigate } from "@tanstack/react-router";
 import { useAccount } from "wagmi";
 import { useAchievements } from "@/hooks/use-achievements";
 
@@ -42,7 +40,7 @@ const ISLANDS = [
 ];
 
 export function MapZoom() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [isZooming, setIsZooming] = useState(false);
   const [hoveredIsland, setHoveredIsland] = useState<number | null>(null);
   const [mobileCurrentIndex, setMobileCurrentIndex] = useState(0);
@@ -90,7 +88,7 @@ export function MapZoom() {
     if (isZooming) return;
     setIsZooming(true);
     setTimeout(() => {
-      router.push(`/lessons/island${index + 1}`);
+      navigate({ to: `/lessons/island${index + 1}` });
     }, 500);
   };
 

@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island2Module5Image() {
@@ -153,7 +151,7 @@ export function Island2Module5Image() {
             <div className="absolute top-[83%] left-[82%] w-[6px] h-[6px] bg-white rounded-full ground-sparkle animate-ground-sparkle-5"></div>
           </div>
         
-        <style jsx>{`
+        <style>{`
           /* Aurora effects - BOLD */
           .aurora-bold {
             filter: blur(50px);

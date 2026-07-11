@@ -1,6 +1,6 @@
 /**
  * Feedback API client for tracking AI interactions and collecting user feedback.
- * Uses the backend API (NEXT_PUBLIC_PLUNDER_ACADEMY_API) for data persistence.
+ * Uses the backend API (VITE_PLUNDER_ACADEMY_API) for data persistence.
  */
 
 import { config } from "./config";

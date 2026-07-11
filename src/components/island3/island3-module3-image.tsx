@@ -1,7 +1,5 @@
-"use client";
-
 import { useState, useEffect } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 import { useAccount } from "wagmi";
 import { config } from "@/lib/config";
@@ -320,7 +318,7 @@ export function Island3Module3Image() {
         )}
 
         
-        <style jsx global>{`
+        <style>{`
           @keyframes golden-burst-massive {
             0%, 100% {
               opacity: 0;

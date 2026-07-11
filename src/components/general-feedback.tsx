@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { MessageSquarePlus, Star, Bug, Lightbulb, Palette, BookOpen, HelpCircle, CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";

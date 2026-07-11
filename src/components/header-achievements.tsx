@@ -1,7 +1,5 @@
-"use client";
-
 import * as React from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { useAccount } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

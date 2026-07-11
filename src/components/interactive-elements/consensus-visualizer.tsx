@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import { Server, CheckCircle2, XCircle, Share2, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";

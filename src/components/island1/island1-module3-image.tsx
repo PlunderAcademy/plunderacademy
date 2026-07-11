@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function JungleModule3Image() {
@@ -131,7 +129,7 @@ export function JungleModule3Image() {
             <div className="absolute top-[54%] left-[53%] w-[3px] h-[6px] bg-orange-400/95 rounded torch-glow animate-torch-flicker-2"></div>
           </div>
         
-        <style jsx>{`
+        <style>{`
           .window-glow {
             filter: blur(10px);
             box-shadow: 0 0 50px currentColor, 0 0 100px currentColor, 0 0 150px currentColor;

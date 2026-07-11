@@ -153,10 +153,9 @@ export function generateTwitterShare(moduleSlug: string): string {
 // Generate Twitter share URL directly from achievement number
 export function generateTwitterShareFromAchievementNumber(achievementNumber: string, achievementName?: string): string {
   // Use dynamic URLs based on environment
-  const baseUrl = typeof window !== 'undefined' 
-    ? window.location.origin 
-    : process.env.NEXT_PUBLIC_SITE_URL || 
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://plunderacademy.vercel.app');
+  const baseUrl = typeof window !== 'undefined'
+    ? window.location.origin
+    : import.meta.env.VITE_SITE_URL || 'https://plunderacademy.com';
   
   const sharePageUrl = `${baseUrl}/share/achievement/${achievementNumber}`;
   

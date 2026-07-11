@@ -1,7 +1,5 @@
-"use client";
-
 import { useState, useEffect } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 import { useAccount } from "wagmi";
 import { config } from "@/lib/config";
@@ -234,7 +232,7 @@ export function Island5Module3Image() {
           </div>
         )}
         
-        <style jsx>{`
+        <style>{`
           /* TRINKET SECRET ACHIEVEMENT ANIMATIONS - Only styles needed */
           @keyframes trinket-zoom-in {
             filter: blur(8px);

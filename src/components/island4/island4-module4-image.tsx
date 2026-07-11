@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island4Module4Image() {
@@ -169,7 +167,7 @@ export function Island4Module4Image() {
             <div className="absolute bottom-[15%] right-[30%] w-[25px] h-[35px] bg-yellow-200/8 person-glow animate-person-glow-6"></div>
           </div>
           
-          <style jsx>{`
+          <style>{`
           /* ROSE WINDOW EFFECTS */
           .rose-glow {
             filter: blur(30px);

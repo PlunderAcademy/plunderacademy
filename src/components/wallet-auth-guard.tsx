@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { useAccount } from "wagmi";
 import { WalletButton } from "@/components/wallet-button";

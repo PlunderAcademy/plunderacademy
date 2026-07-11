@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { trainingRegistryABI } from "@/lib/training-registry-abi";
@@ -17,7 +15,7 @@ import {
   loadNFTMetadata, 
   getNFTImageUrl 
 } from "./utils";
-import { MissionMeta } from "@/lib/mdx";
+import type { MissionMeta } from "@/lib/mdx";
 
 interface UseAchievementClaimingProps {
   moduleSlug: string;

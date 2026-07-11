@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/image";
 import { Card } from "@/components/ui/card";
 
 export function Island2Module4Image() {
@@ -138,7 +136,7 @@ export function Island2Module4Image() {
             <div className="absolute top-[0%] left-[55%] w-[50px] h-[200px] bg-gradient-to-b from-blue-200/35 via-cyan-100/15 to-transparent light-ray animate-light-ray-2"></div>
           </div>
         
-        <style jsx>{`
+        <style>{`
           /* Water channel effects */
           .water-channel-glow {
             filter: blur(32px);
