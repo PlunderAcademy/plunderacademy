@@ -288,15 +288,16 @@ pragma solidity ^0.8.28;
  * 
  * Security Features:
  * - Commit-reveal pattern prevents outcome prediction
- * - Multiple entropy sources (user, prevrandao, blockhash)
+ * - Entropy anchored to the committed target block's hash
+ * - Outcome fixed once the target block is produced (reveal timing can't change it)
  * - Range committed upfront (prevents manipulation)
- * - Manipulation-resistant (uses finalized block data)
+ * - Reveal window enforced (expired commitments revert instead of using bad entropy)
  * - Mathematically fair distribution
  * 
  * Usage:
  * 1. commit(futureBlock, minRandom, maxRandom) - Commit to future block and range
- * 2. Wait for target block
- * 3. reveal() - Generate and retrieve random number
+ * 2. Wait for the target block to be produced
+ * 3. reveal() - Generate and retrieve random number (within 256 blocks of the target)
  */
 contract ZilliqaRandomNumber2 {
     struct Commitment {
@@ -309,6 +310,7 @@ contract ZilliqaRandomNumber2 {
     // Security constants
     uint256 public constant MIN_BLOCKS_DELAY = 5;        // Minimum blocks to wait (~5 seconds on Zilliqa)
     uint256 public constant MAX_BLOCKS_DELAY = 1000;     // Maximum blocks to wait (~16.7 minutes on Zilliqa)
+    uint256 public constant REVEAL_WINDOW = 256;         // Blocks after the target during which its hash is readable
     uint256 public constant MAX_RANDOM_LIMIT = 2_000_000_000; // Maximum random range (2 billion)
     
     // Achievement tracking for Plunder Academy
@@ -329,9 +331,8 @@ contract ZilliqaRandomNumber2 {
         address indexed user,
         uint256 randomNumber,
         uint256 constrainedRandomNumber,
-        bytes32 salt,
-        uint256 prevrandao,
-        bytes32 blockhash,
+        uint256 targetBlock,
+        bytes32 targetBlockHash,
         uint256 minRandom,
         uint256 maxRandom
     );
@@ -389,41 +390,45 @@ contract ZilliqaRandomNumber2 {
     }
     
     /**
-     * @notice Reveal the random number (must be called after target block)
+     * @notice Reveal the random number (must be called after the target block, within the reveal window)
      * @return constrainedRandomNumber The random number within the committed range
      */
     function reveal() external returns (uint256) {
         Commitment storage commitment = commitments[msg.sender];
+        uint256 targetBlock = commitment.targetBlock;
         
         // Validate commitment
-        require(commitment.targetBlock != 0, "No commitment found");
-        require(block.number >= commitment.targetBlock, "Too early");
+        require(targetBlock != 0, "No commitment found");
         require(!commitment.revealed, "Already revealed");
+        require(block.number > targetBlock, "Too early");
+        
+        // The target block's hash is only readable for REVEAL_WINDOW blocks
+        bytes32 targetBlockHash = blockhash(targetBlock);
+        require(targetBlockHash != bytes32(0), "Reveal window expired");
 
-        // Generate random number using multiple entropy sources
+        // Derive randomness from the committed target block's hash.
+        // Both inputs are fixed the moment the target block is produced,
+        // so the result cannot be influenced by when the reveal is sent.
         uint256 randomNumber = uint256(
             keccak256(
                 abi.encodePacked(
-                    msg.sender,                    // User-specific entropy
-                    block.prevrandao,              // Validator entropy (works great on Zilliqa 2.0!)
-                    blockhash(block.number - 1)    // Previous block hash (manipulation-resistant)
+                    msg.sender,        // User-specific entropy
+                    targetBlockHash    // Committed target block's hash
                 )
             )
-        );
-        
-        // Generate fair random number within the committed range
-        uint256 constrainedRandomNumber = generateRandomNumber(
-            randomNumber,
-            commitment.minRandom,
-            commitment.maxRandom
         );
         
         // Store values before cleanup
         uint256 minRandom = commitment.minRandom;
         uint256 maxRandom = commitment.maxRandom;
         
-        // Mark as revealed and cleanup
-        commitment.revealed = true;
+        // Generate fair random number within the committed range
+        uint256 constrainedRandomNumber = generateRandomNumber(
+            randomNumber,
+            minRandom,
+            maxRandom
+        );
+        
         delete commitments[msg.sender];
         
         // Emit event with all entropy sources for verification
@@ -431,9 +436,8 @@ contract ZilliqaRandomNumber2 {
             msg.sender,
             randomNumber,                    // Raw random number
             constrainedRandomNumber,         // Constrained to range
-            bytes32(0),                      // No salt needed in this version
-            block.prevrandao,                // Block's prevrandao
-            blockhash(block.number - 1),     // Previous block hash
+            targetBlock,                     // Committed target block
+            targetBlockHash,                 // Entropy source
             minRandom,
             maxRandom
         );
@@ -458,8 +462,8 @@ contract ZilliqaRandomNumber2 {
     }
     
     /**
-     * @notice Cancel an unrevealed commitment after it expires
-     * @dev Can only cancel if commitment is older than MAX_BLOCKS_DELAY
+     * @notice Cancel an unrevealed commitment after its reveal window has closed
+     * @dev Can only cancel once the target block is more than REVEAL_WINDOW blocks old
      */
     function cancelCommitment() external {
         Commitment storage commitment = commitments[msg.sender];
@@ -467,7 +471,7 @@ contract ZilliqaRandomNumber2 {
         require(commitment.targetBlock != 0, "No commitment found");
         require(!commitment.revealed, "Already revealed");
         require(
-            block.number > commitment.targetBlock + MAX_BLOCKS_DELAY,
+            block.number > commitment.targetBlock + REVEAL_WINDOW,
             "Too early to cancel"
         );
         
@@ -698,8 +702,9 @@ async function main() {
     
     // Calculate reveal time (Zilliqa has 1-second blocks)
     const waitTimeSeconds = blocksAhead;
-    console.log(`\n⏰ You can reveal in ~${waitTimeSeconds} seconds`);
+    console.log(`\n⏰ You can reveal in ~${waitTimeSeconds} seconds (once the target block has been produced)`);
     console.log("Target block:", targetBlock.toString());
+    console.log("⚠️  Reveal within 256 blocks (~4 minutes) of the target block, or the commitment expires");
     
     console.log("\n📋 To reveal:");
     console.log(`export RNG_CONTRACT_ADDRESS=${rngAddress}`);
@@ -759,9 +764,9 @@ async function main() {
   console.log("Range:", `${commitment.minRandom} to ${commitment.maxRandom}`);
   console.log("Revealed:", commitment.revealed);
   
-  // Check if can reveal
-  if (currentBlock < commitment.targetBlock) {
-    const blocksToWait = Number(commitment.targetBlock - currentBlock);
+  // Check if can reveal (must be strictly past the target block)
+  if (currentBlock <= commitment.targetBlock) {
+    const blocksToWait = Number(commitment.targetBlock - currentBlock) + 1;
     console.log(`\n⏰ Too early! Wait ${blocksToWait} more blocks (~${blocksToWait} seconds on Zilliqa)`);
     
     // If on local network, auto-mine blocks
@@ -774,6 +779,14 @@ async function main() {
     } else {
       process.exit(1);
     }
+  }
+  
+  // Check the reveal window (target block hash is only readable for 256 blocks)
+  if (currentBlock > commitment.targetBlock + 256n) {
+    console.error("\n❌ Reveal window expired (more than 256 blocks past the target)!");
+    console.log("Cancel this commitment and make a new one:");
+    console.log("npm run cancel:testnet");
+    process.exit(1);
   }
   
   if (commitment.revealed) {
@@ -803,9 +816,8 @@ async function main() {
           { name: 'user', type: 'address', indexed: true },
           { name: 'randomNumber', type: 'uint256', indexed: false },
           { name: 'constrainedRandomNumber', type: 'uint256', indexed: false },
-          { name: 'salt', type: 'bytes32', indexed: false },
-          { name: 'prevrandao', type: 'uint256', indexed: false },
-          { name: 'blockhash', type: 'bytes32', indexed: false },
+          { name: 'targetBlock', type: 'uint256', indexed: false },
+          { name: 'targetBlockHash', type: 'bytes32', indexed: false },
           { name: 'minRandom', type: 'uint256', indexed: false },
           { name: 'maxRandom', type: 'uint256', indexed: false }
         ]
@@ -826,8 +838,8 @@ async function main() {
       console.log("Range:", `${args.minRandom} to ${args.maxRandom}`);
       console.log("\n📊 Entropy Sources:");
       console.log("Raw Random:", args.randomNumber.toString());
-      console.log("Prevrandao:", args.prevrandao.toString());
-      console.log("Blockhash:", args.blockhash);
+      console.log("Target Block:", args.targetBlock.toString());
+      console.log("Target Block Hash:", args.targetBlockHash);
       console.log("═══════════════════════════════════════");
     }
     
@@ -906,7 +918,8 @@ async function main() {
     console.log("Random range:", `${commitment.minRandom} to ${commitment.maxRandom}`);
     console.log("Revealed:", commitment.revealed);
     
-    const blocksUntilReveal = Number(commitment.targetBlock - currentBlock);
+    const blocksUntilReveal = Number(commitment.targetBlock - currentBlock) + 1;
+    const revealDeadline = commitment.targetBlock + 256n;
     
     if (blocksUntilReveal > 0) {
       console.log("\n⏰ Status: Waiting for target block");
@@ -919,10 +932,16 @@ async function main() {
         console.log("You can advance blocks instantly using network helpers:");
         console.log(`  await networkHelpers.mine(${blocksUntilReveal});`);
       } else {
-        console.log("\nCome back after target block to reveal!");
+        console.log("\nCome back after the target block to reveal!");
       }
+    } else if (currentBlock > revealDeadline) {
+      console.log("\n❌ Status: Reveal window expired");
+      console.log("The target block is more than 256 blocks old.");
+      console.log("Cancel this commitment to make a new one:");
+      console.log("npm run cancel:local");
     } else if (!commitment.revealed) {
       console.log("\n✅ Status: Ready to reveal!");
+      console.log(`Reveal before block ${revealDeadline} (~${Number(revealDeadline - currentBlock)} seconds left)`);
       console.log("Run: npm run reveal:local");
     } else {
       console.log("\n✅ Status: Already revealed");
@@ -935,11 +954,13 @@ async function main() {
   console.log("\n📊 Contract Parameters:");
   const minDelay = await rng.read.MIN_BLOCKS_DELAY();
   const maxDelay = await rng.read.MAX_BLOCKS_DELAY();
+  const revealWindow = await rng.read.REVEAL_WINDOW();
   const maxLimit = await rng.read.MAX_RANDOM_LIMIT();
   const claimant = await rng.read.claimant();
   
   console.log("Min Blocks Delay:", minDelay.toString(), `(~${minDelay} seconds)`);
   console.log("Max Blocks Delay:", maxDelay.toString(), `(~${Number(maxDelay) / 60} minutes)`);
+  console.log("Reveal Window:", revealWindow.toString(), `(~${Number(revealWindow) / 60} minutes after target block)`);
   console.log("Max Random Limit:", maxLimit.toString());
   console.log("Claimant:", claimant);
 }
@@ -989,9 +1010,9 @@ async function main() {
   console.log("Target block:", commitment.targetBlock.toString());
   console.log("Range:", `${commitment.minRandom} to ${commitment.maxRandom}`);
   
-  // Check if can cancel
-  const maxDelay = await rng.read.MAX_BLOCKS_DELAY();
-  const cancelBlock = commitment.targetBlock + maxDelay;
+  // Check if can cancel (only after the reveal window has closed)
+  const revealWindow = await rng.read.REVEAL_WINDOW();
+  const cancelBlock = commitment.targetBlock + revealWindow;
   
   if (currentBlock <= cancelBlock) {
     const blocksToWait = Number(cancelBlock - currentBlock + 1n);
@@ -1000,13 +1021,13 @@ async function main() {
     
     // If on local network, offer to mine blocks
     if (networkName === "localhost" || networkName.startsWith("hardhat")) {
-      console.log(`\n💡 Auto-mining 15 blocks on local network...`);
-      await networkHelpers.mine(15);
+      console.log(`\n💡 Auto-mining ${blocksToWait} blocks on local network...`);
+      await networkHelpers.mine(blocksToWait);
       const newBlock = await publicClient.getBlockNumber();
       console.log("✅ Advanced to block:", newBlock.toString());
       console.log("Proceeding with cancellation...\n");
     } else {
-      console.log("\nOr reveal your commitment instead:");
+      console.log("\nOr reveal your commitment instead (if still within the window):");
       console.log("npm run reveal:local");
       process.exit(1);
     }
@@ -1152,8 +1173,8 @@ Range: 1 to 1000
 
 📊 Entropy Sources:
 Raw Random: 12345678901234567890...
-Prevrandao: 98765432109876543210
-Blockhash: 0x9876...
+Target Block: 12345670
+Target Block Hash: 0x9876...
 ═══════════════════════════════════════
 ```
 
@@ -1246,8 +1267,22 @@ npm run commit:testnet
 # Check current status
 npm run check:testnet
 
-# Wait for target block
+# Wait until the target block has been produced
 # Zilliqa has 1-second blocks, so wait ~N seconds where N is blocks to wait
+```
+
+### Issue: "Reveal window expired" when revealing
+
+**Solution:**
+```bash
+# The target block is more than 256 blocks (~4 minutes) old,
+# so its hash is no longer readable on-chain.
+
+# Cancel the expired commitment and start over
+npm run cancel:testnet
+npm run commit:testnet
+
+# Next time, reveal promptly after the target block is produced
 ```
 
 ### Issue: "No commitment found"

@@ -94,10 +94,10 @@ function drawWinner() public returns (address) {
 ### 2. Commit-Reveal Pattern
 
 **How it works:**
-- Users commit to a future block (commitment phase)
-- Wait for target block
-- Reveal using block data (reveal phase)
-- Combines user-specific and block entropy
+- Users commit to a future target block (commitment phase)
+- Wait for the target block to be produced
+- Reveal using the target block's hash (reveal phase)
+- Combines user-specific entropy with the target block's hash
 
 **Pros:**
 - Fully on-chain
@@ -151,12 +151,12 @@ We'll implement a **commit-reveal VRF** (Verifiable Random Function) that provid
     <tr>
       <td><strong>Wait</strong></td>
       <td>Wait for target block to be mined</td>
-      <td>Ensures unpredictable block data</td>
+      <td>Fixes the outcome the moment the block is produced</td>
     </tr>
     <tr>
       <td><strong>Reveal</strong></td>
-      <td>Generate random number using block data</td>
-      <td>Combines user + block entropy</td>
+      <td>Generate random number using the target block's hash</td>
+      <td>Combines user + target block entropy</td>
     </tr>
   </tbody>
 </table>
@@ -164,7 +164,7 @@ We'll implement a **commit-reveal VRF** (Verifiable Random Function) that provid
 ### Security Properties
 
 **1. Unpredictability**
-- Future block properties are unknown at commit time
+- The target block's hash is unknown at commit time
 - Validators cannot predict without significant cost
 - User-specific entropy prevents identical results
 
@@ -179,13 +179,13 @@ We'll implement a **commit-reveal VRF** (Verifiable Random Function) that provid
 - Transparent and auditable
 
 **4. Manipulation Resistance**
-- Uses previous block hash (already finalized, cannot be manipulated)
-- Combines multiple entropy sources
+- Entropy is anchored to the committed target block's hash, which is fixed the moment that block is produced
+- The result is the same no matter which block the reveal lands in — revealers can't time their transaction to shop for a better outcome
 - Range committed upfront (prevents post-hoc selection)
 
 ### Entropy Sources
 
-Our implementation combines three sources:
+Our implementation combines two sources:
 
 <table>
   <thead>
@@ -202,23 +202,19 @@ Our implementation combines three sources:
       <td>Different users → different results</td>
     </tr>
     <tr>
-      <td><code>block.prevrandao</code></td>
-      <td>Block randomness</td>
-      <td>Unpredictable validator entropy</td>
-    </tr>
-    <tr>
-      <td><code>blockhash(block.number - 1)</code></td>
-      <td>Previous block hash</td>
-      <td>Manipulation-resistant (finalized)</td>
+      <td><code>blockhash(targetBlock)</code></td>
+      <td>Target block hash</td>
+      <td>Unknown at commit time, fixed once the block is produced</td>
     </tr>
   </tbody>
 </table>
 
-**Why these three?**
+**Why these two?**
 
-1. **User Address**: Ensures different users get different results even with identical blocks
-2. **PREVRANDAO**: Provides strong block-level entropy (works excellently on Zilliqa 2.0)
-3. **Previous Block Hash**: Cannot be manipulated by validators (already finalized and included in chain)
+1. **User Address**: Ensures different users get different results even when committing to the same target block
+2. **Target Block Hash**: Unknown at commit time, so no one can predict the outcome — and fixed the instant the target block is mined, so no one can influence the outcome afterwards by choosing when to reveal
+
+Anchoring the entropy to the committed target block is the heart of the design: the random number is fully determined before the reveal transaction is even sent, which means the timing of the reveal cannot change the result.
 
 ## Use Cases
 
@@ -420,7 +416,7 @@ In this practical module, you'll create a production-ready random number generat
 
 ✅ **Secure commit-reveal pattern**  
 ✅ **Configurable random ranges** (1 to 2 billion)  
-✅ **Multiple entropy sources** for unpredictability  
+✅ **Target-block-anchored entropy** for unpredictability  
 ✅ **Fair distribution** (mathematically proven)  
 ✅ **Event emission** for transparency  
 ✅ **Commitment management** (cancel stale commitments)  

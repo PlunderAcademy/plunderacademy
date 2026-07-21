@@ -16,10 +16,10 @@ The `ZilliqaRandomNumber2` contract implements a secure, verifiable random numbe
 
 ✅ **Commit-Reveal Pattern**: Prevents outcome prediction  
 ✅ **Range Constraints**: Generate numbers within specific bounds  
-✅ **Multiple Entropy Sources**: Combines user, block, and validator randomness  
+✅ **Target-Block Entropy**: Outcome fixed the moment the target block is produced  
 ✅ **Security Measures**: Validation checks and manipulation resistance  
 ✅ **Event Transparency**: All entropy sources published  
-✅ **Commitment Management**: Cancel stale commitments  
+✅ **Commitment Management**: Cancel expired commitments  
 
 ## Contract Structure
 
@@ -37,6 +37,7 @@ contract ZilliqaRandomNumber2 {
     // Constants for security
     uint256 public constant MIN_BLOCKS_DELAY = 5;
     uint256 public constant MAX_BLOCKS_DELAY = 1000;
+    uint256 public constant REVEAL_WINDOW = 256;
     uint256 public constant MAX_RANDOM_LIMIT = 2_000_000_000;
     
     // One commitment per address
@@ -54,10 +55,10 @@ contract ZilliqaRandomNumber2 {
 ### State Variables Explained
 
 **targetBlock**
-- The future block number when reveal can happen
+- The future block whose hash becomes the entropy source
 - Must be at least 5 blocks in the future
 - Cannot be more than 1000 blocks ahead
-- Ensures sufficient unpredictability window
+- Its hash is unknown at commit time, and fixed forever once the block is produced
 
 **minRandom / maxRandom**
 - User-specified range for random number
@@ -98,8 +99,8 @@ require(
 **Why 5 blocks minimum?**
 - Zilliqa 2.0 has 1-second block times
 - 5 blocks = ~5 seconds delay
-- Prevents immediate reveal attacks
-- Ensures block entropy is unpredictable
+- Ensures the target block's hash is genuinely unknown at commit time
+- Prevents committing to a block that's about to be produced
 - Gives time for other transactions to be included
 
 ```solidity
@@ -113,7 +114,6 @@ require(
 - 1000 blocks = ~16.7 minutes
 - Prevents very long-lived commitments
 - Ensures reasonable reveal timeframe
-- Older blocks may not have accessible hashes
 - Keeps commitment storage manageable
 
 **2. Existing Commitment Check**
@@ -191,15 +191,20 @@ function reveal() external {
 
 ```solidity
 Commitment storage commitment = commitments[msg.sender];
-require(commitment.targetBlock != 0, "No commitment found");
-require(block.number >= commitment.targetBlock, "Too early");
+uint256 targetBlock = commitment.targetBlock;
+require(targetBlock != 0, "No commitment found");
 require(!commitment.revealed, "Already revealed");
+require(block.number > targetBlock, "Too early");
+
+bytes32 targetBlockHash = blockhash(targetBlock);
+require(targetBlockHash != bytes32(0), "Reveal window expired");
 ```
 
 **Checks:**
 - **Commitment exists**: User must have called `commit()` first
-- **Block reached**: Current block ≥ target block
 - **Not revealed**: Prevents double-reveals
+- **Target block produced**: Current block must be strictly past the target block — `blockhash()` of the current block isn't available yet
+- **Within the reveal window**: The EVM only exposes hashes of the most recent 256 blocks. If the target block is older than that, `blockhash()` returns zero and the reveal reverts rather than silently using bad entropy
 
 **2. Entropy Generation**
 
@@ -208,14 +213,13 @@ uint256 randomNumber = uint256(
     keccak256(
         abi.encodePacked(
             msg.sender,
-            block.prevrandao,
-            blockhash(block.number - 1)
+            targetBlockHash
         )
     )
 );
 ```
 
-**Three entropy sources:**
+**Two entropy sources:**
 
 <table>
   <thead>
@@ -232,14 +236,9 @@ uint256 randomNumber = uint256(
       <td>Different users get different results</td>
     </tr>
     <tr>
-      <td><code>block.prevrandao</code></td>
-      <td>Validator entropy</td>
-      <td>Unpredictable per-block randomness (works great on Zilliqa 2.0)</td>
-    </tr>
-    <tr>
-      <td><code>blockhash(block.number - 1)</code></td>
-      <td>Previous block hash</td>
-      <td>Cannot be manipulated (already finalized)</td>
+      <td><code>blockhash(targetBlock)</code></td>
+      <td>Target block hash</td>
+      <td>Unknown at commit time, fixed once the block is produced</td>
     </tr>
   </tbody>
 </table>
@@ -251,11 +250,12 @@ uint256 randomNumber = uint256(
 - Deterministic (same inputs = same output)
 - One-way (cannot reverse)
 
-**Why these three sources?**
+**Why these two sources?**
 
-1. **msg.sender**: Ensures different users get different results even if they reveal in the same block
-2. **block.prevrandao**: Strong per-block entropy from validators (confirmed working well on Zilliqa 2.0)
-3. **blockhash(block.number - 1)**: Additional entropy that's manipulation-resistant because the block is already finalized
+1. **msg.sender**: Ensures different users committing to the same target block get different results
+2. **blockhash(targetBlock)**: The committed block's hash — nobody knows it at commit time, and once the block is produced it never changes
+
+The critical property: because both inputs are fixed as soon as the target block is mined, the random number is fully determined **before** the reveal transaction is sent. Revealing in any block within the window produces the exact same value, so a user cannot watch the chain and time their reveal to fish for a favorable result.
 
 **3. Range Constraint**
 
@@ -305,7 +305,6 @@ Since 2^256 is astronomically larger than any practical range (max 2 billion), t
 uint256 minRandom = commitment.minRandom;
 uint256 maxRandom = commitment.maxRandom;
 
-commitment.revealed = true;
 delete commitments[msg.sender];
 ```
 
@@ -313,7 +312,7 @@ delete commitments[msg.sender];
 - Need min/max for event emission
 - Delete frees storage (gas refund)
 - Allows user to make new commitment
-- Marks as revealed before deletion (safety)
+- Deleting also prevents double-reveals (the `targetBlock != 0` check fails afterwards)
 
 **5. Event Emission**
 
@@ -322,9 +321,8 @@ emit RandomnessRevealed(
     msg.sender,
     randomNumber,                    // Raw random (full entropy)
     constrainedRandomNumber,         // Final result (within range)
-    bytes32(0),                      // No salt needed
-    block.prevrandao,                // Validator entropy
-    blockhash(block.number - 1),     // Previous block hash
+    targetBlock,                     // The committed target block
+    targetBlockHash,                 // The entropy source
     minRandom,                       // Range minimum
     maxRandom                        // Range maximum
 );
@@ -340,7 +338,7 @@ emit RandomnessRevealed(
 
 ```solidity
 // User committed earlier to get number 1-100 at block X
-// Now block X has been reached
+// Now block X has been produced
 
 uint256 result = rng.reveal();
 
@@ -349,9 +347,8 @@ uint256 result = rng.reveal();
 //   user: 0xUser...,
 //   randomNumber: 115792089237316195423570985008687907853269984665640564039457584007913129639935,
 //   constrainedRandomNumber: 42,  // The actual result: 42 (within 1-100)
-//   salt: 0x0000000000000000000000000000000000000000000000000000000000000000,
-//   prevrandao: 12345678901234567890,
-//   blockhash: 0xabcdef...,
+//   targetBlock: X,
+//   targetBlockHash: 0xabcdef...,
 //   minRandom: 1,
 //   maxRandom: 100
 // )
@@ -361,7 +358,7 @@ uint256 result = rng.reveal();
 
 ### Purpose
 
-Allows users to cancel commitments that have become stale (target block passed + MAX_BLOCKS_DELAY).
+Allows users to reclaim their commitment slot once the reveal window has closed (target block + REVEAL_WINDOW).
 
 ```solidity
 function cancelCommitment() external {
@@ -369,7 +366,7 @@ function cancelCommitment() external {
     require(commitment.targetBlock != 0, "No commitment found");
     require(!commitment.revealed, "Already revealed");
     require(
-        block.number > commitment.targetBlock + MAX_BLOCKS_DELAY,
+        block.number > commitment.targetBlock + REVEAL_WINDOW,
         "Too early to cancel"
     );
     
@@ -378,22 +375,23 @@ function cancelCommitment() external {
 ```
 
 **When to cancel:**
-- User forgot to reveal
+- User forgot to reveal within the 256-block window
 - User doesn't need randomness anymore
-- Commitment too old (> 1000 blocks past target)
+- Reveal now reverts with "Reveal window expired"
 
 **Why the delay requirement?**
-- Prevents canceling to avoid unfavorable outcomes
-- User must wait until commitment is "expired"
+- While the reveal window is open, the only way out is to reveal — you can't cancel a result you don't like
+- Once the window closes and the reveal can no longer succeed, cancel frees the slot
 - Only for cleanup, not manipulation
 
 ### Timeline Example
 
 ```
 Block 1000: User commits for block 1010
-Block 1010: User can reveal (ideal)
+Block 1011+: User can reveal (target block hash now available)
 ...
-Block 2010: User can now cancel (1000 blocks past target)
+Block 1266: Reveal window closes (1010 + 256)
+Block 1267: User can now cancel and commit again
 ```
 
 ## Events Deep Dive
@@ -436,9 +434,8 @@ event RandomnessRevealed(
     address indexed user,
     uint256 randomNumber,
     uint256 constrainedRandomNumber,
-    bytes32 salt,
-    uint256 prevrandao,
-    bytes32 blockhash,
+    uint256 targetBlock,
+    bytes32 targetBlockHash,
     uint256 minRandom,
     uint256 maxRandom
 );
@@ -451,9 +448,8 @@ event RandomnessRevealed(
 - **user**: Who generated the random number
 - **randomNumber**: Raw entropy (before range constraint)
 - **constrainedRandomNumber**: Final result within [min, max]
-- **salt**: Unused in this version (for future extensibility)
-- **prevrandao**: Block's PREVRANDAO value
-- **blockhash**: Previous block's hash
+- **targetBlock**: The committed block whose hash was used
+- **targetBlockHash**: The entropy source itself
 - **minRandom/maxRandom**: The committed range
 
 **Use cases:**
@@ -466,18 +462,23 @@ event RandomnessRevealed(
 ```javascript
 // Verify the calculation
 contract.on("RandomnessRevealed", async (
-  user, rawRandom, finalRandom, salt, 
-  prevrandao, blockHash, min, max, event
+  user, rawRandom, finalRandom,
+  targetBlock, targetBlockHash, min, max, event
 ) => {
   // Verify raw random number calculation
   const expectedRaw = ethers.utils.keccak256(
     ethers.utils.solidityPack(
-      ['address', 'uint256', 'bytes32'],
-      [user, prevrandao, blockHash]
+      ['address', 'bytes32'],
+      [user, targetBlockHash]
     )
   );
   
   console.log("Raw random matches:", rawRandom === expectedRaw);
+  
+  // Independently confirm the entropy: fetch the target block
+  // from any node and compare its hash to targetBlockHash
+  const block = await provider.getBlock(Number(targetBlock));
+  console.log("Target block hash matches:", block.hash === targetBlockHash);
   
   // Verify range constraint
   const range = max - min + 1;
@@ -497,10 +498,10 @@ contract.on("RandomnessRevealed", async (
 ❌ **Attack**: User predicts outcome before committing
 ✅ **Prevention**: Future block data is unknown at commit time
 
-**2. Selective Reveal Attack**
+**2. Reveal Timing Attack**
 
-❌ **Attack**: User only reveals if outcome is favorable
-✅ **Prevention**: Range committed upfront, cannot change after seeing outcome
+❌ **Attack**: User watches each new block and only sends the reveal when the block data would produce a favorable result
+✅ **Prevention**: Entropy comes from the committed target block's hash, not the reveal block — the result is identical in every block of the reveal window, so there is nothing to time
 
 **3. Front-Running Attack**
 
@@ -510,7 +511,7 @@ contract.on("RandomnessRevealed", async (
 **4. Validator Manipulation**
 
 ❌ **Attack**: Validator manipulates block data to influence outcome
-✅ **Prevention**: Uses previous block hash (already finalized) + PREVRANDAO (expensive to manipulate)
+✅ **Prevention**: The only influence is over the single target block itself; on Zilliqa 2.0's BFT consensus, withholding or reshaping that block is expensive and impractical for the value at stake
 
 **5. Commit Spam Attack**
 
@@ -519,8 +520,8 @@ contract.on("RandomnessRevealed", async (
 
 **6. Block Hash Unavailability**
 
-❌ **Attack**: Reveal so late that blockhash() returns 0
-✅ **Prevention**: MAX_BLOCKS_DELAY limits commitment lifetime
+❌ **Attack**: Reveal so late that blockhash() returns 0, feeding zero entropy into the result
+✅ **Prevention**: The reveal explicitly checks for a zero hash and reverts with "Reveal window expired" — expired commitments must be cancelled, never revealed with bad entropy
 
 ### Edge Cases Handled
 
@@ -553,8 +554,12 @@ contract.on("RandomnessRevealed", async (
       <td>Reverts at commit time</td>
     </tr>
     <tr>
-      <td>Stale commitment (forgot to reveal)</td>
-      <td>Can cancel after MAX_BLOCKS_DELAY</td>
+      <td>Reveal after window closes (&gt; 256 blocks past target)</td>
+      <td>Reverts with "Reveal window expired"</td>
+    </tr>
+    <tr>
+      <td>Expired commitment (forgot to reveal)</td>
+      <td>Can cancel after REVEAL_WINDOW</td>
     </tr>
   </tbody>
 </table>
@@ -700,15 +705,16 @@ contract MyNFT {
 ### For Users
 
 ✅ **Do:**
-- Wait for target block before revealing
-- Cancel stale commitments if you don't need them
+- Wait until the target block has been produced before revealing
+- Reveal within 256 blocks of the target (about 4 minutes on Zilliqa 2.0)
+- Cancel expired commitments if you missed the window
 - Choose appropriate block delays (5-20 blocks usually sufficient)
 - Select ranges that make sense for your use case
 
 ❌ **Don't:**
 - Commit and immediately try to reveal
 - Set target blocks too far in the future
-- Forget to reveal (wastes gas on commit)
+- Forget to reveal (the window closes 256 blocks after the target)
 - Try to manipulate by committing multiple times
 
 ### For Integrators
@@ -730,7 +736,7 @@ contract MyNFT {
 
 The `ZilliqaRandomNumber2` contract provides:
 
-✅ **Security**: Multiple entropy sources, manipulation-resistant  
+✅ **Security**: Entropy anchored to the committed target block, manipulation-resistant  
 ✅ **Fairness**: Mathematically proven uniform distribution  
 ✅ **Flexibility**: User-defined ranges up to 2 billion  
 ✅ **Transparency**: All entropy sources published in events  
@@ -740,10 +746,10 @@ The `ZilliqaRandomNumber2` contract provides:
 **Key Takeaways:**
 
 1. Commit-reveal pattern prevents prediction and manipulation
-2. Three entropy sources provide strong randomness
+2. The outcome is fixed the moment the target block is produced — reveal timing can't change it
 3. Range is committed upfront (prevents post-hoc selection)
-4. Events enable verification and integration
-5. Gas-efficient compared to oracle solutions
+4. Reveals must land within 256 blocks of the target; expired commitments are cancelled, not revealed
+5. Events enable verification and integration, and are gas-efficient compared to oracle solutions
 
 ## Next Steps
 

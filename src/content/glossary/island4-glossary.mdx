@@ -18,7 +18,7 @@ This glossary covers terminology introduced in **Island 4: Advanced Patterns and
 
 **Module 1 - DeFi Fundamentals & Simple Swaps:** AMM mechanics, constant product formula, liquidity pools, swap security, slippage protection, fee calculations, and token economics  
 **Module 2 - Oracles, Randomness & Airdrop Patterns:** oracle integration, Chainlink price feeds, commit-reveal randomness, verifiable random functions, merkle-based airdrops, and gas-efficient distribution  
-**Module 3 - Random Number Generator Practical:** on-chain randomness implementation, commit-reveal patterns, preimage binding, rejection sampling, and fair lottery mechanics  
+**Module 3 - Random Number Generator Practical:** on-chain randomness implementation, commit-reveal patterns, target-block entropy anchoring, reveal windows, and fair lottery mechanics  
 **Module 4 - Proxy Patterns & Upgradeability:** transparent proxies, UUPS pattern, delegatecall mechanics, ERC-1967 storage slots, storage safety, and upgrade authorization  
 **Module 5 - Gas Optimization & Security Patterns:** storage packing, calldata optimization, custom errors, bitmap compression, security auditing, CEI discipline, and threat modeling  
 **Module 6 - Upgradable Contract Practical:** deployment workflows, storage collision prevention, upgrade testing, fork testing, and production upgrade strategies
@@ -248,7 +248,7 @@ The amount of each token currently held in a liquidity pool. Like the cash and f
 </GlossaryTerm>
 
 <GlossaryTerm term="Reveal Phase">
-The second phase of commit-reveal randomness where participants prove their original commitments by submitting preimages. Like opening sealed envelopes simultaneously. Participants send `(secret, salt)`; contract verifies `keccak256(msg.sender, secret, salt)` matches the stored commitment, then derives randomness by combining revealed values (XOR, sum, hash). Must enforce time windows: too early (before commit closes) allows strategic behavior; too late (after reveal deadline) is rejected for liveness. If participants committed but don't reveal, handle via refunds, disqualifications, or using blockhash as fallback entropy. Document window sizes and failure modes clearly.
+The second phase of commit-reveal randomness where participants prove their original commitments by submitting preimages. Like opening sealed envelopes simultaneously. Participants send `(secret, salt)`; contract verifies `keccak256(msg.sender, secret, salt)` matches the stored commitment, then derives randomness by combining revealed values (XOR, sum, hash). Must enforce time windows: too early (before commit closes) allows strategic behavior; too late (after reveal deadline) is rejected for liveness. If participants committed but don't reveal, handle via refunds, disqualifications, or round rollover — never by substituting weaker fallback entropy. Document window sizes and failure modes clearly.
 </GlossaryTerm>
 
 <GlossaryTerm term="SafeERC20">

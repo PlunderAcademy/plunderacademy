@@ -277,7 +277,7 @@ export function RngDeployChallenge({ moduleSlug, missionData }: DeployElementPro
             <h4 className="font-semibold text-purple-800 dark:text-purple-200 mb-2">✨ What You&apos;ll Learn:</h4>
             <ul className="text-sm text-purple-700 dark:text-purple-300 space-y-1 list-disc list-inside">
               <li>Commit-reveal pattern for secure randomness</li>
-              <li>Block-level entropy sources (prevrandao, blockhash)</li>
+              <li>Target-block entropy anchoring (blockhash of the committed block)</li>
               <li>Range-constrained random number generation</li>
               <li>Manipulation-resistant RNG design</li>
               <li>Production-ready random number generator deployment</li>

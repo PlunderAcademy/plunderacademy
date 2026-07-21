@@ -86,6 +86,7 @@ describe("ZilliqaRandomNumber2", async function () {
 
       assert.equal(await rng.read.MIN_BLOCKS_DELAY(), 5n);
       assert.equal(await rng.read.MAX_BLOCKS_DELAY(), 1000n);
+      assert.equal(await rng.read.REVEAL_WINDOW(), 256n);
       assert.equal(await rng.read.MAX_RANDOM_LIMIT(), 2_000_000_000n);
     });
 
@@ -299,8 +300,8 @@ describe("ZilliqaRandomNumber2", async function () {
       assert.equal(commitment.minRandom, 1n);
       assert.equal(commitment.maxRandom, 10n);
 
-      // Clean up for next test
-      await mineBlocks(1011);
+      // Clean up for next test (wait for the reveal window to close)
+      await mineBlocks(270);
       await rng.write.cancelCommitment({ account: user1.account });
 
       // Test range 50-150
@@ -363,9 +364,8 @@ describe("ZilliqaRandomNumber2", async function () {
             { name: "user", type: "address", indexed: true },
             { name: "randomNumber", type: "uint256", indexed: false },
             { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-            { name: "salt", type: "bytes32", indexed: false },
-            { name: "prevrandao", type: "uint256", indexed: false },
-            { name: "blockhash", type: "bytes32", indexed: false },
+            { name: "targetBlock", type: "uint256", indexed: false },
+            { name: "targetBlockHash", type: "bytes32", indexed: false },
             { name: "minRandom", type: "uint256", indexed: false },
             { name: "maxRandom", type: "uint256", indexed: false },
           ],
@@ -409,9 +409,8 @@ describe("ZilliqaRandomNumber2", async function () {
             { name: "user", type: "address", indexed: true },
             { name: "randomNumber", type: "uint256", indexed: false },
             { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-            { name: "salt", type: "bytes32", indexed: false },
-            { name: "prevrandao", type: "uint256", indexed: false },
-            { name: "blockhash", type: "bytes32", indexed: false },
+            { name: "targetBlock", type: "uint256", indexed: false },
+            { name: "targetBlockHash", type: "bytes32", indexed: false },
             { name: "minRandom", type: "uint256", indexed: false },
             { name: "maxRandom", type: "uint256", indexed: false },
           ],
@@ -504,9 +503,8 @@ describe("ZilliqaRandomNumber2", async function () {
             { name: "user", type: "address", indexed: true },
             { name: "randomNumber", type: "uint256", indexed: false },
             { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-            { name: "salt", type: "bytes32", indexed: false },
-            { name: "prevrandao", type: "uint256", indexed: false },
-            { name: "blockhash", type: "bytes32", indexed: false },
+            { name: "targetBlock", type: "uint256", indexed: false },
+            { name: "targetBlockHash", type: "bytes32", indexed: false },
             { name: "minRandom", type: "uint256", indexed: false },
             { name: "maxRandom", type: "uint256", indexed: false },
           ],
@@ -524,9 +522,8 @@ describe("ZilliqaRandomNumber2", async function () {
             { name: "user", type: "address", indexed: true },
             { name: "randomNumber", type: "uint256", indexed: false },
             { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-            { name: "salt", type: "bytes32", indexed: false },
-            { name: "prevrandao", type: "uint256", indexed: false },
-            { name: "blockhash", type: "bytes32", indexed: false },
+            { name: "targetBlock", type: "uint256", indexed: false },
+            { name: "targetBlockHash", type: "bytes32", indexed: false },
             { name: "minRandom", type: "uint256", indexed: false },
             { name: "maxRandom", type: "uint256", indexed: false },
           ],
@@ -555,8 +552,8 @@ describe("ZilliqaRandomNumber2", async function () {
         account: user1.account,
       });
 
-      // Mine past target + MAX_BLOCKS_DELAY
-      await mineBlocks(1011);
+      // Mine past target + REVEAL_WINDOW
+      await mineBlocks(270);
 
       // Cancel
       await rng.write.cancelCommitment({ account: user1.account });
@@ -602,7 +599,7 @@ describe("ZilliqaRandomNumber2", async function () {
         account: user1.account,
       });
 
-      // Mine to just after target block (but not past MAX_BLOCKS_DELAY)
+      // Mine to just after target block (but not past REVEAL_WINDOW)
       await mineBlocks(15);
 
       await assert.rejects(
@@ -622,8 +619,8 @@ describe("ZilliqaRandomNumber2", async function () {
         account: user1.account,
       });
 
-      // Mine past expiry and cancel
-      await mineBlocks(1011);
+      // Mine past the reveal window and cancel
+      await mineBlocks(270);
       await rng.write.cancelCommitment({ account: user1.account });
 
       // New commit should succeed
@@ -661,9 +658,8 @@ describe("ZilliqaRandomNumber2", async function () {
             { name: "user", type: "address", indexed: true },
             { name: "randomNumber", type: "uint256", indexed: false },
             { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-            { name: "salt", type: "bytes32", indexed: false },
-            { name: "prevrandao", type: "uint256", indexed: false },
-            { name: "blockhash", type: "bytes32", indexed: false },
+            { name: "targetBlock", type: "uint256", indexed: false },
+            { name: "targetBlockHash", type: "bytes32", indexed: false },
             { name: "minRandom", type: "uint256", indexed: false },
             { name: "maxRandom", type: "uint256", indexed: false },
           ],
@@ -675,21 +671,17 @@ describe("ZilliqaRandomNumber2", async function () {
       const args = (logs[0] as any).args;
       
       // Verify randomness calculation includes user address
-      const prevBlock = await publicClient.getBlock({
-        blockNumber: receipt.blockNumber - 1n,
-      });
-      
       const expectedRandom = keccak256(
         encodePacked(
-          ["address", "uint256", "bytes32"],
-          [user1.account.address, args.prevrandao, prevBlock.hash!]
+          ["address", "bytes32"],
+          [user1.account.address, args.targetBlockHash]
         )
       );
 
       assert.equal(BigInt(expectedRandom), args.randomNumber);
     });
 
-    it("Should use block.prevrandao as entropy", async function () {
+    it("Should anchor entropy to the committed target block's hash", async function () {
       const rng = await deployRNG();
       const currentBlock = await publicClient.getBlockNumber();
       const targetBlock = currentBlock + 10n;
@@ -712,9 +704,8 @@ describe("ZilliqaRandomNumber2", async function () {
             { name: "user", type: "address", indexed: true },
             { name: "randomNumber", type: "uint256", indexed: false },
             { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-            { name: "salt", type: "bytes32", indexed: false },
-            { name: "prevrandao", type: "uint256", indexed: false },
-            { name: "blockhash", type: "bytes32", indexed: false },
+            { name: "targetBlock", type: "uint256", indexed: false },
+            { name: "targetBlockHash", type: "bytes32", indexed: false },
             { name: "minRandom", type: "uint256", indexed: false },
             { name: "maxRandom", type: "uint256", indexed: false },
           ],
@@ -725,11 +716,17 @@ describe("ZilliqaRandomNumber2", async function () {
 
       const args = (logs[0] as any).args;
       
-      // Prevrandao should be included in event
-      assert.ok(args.prevrandao !== undefined);
+      // The event should report the committed target block and its real hash
+      assert.equal(args.targetBlock, targetBlock);
+      
+      const minedTargetBlock = await publicClient.getBlock({
+        blockNumber: targetBlock,
+      });
+      assert.equal(args.targetBlockHash, minedTargetBlock.hash);
+      assert.ok(args.targetBlockHash !== "0x0000000000000000000000000000000000000000000000000000000000000000");
     });
 
-    it("Should use previous block hash as entropy", async function () {
+    it("Should revert if the reveal window has expired", async function () {
       const rng = await deployRNG();
       const currentBlock = await publicClient.getBlockNumber();
       const targetBlock = currentBlock + 10n;
@@ -738,35 +735,13 @@ describe("ZilliqaRandomNumber2", async function () {
         account: user1.account,
       });
 
-      await mineBlocks(10);
+      // Mine far past the target block so its hash is no longer readable (> 256 blocks)
+      await mineBlocks(300);
 
-      const hash = await rng.write.reveal({ account: user1.account });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
-      const logs = await publicClient.getLogs({
-        address: rng.address,
-        event: {
-          type: "event",
-          name: "RandomnessRevealed",
-          inputs: [
-            { name: "user", type: "address", indexed: true },
-            { name: "randomNumber", type: "uint256", indexed: false },
-            { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-            { name: "salt", type: "bytes32", indexed: false },
-            { name: "prevrandao", type: "uint256", indexed: false },
-            { name: "blockhash", type: "bytes32", indexed: false },
-            { name: "minRandom", type: "uint256", indexed: false },
-            { name: "maxRandom", type: "uint256", indexed: false },
-          ],
-        },
-        fromBlock: receipt.blockNumber,
-        toBlock: receipt.blockNumber,
-      });
-
-      const args = (logs[0] as any).args;
-      
-      // Previous block hash should be included
-      assert.ok(args.blockhash !== "0x0000000000000000000000000000000000000000000000000000000000000000");
+      await assert.rejects(
+        async () => await rng.write.reveal({ account: user1.account }),
+        /Reveal window expired/
+      );
     });
 
     it("Should prevent same-block commit and reveal", async function () {
@@ -809,9 +784,8 @@ describe("ZilliqaRandomNumber2", async function () {
             { name: "user", type: "address", indexed: true },
             { name: "randomNumber", type: "uint256", indexed: false },
             { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-            { name: "salt", type: "bytes32", indexed: false },
-            { name: "prevrandao", type: "uint256", indexed: false },
-            { name: "blockhash", type: "bytes32", indexed: false },
+            { name: "targetBlock", type: "uint256", indexed: false },
+            { name: "targetBlockHash", type: "bytes32", indexed: false },
             { name: "minRandom", type: "uint256", indexed: false },
             { name: "maxRandom", type: "uint256", indexed: false },
           ],
@@ -847,9 +821,8 @@ describe("ZilliqaRandomNumber2", async function () {
             { name: "user", type: "address", indexed: true },
             { name: "randomNumber", type: "uint256", indexed: false },
             { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-            { name: "salt", type: "bytes32", indexed: false },
-            { name: "prevrandao", type: "uint256", indexed: false },
-            { name: "blockhash", type: "bytes32", indexed: false },
+            { name: "targetBlock", type: "uint256", indexed: false },
+            { name: "targetBlockHash", type: "bytes32", indexed: false },
             { name: "minRandom", type: "uint256", indexed: false },
             { name: "maxRandom", type: "uint256", indexed: false },
           ],
@@ -913,9 +886,8 @@ describe("ZilliqaRandomNumber2", async function () {
             { name: "user", type: "address", indexed: true },
             { name: "randomNumber", type: "uint256", indexed: false },
             { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-            { name: "salt", type: "bytes32", indexed: false },
-            { name: "prevrandao", type: "uint256", indexed: false },
-            { name: "blockhash", type: "bytes32", indexed: false },
+            { name: "targetBlock", type: "uint256", indexed: false },
+            { name: "targetBlockHash", type: "bytes32", indexed: false },
             { name: "minRandom", type: "uint256", indexed: false },
             { name: "maxRandom", type: "uint256", indexed: false },
           ],
@@ -957,9 +929,8 @@ describe("ZilliqaRandomNumber2", async function () {
               { name: "user", type: "address", indexed: true },
               { name: "randomNumber", type: "uint256", indexed: false },
               { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-              { name: "salt", type: "bytes32", indexed: false },
-              { name: "prevrandao", type: "uint256", indexed: false },
-              { name: "blockhash", type: "bytes32", indexed: false },
+              { name: "targetBlock", type: "uint256", indexed: false },
+              { name: "targetBlockHash", type: "bytes32", indexed: false },
               { name: "minRandom", type: "uint256", indexed: false },
               { name: "maxRandom", type: "uint256", indexed: false },
             ],
@@ -1005,9 +976,8 @@ describe("ZilliqaRandomNumber2", async function () {
             { name: "user", type: "address", indexed: true },
             { name: "randomNumber", type: "uint256", indexed: false },
             { name: "constrainedRandomNumber", type: "uint256", indexed: false },
-            { name: "salt", type: "bytes32", indexed: false },
-            { name: "prevrandao", type: "uint256", indexed: false },
-            { name: "blockhash", type: "bytes32", indexed: false },
+            { name: "targetBlock", type: "uint256", indexed: false },
+            { name: "targetBlockHash", type: "bytes32", indexed: false },
             { name: "minRandom", type: "uint256", indexed: false },
             { name: "maxRandom", type: "uint256", indexed: false },
           ],
@@ -1018,15 +988,16 @@ describe("ZilliqaRandomNumber2", async function () {
 
       const args = (logs[0] as any).args;
       
-      // Manually calculate what the random number should be
-      const prevBlock = await publicClient.getBlock({
-        blockNumber: receipt.blockNumber - 1n,
+      // Manually calculate what the random number should be,
+      // fetching the target block's hash independently from the chain
+      const minedTargetBlock = await publicClient.getBlock({
+        blockNumber: targetBlock,
       });
 
       const calculatedRandom = keccak256(
         encodePacked(
-          ["address", "uint256", "bytes32"],
-          [user1.account.address, args.prevrandao, prevBlock.hash!]
+          ["address", "bytes32"],
+          [user1.account.address, minedTargetBlock.hash!]
         )
       );
 
@@ -1118,8 +1089,8 @@ npm test
       ✔ Should allow new commitment after cancellation (457ms)
     Security Properties
       ✔ Should use user address as part of entropy (388ms)
-      ✔ Should use block.prevrandao as entropy (302ms)
-      ✔ Should use previous block hash as entropy (302ms)
+      ✔ Should anchor entropy to the committed target block's hash (302ms)
+      ✔ Should revert if the reveal window has expired (302ms)
       ✔ Should prevent same-block commit and reveal (186ms)
     Edge Cases and Boundaries
       ✔ Should handle minimum valid range (1-1) (367ms)
@@ -1173,8 +1144,8 @@ This generates a coverage report showing which lines of your contract are tested
 ✅ **Security Properties**
 - Entropy source verification
 - User address inclusion
-- Block randomness usage
-- Previous block hash usage
+- Target block hash anchoring
+- Reveal window enforcement
 - Minimum delay enforcement
 
 ✅ **Edge Cases**
@@ -1206,13 +1177,14 @@ Aim for:
 
 ✅ **Entropy Sources Verified**
 - User address included (prevents identical results)
-- PREVRANDAO used (validator entropy)
-- Previous block hash used (manipulation-resistant)
+- Target block hash used (fixed once the block is produced, unknown at commit time)
+- Result independent of reveal timing (no outcome shopping)
 
 ✅ **Timing Protections**
 - Minimum 5 blocks delay enforced
 - Maximum 1000 blocks limit enforced
-- Cannot reveal before target block
+- Cannot reveal until the target block has been produced
+- Cannot reveal after the 256-block window (reverts instead of using bad entropy)
 
 ✅ **Range Validation**
 - Min greater than 0 required
@@ -1222,7 +1194,7 @@ Aim for:
 ✅ **State Management**
 - Only one commitment per user
 - Commitment cleaned up after reveal
-- Cancellation only after expiry
+- Cancellation only after the reveal window closes
 
 ✅ **Mathematical Fairness**
 - Modulo operation verified
