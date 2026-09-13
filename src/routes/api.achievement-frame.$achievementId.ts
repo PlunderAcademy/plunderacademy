@@ -77,24 +77,24 @@ async function generateFrame(achievementId: string) {
     const html = `
       <div style="height: 628px; width: 1200px; display: flex; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); position: relative;">
         <div style="position: absolute; left: 30px; top: 60px; width: 480px; height: 508px; display: flex; align-items: center; justify-content: center;">
-          ${backgroundImageUrl ? `<img src="${backgroundImageUrl}" style="position: absolute; width: 100%; height: 100%; object-fit: contain;" />` : ''}
+          ${backgroundImageUrl ? `<img src="${backgroundImageUrl}" width="480" height="508" style="position: absolute; width: 100%; height: 100%; object-fit: contain;" />` : ''}
           ${achievementData.image
-            ? `<img src="${achievementData.image}" style="position: absolute; width: 100%; height: 100%; object-fit: contain;" />`
+            ? `<img src="${achievementData.image}" width="480" height="508" style="position: absolute; width: 100%; height: 100%; object-fit: contain;" />`
             : `<div style="position: absolute; width: 100%; height: 100%; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border: 3px solid #fbbf24; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-                <div style="font-size: 24px; color: #fbbf24; font-weight: bold; text-align: center;">NFT Achievement</div>
-                <div style="font-size: 18px; color: #e2e8f0; text-align: center; margin-top: 10px;">${achievementName}</div>
+                <div style="display: flex; font-size: 24px; color: #fbbf24; font-weight: bold; text-align: center;">NFT Achievement</div>
+                <div style="display: flex; font-size: 18px; color: #e2e8f0; text-align: center; margin-top: 10px;">${achievementName}</div>
               </div>`}
         </div>
         <div style="position: absolute; left: 580px; top: 100px; display: flex; flex-direction: column; color: white; width: 580px;">
-          <div style="font-size: 32px; font-weight: bold; color: #fbbf24; margin-bottom: 20px;">Achievement Unlocked!</div>
-          <div style="font-size: 42px; font-weight: bold; line-height: 1.1; margin-bottom: 30px; color: #fbbf24;">${achievementName}</div>
+          <div style="display: flex; font-size: 32px; font-weight: bold; color: #fbbf24; margin-bottom: 20px;">Achievement Unlocked!</div>
+          <div style="display: flex; font-size: 42px; font-weight: bold; line-height: 1.1; margin-bottom: 30px; color: #fbbf24;">${achievementName}</div>
           <div style="display: flex; align-items: center; font-size: 24px; padding: 12px 24px; background-color: rgba(59, 130, 246, 0.2); border: 2px solid #3b82f6; border-radius: 12px; color: #93c5fd; margin-bottom: 40px; width: 400px;">${moduleTitle}</div>
-          <div style="font-size: 28px; color: #e2e8f0; font-weight: 600; line-height: 1.3;">Claim your treasure at</div>
-          <div style="font-size: 28px; color: #e2e8f0; font-weight: 600; line-height: 1.3;">PlunderAcademy.com</div>
+          <div style="display: flex; font-size: 28px; color: #e2e8f0; font-weight: 600; line-height: 1.3;">Claim your treasure at</div>
+          <div style="display: flex; font-size: 28px; color: #e2e8f0; font-weight: 600; line-height: 1.3;">PlunderAcademy.com</div>
         </div>
-        <div style="position: absolute; bottom: 20px; right: 30px; font-size: 16px; color: #64748b; font-weight: 500;">PlunderAcademy.com</div>
+        <div style="display: flex; position: absolute; bottom: 20px; right: 30px; font-size: 16px; color: #64748b; font-weight: 500;">PlunderAcademy.com</div>
       </div>
-    `;
+    `.replace(/>\s+</g, '><').trim();
 
     const imageResponse = new ImageResponse(html, {
       width: 1200,
