@@ -21,6 +21,7 @@
  */
 
 import { experimental_createMCPClient as createMCPClient } from "@ai-sdk/mcp";
+import { jsonSchema } from "ai";
 
 // ============================================================================
 // Configuration
@@ -127,13 +128,6 @@ function normalizeValidatorName(name: string): string {
 
 
 // ============================================================================
-// MCP Client Cache
-// ============================================================================
-let mcpClient: Awaited<ReturnType<typeof createMCPClient>> | null = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let mcpTools: Record<string, any> | null = null;
-
-// ============================================================================
 // Custom Composite Tools
 // ============================================================================
 
@@ -174,7 +168,7 @@ function createCustomTools(mcpTools: Record<string, any>): Record<string, any> {
     // Calculate effective APR for top validators
     'getValidatorAPR': {
       description: 'Calculate effective APR (Annual Percentage Rate) for validators by combining earnings and stake data. Returns validators ranked by APR performance.',
-      parameters: {
+      inputSchema: jsonSchema({
         type: 'object',
         properties: {
           startTime: {
@@ -190,7 +184,7 @@ function createCustomTools(mcpTools: Record<string, any>): Record<string, any> {
             description: 'Number of validators to return (default: 10)'
           }
         }
-      },
+      }),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       execute: async (args: { startTime?: string; endTime?: string; limit?: number }): Promise<any> => {
         const limit = args.limit || 10;
@@ -314,17 +308,15 @@ function createCustomTools(mcpTools: Record<string, any>): Record<string, any> {
 /**
  * Refresh validator cache by calling listValidators
  */
-async function refreshValidatorCache(): Promise<void> {
-  if (!mcpClient) return;
-  
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function refreshValidatorCache(rawTools: Record<string, any>): Promise<void> {
   const now = Date.now();
   if (validatorCache.length > 0 && now - validatorCacheTime < VALIDATOR_CACHE_TTL) {
     return; // Cache still valid
   }
-  
+
   try {
     console.log("[MCP] Refreshing validator cache...");
-    const rawTools = await mcpClient.tools();
     const listValidatorsTool = rawTools['listValidators'] || rawTools['list_validators'];
     
     if (listValidatorsTool) {
@@ -352,44 +344,57 @@ async function refreshValidatorCache(): Promise<void> {
   }
 }
 
+// Tool names, descriptions and input schemas are plain data, so they're cached per
+// Worker instance after the first connection. The MCP client itself can't be shared
+// across requests (Workers I/O isolation), so each request opens its own, and only
+// when the model actually calls a tool.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let toolDefinitions: Record<string, any> | null = null;
+
 /**
- * Get Zilliqa Insights MCP tools (cached after first request)
+ * Get Zilliqa Insights tools for the current request. Callers must call close()
+ * once they are done executing tools.
  * Tools are wrapped to normalize validator names and resolve public keys automatically
  */
 export async function getZilliqaInsightsTools() {
-  // Return cached tools if available
-  if (mcpTools) {
-    // Refresh validator cache in background if stale
-    refreshValidatorCache().catch(console.error);
-    return mcpTools;
-  }
+  let clientPromise: ReturnType<typeof createMCPClient> | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let liveTools: Promise<Record<string, any>> | null = null;
+
+  const getLiveTools = () =>
+    (liveTools ??= (clientPromise ??= createMCPClient({
+      transport: { type: "http", url: ZILLIQA_MCP_URL },
+    })).then((client) => client.tools()));
+
+  const close = async () => {
+    if (!clientPromise) return;
+    await clientPromise
+      .then((client) => client.close())
+      .catch((error) => console.error("[MCP] Failed to close:", error));
+  };
 
   try {
-    console.log("[MCP] Connecting to Zilliqa Insights server...");
-    
-    // Create MCP client with HTTP transport
-    mcpClient = await createMCPClient({
-      transport: {
-        type: "http",
-        url: ZILLIQA_MCP_URL,
-      },
-    });
+    if (!toolDefinitions) {
+      console.log("[MCP] Connecting to Zilliqa Insights server...");
+      const rawTools = await getLiveTools();
+      toolDefinitions = Object.fromEntries(
+        Object.entries(rawTools).map(([name, { execute: _execute, ...definition }]) => [name, definition])
+      );
+      console.log("[MCP] Cached tool definitions:", Object.keys(toolDefinitions));
+    }
 
-    // Get tools from the server
-    const rawTools = await mcpClient.tools();
-    console.log("[MCP] Connected! Available tools:", Object.keys(rawTools));
-    
-    // Try to populate validator cache immediately
-    await refreshValidatorCache();
-    
     // Wrap tools to normalize validator names
     // The MCP server uses 'validator' parameter for all validator-specific tools
     const wrappedTools = Object.fromEntries(
-      Object.entries(rawTools).map(([name, tool]) => {
-        const wrappedTool = {
-          ...tool,
+      Object.entries(toolDefinitions).map(([name, definition]) => [
+        name,
+        {
+          ...definition,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           execute: async (args: any) => {
+            const rawTools = await getLiveTools();
+            await refreshValidatorCache(rawTools);
+
             // Normalize validator name if present
             if (args && typeof args.validator === 'string') {
               const originalName = args.validator;
@@ -399,36 +404,22 @@ export async function getZilliqaInsightsTools() {
               }
               args = { ...args, validator: normalizedName };
             }
-            
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            return (tool as any).execute(args);
+
+            return rawTools[name].execute(args);
           },
-        };
-        return [name, wrappedTool];
-      })
+        },
+      ])
     );
-    
+
     // Add custom composite tools
     const customTools = createCustomTools(wrappedTools);
-    mcpTools = { ...wrappedTools, ...customTools };
-    
-    console.log("[MCP] Added custom tools:", Object.keys(customTools));
-    
-    return mcpTools;
+
+    return { tools: { ...wrappedTools, ...customTools }, close };
   } catch (error) {
     console.error("[MCP] Failed to connect:", error);
+    await close();
     return null;
   }
-}
-
-/**
- * Get list of all known validators (from cache or fresh)
- */
-export async function getValidatorList(): Promise<ValidatorInfo[]> {
-  if (validatorCache.length === 0 || Date.now() - validatorCacheTime > VALIDATOR_CACHE_TTL) {
-    await refreshValidatorCache();
-  }
-  return validatorCache;
 }
 
 // ============================================================================

@@ -1,25 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { streamText } from "ai";
+import { streamText, type UIMessage } from "ai";
 import reviewerSystemPrompt from "@/prompts/reviewer-system-prompt.md?raw";
+import { gatewayModel } from "@/lib/ai";
 
-// Available models through AI Gateway (examples):
-// - openai/gpt-4o-mini ($0.15/$0.60) - its ok but think oss and 2.5 flash lite are better, a little slower
-// - openai/gpt-5-mini ($0.25/$2) - looks really nice but was really slow
-// - openai/gpt-5-nano ($0.05/$0.40) - its ok but think oss and 2.5 flash lite are better, a little slower
-// - openai/gpt-oss-120b ($0.15/$0.75) - this is really nice and fast on cerebras
-// - xai/grok-3-mini ($0.30/$0.50) - its ok but think oss and 2.5 flash lite are better, a little slower
-// - meta/llama-4-maverick ($0.20/$0.60) - its ok but think oss and 2.5 flash lite are better
-// - google/gemini-2.0-flash ($0.15/$0.60) - 2.5 flash lite is better
-// - google/gemini-2.0-flash-lite ($0.07/$0.30) - 2.5 flash lite is better
-// - google/gemini-2.5-flash ($0.30/$2.50) - quite slow
-// - google/gemini-2.5-flash-lite ($0.10/$0.40) - REALLY like this one
-// - google/gemini-3.1-flash-lite-preview ($0.25/$1.50) - this is epic and brand new
-// Best models:
-// - google/gemini-2.5-flash-lite
-// - google/gemini-3.1-flash-lite-preview
-
-// Default model for AI Gateway
-const DEFAULT_MODEL = "google/gemini-3.1-flash-lite-preview";
+// Fixed server-side so callers can't pick a pricier model on our credits
+const MODEL = "anthropic/claude-haiku-5.5";
 
 // Load system prompt from bundled markdown, stripping the title
 function getSystemPrompt(): string {
@@ -27,39 +12,37 @@ function getSystemPrompt(): string {
 }
 
 type ReviewerRequestBody = {
-  prompt?: string;
-  model?: string;
+  messages?: UIMessage[];
 };
 
 async function handleReview(req: Request) {
   const body = (await req.json().catch(() => ({}))) as ReviewerRequestBody;
 
-  // AI Gateway model selection (format: provider/model-name)
-  const modelName =
-    typeof body?.model === "string" && body.model.trim()
-      ? body.model.trim()
-      : DEFAULT_MODEL;
-
-  // Extract prompt from request body
-  const prompt = body?.prompt?.trim();
+  // Each review is independent: only the latest user message (the contract) is used
+  const lastUser = body?.messages?.findLast((m) => m.role === "user");
+  const prompt = lastUser?.parts
+    .map((p) => (p.type === "text" ? p.text : ""))
+    .join("")
+    .trim();
 
   if (!prompt) {
-    return new Response("Invalid request: provide `prompt`.", {
+    return new Response("Invalid request: provide the contract as a user message.", {
       status: 400,
     });
   }
 
-  // AI Gateway with provider options
-  const result = await streamText({
-    model: modelName, // e.g., "openai/gpt-oss-120b"
+  const result = streamText({
+    model: gatewayModel(MODEL),
     system: getSystemPrompt(),
     prompt,
-    temperature: 0.2, // Lower temperature for more consistent results
+    // Summaries of the model's reasoning stream while it thinks (~30s before the report
+    // starts), so the reviewer page can show what it's checking
+    providerOptions: { anthropic: { thinking: { type: "adaptive", display: "summarized" } } },
   });
 
   // Log the complete response for debugging formatting issues
   const requestId = Math.random().toString(36).substring(2, 15);
-  console.log(`[${requestId}] Starting review with model: ${modelName}`);
+  console.log(`[${requestId}] Starting review with model: ${MODEL}`);
   console.log(`[${requestId}] Input prompt length: ${prompt.length} chars`);
 
   result.text.then((fullResponse) => {
@@ -101,56 +84,13 @@ async function handleReview(req: Request) {
     console.error(`[${requestId}] Error getting token usage:`, error);
   });
 
-  // Log detailed provider metadata if available
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (result as any).providerMetadata?.then((providerMetadata: any) => {
-    // Google metadata (rich usage details)
-    if (providerMetadata?.google?.usageMetadata) {
-      const googleUsage = providerMetadata.google.usageMetadata;
-      console.log(`[${requestId}] Google usage metadata:`, {
-        promptTokenCount: googleUsage.promptTokenCount,
-        candidatesTokenCount: googleUsage.candidatesTokenCount,
-        totalTokenCount: googleUsage.totalTokenCount,
-        ...(googleUsage.cachedContentTokenCount && { cachedContentTokenCount: googleUsage.cachedContentTokenCount }),
-        ...(googleUsage.thoughtsTokenCount && { thoughtsTokenCount: googleUsage.thoughtsTokenCount }),
-      });
-
-      if (providerMetadata.google.safetyRatings) {
-        console.log(`[${requestId}] Safety ratings:`, providerMetadata.google.safetyRatings);
-      }
-
-      if (providerMetadata.google.groundingMetadata) {
-        console.log(`[${requestId}] Grounding metadata:`, providerMetadata.google.groundingMetadata);
-      }
-    }
-
-    // Gateway routing information (useful for all providers)
-    if (providerMetadata?.gateway?.routing) {
-      const routing = providerMetadata.gateway.routing;
-      console.log(`[${requestId}] Gateway routing:`, {
-        originalModelId: routing.originalModelId,
-        resolvedProvider: routing.resolvedProvider,
-        resolvedProviderApiModelId: routing.resolvedProviderApiModelId,
-        finalProvider: routing.finalProvider,
-        cost: providerMetadata.gateway.cost,
-        responseTime: routing.attempts?.[0] ?
-          `${Math.round(routing.attempts[0].endTime - routing.attempts[0].startTime)}ms` : 'unknown'
-      });
-    }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }).catch((error: any) => {
-    console.error(`[${requestId}] Error getting provider metadata:`, error);
-  });
-
   result.finishReason.then((finishReason) => {
     console.log(`[${requestId}] Finish reason:`, finishReason);
   }).catch((error) => {
     console.error(`[${requestId}] Error getting finish reason:`, error);
   });
 
-  // Return text stream response (works well with useCompletion)
-  return result.toTextStreamResponse();
+  return result.toUIMessageStreamResponse({ sendReasoning: true });
 }
 
 export const Route = createFileRoute("/api/reviewer")({
