@@ -315,13 +315,13 @@ Your project is now ready for the TrainingRegistry contracts!
 We'll use [OpenZeppelin Contracts Upgradeable](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable) - the upgradeable variant of OpenZeppelin's battle-tested smart contract library.
 
 <Callout type="warning" title="Version Compatibility">
-These instructions use **v5.4.0** (December 2025). OpenZeppelin v5.5.0+ requires the **Cancun** EVM version, but Zilliqa 2.0 uses **Shanghai**, so we must pin to v5.4.0 or earlier.
+These instructions use **v5.4.0** (December 2025) so your setup matches this practical. OpenZeppelin v5.5.0+ uses **Cancun**-only instructions (such as `MCOPY`); Zilliqa 2.0 runs the Cancun fork, so newer versions also work as long as `evm_version` is set to `cancun`.
 
 OpenZeppelin uses semantic versioning - major versions can have breaking changes, particularly in storage layout which is critical for upgradeable contracts. If you need a different version, specify it with the `@tag` syntax (e.g., `@v5.3.0`).
 </Callout>
 
 ```bash
-# Install OpenZeppelin upgradeable contracts (pinned to v5.4.0 for Shanghai EVM)
+# Install OpenZeppelin upgradeable contracts (pinned to v5.4.0 to match this practical)
 forge install OpenZeppelin/openzeppelin-contracts-upgradeable@v5.4.0
 
 # Install OpenZeppelin regular contracts (needed as dependency)
@@ -347,7 +347,7 @@ Update `foundry.toml` for Zilliqa compatibility (Replace everything in the file)
 src = "src"
 out = "out"
 libs = ["lib"]
-evm_version = 'shanghai'          # Required for Zilliqa 2.0
+evm_version = 'cancun'            # Zilliqa 2.0 runs the Cancun fork
 optimizer = true
 optimizer_runs = 200
 via_ir = true                     # Improved optimization for complex contracts
@@ -360,7 +360,7 @@ zilliqaMainnet = "https://api.zilliqa.com"
 ```
 
 **Key settings:**
-- **evm_version = 'shanghai'**: Required for Zilliqa 2.0 (same as Hardhat)
+- **evm_version = 'cancun'**: Zilliqa 2.0 runs the Cancun fork; set it explicitly because recent solc versions default to newer forks (same as Hardhat)
 - **solc_version = "0.8.28"**: Aligned with Zilliqa 2.0 and your previous practicals
 - **via_ir = true**: Better optimization for complex upgradeable contracts
 - **optimizer_runs = 200**: Standard optimization level
@@ -971,9 +971,9 @@ Error (7755): The "mcopy" instruction is only available for Cancun-compatible VM
 94 |             mcopy(add(result, 0x20), add(add(buffer, 0x20), start), sub(end, start))
 ```
 
-**Cause:** You've installed OpenZeppelin v5.5.0 or later, which uses Cancun-only EVM instructions. Zilliqa 2.0 uses the Shanghai EVM version.
+**Cause:** You've installed OpenZeppelin v5.5.0 or later, which uses Cancun-only EVM instructions, while your compiler is still targeting an older EVM version such as Shanghai.
 
-**Solution:** Pin to v5.4.0 which is compatible with Shanghai:
+**Solution:** Set `evm_version = 'cancun'` in `foundry.toml` (Zilliqa 2.0 runs the Cancun fork). Alternatively, pin to v5.4.0 as used in this practical:
 ```bash
 # Remove existing installations
 rm -rf lib/openzeppelin-contracts lib/openzeppelin-contracts-upgradeable

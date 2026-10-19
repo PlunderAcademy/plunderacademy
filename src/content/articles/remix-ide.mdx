@@ -1,24 +1,24 @@
 ---
 slug: remix-ide-zilliqa-shanghai
-title: "Using Remix IDE with Zilliqa: Why the “Shanghai” Version Matters"
-excerpt: "Learn how to set up Remix IDE for Zilliqa development — including selecting the correct version, configuring the network, deploying smart contracts, and interacting with Zilliqa 2.0."
+title: "Using Remix IDE with Zilliqa: Why the EVM Version Matters"
+excerpt: "Learn how to set up Remix IDE for Zilliqa development — including selecting the correct EVM version, configuring the network, deploying smart contracts, and interacting with Zilliqa 2.0."
 level: beginner
 tags:
   - zilliqa
   - remix ide
   - smart contracts
   - evm
-  - shanghai
+  - cancun
 hero: /remix.png
 ---
 
 Developing smart contracts on **Zilliqa 2.0** has never been easier, thanks to its full **EVM compatibility**.  
 If you’re building or testing contracts using **Remix IDE**, there’s one critical detail you must know:
 
-👉 **Zilliqa works best with the “Shanghai” version of Remix**.
+👉 **Zilliqa 2.0 runs the “Cancun” EVM fork — set Remix’s EVM version to “cancun”**.
 
-Older or experimental Remix versions may cause compilation or deployment errors when targeting Zilliqa’s EVM runtime.  
-This guide walks you through setting up Remix IDE for Zilliqa, deploying your first contract, and understanding why the **Shanghai** build is essential.
+Recent Solidity compiler versions default to EVM forks newer than Cancun, which can cause deployment or execution errors on Zilliqa’s EVM runtime.  
+This guide walks you through setting up Remix IDE for Zilliqa, deploying your first contract, and understanding why the **EVM version** setting matters.
 
 ---
 
@@ -35,40 +35,39 @@ It’s perfect for testing Zilliqa smart contracts quickly without installing lo
 
 ---
 
-## 🧩 The Key Requirement — Use the “Shanghai” Version
+## 🧩 The Key Requirement — Set the EVM Version to “cancun”
 
-Zilliqa’s EVM runtime implements opcode compatibility aligned with the **Shanghai EVM upgrade**.  
-If you compile or deploy contracts using an older Remix version (e.g., “London” or “Berlin”), you may encounter errors such as:
+Zilliqa 2.0’s EVM runtime runs the **Cancun** fork (activated in February 2026), so `PUSH0`, `TSTORE`/`TLOAD` and `MCOPY` all work. Blob transactions and Prague features (such as EIP-7702) do **not**.  
+If you compile for an EVM version newer than Cancun — which recent Solidity compiler versions use by default — you may encounter errors such as:
 
 - “Invalid opcode”  
-- “Unsupported chain ID”  
 - Deployment failures or gas miscalculations  
 
-To ensure compatibility, select the **Shanghai version** in Remix before compiling.
+To ensure compatibility, set the **EVM version to cancun** in Remix before compiling.
 
 <table>
   <thead>
     <tr>
-      <th>Remix Version</th>
+      <th>EVM Version</th>
       <th>Status with Zilliqa</th>
       <th>Notes</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><strong>Shanghai</strong></td>
+      <td><strong>Cancun</strong></td>
+      <td>✅ Recommended</td>
+      <td>Matches the fork Zilliqa 2.0 runs</td>
+    </tr>
+    <tr>
+      <td>Shanghai and older</td>
       <td>✅ Supported</td>
-      <td>Required for compiling and deploying contracts on Zilliqa 2.0</td>
+      <td>Still compiles and deploys fine, but can’t use newer opcodes like <code>MCOPY</code> or <code>TSTORE</code></td>
     </tr>
     <tr>
-      <td>London / Berlin</td>
-      <td>⚠️ Partially supported</td>
-      <td>May compile but will fail at deployment due to missing opcodes</td>
-    </tr>
-    <tr>
-      <td>Paris + Cancun (Beta)</td>
+      <td>Prague and newer</td>
       <td>🚫 Not compatible</td>
-      <td>Targets EVM features not yet available on Zilliqa</td>
+      <td>Targets EVM features not available on Zilliqa</td>
     </tr>
   </tbody>
 </table>
@@ -86,14 +85,14 @@ Before you start, you’ll need:
 
 ---
 
-## 🧭 Step 1 – Select the Correct Remix Version
+## 🧭 Step 1 – Select the Correct EVM Version
 
 1. Open [Remix IDE](https://remix.ethereum.org).  
-2. In the top-right corner, click the **Remix version dropdown**.  
-3. Select **“Shanghai”**.  
-4. Reload the page to apply changes.
+2. Go to the **Solidity Compiler** tab.  
+3. Expand **Advanced Configurations** and set **EVM Version** to **“cancun”**.  
+4. Recompile your contract to apply the change.
 
-> **Tip:** If Remix still shows an older version after reloading, clear your browser cache or open Remix in an incognito window.
+> **Tip:** The `cancun` option requires Solidity compiler version 0.8.24 or later.
 
 ---
 
@@ -103,8 +102,8 @@ Before you start, you’ll need:
 2. Under **Environment**, choose **“Injected Provider – MetaMask”**.  
 3. Connect MetaMask to your **Zilliqa RPC endpoint**:
 
-   - **Testnet:** `https://evm-api-testnet.zilliqa.com`  
-   - **Mainnet:** `https://evm-api.zilliqa.com`  
+   - **Testnet:** `https://api.testnet.zilliqa.com` (chain ID 33101)  
+   - **Mainnet:** `https://api.zilliqa.com` (chain ID 32769)  
 
 4. Confirm your wallet connection.
 
@@ -127,7 +126,7 @@ contract HelloZilliqa {
 }
 ```
 
-Compile it under **Solidity Compiler > Version 0.8.20 (Shanghai)**.
+Compile it under **Solidity Compiler** with version 0.8.24 or later and **EVM Version: cancun**.
 
 ---
 
@@ -167,8 +166,8 @@ Zilliqa’s low-latency EVM ensures quick confirmations for these transactions.
   <tbody>
     <tr>
       <td><strong>Invalid opcode</strong></td>
-      <td>Using a pre-Shanghai Remix compiler</td>
-      <td>Switch to the <strong>Shanghai</strong> compiler version</td>
+      <td>Compiling for an EVM version newer than Cancun</td>
+      <td>Set the EVM version to <strong>cancun</strong> in Advanced Configurations</td>
     </tr>
     <tr>
       <td><strong>Network not found</strong></td>
@@ -177,8 +176,8 @@ Zilliqa’s low-latency EVM ensures quick confirmations for these transactions.
     </tr>
     <tr>
       <td><strong>Gas estimation errors</strong></td>
-      <td>Remix version mismatch</td>
-      <td>Refresh Remix after switching versions</td>
+      <td>EVM version mismatch</td>
+      <td>Set the EVM version to <strong>cancun</strong> and recompile</td>
     </tr>
   </tbody>
 </table>
@@ -187,7 +186,7 @@ Zilliqa’s low-latency EVM ensures quick confirmations for these transactions.
 
 ## 🧠 Recap
 
-- **Remix IDE** is fully compatible with **Zilliqa 2.0** when using the **Shanghai** compiler version.  
+- **Remix IDE** is fully compatible with **Zilliqa 2.0** when compiling with the **cancun** EVM version.  
 - Ensure your RPC endpoint points to the correct Zilliqa network.  
 - Always verify your Remix compiler and environment settings before deployment.  
 

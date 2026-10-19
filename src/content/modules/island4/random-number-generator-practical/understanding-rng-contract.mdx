@@ -511,7 +511,7 @@ contract.on("RandomnessRevealed", async (
 **4. Validator Manipulation**
 
 ❌ **Attack**: Validator manipulates block data to influence outcome
-✅ **Prevention**: The only influence is over the single target block itself; on Zilliqa 2.0's BFT consensus, withholding or reshaping that block is expensive and impractical for the value at stake
+✅ **Prevention**: The only influence is over the single target block itself: that block's leader could grind its hash, which is an acceptable risk for low-value uses like games and NFT traits. For high-value outcomes, use a VRF instead
 
 **5. Commit Spam Attack**
 
@@ -706,7 +706,7 @@ contract MyNFT {
 
 ✅ **Do:**
 - Wait until the target block has been produced before revealing
-- Reveal within 256 blocks of the target (about 4 minutes on Zilliqa 2.0)
+- Reveal within 256 blocks of the target (about 5 minutes on Zilliqa 2.0)
 - Cancel expired commitments if you missed the window
 - Choose appropriate block delays (5-20 blocks usually sufficient)
 - Select ranges that make sense for your use case

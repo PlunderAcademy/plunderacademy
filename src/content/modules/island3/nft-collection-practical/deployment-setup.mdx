@@ -159,7 +159,7 @@ const config: HardhatUserConfig = {
       default: {
         version: "0.8.28",
         settings: {
-          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+          evmVersion: "cancun", // Zilliqa 2.0 runs the Cancun fork
         },
       },
       production: {
@@ -169,7 +169,7 @@ const config: HardhatUserConfig = {
             enabled: true,
             runs: 200,
           },
-          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+          evmVersion: "cancun", // Zilliqa 2.0 runs the Cancun fork
         },
       },
     },
@@ -240,7 +240,7 @@ export default config;
 
 **Key settings:**
 - **Compiler:** Solidity 0.8.28 with optimizer enabled
-- **evmVersion:** "shanghai" - Required for Zilliqa 2.0 compatibility
+- **evmVersion:** "cancun" - Zilliqa 2.0 runs the Cancun fork; set it explicitly because recent solc versions default to newer forks
 - **Zilliqa networks:** Testnet and mainnet configurations
 - **Private keys:** Loaded from environment variables
 
@@ -498,7 +498,7 @@ npx hardhat compile
 
 **Expected output:**
 ```
-Compiled 1 Solidity file with solc 0.8.28 (evm target: shanghai).
+Compiled 1 Solidity file with solc 0.8.28 (evm target: cancun).
 ```
 
 ## Creating the Deployment Script

@@ -402,7 +402,7 @@ Before shipping oracle integration:
 
 ## Zilliqa Chainlink Deployment
 
-**Zilliqa provides Chainlink Community Deployment price feeds** on both testnet and mainnet. These feeds are production-ready and maintained by Zilliqa's oracle infrastructure.
+**Zilliqa has a Chainlink Community Deployment of price feeds** on both testnet and mainnet. This is a community deployment, not managed by Chainlink Labs, and the feeds are currently **stale**: the mainnet ZIL/USD and USDT/USD feeds last updated on 2026-05-12 and the testnet feeds on 2025-09-05. Treat them as a learning example rather than a production price source, and always enforce staleness checks in any integration.
 
 ### Available Price Feeds
 
@@ -413,8 +413,6 @@ Before shipping oracle integration:
 **Mainnet (Chain ID: 32769)**
 - **ZIL/USD**: `0x8245E42c7eBF756E7A18A59Fd828159f29587a23`
 - **USDT/USD**: `0x54d10Ee86cd2C3258b23FDb78782F70e84966683`
-
-Reference: [Zilliqa Chainlink Documentation](https://dev.zilliqa.com/zilliqa2/ecosystem/chainlink/)
 
 ### Zilliqa-Specific Example: FeedConsumer
 
@@ -509,9 +507,9 @@ uint256 priceX18 = consumer.getPriceX18();
 
 ### Integration Notes for Zilliqa
 
-1. **Update frequency**: Zilliqa Chainlink feeds update based on deviation thresholds and heartbeat intervals (typically every few minutes)
+1. **Update frequency**: Chainlink feeds normally update based on deviation thresholds and heartbeat intervals, but Zilliqa's community feeds are currently stale (see above) - always check `updatedAt`
 2. **Decimals**: USD pairs use 8 decimals (Chainlink standard)
-3. **Staleness**: Feeds should update every 1-2 minutes under normal conditions; set `maxAge` to 15-30 minutes for swaps
+3. **Staleness**: Set `maxAge` to 15-30 minutes for swaps. With the current stale feeds, `getLatestPrice()` reverts with "Stale price" - that's the fail-closed policy working as intended
 4. **Gas costs**: Reading price feeds is a view call—zero gas cost for read-only queries
 5. **Testnet faucet**: Get testnet ZIL from [https://faucet.testnet.zilliqa.com](https://faucet.testnet.zilliqa.com)
 
@@ -532,12 +530,13 @@ Block Explorer: https://testnet.zilliqa.blockscout.com
 # Use ZIL/USD testnet address: 0x845f152725A2FF60cb2F5a0E024B5A749f7551C0
 
 # 4. Call getLatestPrice() and verify price
+# Note: the testnet feeds are currently stale, so expect a "Stale price" revert with a 900-second maxAge
 # Example response: 1791000 (divide by 1e8 for human-readable: 0.01791 USD)
 ```
 
 ## Wrap‑up
 
-You can safely read decentralized price feeds on Zilliqa by validating freshness, normalizing units, and defining a clear fail‑closed policy. Zilliqa's Chainlink deployment provides production-ready price feeds for ZIL/USD and USDT/USD on both testnet and mainnet.
+You can safely read decentralized price feeds on Zilliqa by validating freshness, normalizing units, and defining a clear fail‑closed policy. Zilliqa's community Chainlink deployment exposes ZIL/USD and USDT/USD feeds on both testnet and mainnet, but they're currently stale - exactly why these checks matter.
 
 The patterns you learned—staleness checks, decimal normalization, deviation guards, and circuit breakers—apply to any oracle integration. Whether you're reading Chainlink feeds on Zilliqa, Ethereum, or other EVM chains, the discipline is the same: treat oracle outputs as untrusted, validate locally, and fail closed when signals are questionable.
 

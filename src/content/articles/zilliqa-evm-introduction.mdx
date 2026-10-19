@@ -15,7 +15,7 @@ tags:
 The Zilliqa EVM brings familiar Ethereum-style development to Zilliqa's high-performance blockchain. You write Solidity, deploy with standard tooling like Hardhat and Foundry, and interact using common wallets like MetaMask — all while benefiting from Zilliqa's superior scalability and lower costs.
 
 
-This isn't just another EVM-compatible chain. Zilliqa EVM represents a strategic evolution that combines the developer experience you already know with the performance advantages of Zilliqa's pioneering sharding technology.
+This isn't just another EVM-compatible chain. Zilliqa EVM represents a strategic evolution that combines the developer experience you already know with the performance of Zilliqa 2.0's Proof of Stake chain: Pipelined Fast-HotStuff consensus, ~1-second blocks, and finality after two further blocks.
 
 ## Zilliqa EVM vs Ethereum: Key Differences
 
@@ -34,7 +34,7 @@ This isn't just another EVM-compatible chain. Zilliqa EVM represents a strategic
     <tr>
       <td><strong>Transaction Finality</strong></td>
       <td>12-15 seconds (12+ confirmations)</td>
-      <td>1-2 seconds (2-3 confirmations)</td>
+      <td>A few seconds (final after 2 further blocks)</td>
       <td>⚡ <strong>75% faster</strong> settlement</td>
     </tr>
     <tr>
@@ -46,13 +46,13 @@ This isn't just another EVM-compatible chain. Zilliqa EVM represents a strategic
     <tr>
       <td><strong>Network Throughput</strong></td>
       <td>15-20 TPS</td>
-      <td>100+ TPS (with sharding)</td>
+      <td>100+ TPS</td>
       <td>📈 <strong>5x higher</strong> capacity</td>
     </tr>
     <tr>
       <td><strong>Block Time</strong></td>
       <td>12 seconds</td>
-      <td>1-2 seconds</td>
+      <td>~1 second</td>
       <td>⏱️ <strong>Instant</strong> feedback</td>
     </tr>
   </tbody>
@@ -118,14 +118,8 @@ This isn't just another EVM-compatible chain. Zilliqa EVM represents a strategic
     <tr>
       <td><strong>Scalability</strong></td>
       <td>Layer 2 solutions</td>
-      <td>Native sharding</td>
-      <td>🏗️ <strong>Built-in scaling</strong></td>
-    </tr>
-    <tr>
-      <td><strong>State Management</strong></td>
-      <td>Single chain</td>
-      <td>Sharded state</td>
-      <td>🔀 <strong>Parallel processing</strong></td>
+      <td>Fast Layer 1 (Pipelined Fast-HotStuff, ~1-second blocks)</td>
+      <td>🏗️ <strong>No bridging needed</strong></td>
     </tr>
     <tr>
       <td><strong>Finality</strong></td>
@@ -168,7 +162,7 @@ const address = "0x742d35Cc6634C0532925a3b8D2D1E3a8B4D3c7E8";
 
 ### Gas System
 Transactions consume gas for execution and storage, following Ethereum's model:
-- **Gas Price:** Set in gwei (typically much lower than Ethereum)
+- **Gas Price:** Fixed at 4761.9048 gwei on Zilliqa (no fee market), so a simple 21,000-gas transfer costs about 0.1 ZIL
 - **Gas Limit:** Maximum gas units for transaction execution
 - **Gas Used:** Actual gas consumed (refunds for unused gas)
 
@@ -265,7 +259,7 @@ module.exports = {
       url: "https://api.testnet.zilliqa.com",
       chainId: 33101,
       accounts: getAccounts(),
-      gasPrice: 4761904800000, // Minimum gas price for Zilliqa (4761.9048 gwei)
+      gasPrice: 4761904800000, // Fixed gas price for Zilliqa (4761.9048 gwei)
       gas: 8000000, // 8M gas limit (reasonable default)
       timeout: 60000 // 60 second timeout
     },
@@ -273,7 +267,7 @@ module.exports = {
       url: "https://api.zilliqa.com", 
       chainId: 32769,
       accounts: getAccounts(),
-      gasPrice: 4761904800000, // Minimum gas price for Zilliqa
+      gasPrice: 4761904800000, // Fixed gas price for Zilliqa
       gas: 8000000,
       timeout: 60000
     }
@@ -617,9 +611,10 @@ function TreasureChestComponent() {
 - **Better UX:** Faster finality improves user experience
 
 ### From Legacy Zilliqa (Scilla)
-- **Language change:** Rewrite contracts in Solidity
+- **Language change:** Scilla contracts are retired, so contracts must be rewritten in Solidity
 - **Tool migration:** Switch to Ethereum-compatible tools
-- **Asset bridging:** Use official bridges to move tokens
+- **ZRC-2 tokens:** Existing ZRC-2 tokens are usable from EVM through allow-listed ERC-20 proxy contracts
+- **Addresses:** Legacy `zil1` addresses are no longer used - use your `0x` EVM address; for funds in a legacy wallet, follow Zilliqa's [official guidance](https://www.zilliqa.com/ledger-incident/)
 
 ## Best Practices for Zilliqa Development
 
