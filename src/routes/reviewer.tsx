@@ -5,18 +5,23 @@ export const Route = createFileRoute("/reviewer")({
 });
 
 import * as React from "react";
-import { useCompletion } from "@ai-sdk/react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { CodeInput } from "@/components/code-input";
+import { usePageIntro } from "@/hooks/use-page-intro";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { reviewerExampleCategories, reviewerExamples } from "@/lib/reviewer-examples";
 import { Response } from "@/components/ai-elements/response";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
 import { AIFeedback } from "@/components/ai-feedback";
@@ -77,139 +82,34 @@ const DEAD_MANS_CHEST_PATTERNS = [
   /origin.*authorization/i,
 ];
 
-const starterSnippets = [
-  {
-    label: "Overflow token",
-    description: "unchecked arithmetic in mint()",
-    code: `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
-
-contract OverflowToken {
-    mapping(address => uint256) public balanceOf;
-
-    constructor() {
-        balanceOf[msg.sender] = type(uint256).max - 10;
-    }
-
-    // BUG: unchecked addition can wrap around
-    function mint(uint256 amount) external {
-        unchecked {
-            balanceOf[msg.sender] += amount; // overflow if amount > 10
-        }
-    }
-}`,
-  },
-  {
-    label: "Guardian vault",
-    description: "weak access control",
-    code: `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
-
-contract GuardianVault {
-    address public owner;
-    mapping(address => bool) public guardians;
-
-    constructor() {
-        owner = msg.sender;
-    }
-
-    function setOwner(address newOwner) external {
-        require(guardians[msg.sender], "not guardian");
-        owner = newOwner; // BUG: no quorum and callable by single guardian
-    }
-
-    function toggleGuardian(address account) external {
-        require(msg.sender == owner, "not owner");
-        guardians[account] = !guardians[account];
-    }
-
-    function withdraw() external {
-        require(msg.sender == owner, "not owner");
-        (bool ok, ) = msg.sender.call{value: address(this).balance}("");
-        require(ok, "withdraw failed"); // BUG: vulnerable to reentrancy
-    }
-
-    receive() external payable {}
-}`,
-  },
-  {
-    label: "Upgradeable timelock",
-    description: "initialization flaws",
-    code: `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
-
-contract UpgradeableTimelock {
-    address public admin;
-    bool public initialized;
-    uint256 public executionDelay;
-    mapping(bytes32 => bool) public queued;
-
-    function init(address newAdmin, uint256 delay) external {
-        require(!initialized, "already initialized");
-        admin = newAdmin; // BUG: anyone can self-assign admin
-        executionDelay = delay; // BUG: accepts delay = 0
-        initialized = true;
-    }
-
-    function queue(bytes32 id) external {
-        require(msg.sender == admin, "not admin");
-        queued[id] = true;
-    }
-
-    function execute(bytes32 id) external {
-        require(queued[id], "not queued");
-        queued[id] = false;
-        (bool ok, ) = admin.call(""); // BUG: ignores return data
-        require(ok, "execute failed");
-    }
-}`,
-  },
+const SEVERITIES = [
+  { key: "Critical", dot: "bg-red-600" },
+  { key: "High", dot: "bg-orange-500" },
+  { key: "Medium", dot: "bg-amber-400" },
+  { key: "Low", dot: "bg-slate-400" },
 ] as const;
 
-const reviewTags = [
-  "Reentrancy",
-  "Access control",
-  "Gas usage",
-  "Upgrade safety",
-  "Tokenomics",
-  "Deployment hygiene",
-] as const;
+type SeverityCounts = Record<(typeof SEVERITIES)[number]["key"], number>;
 
-const focusAreas = [
-  {
-    title: "Security posture",
-    description:
-      "Detects overflow/underflow, delegatecall hazards, and reentrancy patterns before audit.",
-  },
-  {
-    title: "Economic safety",
-    description:
-      "Flags unbounded minting, price manipulation windows, and unchecked supply drifts.",
-  },
-  {
-    title: "Execution health",
-    description:
-      "Surfaces brittle require paths, unverified external calls, and revert-prone flows.",
-  },
-  {
-    title: "Deployment readiness",
-    description:
-      "Reminds you about initialization gaps, upgradeable storage, and missing pausable controls.",
-  },
-] as const;
+// Reads the counts line the reviewer writes at the top of every report
+function parseSeverityCounts(report: string): SeverityCounts | null {
+  const m = report.match(/Critical:\s*(\d+)\s*\|\s*High:\s*(\d+)\s*\|\s*Medium:\s*(\d+)\s*\|\s*Low:\s*(\d+)/);
+  return m ? { Critical: +m[1], High: +m[2], Medium: +m[3], Low: +m[4] } : null;
+}
 
-const REVIEW_MODEL_ID = "google/gemini-3.1-flash-lite-preview";
+const REVIEW_MODEL_ID = "anthropic/claude-haiku-5.5";
 
 function ReviewerPage() {
   const { address, sessionId } = useSession();
-  const [code, setCode] = React.useState<string>(starterSnippets[0].code);
-  const [activeSnippetLabel, setActiveSnippetLabel] = React.useState<
-    string | null
-  >(starterSnippets[0].label);
+  const [code, setCode] = React.useState<string>(reviewerExamples[0].code);
+  const [activeExampleId, setActiveExampleId] = React.useState<string | null>(
+    reviewerExamples[0].id
+  );
+  const activeExample = reviewerExamples.find((e) => e.id === activeExampleId);
   const [interactionId, setInteractionId] = React.useState<string>();
   const [startTime, setStartTime] = React.useState<number>(0);
   const [lastSubmittedCodeLength, setLastSubmittedCodeLength] =
-    React.useState<number>(starterSnippets[0].code.length);
+    React.useState<number>(reviewerExamples[0].code.length);
 
   // Track if we've already submitted tracking for current interaction
   const hasTrackedRef = React.useRef(false);
@@ -317,43 +217,33 @@ function ReviewerPage() {
     }
   }, [address, fetchWalletAchievements, fetchUnclaimedVouchers]);
 
-  const { completion, complete, isLoading, error } = useCompletion({
-    api: "/api/reviewer",
-    streamProtocol: "text",
+  const { messages, sendMessage, setMessages, status, error } = useChat({
+    transport: new DefaultChatTransport({ api: "/api/reviewer" }),
   });
+  const isLoading = status === "submitted" || status === "streaming";
+  const reviewMessage = messages.findLast((m) => m.role === "assistant");
+  const partText = (type: "text" | "reasoning") =>
+    reviewMessage?.parts
+      .map((p) => (p.type === type ? p.text : ""))
+      .join("") ?? "";
+  const completion = partText("text");
+  // Latest paragraph of the model's reasoning summary, shown while the report hasn't started
+  const latestReasoning = partText("reasoning").trim().split(/\n\s*\n/).pop() ?? "";
 
   const isCodeEmpty = code.trim().length === 0;
-
-  const analysisStatus = React.useMemo(() => {
-    if (isLoading) {
-      return {
-        label: "Running automated heuristics",
-        helper: "Streaming findings in real time",
-        textClass: "text-amber-600 dark:text-amber-400",
-        dotClass: "bg-amber-500 animate-pulse",
-      };
-    }
-
-    if (completion) {
-      return {
-        label: "Latest review ready",
-        helper: "Based on your most recent snippet",
-        textClass: "text-emerald-600 dark:text-emerald-400",
-        dotClass: "bg-emerald-500",
-      };
-    }
-
-    return {
-      label: "Awaiting review",
-      helper: "Paste Solidity or pick a starter snippet",
-      textClass: "text-muted-foreground",
-      dotClass: "bg-muted-foreground/60",
-    };
-  }, [isLoading, completion]);
+  const severityCounts = React.useMemo(() => parseSeverityCounts(completion), [completion]);
+  const reportRef = React.useRef<HTMLElement>(null);
+  const intro = usePageIntro("reviewer");
 
   async function onReview() {
     const trimmedCode = code.trim();
     if (!trimmedCode) return;
+
+    // On narrow screens the report sits below the editor, so bring it into view
+    if (!window.matchMedia("(min-width: 1024px)").matches) {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      reportRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    }
 
     // Generate interaction ID and track start time
     const id = crypto.randomUUID();
@@ -362,17 +252,21 @@ function ReviewerPage() {
     setLastSubmittedCodeLength(trimmedCode.length);
     hasTrackedRef.current = false; // Reset tracking flag for new review
 
-    await complete(trimmedCode);
+    // Every review starts fresh rather than continuing a conversation
+    setMessages([]);
+    await sendMessage({ text: trimmedCode });
   }
 
   const handleClear = () => {
     setCode("");
-    setActiveSnippetLabel(null);
+    setActiveExampleId(null);
   };
 
-  const handleSampleSelect = (snippetCode: string, label: string) => {
-    setCode(snippetCode);
-    setActiveSnippetLabel(label);
+  const handleExampleSelect = (id: string) => {
+    const example = reviewerExamples.find((e) => e.id === id);
+    if (!example) return;
+    setCode(example.code);
+    setActiveExampleId(example.id);
   };
 
   // Track interaction ONLY when streaming completes
@@ -464,12 +358,23 @@ function ReviewerPage() {
       title="Wallet Required for Code Review"
       description="Connect your wallet to access our AI Solidity code reviewer for security analysis and optimization."
     >
-      <div className="space-y-10">
+      <div className="space-y-6">
+        {intro.open ? (
         <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-slate-50 via-white to-emerald-50 text-zinc-900 shadow-xl dark:from-zinc-950 dark:via-zinc-900 dark:to-black dark:text-white">
           <div className="pointer-events-none absolute inset-0 opacity-70">
             <div className="absolute -top-8 right-0 h-40 w-40 rounded-full bg-emerald-300/40 blur-3xl dark:bg-emerald-500/40" />
             <div className="absolute bottom-0 left-12 h-48 w-48 rounded-full bg-cyan-200/40 blur-3xl dark:bg-cyan-500/30" />
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={intro.toggle}
+            aria-expanded="true"
+            className="absolute right-3 top-3 z-10 gap-1 text-muted-foreground"
+          >
+            Hide intro
+            <ChevronUp className="size-4" />
+          </Button>
           <div className="relative space-y-8 p-6 sm:p-10">
             <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-4">
@@ -486,12 +391,12 @@ function ReviewerPage() {
                     AI Solidity Reviewer
                   </h1>
                   <p className="text-base text-zinc-700 sm:text-lg dark:text-white/80">
-                    Stream instant findings for vulnerabilities, gas waste, and
-                    deployment readiness before you ever hit mainnet.
+                    Find exploitable bugs before you ever hit mainnet, with each issue
+                    ranked, fixed, and linked to the lesson that explains it.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {reviewTags.slice(0, 4).map((tag) => (
+                  {["Reentrancy", "Access control", "Oracle manipulation", "Upgrade safety"].map((tag) => (
                     <Badge
                       key={tag}
                       variant="outline"
@@ -505,14 +410,14 @@ function ReviewerPage() {
               <div className="grid w-full gap-4 text-left sm:grid-cols-3 lg:max-w-md">
                 {[
                   {
-                    label: "Heuristic checks",
-                    value: "35+",
-                    helper: "Security patterns",
+                    label: "Example contracts",
+                    value: String(reviewerExamples.length),
+                    helper: `Including ${reviewerExamples.filter((e) => e.category === "historical").length} historical hacks`,
                   },
                   {
-                    label: "Average turnaround",
-                    value: "~4s",
-                    helper: "Streaming responses",
+                    label: "Full review",
+                    value: "~1 min",
+                    helper: "Watch it reason live",
                   },
                   {
                     label: "Primary chain",
@@ -539,207 +444,157 @@ function ReviewerPage() {
             </div>
           </div>
         </section>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">AI Solidity Reviewer</h1>
+              <p className="text-sm text-muted-foreground">Find exploitable bugs before mainnet, with each issue ranked, fixed, and linked to a lesson.</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={intro.toggle} aria-expanded="false" className="gap-1 text-muted-foreground">
+              Show intro
+              <ChevronDown className="size-4" />
+            </Button>
+          </div>
+        )}
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <Card className="bg-white/90 shadow-lg backdrop-blur-sm dark:bg-card/80">
-            <CardHeader className="space-y-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <CardTitle>Solidity input</CardTitle>
-                  <CardDescription>
-                    {activeSnippetLabel
-                      ? `Prefilled with ${activeSnippetLabel}. Customize freely.`
-                      : "Paste your contract or drag in a snippet to begin."}
-                  </CardDescription>
-                </div>
-                <div className="flex flex-col items-start gap-2 text-left md:items-end">
-                  <p className="text-xs font-semibold uppercase text-muted-foreground">
-                    Live audit status
-                  </p>
-                  <div className="flex items-center gap-2 text-xs font-medium">
-                    <span
-                      className={cn(
-                        "h-2 w-2 rounded-full",
-                        analysisStatus.dotClass
-                      )}
-                    />
-                    <span className={analysisStatus.textClass}>
-                      {analysisStatus.label}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {analysisStatus.helper}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {starterSnippets.map((snippet) => (
-                  <Button
-                    key={snippet.label}
-                    type="button"
-                    size="sm"
-                    variant={
-                      activeSnippetLabel === snippet.label
-                        ? "secondary"
-                        : "outline"
-                    }
-                    onClick={() =>
-                      handleSampleSelect(snippet.code, snippet.label)
-                    }
-                  >
-                    {snippet.label}
-                  </Button>
-                ))}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                value={code}
-                onChange={(e) => {
-                  setCode(e.target.value);
-                  setActiveSnippetLabel(null);
-                }}
-                className="min-h-[420px] rounded-2xl border border-emerald-100 bg-slate-50 font-mono text-sm shadow-inner dark:border-border dark:bg-muted/20"
-                spellCheck={false}
-              />
-              <div className="flex flex-wrap items-center gap-3">
-                <Button onClick={onReview} disabled={isLoading || isCodeEmpty}>
-                  {isLoading ? "Reviewing..." : "Review code"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={handleClear}
-                  disabled={isLoading}
+        <div className="grid gap-4 lg:h-[calc(100dvh-7rem)] lg:min-h-[600px] lg:grid-cols-2 lg:grid-rows-1">
+          <section
+            aria-label="Contract"
+            className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card shadow-sm"
+          >
+            <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+              <Select value={activeExampleId ?? ""} onValueChange={handleExampleSelect}>
+                <SelectTrigger
+                  size="sm"
+                  className="w-full sm:w-64"
+                  aria-label="Load an example contract"
                 >
+                  <SelectValue placeholder="Load an example contract" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reviewerExampleCategories.map((category) => (
+                    <SelectGroup key={category.id}>
+                      <SelectLabel>{category.label}</SelectLabel>
+                      {reviewerExamples
+                        .filter((e) => e.category === category.id)
+                        .map((example) => (
+                          <SelectItem key={example.id} value={example.id}>
+                            {example.label}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="ml-auto flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={handleClear} disabled={isLoading}>
                   Clear
                 </Button>
-                <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-                  <span
-                    className={cn(
-                      "h-2 w-2 rounded-full",
-                      analysisStatus.dotClass
-                    )}
-                  />
-                  {isLoading ? "Audit in progress" : "Ready for submission"}
-                </div>
+                <Button size="sm" onClick={onReview} disabled={isLoading || isCodeEmpty}>
+                  {isLoading ? "Reviewing…" : "Review contract"}
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="flex h-full flex-col bg-white/90 shadow-lg backdrop-blur-sm dark:bg-card/80">
-            <CardHeader className="space-y-2">
-              <CardTitle>Findings</CardTitle>
-              <CardDescription>
-                {isLoading
-                  ? "We highlight vulnerabilities as soon as tokens stream in."
-                  : completion
-                  ? "Latest analysis including mitigation ideas."
-                  : "No findings yet. Run a review to populate this panel."}
-              </CardDescription>
-              <div className="flex items-center gap-2 text-xs font-medium">
-                <span
-                  className={cn(
-                    "h-2 w-2 rounded-full",
-                    analysisStatus.dotClass
-                  )}
-                />
-                <span className={analysisStatus.textClass}>
-                  {analysisStatus.label}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-1 flex-col space-y-4">
-              <div className="flex flex-1 flex-col rounded-2xl border border-dashed border-emerald-100 bg-slate-50/80 p-4 dark:border-border dark:bg-muted/30">
-                {error ? (
-                  <div className="flex flex-1 items-center justify-center text-center text-sm text-destructive">
-                    {error.message}
-                  </div>
-                ) : completion ? (
-                  <div className="flex-1 overflow-hidden">
-                    <ScrollArea className="h-full pr-4">
-                      <div className="prose max-w-none text-sm">
-                        <Response>{completion}</Response>
-                      </div>
-                    </ScrollArea>
-                  </div>
-                ) : (
-                  <div className="flex flex-1 flex-col items-center justify-center text-center text-sm text-muted-foreground">
-                    <p className="font-medium">Awaiting findings</p>
-                    <p className="text-xs text-muted-foreground/80">
-                      Run a review to surface prioritized vulnerabilities,
-                      severity, and remediation notes.
-                    </p>
-                  </div>
-                )}
-              </div>
-              {completion && interactionId && (
-                <div className="rounded-2xl border border-emerald-100 bg-white/90 p-4 dark:border-border dark:bg-background/70">
-                  <AIFeedback interactionId={interactionId} toolType="auditor" />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="bg-white/80 shadow-lg backdrop-blur-sm dark:bg-card/50">
-          <CardHeader>
-            <CardTitle>Review scope</CardTitle>
-            <CardDescription>
-              Automated heuristics that run on every submission.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {reviewTags.map((tag) => (
-                <Badge key={tag} variant="outline">
-                  {tag}
-                </Badge>
-              ))}
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {focusAreas.map((area) => (
-                <div
-                  key={area.title}
-                  className="rounded-2xl border border-emerald-100 bg-slate-50 p-4 dark:border-border dark:bg-muted/30"
-                >
-                  <p className="text-sm font-semibold">{area.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {area.description}
+            <CodeInput
+              value={code}
+              onChange={(value) => {
+                setCode(value);
+                setActiveExampleId(null);
+              }}
+              aria-label="Solidity contract"
+              placeholder="Paste your Solidity contract here"
+              className="h-[55vh] lg:h-auto lg:flex-1"
+            />
+            <p className="truncate border-t px-3 py-1.5 text-xs text-muted-foreground">
+              {activeExample
+                ? `${activeExample.label}: ${activeExample.description}`
+                : "Your contract"}
+            </p>
+          </section>
+
+          <section
+            ref={reportRef}
+            aria-label="Review"
+            className="flex min-h-[50vh] scroll-mt-20 flex-col overflow-hidden rounded-xl border bg-card shadow-sm lg:min-h-0"
+          >
+            <div className="flex min-h-11 flex-wrap items-center gap-x-4 gap-y-1 border-b px-4 py-2">
+              <h2 className="text-sm font-semibold">Review</h2>
+              {severityCounts && (
+                <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" aria-label="Findings by severity">
+                  {SEVERITIES.map(({ key, dot }) => (
+                    <li
+                      key={key}
+                      className={cn(
+                        "flex items-center gap-1.5",
+                        severityCounts[key] === 0 && "text-muted-foreground/60"
+                      )}
+                    >
+                      <span className={cn("size-2 rounded-full", severityCounts[key] === 0 ? "bg-muted-foreground/30" : dot)} />
+                      <span className="tabular-nums font-medium">{severityCounts[key]}</span> {key}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {isLoading && (
+                <span className="ml-auto flex items-center gap-2 text-xs text-muted-foreground" role="status">
+                  <span className="size-2 animate-pulse rounded-full bg-primary" />
+                  {completion ? "Writing report" : "Analysing"}
+                </span>
+              )}
+            </div>
+
+            <div className="scrollbar-visible flex flex-1 flex-col px-5 py-4 lg:min-h-0 lg:overflow-y-auto">
+              {completion ? (
+                <div className="prose max-w-none text-sm">
+                  <Response>{completion}</Response>
+                  {error && !isLoading && (
+                    <p role="alert" className="not-prose mt-4 text-sm text-destructive">
+                      The review stopped before it finished. Choose Review contract to run it again.
+                    </p>
+                  )}
+                </div>
+              ) : error ? (
+                <div className="m-auto max-w-sm text-center text-sm" role="alert">
+                  <p className="font-medium text-destructive">The review didn&apos;t complete.</p>
+                  <p className="text-muted-foreground">Choose Review contract to try again in a moment.</p>
+                </div>
+              ) : isLoading ? (
+                <div className="m-auto w-full max-w-md text-center text-sm text-muted-foreground">
+                  <div className="mx-auto mb-4 size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  <p className="font-medium text-foreground" role="status">Reviewing your contract…</p>
+                  <p className="text-xs">
+                    It works through the code first, then writes the report. A full review takes about a minute.
+                  </p>
+                  {latestReasoning && (
+                    <p className="mt-5 rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-left text-xs leading-relaxed text-foreground/80" aria-live="polite">
+                      {latestReasoning}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="m-auto max-w-sm text-center text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">No review yet</p>
+                  <p className="text-xs">
+                    Choose Review contract to check your code. Not sure where to start? Try one of
+                    the historical hacks from the examples list.
                   </p>
                 </div>
-              ))}
+              )}
             </div>
-          </CardContent>
-        </Card>
 
-        <Card className="border-red-200 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100">
-          <CardHeader className="space-y-3 sm:flex sm:items-start sm:justify-between">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="destructive">Safety notice</Badge>
-                <p className="text-sm font-semibold">
-                  Not a substitute for a professional audit
-                </p>
+            {completion && !isLoading && interactionId && (
+              <div className="border-t px-4 py-2">
+                <AIFeedback interactionId={interactionId} toolType="auditor" />
               </div>
-              <CardDescription className="text-red-900/80 dark:text-red-100/80">
-                Automated insights are directional only. Critical code should
-                always be validated manually and by third-party auditors.
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>
-              Results may miss severe bugs or flag false positives. Treat every
-              suggestion as guidance that still needs reproduction, testing, and
-              code review.
-            </p>
-            <p>
-              You are responsible for verifying smart contracts before
-              deployment. Engage qualified security professionals for production
-              deployments, bug bounties, or mainnet launches.
-            </p>
-          </CardContent>
-        </Card>
+            )}
+          </section>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          This is an automated review, not an audit. It can miss serious bugs or flag issues that
+          aren&apos;t exploitable, so reproduce and test every finding, and get an independent audit
+          before deploying anything that holds real funds.
+        </p>
 
         {/* Secret Achievement Success Modal */}
         {secretAchievementModal.show && secretAchievementModal.achievement && (

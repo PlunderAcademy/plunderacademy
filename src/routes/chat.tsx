@@ -22,15 +22,16 @@ import {
   PromptInputTextarea,
   PromptInputSubmit,
 } from "@/components/ai-elements/prompt-input";
-import { Suggestions, Suggestion } from "@/components/ai-elements/suggestion";
 import { Response } from "@/components/ai-elements/response";
 import { Loader } from "@/components/ai-elements/loader";
 import { WalletAuthGuard } from "@/components/wallet-auth-guard";
 import { AIFeedback } from "@/components/ai-feedback";
 import { useSession } from "@/lib/session-context";
 import { trackAIInteraction } from "@/lib/feedback-api";
+import { usePageIntro } from "@/hooks/use-page-intro";
 import {
-  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
   Cpu,
   Shield,
   Sparkles,
@@ -48,6 +49,7 @@ import {
   type StoredConversation,
 } from "@/lib/chat-storage";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { config } from "@/lib/config";
 import { useAchievements } from "@/hooks/use-achievements";
 import { cn } from "@/lib/utils";
@@ -142,7 +144,7 @@ const MCP_RESPONSE_PATTERNS = [
   /Top.*by Earnings/i,
 ];
 
-const DEFAULT_MODEL = "google/gemini-3.1-flash-lite-preview";
+const DEFAULT_MODEL = "anthropic/claude-haiku-5.5";
 
 const heroHighlights = [
   {
@@ -191,6 +193,8 @@ function ChatPage() {
   );
   const [conversations, setConversations] = React.useState<StoredConversation[]>([]);
   const [showHistory, setShowHistory] = React.useState(false);
+  const [historySheetOpen, setHistorySheetOpen] = React.useState(false);
+  const intro = usePageIntro("chat");
 
   // Open history by default on desktop only
   React.useEffect(() => {
@@ -206,7 +210,7 @@ function ChatPage() {
     setConversations(loaded);
   }, [address]);
   
-  const { messages, sendMessage, status, setMessages } = useChat({
+  const { messages, sendMessage, status, setMessages, error } = useChat({
     id: currentConversationId,
   });
   
@@ -219,8 +223,20 @@ function ChatPage() {
   }, [currentConversationId, pendingLoadMessages, messages.length, setMessages]);
   
   const [input, setInput] = React.useState("");
-  const [hideValidatorPrompts, setHideValidatorPrompts] = React.useState(false);
   const isLoading = status === "submitted" || status === "streaming";
+  const chatSectionRef = React.useRef<HTMLElement>(null);
+
+  // On phones the conversation flows in the page, so follow new content like a chat app
+  // unless the reader has scrolled up
+  React.useEffect(() => {
+    const section = chatSectionRef.current;
+    if (!section || messages.length === 0 || window.matchMedia("(min-width: 1024px)").matches) return;
+    const target = section.offsetTop + section.offsetHeight - window.innerHeight;
+    const nearBottom = window.scrollY >= target - 400;
+    if (nearBottom || messages[messages.length - 1]?.role === "user") {
+      window.scrollTo({ top: Math.max(target, 0) });
+    }
+  }, [messages]);
 
   const [interactionIds, setInteractionIds] = React.useState<Record<number, string>>({});
   const [messageTiming, setMessageTiming] = React.useState<
@@ -382,12 +398,6 @@ function ChatPage() {
   }, []);
 
   const handleSuggestionSelect = (suggestion: string) => {
-    setInput(suggestion);
-    focusPromptTextarea(suggestion);
-  };
-
-  const handleValidatorPromptSelect = (suggestion: string) => {
-    setHideValidatorPrompts(true);
     setInput(suggestion);
     focusPromptTextarea(suggestion);
   };
@@ -608,122 +618,112 @@ function ChatPage() {
     submitSecretAchievement,
   ]);
 
+  const toggleHistory = () => {
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      setShowHistory((open) => !open);
+    } else {
+      setHistorySheetOpen(true);
+    }
+  };
+
+  const historyList = (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <Button
+        onClick={() => {
+          handleNewConversation();
+          setHistorySheetOpen(false);
+        }}
+        size="sm"
+        className="w-full"
+      >
+        <Plus className="mr-2 size-4" />
+        New chat
+      </Button>
+      {conversations.length === 0 ? (
+        <p className="py-8 text-center text-xs text-muted-foreground">
+          Your past chats will appear here.
+        </p>
+      ) : (
+        <ul className="scrollbar-visible -mr-2 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+          {conversations.map((conv) => (
+            <li
+              key={conv.id}
+              className={cn(
+                "group flex items-start gap-1 rounded-lg",
+                conv.id === currentConversationId ? "bg-primary/10" : "hover:bg-muted/60"
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  handleLoadConversation(conv);
+                  setHistorySheetOpen(false);
+                }}
+                className="flex min-w-0 flex-1 items-start gap-2 rounded-lg p-2 text-left focus-visible:outline-2 focus-visible:outline-ring"
+                aria-current={conv.id === currentConversationId ? "true" : undefined}
+              >
+                <MessageSquare className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium">{conv.title}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {new Date(conv.updatedAt).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => handleDeleteConversation(conv.id, e)}
+                className="m-1 rounded p-1.5 text-muted-foreground hover:text-destructive focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring lg:opacity-0 lg:group-hover:opacity-100"
+                aria-label={`Delete chat: ${conv.title}`}
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
+  const promptButton = (prompt: string) => (
+    <button
+      key={prompt}
+      type="button"
+      onClick={() => handleSuggestionSelect(prompt)}
+      className="rounded-lg border bg-background px-3 py-2 text-left text-sm transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-ring"
+    >
+      {prompt}
+    </button>
+  );
+
   return (
     <WalletAuthGuard
       title="Wallet Required for AI Chat"
       description="Connect your wallet to access our AI chat assistant for Solidity and EVM development help."
     >
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 lg:flex-row">
-        {/* History Sidebar */}
-        {showHistory && (
-          <aside className="w-full space-y-3 lg:w-72 lg:flex-shrink-0">
-            <div className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-foreground">
-                  Chat History
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowHistory(false)}
-                  className="h-7 px-2 text-xs"
-                >
-                  Close
-                </Button>
-              </div>
-              
-              <Button
-                onClick={handleNewConversation}
-                className="mb-3 w-full"
-                size="sm"
-              >
-                <Plus className="mr-2 size-4" />
-                New Chat
-              </Button>
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+        {intro.open ? (
+        <section className="relative rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm sm:p-5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={intro.toggle}
+            aria-expanded="true"
+            className="absolute right-3 top-3 z-10 gap-1 text-muted-foreground"
+          >
+            Hide intro
+            <ChevronUp className="size-4" />
+          </Button>
 
-              <div className="space-y-1.5 max-h-72 overflow-y-auto lg:max-h-[600px]">
-                {conversations.length === 0 ? (
-                  <p className="py-8 text-center text-xs text-muted-foreground">
-                    No previous conversations
-                  </p>
-                ) : (
-                  conversations.map((conv) => (
-                    <div
-                      key={conv.id}
-                      className={`group relative w-full cursor-pointer rounded-lg border p-3 text-left transition-colors ${
-                        conv.id === currentConversationId
-                          ? "border-primary bg-primary/10"
-                          : "border-border/40 bg-background/60 hover:bg-muted/50"
-                      }`}
-                      onClick={() => handleLoadConversation(conv)}
-                    >
-                      <div className="flex items-start gap-2">
-                        <MessageSquare className="mt-0.5 size-4 flex-shrink-0 text-muted-foreground" />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-foreground">
-                            {conv.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(conv.updatedAt).toLocaleDateString(undefined, {
-                              month: "short",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
-                        <button
-                          onClick={(e) => handleDeleteConversation(conv.id, e)}
-                          className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
-                          aria-label="Delete conversation"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </aside>
-        )}
-
-        {/* Main Chat Area */}
-        <div className="flex min-w-0 flex-1 flex-col gap-6">
-        <section className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm sm:p-5">
           <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-                Realtime mentor
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowHistory(!showHistory)}
-                  className="h-8 gap-2 text-xs"
-                >
-                  <History className="size-4" />
-                  {showHistory ? "Hide History" : "Show History"}
-                  {conversations.length > 0 && (
-                    <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                      {conversations.length}
-                    </span>
-                  )}
-                </Button>
-                {messages.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNewConversation}
-                    className="h-8 gap-2 text-xs"
-                  >
-                    <Plus className="size-4" />
-                    New
-                  </Button>
-                )}
-              </div>
-            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+              Realtime mentor
+            </p>
             <div>
               <h1 className="text-3xl font-semibold tracking-tight text-foreground">
                 AI Chat Assistant
@@ -751,154 +751,185 @@ function ChatPage() {
             })}
           </div>
         </section>
-
-        {messages.length === 0 && (
-          <section className="rounded-2xl border border-dashed border-muted-foreground/40 bg-muted/30 p-4">
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <Sparkles className="size-3" />
-              Jump start a thread
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">AI Chat Assistant</h1>
+              <p className="text-sm text-muted-foreground">Guidance for Solidity patterns, tooling, gas strategy, on-chain debugging and live validator data.</p>
             </div>
-            <Suggestions className="px-1">
-              {starterPrompts.map((prompt) => (
-                <Suggestion
-                  key={prompt}
-                  suggestion={prompt}
-                  onClick={handleSuggestionSelect}
-                  className="border-muted-foreground/30 bg-background/70 text-foreground hover:bg-background"
-                />
-              ))}
-            </Suggestions>
-          </section>
-        )}
-        
-        {/* Zilliqa Validator Queries - hide after first use */}
-        {!hideValidatorPrompts && (
-          <section className="rounded-2xl border border-emerald-500/30 bg-emerald-50/20 p-3 dark:bg-emerald-950/20">
-            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-              🔗 Live ZQ2 Validator Data
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {validatorPrompts.map((prompt) => (
-                <button
-                  key={prompt}
-                  onClick={() => handleValidatorPromptSelect(prompt)}
-                  className="rounded-lg border border-emerald-500/30 bg-emerald-50/50 px-3 py-2 text-left text-xs text-emerald-900 transition-colors hover:bg-emerald-100/70 dark:bg-emerald-950/30 dark:text-emerald-100 dark:hover:bg-emerald-900/40"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          </section>
+            <Button variant="ghost" size="sm" onClick={intro.toggle} aria-expanded="false" className="gap-1 text-muted-foreground">
+              Show intro
+              <ChevronDown className="size-4" />
+            </Button>
+          </div>
         )}
 
-        <section className="flex flex-1 flex-col gap-4 rounded-3xl border border-border/60 bg-card/50 p-4 shadow-lg">
-          <div className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-b from-background/90 via-background to-background/70">
-            <Conversation className="flex-1">
-              <ConversationContent>
-                {messages.length === 0 && (
-                  <Message from="assistant">
-                    <MessageAvatar src="/ai-avatar.svg" name="AI" />
-                    <MessageContent className="group-[.is-assistant]:bg-card group-[.is-assistant]:border">
-                      <div className="prose max-w-none">
-                        <Response>
-                          Ask me anything about Solidity, EVM, and tooling. I&apos;m here to help with smart contract development, security audits, gas optimization, and more!
-                        </Response>
-                      </div>
-                    </MessageContent>
-                  </Message>
-                )}
+        <div className="flex gap-4 lg:h-[calc(100dvh-7rem)] lg:min-h-[520px]">
+        {showHistory && (
+          <aside
+            aria-label="Chat history"
+            className="hidden w-64 shrink-0 flex-col gap-3 rounded-xl border bg-card p-3 shadow-sm lg:flex"
+          >
+            <h2 className="px-1 text-sm font-semibold">Chat history</h2>
+            {historyList}
+          </aside>
+        )}
 
-                {messages.map((message: UIMessage, index: number) => (
-                  <Message key={message.id} from={message.role}>
-                    {message.role === "assistant" && (
-                      <MessageAvatar src="/ai-avatar.svg" name="AI" />
-                    )}
-                    {message.role === "user" && (
-                      <MessageAvatar src="/user-avatar.svg" name="You" />
-                    )}
-                    <MessageContent className="group-[.is-assistant]:bg-card group-[.is-assistant]:border">
-                      {message.role === "user" ? (
-                        Array.isArray(message.parts)
-                          ? message.parts
-                              .filter((p) => p?.type === "text")
-                              .map((p, i: number) => (
-                                <div
-                                  key={`${message.id}-${i}`}
-                                  className="whitespace-pre-wrap"
-                                >
-                                  {p.type === "text" ? p.text : ""}
-                                </div>
-                              ))
-                          : null
-                      ) : (
-                        <>
-                          <div className="prose max-w-none">
-                            <Response>
-                              {Array.isArray(message.parts)
-                                ? message.parts
-                                    .filter((p) => p?.type === "text")
-                                    .map((p) => (p.type === "text" ? p.text : ""))
-                                    .join("\n\n")
-                                : ""}
-                            </Response>
-                          </div>
-                          {interactionIds[index] && (
-                            <AIFeedback
-                              interactionId={interactionIds[index]}
-                              toolType="chat"
-                            />
-                          )}
-                        </>
-                      )}
-                    </MessageContent>
-                  </Message>
-                ))}
+        <Sheet open={historySheetOpen} onOpenChange={setHistorySheetOpen}>
+          <SheetContent side="left" className="flex w-80 flex-col gap-3 p-4">
+            <SheetHeader className="p-0">
+              <SheetTitle>Chat history</SheetTitle>
+            </SheetHeader>
+            {historyList}
+          </SheetContent>
+        </Sheet>
 
-                {isLoading && (
-                  <Message from="assistant">
-                    <MessageAvatar src="/ai-avatar.svg" name="AI" />
-                    <MessageContent className="group-[.is-assistant]:bg-card group-[.is-assistant]:border">
-                      <div className="flex items-center gap-2">
-                        <Loader size={16} />
-                        <span className="text-muted-foreground">Thinking...</span>
-                      </div>
-                    </MessageContent>
-                  </Message>
-                )}
-              </ConversationContent>
-              <ConversationScrollButton />
-            </Conversation>
+        <section
+          ref={chatSectionRef}
+          aria-label="AI chat"
+          className="flex min-h-[70dvh] min-w-0 flex-1 flex-col rounded-xl border bg-card shadow-sm lg:min-h-0 lg:overflow-hidden"
+        >
+          <div className="flex items-center gap-2 border-b px-3 py-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleHistory}
+              className="gap-2"
+              aria-label="Chat history"
+            >
+              <History className="size-4" />
+              <span className="hidden sm:inline">History</span>
+              {conversations.length > 0 && (
+                <span className="rounded-full bg-muted px-1.5 text-[11px] font-medium tabular-nums text-muted-foreground">
+                  {conversations.length}
+                </span>
+              )}
+            </Button>
+            <span className="text-sm font-semibold">AI Chat</span>
+            {messages.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleNewConversation} className="ml-auto gap-2">
+                <Plus className="size-4" />
+                New chat
+              </Button>
+            )}
           </div>
 
-          <div className="rounded-2xl border border-border/70 bg-background/95 shadow-sm">
-            <PromptInput
-              onSubmit={handleSubmit}
-              className="border-0 bg-transparent shadow-none"
-            >
-              <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-end">
-                <PromptInputTextarea
-                  id="chat-prompt"
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder="Describe what you need help with"
-                  className="text-base leading-relaxed sm:flex-1"
-                />
-                <PromptInputSubmit
-                  className="sm:self-stretch"
-                  status={status}
-                  disabled={!input.trim()}
-                />
+          {messages.length === 0 ? (
+            <div className="scrollbar-visible flex-1 lg:min-h-0 lg:overflow-y-auto">
+              <div className="mx-auto w-full max-w-3xl p-4">
+                <div className="flex flex-col gap-6 py-4 sm:py-8">
+                  <div className="space-y-1">
+                    <h2 className="text-xl font-semibold tracking-tight">
+                      What are you building?
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Ask about Solidity, Zilliqa 2.0 or your tooling, paste an error to debug, or
+                      look up live validator stats.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Learn and debug</h3>
+                    <div className="grid gap-2 sm:grid-cols-2">{starterPrompts.map(promptButton)}</div>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Live validator data</h3>
+                    <div className="grid gap-2 sm:grid-cols-2">{validatorPrompts.map(promptButton)}</div>
+                  </div>
+                </div>
               </div>
-            </PromptInput>
+            </div>
+          ) : (
+          <Conversation className="scrollbar-visible min-h-0 max-lg:overflow-y-visible">
+            <ConversationContent className="mx-auto w-full max-w-3xl">
+              {messages.map((message: UIMessage, index: number) => (
+                <Message key={message.id} from={message.role}>
+                  {message.role === "assistant" && (
+                    <MessageAvatar src="/ai-avatar.svg" name="AI" />
+                  )}
+                  {message.role === "user" && (
+                    <MessageAvatar src="/user-avatar.svg" name="You" />
+                  )}
+                  <MessageContent className="group-[.is-assistant]:bg-card group-[.is-assistant]:border">
+                    {message.role === "user" ? (
+                      Array.isArray(message.parts)
+                        ? message.parts
+                            .filter((p) => p?.type === "text")
+                            .map((p, i: number) => (
+                              <div
+                                key={`${message.id}-${i}`}
+                                className="whitespace-pre-wrap"
+                              >
+                                {p.type === "text" ? p.text : ""}
+                              </div>
+                            ))
+                        : null
+                    ) : (
+                      <>
+                        <div className="prose max-w-none [overflow-wrap:anywhere]">
+                          <Response>
+                            {Array.isArray(message.parts)
+                              ? message.parts
+                                  .filter((p) => p?.type === "text")
+                                  .map((p) => (p.type === "text" ? p.text : ""))
+                                  .join("\n\n")
+                              : ""}
+                          </Response>
+                        </div>
+                        {interactionIds[index] && (
+                          <AIFeedback
+                            interactionId={interactionIds[index]}
+                            toolType="chat"
+                          />
+                        )}
+                      </>
+                    )}
+                  </MessageContent>
+                </Message>
+              ))}
+
+              {status === "submitted" && (
+                <Message from="assistant">
+                  <MessageAvatar src="/ai-avatar.svg" name="AI" />
+                  <MessageContent className="group-[.is-assistant]:bg-card group-[.is-assistant]:border">
+                    <div className="flex items-center gap-2" role="status">
+                      <Loader size={16} />
+                      <span className="text-muted-foreground">Thinking…</span>
+                    </div>
+                  </MessageContent>
+                </Message>
+              )}
+
+              {error && !isLoading && (
+                <p role="alert" className="mx-auto max-w-md py-2 text-center text-sm text-destructive">
+                  The reply didn&apos;t complete. Send your message again to retry.
+                </p>
+              )}
+            </ConversationContent>
+            <ConversationScrollButton />
+          </Conversation>
+          )}
+
+          <div className="sticky bottom-0 z-10 rounded-b-xl border-t bg-card p-3 lg:static">
+            <div className="mx-auto max-w-3xl">
+              <PromptInput onSubmit={handleSubmit}>
+                <div className="flex items-end gap-2 p-1.5">
+                  <PromptInputTextarea
+                    id="chat-prompt"
+                    value={input}
+                    onChange={handleInputChange}
+                    placeholder="Ask a question or paste an error"
+                    aria-label="Message"
+                    className="flex-1 text-base leading-relaxed"
+                  />
+                  <PromptInputSubmit status={status} disabled={!input.trim()} className="mb-1" />
+                </div>
+              </PromptInput>
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                AI answers can be wrong. Review and test any code before you deploy it.
+              </p>
+            </div>
           </div>
         </section>
-
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
-          <AlertTriangle className="mt-0.5 size-5 flex-shrink-0" />
-          <p>
-            <strong>Important:</strong> AI-generated code is provided &ldquo;as is&rdquo; without guarantees. Always review, test, and validate outputs before production use. You are solely responsible for ensuring code meets your security and functional requirements.
-          </p>
-        </div>
         </div>
       </div>
 
