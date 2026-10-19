@@ -39,9 +39,25 @@
 
 - `/` (Home): high-level CTAs to Articles, Reviewer, and Chat.
 - `/articles` (List) and `/articles/$slug` (Detail): MDX content loaded via route loaders + server functions.
-- `/reviewer`: client page; text input/textarea and results panel; calls `/api/reviewer`.
-- `/chat`: client page; simple chat log + input; streams responses from `/api/chat`.
+- `/reviewer`: client page; code editor with an examples dropdown and a report panel that shows the model's reasoning while it works; calls `/api/reviewer`.
+- `/chat`: client page; conversation with history (sidebar on desktop, sheet on mobile) and live validator data; streams responses from `/api/chat`.
 - `/share/achievement/$achievementId` and `/api/achievement-frame/$achievementId`: server routes emitting crawler-facing HTML and Open Graph PNGs (workers-og).
+
+## AI features
+
+- Model access goes through `gatewayModel()` in `src/lib/ai.ts`: Claude Haiku 5.5 via the Workers AI binding and the `default` Cloudflare AI Gateway, paid from AI Gateway credits. There are no provider API keys. Keep the model fixed server-side; don't accept a model from the request body.
+- Prompts live in `src/prompts/`. Chat runs with thinking off for speed; the reviewer keeps thinking on for accuracy. Both settings were chosen from eval results, so re-run the evals before changing either.
+- After changing a prompt or model setting, compare old against new with `scripts/prompt-evals/run.mjs` (see README → Prompt evals). Evals spend AI Gateway credits.
+- The reviewer page parses `### N.` finding headings and the `Critical: N | High: N | Medium: N | Low: N` summary line from the report, so keep both in the prompt's format.
+- Reviewer example contracts live in `src/lib/reviewer-examples.ts` and double as eval cases. Adding one means adding its expectations in `scripts/prompt-evals/reviewer-cases.mjs`.
+- Zilliqa Insights MCP tools (`src/lib/zilliqa-mcp.ts`): tool definitions are cached, but the MCP client must be created per request. Workers can't reuse I/O objects across requests.
+
+## Zilliqa 2.0 facts for content (verified October 2026)
+
+- The EVM runs the Cancun fork: use `evmVersion: "cancun"`. Prague features such as EIP-7702 aren't live.
+- Legacy Zilliqa transactions and Scilla are retired, except ZRC-2 tokens used through allow-listed ERC-20 proxies. Don't present zil1 addresses, ViewBlock or sharding as current.
+- The gas price is fixed at 4761.9048 Gwei with no fee market. Blocks are about 1 second, with finality after two further blocks. There are 24 active validators.
+- Explorers are Blockscout and Otterscan. Zilliqa's Chainlink feeds are a community deployment and were stale as of October 2026.
 
 ## Coding style
 
@@ -54,6 +70,7 @@
 - Add new shadcn components: `npx shadcn@latest add dialog sheet dropdown-menu --yes`
 - Do not hand-edit anything in `src/components/ui/*` after generation.
 - Verify with `npm run typecheck` and `npm run build`; test the Workers runtime with `npm run preview`.
+- Compare prompt versions: `node scripts/prompt-evals/run.mjs --suite reviewer|chat --variant old=<file> --variant new=<file>`.
 
 ## Non-negotiables
 
@@ -69,5 +86,5 @@
 - UI: Use `ConnectButton` from `@rainbow-me/rainbowkit` in the header.
 - Styles: `@rainbow-me/rainbowkit/styles.css` is linked in `src/routes/__root.tsx`.
 - Env: Set `VITE_WALLETCONNECT_PROJECT_ID` for WalletConnect.
-- Security: Do not expose private keys or secrets; only use public env (`VITE_*`) on the client. Server secrets (e.g. `AI_GATEWAY_API_KEY`) live as Worker secrets.
+- Security: Do not expose private keys or secrets; only use public env (`VITE_*`) on the client. Server secrets live as Worker secrets.
 - Network scope: Keep chains limited to Zilliqa (and optionally its testnet) unless explicitly expanded.
