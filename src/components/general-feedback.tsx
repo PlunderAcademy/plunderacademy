@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { MessageSquarePlus, Star, Bug, Lightbulb, Palette, BookOpen, HelpCircle, CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -338,7 +339,9 @@ export function GeneralFeedback({
  */
 function FloatingFeedbackButton({ onClick }: { onClick: () => void }) {
   const [isHovered, setIsHovered] = React.useState(false);
-  
+  // On phones the chat input is pinned to the bottom of the screen, so sit above it
+  const isChat = useRouterState({ select: (s) => s.location.pathname === "/chat" });
+
   return (
     <button
       onClick={onClick}
@@ -346,6 +349,7 @@ function FloatingFeedbackButton({ onClick }: { onClick: () => void }) {
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
         "fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full",
+        isChat && "max-lg:bottom-32",
         "bg-primary text-primary-foreground shadow-lg",
         "transition-all duration-300 ease-out",
         "hover:shadow-xl hover:scale-105",

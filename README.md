@@ -15,7 +15,7 @@ Plunder Academy is an EVM training portal built around Zilliqa 2.0. It combines 
 
 - Vite 7 + TanStack Start / TanStack Router with TypeScript, deployed to Cloudflare Workers via the Cloudflare Vite plugin and Wrangler.
 - Tailwind CSS v4, Shadcn UI components, Radix UI primitives, and Embla for interactive UI.
-- `@ai-sdk/react` streaming hooks hitting an AI Gateway (OpenAI, Google Gemini, etc.) through TanStack Start server routes.
+- AI SDK (`ai`, `@ai-sdk/react`) streaming from TanStack Start server routes, which call Claude Haiku 5.5 through the Workers AI binding and Cloudflare AI Gateway.
 - wagmi + RainbowKit configured for the Zilliqa EVM testnet by default.
 - MDX content pipeline (`src/lib/mdx.ts`) for articles, lessons, quizzes, missions, and interactive MDX components. Content is bundled at build time via `import.meta.glob` and served through TanStack Start server functions (`src/lib/content.ts`).
 
@@ -64,9 +64,6 @@ When this flag is set, the application automatically:
 | Variable | Description | Required |
 | --- | --- | --- |
 | `VITE_MAINNET` | Network toggle: `true` for mainnet, `false` for testnet | Yes |
-| `AI_GATEWAY_API_KEY` | API key for the AI Gateway powering chat and reviewer routes | Yes |
-| `AZURE_RESOURCE_NAME` | Azure OpenAI resource (if using Azure instead of AI Gateway) | Optional |
-| `AZURE_API_KEY` | Azure OpenAI key | Optional |
 | `VITE_WALLETCONNECT_PROJECT_ID` | WalletConnect Cloud project ID for RainbowKit | Yes |
 | `VITE_PLUNDER_ACADEMY_API_TESTNET` | Testnet API URL for voucher and achievement requests | Yes |
 | `VITE_PLUNDER_ACADEMY_API_MAINNET` | Mainnet API URL for voucher and achievement requests | Yes |
@@ -87,7 +84,9 @@ VITE_FACTORY_ADDRESS_TESTNET=0x92aE8eA5a9eD94Bb230999E77376765a88bfEC09
 
 **For production mainnet deployment**, set `VITE_MAINNET=true` and ensure all mainnet contract addresses are deployed and verified.
 
-Store local values in `.env`; Vite loads it automatically during development. Variables prefixed with `VITE_` are embedded in the browser bundle and must not contain secrets. `AI_GATEWAY_API_KEY` is server-only — keep it out of `VITE_` and store it as a Worker secret in production.
+Store local values in `.env`; Vite loads it automatically during development. Variables prefixed with `VITE_` are embedded in the browser bundle and must not contain secrets.
+
+The chat and reviewer routes call Claude through the Workers AI binding (`AI` in [wrangler.jsonc](./wrangler.jsonc)) and Cloudflare AI Gateway, billed to the account's AI Gateway credits, so no model provider key is needed. The binding always calls Cloudflare remotely, including in local dev.
 
 ## Content Authoring
 
@@ -316,9 +315,24 @@ See `src/components/interactive-elements/README.md` for detailed integration doc
 
 ## AI Copilots
 
-- Chat endpoint: `src/routes/api.chat.ts` streams responses using the AI Gateway. Change the default model or provider routing in that file. Update the system prompt at `src/prompts/chat-system-prompt.md`.
-- Reviewer endpoint: `src/routes/api.reviewer.ts` performs contract reviews with temperature `0.2`. Adjust sections or formatting by editing `src/prompts/reviewer-system-prompt.md`.
-- Frontend hooks: `/chat` uses `useChat` and `/reviewer` uses `useCompletion`. Both pages are behind `WalletAuthGuard` so learners must connect a wallet.
+Both copilots use Claude Haiku 5.5, fixed server-side in each route so callers can't pick a different model. `src/lib/ai.ts` connects the AI SDK's Anthropic provider to the Workers AI binding (`AI` in `wrangler.jsonc`), which routes through the `default` AI Gateway and bills its credits, so there are no provider API keys. It also handles turning thinking off, which `@ai-sdk/anthropic` v2 can't send for this model.
+
+- **Chat** (`src/routes/api.chat.ts`, prompt in `src/prompts/chat-system-prompt.md`): one streaming call with the Zilliqa Insights MCP tools attached (`src/lib/zilliqa-mcp.ts`), with thinking off for fast replies. General questions stream straight away. When the model calls a validator tool, the result is formatted by `formatMCPToolResult` and streamed as-is. Tool definitions are cached per Worker instance, but the MCP connection is opened per request, and only when a tool is called, because Workers can't share I/O objects across requests.
+- **Reviewer** (`src/routes/api.reviewer.ts`, prompt in `src/prompts/reviewer-system-prompt.md`): thinking stays on because it measurably improves detection, and summaries of the model's reasoning stream to the page while it works (about a minute per review). The page reads two things from the report, so keep them if you change the format: the `### N.` finding headings and the `Critical: N | High: N | Medium: N | Low: N` summary line.
+- **Example contracts** (`src/lib/reviewer-examples.ts`): the reviewer's examples dropdown, including historical hacks. The prompt evals grade the reviewer against the same contracts, and every example needs expectations in `scripts/prompt-evals/reviewer-cases.mjs`.
+- **Frontend**: `/chat` and `/reviewer` both use `useChat`. Both pages are behind `WalletAuthGuard`, so learners must connect a wallet.
+
+### Prompt evals
+
+`scripts/prompt-evals/` compares prompt versions and model settings on fixed test cases. The reviewer cases check detection, severity calibration and report format. The chat cases check Zilliqa facts, lesson links and MCP tool routing. Change a prompt, then run old against new:
+
+```bash
+git show HEAD:src/prompts/reviewer-system-prompt.md > /tmp/old-reviewer.md
+node scripts/prompt-evals/run.mjs --suite reviewer \
+  --variant old=/tmp/old-reviewer.md --variant new=src/prompts/reviewer-system-prompt.md --runs 2
+```
+
+A variant can also set request options, e.g. `--variant "new-fast=src/prompts/reviewer-system-prompt.md;thinking=disabled"`. Evals call the real model through the AI binding and spend AI Gateway credits. They use a gateway named `prompt-evals` by default, kept separate from production's rate limit (create it in the Cloudflare dashboard, or pass `--gateway default`). Full outputs go to `.prompt-evals/`, and `--regrade <dir>` re-scores saved outputs without new calls.
 
 ## Feedback & Analytics
 
@@ -375,11 +389,10 @@ The backend should detect JSON-formatted answers and parse them to extract the `
 
 The site is a TanStack Start application deployed on Cloudflare Workers. Wrangler uses [wrangler.jsonc](./wrangler.jsonc) and the Worker output generated by the Cloudflare Vite plugin.
 
-1. Authenticate Wrangler and store the AI Gateway key as a Worker secret:
+1. Authenticate Wrangler:
 
    ```bash
    npx wrangler login
-   npx wrangler secret put AI_GATEWAY_API_KEY
    ```
 
 2. Set the public `VITE_*` variables in the build environment before building (they are inlined into the client bundle at build time).
@@ -390,7 +403,7 @@ The site is a TanStack Start application deployed on Cloudflare Workers. Wrangle
    ```
 
 - Ensure production environments set the `VITE_*` variables and point WalletConnect to the correct domain.
-- If you rely on Azure OpenAI instead of the AI Gateway, uncomment the Azure lines inside both API routes and provide the Azure resource and API key as Worker secrets.
+- The AI routes need no secrets: the `AI` binding authenticates to the account's AI Gateway, and usage draws on its credits. Rate-limit `/api/chat` and `/api/reviewer` with a Cloudflare WAF rule, since each request spends credits.
 
 ## Contributing
 

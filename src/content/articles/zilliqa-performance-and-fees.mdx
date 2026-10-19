@@ -15,13 +15,13 @@ Zilliqa's unique architecture provides significant performance advantages over t
 
 ## Zilliqa's Performance Architecture
 
-### Sharding Fundamentals
+### Consensus Fundamentals
 
-Zilliqa pioneered practical sharding, which enables:
+Zilliqa 2.0 runs Proof of Stake with Pipelined Fast-HotStuff consensus (Zilliqa 1.0's sharding is no longer used), which provides:
 
-- **Parallel Transaction Processing**: Multiple shards process transactions simultaneously
-- **Linear Scalability**: More nodes = higher throughput (up to a point)
-- **Maintained Security**: Each shard maintains full security guarantees
+- **~1-Second Blocks**: A new block roughly every second (~3,600 blocks per hour)
+- **Fast Finality**: Transactions are final after two further blocks
+- **Staked Security**: Blocks are produced and confirmed by a validator set (currently 24 active) secured by staked ZIL
 
 ```solidity
 // On Zilliqa, you can design for higher throughput scenarios
@@ -43,7 +43,7 @@ contract HighThroughputAuction {
 
 ### Transaction Finality
 
-**Zilliqa Finality**: 1-2 seconds (2-3 block confirmations)
+**Zilliqa Finality**: a few seconds (final after two further blocks, with ~1-second block times)
 **Ethereum Finality**: 12-15 seconds (12+ block confirmations)
 
 This faster finality enables different UX patterns:
@@ -66,7 +66,7 @@ contract InstantSettlement {
 
 ### Understanding Zilliqa's Gas Model
 
-Zilliqa uses a **gas price minimum** of approximately **4,761.9048 gwei**, but this translates to much lower actual costs due to the gas-to-ZIL conversion factor.
+Zilliqa uses a **fixed gas price** of **4,761.9048 gwei** (there is no fee market), so a simple 21,000-gas transfer costs about **0.1 ZIL**. The block gas limit is 84M gas.
 
 ```solidity
 // Gas optimization strategies for Zilliqa

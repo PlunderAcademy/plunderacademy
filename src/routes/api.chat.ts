@@ -1,28 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { streamText, generateText, type UIMessage, convertToModelMessages } from "ai";
+import {
+  streamText,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  generateId,
+  type UIMessage,
+  convertToModelMessages,
+} from "ai";
 import { getZilliqaInsightsTools, formatMCPToolResult } from "@/lib/zilliqa-mcp";
 import chatSystemPrompt from "@/prompts/chat-system-prompt.md?raw";
+import { gatewayModel } from "@/lib/ai";
 
 // ============================================================================
 // Model Configuration
 // ============================================================================
-// Available models through AI Gateway (examples):
-// - openai/gpt-4o-mini ($0.15/$0.60) - its ok but think oss and 2.5 flash lite are better, a little slower
-// - openai/gpt-5-mini ($0.25/$2) - looks really nice but was really slow
-// - openai/gpt-5-nano ($0.05/$0.40) - its ok but think oss and 2.5 flash lite are better, a little slower
-// - openai/gpt-oss-120b ($0.15/$0.75) - this is really nice and fast on cerebras
-// - xai/grok-3-mini ($0.30/$0.50) - its ok but think oss and 2.5 flash lite are better, a little slower
-// - meta/llama-4-maverick ($0.20/$0.60) - its ok but think oss and 2.5 flash lite are better
-// - google/gemini-2.0-flash ($0.15/$0.60) - 2.5 flash lite is better
-// - google/gemini-2.0-flash-lite ($0.07/$0.30) - 2.5 flash lite is better
-// - google/gemini-2.5-flash ($0.30/$2.50) - quite slow
-// - google/gemini-3.1-flash-lite-preview ($0.25/$1.50) - this is epic and brand new
-// Best models:
-// - google/gemini-2.5-flash-lite
-// - google/gemini-3.1-flash-lite-preview
+// Fixed server-side so callers can't pick a pricier model on our credits
+const MODEL = "anthropic/claude-haiku-5.5";
 
-// Default model for AI Gateway
-const DEFAULT_MODEL = "google/gemini-3.1-flash-lite-preview";
+// Chat runs with thinking off: in the prompt evals it answered and routed tools as well
+// as with thinking on, and the first words arrive in ~1.5s instead of ~5s
+const chatModel = () => gatewayModel(MODEL, { disableThinking: true });
 
 // ============================================================================
 // System Prompt
@@ -60,85 +57,69 @@ async function handleChat(req: Request) {
   const body = (await req.json().catch(() => ({}))) as {
     messages?: UIMessage[];
     prompt?: string;
-    model?: string;
   };
 
-  const modelName =
-    typeof body?.model === "string" && body.model.trim()
-      ? body.model.trim()
-      : DEFAULT_MODEL;
-
-  // Get Zilliqa Insights tools (cached after first request)
-  const tools = await getZilliqaInsightsTools();
-  const hasTools = tools && Object.keys(tools).length > 0;
-
-  console.log(`[Chat] Model: ${modelName}, MCP tools available: ${hasTools ? Object.keys(tools).length : 0}`);
-
   if (Array.isArray(body?.messages) && body.messages.length > 0) {
+    // Zilliqa Insights tools, connected for this request only
+    const mcp = await getZilliqaInsightsTools();
+    console.log(`[Chat] Model: ${MODEL}, MCP tools available: ${mcp ? Object.keys(mcp.tools).length : 0}`);
+
     // If MCP tools are available, use two-phase approach:
     // Phase 1: Let model decide and execute tools
     // Phase 2: Generate response with tool results in context
-    if (hasTools) {
+    if (mcp) {
       const requestId = Math.random().toString(36).substring(2, 15);
-      console.log(`[${requestId}] Using two-phase MCP tool execution...`);
+      const messages = convertToModelMessages(body.messages);
 
-      // Phase 1: Execute with tools (maxSteps: 1 to just get tool calls)
-      const phase1 = await generateText({
-        model: modelName,
-        system: getSystemPrompt(),
-        messages: convertToModelMessages(body.messages),
-        tools,
-        // @ts-expect-error - maxSteps exists in runtime but types are outdated
-        maxSteps: 1,
-      });
-
-      const toolCallCount = phase1.toolCalls?.length || 0;
-      const toolResultCount = phase1.toolResults?.length || 0;
-      console.log(`[${requestId}] Phase 1 complete - Tool calls: ${toolCallCount}, Results: ${toolResultCount}`);
-
-      // If tools were called, format and return the results
-      if (phase1.toolResults && phase1.toolResults.length > 0) {
-        const formattedResults = phase1.toolResults
-          .map(tr => formatMCPToolResult(tr.toolName, tr))
-          .join('\n\n');
-
-        console.log(`[${requestId}] Formatted MCP results:`, formattedResults);
-
-        // If we have nicely formatted results, just pass them through with minimal AI formatting
-        if (formattedResults && formattedResults.trim()) {
-          const formattedResponse = await streamText({
-            model: modelName,
-            system: "You are a data presenter. Output the data exactly as provided. Do not refuse, apologize, or add commentary. Just present the data.",
-            prompt: `Present this validator data:\n\n${formattedResults}`,
+      const stream = createUIMessageStream({
+        execute: async ({ writer }) => {
+          // One streaming call with the tools attached: general questions stream straight
+          // away, and validator questions come back as tool results from the same step
+          const first = streamText({
+            model: chatModel(),
+            system: getSystemPrompt(),
+            messages,
+            tools: mcp.tools,
           });
+          // Forward parts in order so the formatted results can't interleave with them
+          for await (const part of first.toUIMessageStream({ sendFinish: false })) {
+            writer.write(part);
+          }
 
-          return formattedResponse.toUIMessageStreamResponse();
-        }
+          const toolResults = await first.toolResults.finally(mcp.close);
+          console.log(`[${requestId}] Tool calls: ${(await first.toolCalls).length}, results: ${toolResults.length}`);
 
-        // Fallback if formatting failed
-        console.log(`[${requestId}] Formatting produced empty result, falling back`);
-      }
-
-      // No tools called - stream a proper response
-      console.log(`[${requestId}] No tools called, streaming normal response`);
-      const normalResponse = await streamText({
-        model: modelName,
-        system: getSystemPrompt(),
-        messages: convertToModelMessages(body.messages),
+          // Tool results are already formatted as markdown, so they're streamed as-is
+          // rather than through a second model call
+          const formattedResults = toolResults
+            .map((tr) => formatMCPToolResult(tr.toolName, tr))
+            .join("\n\n");
+          if (formattedResults.trim()) {
+            const id = generateId();
+            writer.write({ type: "text-start", id });
+            writer.write({ type: "text-delta", id, delta: formattedResults });
+            writer.write({ type: "text-end", id });
+          }
+          writer.write({ type: "finish" });
+        },
+        onError: (error) => {
+          console.error(`[${requestId}] Chat stream error:`, error);
+          return "The reply didn't complete.";
+        },
       });
 
-      return normalResponse.toUIMessageStreamResponse();
+      return createUIMessageStreamResponse({ stream });
     }
 
     // No tools available - use regular streaming
     const result = await streamText({
-      model: modelName, // e.g., "openai/gpt-oss-120b" via groq
+      model: chatModel(),
       system: getSystemPrompt(),
       messages: convertToModelMessages(body.messages),
     });
 
     const requestId = Math.random().toString(36).substring(2, 15);
-    console.log(`[${requestId}] Chat (messages) started with model: ${modelName}`);
+    console.log(`[${requestId}] Chat (messages) started with model: ${MODEL}`);
 
     // Log token usage
     result.usage.then((usage) => {
@@ -157,18 +138,26 @@ async function handleChat(req: Request) {
   }
 
   if (typeof body?.prompt === "string" && body.prompt.trim()) {
+    // Tools run during the stream, so the MCP connection closes once it ends
+    const mcp = await getZilliqaInsightsTools();
     const result = await streamText({
-      model: modelName,
+      model: chatModel(),
       system: getSystemPrompt(),
       prompt: body.prompt.trim(),
-      ...(hasTools && {
-        tools,
+      ...(mcp && {
+        tools: mcp.tools,
         maxSteps: 5,
+        onFinish: mcp.close,
+        onAbort: mcp.close,
+        onError: ({ error }) => {
+          console.error("[Chat] Stream error:", error);
+          return mcp.close();
+        },
       }),
     });
 
     const requestId = Math.random().toString(36).substring(2, 15);
-    console.log(`[${requestId}] Chat (prompt) started with model: ${modelName}`);
+    console.log(`[${requestId}] Chat (prompt) started with model: ${MODEL}`);
 
     result.usage.then((usage) => {
       console.log(`[${requestId}] Chat Token usage:`, usage);

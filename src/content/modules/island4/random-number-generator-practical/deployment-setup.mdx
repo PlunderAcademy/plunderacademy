@@ -146,7 +146,7 @@ const config: HardhatUserConfig = {
       default: {
         version: "0.8.28",
         settings: {
-          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+          evmVersion: "cancun", // Zilliqa 2.0 runs the Cancun fork
         },
       },
       production: {
@@ -156,7 +156,7 @@ const config: HardhatUserConfig = {
             enabled: true,
             runs: 200,
           },
-          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+          evmVersion: "cancun", // Zilliqa 2.0 runs the Cancun fork
         },
       },
     },
@@ -227,7 +227,7 @@ export default config;
 
 **Key settings:**
 - **Compiler:** Solidity 0.8.28 with optimizer enabled
-- **evmVersion:** "shanghai" - Required for Zilliqa 2.0 compatibility
+- **evmVersion:** "cancun" - Zilliqa 2.0 runs the Cancun fork; set it explicitly because recent solc versions default to newer forks
 - **Zilliqa networks:** Testnet and mainnet configurations
 - **Private keys:** Loaded from environment variables
 
@@ -284,7 +284,7 @@ pragma solidity ^0.8.28;
 /**
  * @title ZilliqaRandomNumber2
  * @notice Commit-reveal random number generation contract with range constraints
- * @dev Designed for Zilliqa 2.0 - optimized for 1-second block times and Shanghai EVM
+ * @dev Designed for Zilliqa 2.0 - optimized for 1-second block times and the Cancun EVM
  * 
  * Security Features:
  * - Commit-reveal pattern prevents outcome prediction
@@ -493,7 +493,7 @@ contract ZilliqaRandomNumber2 {
 - `address public immutable claimant` → Your training portal wallet
 - Constructor accepts `_claimant` parameter
 - Used for achievement verification
-- Optimized for Zilliqa 2.0 (1-second blocks, Shanghai EVM)
+- Optimized for Zilliqa 2.0 (1-second blocks, Cancun EVM)
 
 ### Compile the Contract
 
@@ -503,7 +503,7 @@ npx hardhat compile
 
 **Expected output:**
 ```
-Compiled 1 Solidity file with solc 0.8.28 (evm target: shanghai).
+Compiled 1 Solidity file with solc 0.8.28 (evm target: cancun).
 ```
 
 ## Creating the Deployment Script
@@ -704,7 +704,7 @@ async function main() {
     const waitTimeSeconds = blocksAhead;
     console.log(`\n⏰ You can reveal in ~${waitTimeSeconds} seconds (once the target block has been produced)`);
     console.log("Target block:", targetBlock.toString());
-    console.log("⚠️  Reveal within 256 blocks (~4 minutes) of the target block, or the commitment expires");
+    console.log("⚠️  Reveal within 256 blocks (~5 minutes) of the target block, or the commitment expires");
     
     console.log("\n📋 To reveal:");
     console.log(`export RNG_CONTRACT_ADDRESS=${rngAddress}`);
@@ -1275,7 +1275,7 @@ npm run check:testnet
 
 **Solution:**
 ```bash
-# The target block is more than 256 blocks (~4 minutes) old,
+# The target block is more than 256 blocks (~5 minutes) old,
 # so its hash is no longer readable on-chain.
 
 # Cancel the expired commitment and start over

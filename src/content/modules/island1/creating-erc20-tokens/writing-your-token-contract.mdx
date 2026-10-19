@@ -203,7 +203,7 @@ const config: HardhatUserConfig = {
       default: {
         version: "0.8.28",
         settings: {
-          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+          evmVersion: "cancun", // Zilliqa 2.0 runs the Cancun fork
         },
       },
       production: {
@@ -213,7 +213,7 @@ const config: HardhatUserConfig = {
             enabled: true,
             runs: 200,
           },
-          evmVersion: "shanghai", // Required for Zilliqa 2.0 compatibility
+          evmVersion: "cancun", // Zilliqa 2.0 runs the Cancun fork
         },
       },
     },
